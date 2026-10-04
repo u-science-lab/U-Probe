@@ -24,7 +24,7 @@ def read_gtf(
     if filter_by_type:
         df = df[df[basic_fields[2]] == filter_by_type]
     if get_length:
-        df['length'] = df['end'] - df['start']
+        df['length'] = df['end'] - df['start'] + 1
     for f in extract_fields:
         df[f] = df[basic_fields[-1]].str.extract(f"{f} \"(.*?)\"")
     chr_new = []
@@ -108,7 +108,7 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
                     if chr_fixed in fa.keys():
                         chr_ = chr_fixed
             try:
-                seq = fa[chr_][start:end].seq.upper()
+                seq = fa[chr_][start - 1:end].seq.upper()
             except Exception as e:
                 import sys
                 print(f"STDOUT ERROR: KeyError accessing {chr_}. FASTA keys: {list(fa.keys())[:5]}", file=sys.stdout)
@@ -172,7 +172,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                     chr_fixed = 'chr' + chr_
                     if chr_fixed in fa.keys():
                         chr_ = chr_fixed
-            seq = fa[chr_][start:end].seq.upper()
+            seq = fa[chr_][start - 1:end].seq.upper()
             if strand == '-':
                 seq = reverse_complement(seq)
             gene_features[gene].append(("exon", name, seq, n_trans))
@@ -192,7 +192,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                         chr_fixed = 'chr' + chr_
                         if chr_fixed in fa.keys():
                             chr_ = chr_fixed
-                seq = fa[chr_][start:end].seq.upper()
+                seq = fa[chr_][start - 1:end].seq.upper()
                 if strand == '-':
                     seq = reverse_complement(seq) 
                 if idx == 0:
@@ -216,7 +216,7 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
     # Match fisheye: exclude alternative/small chromosome records containing
     # an underscore before constructing the transcriptome reference.
     exons_df = exons_df[~exons_df['chr'].astype(str).str.contains("_", na=False)]
-    exons_df = exons_df[exons_df.start < exons_df.end]
+    exons_df = exons_df[exons_df.start <= exons_df.end]
     exons_df = exons_df[['chr','start','end','strand','gene_name','transcript_id']].dropna(axis=0, how="any", subset=['transcript_id'])
     trans = {}  # (gene_name, trans_id) -> [chr, strand, exons],  exons: (start, end)
     for (_, row) in exons_df.iterrows():
@@ -255,12 +255,14 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
             )
         seq_lst = []
         for i in range(len(exons)):
-            seq = fa[fasta_chrom][exons[i][0]:exons[i][1]].seq
+            seq = fa[fasta_chrom][exons[i][0] - 1:exons[i][1]].seq
             if strand == '-':
                 seq = reverse_complement(seq)
                 seq_lst.append(seq)
             else:
                 seq_lst.append(seq)
+        if strand == "-":
+            seq_lst.reverse()
         seq = "".join(seq_lst)
         seq_dict[key_] = seq
     log.info(f"save results to {output_fa_path}")
