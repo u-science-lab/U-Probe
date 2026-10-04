@@ -10,7 +10,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/uprobe)](https://pypi.org/project/uprobe/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/UFISH-Team/U-Probe/blob/main/LICENSE)
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://ufish-team.github.io/uprobe-official/)
 [![Website](https://img.shields.io/badge/Website-Official-green.svg)](https://ufish-team.github.io/uprobe-official/)
 
@@ -28,7 +28,7 @@ Whether you are designing standard probes for established protocols or developin
 
 ## Installation
 
-U-Probe can be easily installed via pip. We recommend using a virtual environment (like conda or venv).
+Requires Python 3.10+. Use Linux or WSL2 for backend development and bioinformatics tools.
 
 ### Install via pip (Recommended)
 
@@ -51,7 +51,7 @@ git clone https://github.com/UFISH-Team/U-Probe.git
 cd U-Probe
 conda env create -f environments.yaml
 conda activate uprobe
-pip install .
+pip install -e .
 ```
 
 ## Usage Guide
@@ -89,15 +89,29 @@ CLI Agent sessions set `UPROBE_OUTPUT_DIR` automatically. New generated files sh
 Use `uprobe agent --force` after upgrading if you need to refresh the installed Pantheon team template.
 
 #### 🌐 Start Web Server 
-U-Probe now comes with a built-in web server and UI for an intuitive visual experience.
+Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. First check `config.ini`: use local Linux paths under `[Paths]` and `frontend_url = http://localhost:5173` under `[Server]`.
 
 ```bash
-# Start in development mode (default)
-uprobe server --host 127.0.0.1 --port 8000
-
-# Start in production mode with multiple workers
-uprobe server --env production --host 0.0.0.0 --port 8000 --workers 4
+cd /path/to/U-Probe
+conda activate uprobe  # or your existing Python 3.10+ environment
+uprobe server --env development --host 127.0.0.1 --port 8005 --workers 1
 ```
+
+Development mode reloads Python changes automatically. Alternatively, run `APP_ENV=development PORT=8005 python -m uprobe.http.server` from the project root. Running without overrides uses `config.ini`, which may select production mode.
+
+In a separate Windows PowerShell terminal:
+
+```powershell
+cd D:\repos\uprobe-web-ui
+pnpm install  # first run or after dependency changes
+pnpm dev --host 127.0.0.1 --port 5173
+```
+
+- UI: http://localhost:5173
+- API docs: http://localhost:8005/docs
+- Connection check: http://localhost:5173/api/ should return `{"message":"Hello, World!"}`.
+
+The frontend proxies `/api` to backend port `8005`. No separate database service is needed; users and tasks are stored locally. Create a test account through `POST /auth/register` in the API docs; this endpoint needs no email verification. Full probe workflows also require FASTA/GTF data and the relevant bioinformatics tools.
 
 #### 🌟 Complete Workflow (Recommended)
 To run the entire pipeline from genome index construction to final probe generation in one go:
@@ -336,7 +350,7 @@ We thank the bioinformatics community for valuable feedback during development, 
 - [Jellyfish](https://github.com/gmarcais/Jellyfish) - Fast k-mer counting
 - [ViennaRNA](https://www.tbi.univie.ac.at/RNA/) - RNA secondary structure prediction
 - [Primer3](https://primer3.org/) - Primer and probe design algorithms
-- [FastAPI](https://fastapi.tiangolo.com/) & [Vue.js](https://vuejs.org/) - Powering our interactive Web UI
+- [FastAPI](https://fastapi.tiangolo.com/) & [React](https://react.dev/) - Powering our interactive Web UI
 
 
 
