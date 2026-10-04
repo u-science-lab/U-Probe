@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import traceback
 import yaml
+from uprobe.http.utils.result_archive import RESULT_SUFFIXES
 
 def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, output_dir: str, threads: int, raw_csv: bool, continue_invalid_targets: bool, log_path: str) -> dict:
     out_dir = Path(output_dir)
@@ -50,7 +51,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
         import zipfile
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for p in out_dir.iterdir():
-                if p.is_file() and p.suffix in (".csv", ".html", ".yaml", ".log"):
+                if p.is_file() and p.suffix in RESULT_SUFFIXES:
                     zf.write(p, p.name)
         return {"ok": True, "zip_name": zip_name, "csv_files": csv_files, "html_files": html_files}
     except Exception:

@@ -17,6 +17,7 @@ import re
 from collections import deque
 import functools
 from uprobe.http.utils.process_pool import get_process_pool
+from uprobe.http.utils.result_archive import restrict_result_archive
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.http.utils.paths import get_data_dir, get_tasks_dir, get_results_dir
 
@@ -541,6 +542,8 @@ async def download_task_result(
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Result file not found on disk")
+    # Apply the same result-only policy to tasks completed before this change.
+    await asyncio.to_thread(restrict_result_archive, file_path)
     
     # Return file download response
     return FileResponse(
