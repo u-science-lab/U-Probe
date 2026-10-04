@@ -4,6 +4,7 @@ from zipfile import ZipFile
 import pandas as pd
 from uprobe.core.report.formatting import prepare_result_table
 from uprobe.core.report.excel import workbook_bytes, column_styles
+from uprobe.core.report.formatting import ordered_columns
 
 
 def data():
@@ -31,6 +32,26 @@ def test_sequence_components_and_attributes_share_color_group():
     assert styles["pad_tm"]["background"] == styles["pad_probe.part1"]["background"]
     assert styles["pad_probe"]["header"] == styles["pad_tm"]["header"]
     assert styles["pad_probe"]["header"] != styles["amp_probe"]["header"]
+
+
+def test_generic_order_uses_configured_targets_without_losing_columns():
+    protocol = {"extracts": {"capture": {}}, "probes": {"custom": {}, "custom.long": {}},
+                "attributes": {"unrelated_name": {"target": "custom.part1"},
+                               "capture_quality": {"target": "capture"},
+                               "long_quality": {"target": "custom.long.part1"},
+                               "unknown": {"target": "missing"}}}
+    columns = ["long_quality", "unrelated_name", "custom.part1", "target", "custom.long.part1",
+               "capture_quality", "custom.long", "unknown", "capture", "custom", "extra"]
+    expected = ["target", "unknown", "extra", "capture", "capture_quality", "custom",
+                "custom.part1", "unrelated_name", "custom.long", "custom.long.part1", "long_quality"]
+    assert ordered_columns(columns, protocol) == expected
+    df = pd.DataFrame([{column: column for column in columns}])
+    assert prepare_result_table(df, protocol).columns.tolist() == expected
+    assert df.columns.tolist() == columns
+    assert ordered_columns(columns, {}) == columns
+    styles = column_styles(columns, protocol)
+    assert styles["long_quality"]["group"] == "custom.long"
+    assert styles["unrelated_name"]["group"] == "custom"
 
 
 def test_xlsx_values_styles_and_navigation():

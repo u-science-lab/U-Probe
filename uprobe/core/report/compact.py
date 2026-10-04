@@ -12,8 +12,8 @@ from .excel import column_styles, workbook_bytes
 
 
 def build_report_data(df, protocol, raw_df=None, csv_filename=None):
-    display_df = prepare_result_table(df)
-    display_raw = prepare_result_table(raw_df) if raw_df is not None else None
+    display_df = prepare_result_table(df, protocol)
+    display_raw = prepare_result_table(raw_df, protocol) if raw_df is not None else None
     target_col = next((c for c in ("target", "gene") if c in df.columns), None)
     raw_target = next((c for c in ("target", "gene") if raw_df is not None and c in raw_df.columns), None)
     requested = []

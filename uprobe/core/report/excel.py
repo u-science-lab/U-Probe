@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import xlsxwriter
 
-from .formatting import prepare_result_table
+from .formatting import prepare_result_table, sequence_groups, column_group
 
 
 PALETTE = [
@@ -21,15 +21,10 @@ PALETTE = [
 
 
 def column_styles(columns, protocol):
-    groups = ["target_region"] + list(protocol.get("probes", {}))
-    attributes = protocol.get("attributes", {}) or {}
+    groups = sequence_groups(protocol)
     styles = {}
     for column in columns:
-        target = attributes.get(column, {}).get("target", column)
-        if not isinstance(target, str):
-            continue
-        group = next((g for g in sorted(groups, key=len, reverse=True)
-                      if target == g or target.startswith(g + ".")), None)
+        group = column_group(column, protocol)
         if group is None:
             continue
         sequence, attribute, header = PALETTE[groups.index(group) % len(PALETTE)]
@@ -39,7 +34,7 @@ def column_styles(columns, protocol):
 
 
 def workbook_bytes(df, protocol):
-    table = prepare_result_table(df)
+    table = prepare_result_table(df, protocol)
     stream = BytesIO()
     book = xlsxwriter.Workbook(stream, {"in_memory": True, "strings_to_formulas": False,
                                        "strings_to_urls": False})
