@@ -102,7 +102,7 @@ Development mode reloads Python changes automatically. Alternatively, run `APP_E
 In a separate Windows PowerShell terminal:
 
 ```powershell
-cd D:\repos\uprobe-web-ui
+cd /path/to/probe-web-ui
 pnpm install  # first run or after dependency changes
 pnpm dev --host 127.0.0.1 --port 5173
 ```
