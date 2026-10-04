@@ -52,7 +52,7 @@ def test_safe_offline_english_report_and_exact_export_data(tmp_path):
     assert '<html lang="en">' in html
     assert 'Run information' not in html
     assert 'View fields' not in html
-    assert 'All fields are shown.' in html
+    assert 'Matching colors group sequences and their attributes.' in html
     assert not re.search(r"[\u4e00-\u9fff]", html)
     assert 'src="https://' not in html and 'href="https://' not in html
     assert '<script>alert("x")</script>' not in html

@@ -188,7 +188,7 @@ async def get_tasks(
             log_path = directory / "run.log"
             if log_path.exists() and "Using raw data for final result" in log_path.read_text(encoding="utf-8", errors="replace"):
                 task.no_filtered_probes = True
-                task.raw_file = next((p.name for p in directory.glob("*_raw.csv")), None)
+                task.raw_file = next((p.name for p in directory.glob("*_raw.xlsx")), None)
 
     
     # Filter by status
@@ -586,11 +586,11 @@ async def list_task_files(
     
     files = []
     for file_path in task_results_dir.iterdir():
-        if file_path.is_file() and not file_path.name.endswith('.zip'):
+        if file_path.is_file() and file_path.suffix in {'.xlsx', '.html'}:
             file_info = {
                 "name": file_path.name,
                 "size": file_path.stat().st_size,
-                "type": "csv" if file_path.suffix == ".csv" else "html" if file_path.suffix == ".html" else "other",
+                "type": "xlsx" if file_path.suffix == ".xlsx" else "csv" if file_path.suffix == ".csv" else "html" if file_path.suffix == ".html" else "other",
                 "url": f"/task/{task_id}/file/{file_path.name}"
             }
             files.append(file_info)
@@ -624,7 +624,7 @@ async def download_single_file(
     if not str(file_path.resolve()).startswith(str(task_results_dir.resolve())):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    media_type = "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
     
     return FileResponse(
         path=str(file_path),

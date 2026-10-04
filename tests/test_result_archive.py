@@ -16,12 +16,12 @@ class ResultArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "results.zip"
             results = {"report.html": b"<html>report</html>",
-                       "probes_raw.csv": b"sequence\nACTG\n",
-                       "probes.csv": b"sequence\nACTG\n"}
+                       "probes_raw.xlsx": b"sequence\nACTG\n",
+                       "probes.xlsx": b"sequence\nACTG\n"}
             with zipfile.ZipFile(archive, "w") as output:
                 for name, content in results.items():
                     output.writestr(name, content)
-                for name in ("protocol.yaml", "merged_genomes.yaml", "run.log", "data.fa"):
+                for name in ("protocol.yaml", "merged_genomes.yaml", "run.log", "data.fa", "legacy.csv"):
                     output.writestr(name, "excluded")
             module.restrict_result_archive(archive)
             with zipfile.ZipFile(archive) as output:

@@ -24,3 +24,5 @@ uvicorn
 python-dotenv
 
 pantheon-agents
+
+xlsxwriter>=3.2

@@ -44,7 +44,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
         from uprobe.core.api import UProbeAPI
         api = UProbeAPI(protocol_config=protocol_dict, genomes_config=merged_genomes, output_dir=out_dir)
         api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads)
-        csv_files = [p.name for p in out_dir.glob("*.csv")]
+        xlsx_files = [p.name for p in out_dir.glob("*.xlsx")]
         html_files = [p.name for p in out_dir.glob("*.html")]
         zip_name = f"{task_id}_results.zip"
         zip_path = out_dir / zip_name
@@ -53,7 +53,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
             for p in out_dir.iterdir():
                 if p.is_file() and p.suffix in RESULT_SUFFIXES:
                     zf.write(p, p.name)
-        return {"ok": True, "zip_name": zip_name, "csv_files": csv_files, "html_files": html_files, "no_filtered_probes": getattr(api, "no_filtered_probes", False), "raw_file": getattr(api, "raw_file", None)}
+        return {"ok": True, "zip_name": zip_name, "xlsx_files": xlsx_files, "html_files": html_files, "no_filtered_probes": getattr(api, "no_filtered_probes", False), "raw_file": getattr(api, "raw_file", None)}
     except Exception:
         tb = traceback.format_exc()
         try:
