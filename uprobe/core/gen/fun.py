@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import re
 import typing as t
 from pyfaidx import Fasta
 
@@ -25,8 +26,18 @@ def read_gtf(
         df = df[df[basic_fields[2]] == filter_by_type]
     if get_length:
         df['length'] = df['end'] - df['start'] + 1
+    def extract_attribute(key):
+        # Match a complete GTF attribute key, not suffixes such as other_gene.
+        pattern = rf'(?:^|;)\s*{re.escape(key)}\s+"([^"\r\n]*)"'
+        return df[basic_fields[-1]].str.extract(pattern, expand=False)
+
     for f in extract_fields:
-        df[f] = df[basic_fields[-1]].str.extract(f"{f} \"(.*?)\"")
+        df[f] = extract_attribute(f)
+        if f == "gene_name":
+            # NCBI GTF may use gene instead of gene_name. Normalize in memory
+            # per record, including mixed files and empty gene_name values.
+            missing = df[f].isna() | df[f].str.strip().eq("")
+            df.loc[missing, f] = extract_attribute("gene").loc[missing]
     chr_new = []
     for chr_ in df.chr:
         chr_new.append(str(chr_).replace('chr', ''))
@@ -210,17 +221,17 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
     """
     log.info(f"extract transcript sequences from: {gtf_path}, {fa_path}")
     fa = Fasta(str(fa_path))
-    # Match fisheye semantics: extract gene name (not gene_id) so transcript
-    # headers match the fisheye reference (`>{gene_name}_{transcript_id}`).
-    exons_df = read_gtf(gtf_path, filter_by_type='exon', extract_fields=["gene_name", "transcript_id"])
+    # Match fisheye: identify transcripts by gene_id and transcript_id,
+    # and write FASTA headers as >{gene_id}_{transcript_id}.
+    exons_df = read_gtf(gtf_path, filter_by_type='exon', extract_fields=["gene_id", "transcript_id"])
     # Match fisheye: exclude alternative/small chromosome records containing
     # an underscore before constructing the transcriptome reference.
     exons_df = exons_df[~exons_df['chr'].astype(str).str.contains("_", na=False)]
     exons_df = exons_df[exons_df.start <= exons_df.end]
-    exons_df = exons_df[['chr','start','end','strand','gene_name','transcript_id']].dropna(axis=0, how="any", subset=['transcript_id'])
-    trans = {}  # (gene_name, trans_id) -> [chr, strand, exons],  exons: (start, end)
+    exons_df = exons_df[['chr','start','end','strand','gene_id','transcript_id']].dropna(axis=0, how="any", subset=['transcript_id'])
+    trans = {}  # (gene_id, trans_id) -> [chr, strand, exons],  exons: (start, end)
     for (_, row) in exons_df.iterrows():
-        key_ = (row['gene_name'], row['transcript_id'])
+        key_ = (row['gene_id'], row['transcript_id'])
         chrom, strand, left, right = str(row['chr']), row['strand'], row['start'], row['end']
         if key_ not in trans:
             trans[key_] = [chrom, strand, [[left, right]]]
@@ -267,8 +278,8 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
         seq_dict[key_] = seq
     log.info(f"save results to {output_fa_path}")
     with open(output_fa_path, 'w') as f:
-        for (gene_name, tran_id), seq in seq_dict.items():
-            f.write(f">{gene_name}_{tran_id}\n")
+        for (gene_id, tran_id), seq in seq_dict.items():
+            f.write(f">{gene_id}_{tran_id}\n")
             f.write(f"{seq}\n")
 
 def generate_target_seqs(
@@ -329,10 +340,9 @@ def generate_target_seqs(
 def validate_targets(targets, gtf_path, DTF_NAME_FIX=False):
     log.info(f"validating targets in gtf file: {targets}")
     df_gtf = read_gtf(gtf_path)
-    if DTF_NAME_FIX:
-        process_gtf_inplace(gtf_path)
-        df_gtf = read_gtf(gtf_path)
-    genome_genes = set(df_gtf['gene_name'].unique())
+    # DTF_NAME_FIX is retained for caller compatibility; normalization now
+    # happens in read_gtf without rewriting the input annotation.
+    genome_genes = set(df_gtf["gene_name"].dropna().unique())
     valid_targets = []
     invalid_targets = []
     for target in targets:

@@ -106,6 +106,8 @@ class TaskRead(TaskBase):
     result_url: Optional[str] = None
     yaml_content: Optional[str] = None
     error_message: Optional[str] = None
+    no_filtered_probes: bool = False
+    raw_file: Optional[str] = None
     paused_from: Optional[Literal["pending", "running"]] = None
 
 # --- Helper Function ---
@@ -180,6 +182,14 @@ async def get_tasks(
     """
     tasks_dicts = load_user_tasks(current_user.username)
     filtered_tasks = [TaskRead(**t) for t in tasks_dicts]
+    for task in filtered_tasks:
+        if task.status == "completed" and not task.no_filtered_probes:
+            directory = get_results_dir() / task.id
+            log_path = directory / "run.log"
+            if log_path.exists() and "Using raw data for final result" in log_path.read_text(encoding="utf-8", errors="replace"):
+                task.no_filtered_probes = True
+                task.raw_file = next((p.name for p in directory.glob("*_raw.csv")), None)
+
     
     # Filter by status
     if status_filter and status_filter != "all":
@@ -504,6 +514,8 @@ async def _run_uprobe_task(username: str, task_id: str):
                 update_task_in_db(username, task)
                 return
             task.status = "completed"
+            task.no_filtered_probes = result.get("no_filtered_probes", False)
+            task.raw_file = result.get("raw_file")
             task.progress = 100
             task.result_url = str(zip_path.relative_to(results_base_dir))
             task.updated_at = datetime.now()

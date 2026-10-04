@@ -53,7 +53,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
             for p in out_dir.iterdir():
                 if p.is_file() and p.suffix in RESULT_SUFFIXES:
                     zf.write(p, p.name)
-        return {"ok": True, "zip_name": zip_name, "csv_files": csv_files, "html_files": html_files}
+        return {"ok": True, "zip_name": zip_name, "csv_files": csv_files, "html_files": html_files, "no_filtered_probes": getattr(api, "no_filtered_probes", False), "raw_file": getattr(api, "raw_file", None)}
     except Exception:
         tb = traceback.format_exc()
         try:
