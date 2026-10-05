@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from uprobe.core.process import filter_table
+from uprobe.core.process.sequence_filter import sequence_filter_description
 from .formatting import prepare_result_table
 from .excel import column_styles, workbook_bytes
 
@@ -28,10 +29,11 @@ def build_report_data(df, protocol, raw_df=None, csv_filename=None):
     filtered = filter_table(raw_df.copy(), filters) if raw_df is not None else None
     diagnostics = []
     for key, config in filters.items():
-        if not isinstance(config, dict) or "condition" not in config:
+        if not isinstance(config, dict) or ("condition" not in config and config.get("type") != "sequence_pattern"):
             continue
         passed = len(filter_table(raw_df.copy(), {key: config})) if raw_df is not None else None
-        diagnostics.append({"metric": key, "condition": config["condition"], "passed": passed,
+        condition = sequence_filter_description(config) if config.get("type") == "sequence_pattern" else config["condition"]
+        diagnostics.append({"metric": key, "condition": condition, "passed": passed,
                             "rejected": len(raw_df) - passed if passed is not None else None})
     summary = protocol.get("summary", {}) or {}
     settings = summary.get("report", {}) or {}
@@ -64,7 +66,7 @@ def build_report_data(df, protocol, raw_df=None, csv_filename=None):
         "filtersConfigured": bool(filters), "covered": covered, "targetCount": len(requested),
         "targets": [{"target": t, "raw": raw_counts.get(t, 0) if raw_target else None,
                      "final": counts.get(t, 0) if target_col else None} for t in requested],
-        "diagnostics": diagnostics, "metrics": metrics, "statistics": statistics,
+        "diagnostics": diagnostics, "postProcessStages": df.attrs.get('post_process_stages', []), "metrics": metrics, "statistics": statistics,
         "columns": list(display_df.columns), "tableColumns": table_columns,
         "columnStyles": column_styles(display_df.columns, protocol),
         "sequenceColumns": [c for c in ["target_region"] + list(protocol.get("probes", {})) if c in display_df],
@@ -125,7 +127,7 @@ if(data.state!=='complete'){el('notice').classList.remove('hidden');text('notice
 if(data.rawRows.length)el('viewRaw').classList.remove('hidden');
 el('viewRaw').onclick=()=>{el('rawTable').innerHTML=table(data.rawColumns,data.rawRows.slice(0,100));el('rawDialog').showModal()};el('closeRaw').onclick=()=>el('rawDialog').close();el('downloadRaw').onclick=()=>downloadWorkbook(data.rawXlsxData,data.xlsxFilename.replace(/\.xlsx$/,'_raw.xlsx'));
 el('download').disabled=!data.rows.length;el('download').onclick=()=>downloadWorkbook(data.xlsxData,data.xlsxFilename);el('print').onclick=()=>window.print();
-el('filterTable').innerHTML=data.diagnostics.length?table(['metric','condition','passed','rejected'],data.diagnostics):'<p class="muted">No filter conditions configured.</p>';
+el('filterTable').innerHTML=(data.diagnostics.length?table(['metric','condition','passed','rejected'],data.diagnostics):'<p class="muted">No filter conditions configured.</p>')+(data.postProcessStages?.length?'<h3>Post-processing steps</h3><p class="muted">Sequential counts from raw candidates to final probes.</p>'+table(['stage','before','after','removed'],data.postProcessStages):'');
 let page=0,sortColumn=null,ascending=true;function renderRows(){const query=el('search').value.toLowerCase();let rows=data.rows.filter(r=>data.columns.some(c=>String(r[c]??'').toLowerCase().includes(query)));if(sortColumn)rows.sort((a,b)=>{const av=a[sortColumn],bv=b[sortColumn];return (typeof av==='number'&&typeof bv==='number'?av-bv:String(av??'').localeCompare(String(bv??'')))*(ascending?1:-1)});const pages=Math.max(1,Math.ceil(rows.length/20));page=Math.min(page,pages-1);const visible=rows.slice(page*20,page*20+20);el('results').innerHTML='<table><thead><tr>'+data.tableColumns.map(c=>'<th data-column="'+esc(c)+'">'+esc(label(c))+'</th>').join('')+'</tr></thead><tbody>'+visible.map(r=>'<tr>'+data.tableColumns.map(c=>'<td'+cellClass(c)+'>'+esc(typeof r[c]==='object'&&r[c]!==null?JSON.stringify(r[c]):r[c]??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(rows.length?'':'<p class="muted">No probes to display.</p>');text('pageInfo',num(rows.length)+' probes · Page '+(page+1)+' / '+pages);el('prev').disabled=page===0;el('next').disabled=page>=pages-1;el('results').querySelectorAll('[data-column]').forEach(th=>th.onclick=()=>{const c=th.dataset.column;ascending=sortColumn===c?!ascending:true;sortColumn=c;page=0;renderRows()})}
 el('search').oninput=()=>{page=0;renderRows()};el('prev').onclick=()=>{page--;renderRows()};el('next').onclick=()=>{page++;renderRows()};renderRows();
 el('metric').innerHTML=data.statistics.map((s,i)=>'<option value="'+i+'">'+esc(label(s.name))+'</option>').join('');function histogram(){const s=data.statistics[Number(el('metric').value)];if(!s){text('statSummary','No statistics available.');return}text('statSummary','Median '+num(s.median)+' '+s.unit+' · Range '+num(s.min)+'–'+num(s.max));const max=Math.max(...s.bins.map(b=>b.count),1);el('chart').innerHTML=s.bins.map(b=>'<i title="'+esc(b.label+': '+b.count+' probes')+'" style="height:'+b.count/max*140+'px"></i>').join('');text('low',num(s.min)+' '+s.unit);text('high',num(s.max)+' '+s.unit)}el('metric').onchange=histogram;histogram();
