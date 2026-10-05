@@ -1,7 +1,7 @@
 import pandas as pd
 import os
-import re
 import tempfile
+import re
 import typing as t
 from pyfaidx import Fasta
 
@@ -131,7 +131,7 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
                     if chr_fixed in fa.keys():
                         chr_ = chr_fixed
             try:
-                seq = fa[chr_][start:end].seq.upper()
+                seq = fa[chr_][start - 1:end].seq.upper()
             except Exception as e:
                 import sys
                 print(f"STDOUT ERROR: KeyError accessing {chr_}. FASTA keys: {list(fa.keys())[:5]}", file=sys.stdout)
@@ -195,7 +195,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                     chr_fixed = 'chr' + chr_
                     if chr_fixed in fa.keys():
                         chr_ = chr_fixed
-            seq = fa[chr_][start:end].seq.upper()
+            seq = fa[chr_][start - 1:end].seq.upper()
             if strand == '-':
                 seq = reverse_complement(seq)
             gene_features[gene].append(("exon", name, seq, n_trans))
@@ -215,7 +215,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                         chr_fixed = 'chr' + chr_
                         if chr_fixed in fa.keys():
                             chr_ = chr_fixed
-                seq = fa[chr_][start:end].seq.upper()
+                seq = fa[chr_][start - 1:end].seq.upper()
                 if strand == '-':
                     seq = reverse_complement(seq) 
                 if idx == 0:
@@ -380,10 +380,9 @@ def generate_target_seqs(
 def validate_targets(targets, gtf_path, DTF_NAME_FIX=False):
     log.info(f"validating targets in gtf file: {targets}")
     df_gtf = read_gtf(gtf_path)
-    if DTF_NAME_FIX:
-        process_gtf_inplace(gtf_path)
-        df_gtf = read_gtf(gtf_path)
-    genome_genes = set(df_gtf['gene_name'].unique())
+    # DTF_NAME_FIX is retained for caller compatibility; normalization now
+    # happens in read_gtf without rewriting the input annotation.
+    genome_genes = set(df_gtf["gene_name"].dropna().unique())
     valid_targets = []
     invalid_targets = []
     for target in targets:

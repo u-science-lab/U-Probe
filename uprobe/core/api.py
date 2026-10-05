@@ -1,4 +1,3 @@
-from uprobe.core.report.excel import save_xlsx
 import time
 import typing as T
 from pathlib import Path
@@ -13,6 +12,8 @@ from .gen.probe import construct_probes
 from .process import post_process
 from .report import generate_plot_report
 from .report.html import save_html_report
+from .report.formatting import prepare_result_table
+from .report.excel import save_xlsx
 
 from .tools import build_genome
 from .utils import get_logger
@@ -299,7 +300,7 @@ class UProbeAPI:
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
         # 6. Generate Report (if configured)
         summary_config = self.protocol.get('summary', {})
-        if summary_config.get('report_name') and not df_processed.empty:
+        if summary_config.get('report_name'):
             log.info("Generating final report with summary statistics...")
             self.generate_report(df_processed, 
                                include_plots=self._include_plots,
@@ -308,74 +309,18 @@ class UProbeAPI:
         log.info("--- U-Probe Workflow Completed ---")
         return df_processed
 
-    def generate_report(self, df_processed: pd.DataFrame, include_plots: bool = True, report_suffix: str = "", generate_html: bool = True, embed_plots: bool = True) -> T.Dict[str, T.List[Path]]:
-        """
-        Args:
-            df_processed: DataFrame with probe data
-            include_plots: Whether to include visualization plots
-            report_suffix: Suffix to add to report filenames (e.g. "_raw")
-            generate_html: Whether to generate HTML reports (always True now)
-            embed_plots: If True, embed plots in HTML (not save separately)
-        """
-        if df_processed.empty:
-            log.warning("No probe data available for report generation")
+    def generate_report(self, df_processed: pd.DataFrame, include_plots: bool = True,
+                        report_suffix: str = "", generate_html: bool = True,
+                        embed_plots: bool = True) -> T.Dict[str, T.List[Path]]:
+        """Generate one standalone report, including empty-result diagnostics."""
+        if not generate_html:
             return {"html_reports": []}
-        
-        html_paths = []
-        
-        try:
-            from .process.summary import generate_summary_data
-            summary_config = self.protocol.get('summary', {})
-            if summary_config:
-                log.info("Generating summary statistics for report...")
-                summary_data = generate_summary_data(df_processed, summary_config)
-                if hasattr(df_processed, 'attrs'):
-                    df_processed.attrs['summary_data'] = summary_data
-                else:
-                    import tempfile
-                    import pickle
-                    import os
-                    temp_dir = tempfile.gettempdir()
-                    summary_file = os.path.join(temp_dir, 'uprobe_summary_data.pkl')
-                    with open(summary_file, 'wb') as f:
-                        pickle.dump(summary_data, f)
-                    log.info(f"Summary data saved to temporary file: {summary_file}")
-            plot_data = {}
-            if include_plots:
-                try:
-                    plot_result = generate_plot_report(
-                        df_processed, 
-                        self.protocol, 
-                        self.output_dir, 
-                        report_suffix,
-                        save_files=False, 
-                        return_base64=True 
-                    )
-                    
-                    plot_data = plot_result.get("plot_data", {}) 
-                except Exception as e:
-                    log.error(f"Failed to generate plots: {e}")
-            protocol_name = self.protocol.get('name', 'probes')
-            time_str = time.strftime("%Y%m%d_%H%M%S")
-            html_output_path = self.output_dir / f"{protocol_name}_report{report_suffix}_{time_str}.html"
-            summary_config = self.protocol.get('summary', {})
-            template_type = summary_config.get('report_name', 'scientific_report')
-            
-            html_path = save_html_report(
-                df_processed, 
-                self.protocol, 
-                html_output_path,
-                template_type=template_type,
-                plot_data=plot_data,
-                csv_filename=self._csv_filename
-            )
-            
-            if html_path:
-                html_paths.append(html_path)
-                log.info(f"HTML report generated: {html_path}")
-                    
-        except Exception as e:
-            log.error(f"Failed to generate HTML report: {e}")
-        
-        log.info(f"Report generation completed: {len(html_paths)} HTML reports")
-        return {"html_reports": html_paths}
+        name = self.protocol.get("name", "probes")
+        time_str = time.strftime("%Y%m%d_%H%M%S")
+        output_path = self.output_dir / f"{name}_report{report_suffix}_{time_str}.html"
+        path = save_html_report(
+            df_processed, self.protocol, output_path,
+            csv_filename=getattr(self, "_csv_filename", None),
+            raw_df=getattr(self, "_report_raw_data", None),
+        )
+        return {"html_reports": [path] if path else []}

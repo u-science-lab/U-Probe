@@ -1,0 +1,30 @@
+{
+  "directory": "/home/qzhang/uprobe_all/genomes/public/toy_uprobe",
+  "total_bases": 20000,
+  "genes": [
+    "ToyGeneA",
+    "ToyGeneB",
+    "ToyGeneC"
+  ],
+  "exon_count": 8,
+  "transcript_lengths": {
+    "ToyGeneA_ToyGeneA.t1": 2697,
+    "ToyGeneB_ToyGeneB.t1": 2697,
+    "ToyGeneC_ToyGeneC.t1": 2398
+  },
+  "standard_gtf_transcript_lengths": [
+    2700,
+    2700,
+    2400
+  ],
+  "backend_coordinate_note": "Current backend drops one base per exon (GTF start used directly as Python slice start).",
+  "files": {
+    "toy_uprobe.gtf": 2195,
+    "toy_uprobe.fa.fai": 35,
+    "toy_uprobe.fa": 20256,
+    "genomes.yaml": 354,
+    "transcripts.fa.fai": 121,
+    "transcripts.fa": 7861,
+    "targets.txt": 27
+  }
+}

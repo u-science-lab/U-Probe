@@ -1,0 +1,21 @@
+# Synthetic test reference; not biological data.
+1	synthetic	gene	1001	4900	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA";
+1	synthetic	transcript	1001	4900	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1";
+1	synthetic	exon	1001	1900	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1"; exon_number "1";
+1	synthetic	exon	2501	3400	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1"; exon_number "2";
+1	synthetic	exon	4001	4900	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1"; exon_number "3";
+1	synthetic	UTR	1001	1150	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1";
+1	synthetic	UTR	4751	4900	.	+	.	gene_id "ToyGeneA"; gene_name "ToyGeneA"; transcript_id "ToyGeneA.t1";
+1	synthetic	gene	6501	10400	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB";
+1	synthetic	transcript	6501	10400	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1";
+1	synthetic	exon	6501	7400	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1"; exon_number "3";
+1	synthetic	exon	8001	8900	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1"; exon_number "2";
+1	synthetic	exon	9501	10400	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1"; exon_number "1";
+1	synthetic	UTR	6501	6650	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1";
+1	synthetic	UTR	10251	10400	.	-	.	gene_id "ToyGeneB"; gene_name "ToyGeneB"; transcript_id "ToyGeneB.t1";
+2	synthetic	gene	1001	4200	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC";
+2	synthetic	transcript	1001	4200	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC"; transcript_id "ToyGeneC.t1";
+2	synthetic	exon	1001	2200	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC"; transcript_id "ToyGeneC.t1"; exon_number "1";
+2	synthetic	exon	3001	4200	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC"; transcript_id "ToyGeneC.t1"; exon_number "2";
+2	synthetic	UTR	1001	1150	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC"; transcript_id "ToyGeneC.t1";
+2	synthetic	UTR	4051	4200	.	+	.	gene_id "ToyGeneC"; gene_name "ToyGeneC"; transcript_id "ToyGeneC.t1";
