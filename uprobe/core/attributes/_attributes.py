@@ -66,6 +66,7 @@ def bowtie2_align_se_sen(
             # print log file
             with open(log_file) as f:
                 log.error(f.read())
+        raise
     return sam_path
 
 def parse_cigar(cigar: str) -> int:
@@ -213,12 +214,13 @@ def self_match(probe: str, min_match = 4):
                 match_pairs = match_pairs + 1
     return match_pairs
 
-def preprocess_seq(seq):
-    return seq.replace('N', 'A')
-
 def cal_temp(seq: str): # Tm
-    seq = preprocess_seq(seq)
-    return primer3.calc_tm(seq)
+    """Use explicit reaction conditions matching the fisheye reference output."""
+    return primer3.calc_tm(
+        seq, mv_conc=50, dv_conc=0, dntp_conc=0.6, dna_conc=50,
+        formamide_conc=0, dmso_conc=0, tm_method="santalucia",
+        salt_corrections_method="santalucia",
+    )
 
 def cal_fold(seq: str): # RNA fold
     return -RNA.fold_compound(seq).mfe()[1]
