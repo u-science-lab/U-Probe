@@ -116,7 +116,7 @@ def add_attributes(
                     f"Aligner {attr['aligner']} is not implemented."
                 )
         elif attr_type == "annealing_temperature":
-            vals = df_probes[actual_target].apply(cal_temp).round(2)
+            vals = df_probes[actual_target].apply(cal_temp)
             df_probes[attr_name] = vals
         elif attr_type == "gc_content":
             vals = df_probes[actual_target].apply(cal_gc_content).round(2)

@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import re
+import tempfile
 import typing as t
 from pyfaidx import Fasta
 
@@ -24,9 +26,30 @@ def read_gtf(
     if filter_by_type:
         df = df[df[basic_fields[2]] == filter_by_type]
     if get_length:
-        df['length'] = df['end'] - df['start']
+        df['length'] = df['end'] - df['start'] + 1
+    def extract_attribute(key):
+        # Match a complete GTF attribute key, not suffixes such as other_gene.
+        pattern = rf'(?:^|;)\s*{re.escape(key)}\s+"([^"\r\n]*)"'
+        return df[basic_fields[-1]].str.extract(pattern, expand=False)
+
+    def extract_attribute(key):
+        pattern = rf'(?:^|;)\s*{re.escape(key)}\s+"([^"\r\n]*)"'
+        return df[basic_fields[-1]].str.extract(pattern, expand=False)
+
     for f in extract_fields:
-        df[f] = df[basic_fields[-1]].str.extract(f"{f} \"(.*?)\"")
+        df[f] = extract_attribute(f)
+        if f == "gene_name":
+            missing = df[f].isna() | df[f].str.strip().eq("")
+            df.loc[missing, f] = extract_attribute("gene").loc[missing]
+        elif f == "gene_id":
+            # RefSeq annotations may omit gene_id but retain NCBI GeneID.
+            for fallback in (
+                df[basic_fields[-1]].str.extract(r'GeneID:(\d+)', expand=False),
+                extract_attribute("gene_name"),
+                extract_attribute("gene"),
+            ):
+                missing = df[f].isna() | df[f].str.strip().eq("")
+                df.loc[missing, f] = fallback.loc[missing]
     chr_new = []
     for chr_ in df.chr:
         chr_new.append(str(chr_).replace('chr', ''))
@@ -210,64 +233,94 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
     """
     log.info(f"extract transcript sequences from: {gtf_path}, {fa_path}")
     fa = Fasta(str(fa_path))
-    # Match fisheye semantics: extract gene name (not gene_id) so transcript
-    # headers match the fisheye reference (`>{gene_name}_{transcript_id}`).
-    exons_df = read_gtf(gtf_path, filter_by_type='exon', extract_fields=["gene_name", "transcript_id"])
-    # Match fisheye: exclude alternative/small chromosome records containing
-    # an underscore before constructing the transcriptome reference.
-    exons_df = exons_df[~exons_df['chr'].astype(str).str.contains("_", na=False)]
-    exons_df = exons_df[exons_df.start < exons_df.end]
-    exons_df = exons_df[['chr','start','end','strand','gene_name','transcript_id']].dropna(axis=0, how="any", subset=['transcript_id'])
-    trans = {}  # (gene_name, trans_id) -> [chr, strand, exons],  exons: (start, end)
-    for (_, row) in exons_df.iterrows():
-        key_ = (row['gene_name'], row['transcript_id'])
-        chrom, strand, left, right = str(row['chr']), row['strand'], row['start'], row['end']
-        if key_ not in trans:
-            trans[key_] = [chrom, strand, [[left, right]]]
-        else:
-            trans[key_][2].append([left, right])
-    adjacent_thresh = 5
-    for key_, [chrom, strand, exons] in list(trans.items()):  # merge adjacent exons
-        exons.sort()
-        tmp_exons = [exons[0]]
-        for i in range(1, len(exons)):
-            if exons[i][0] - tmp_exons[-1][1] <= adjacent_thresh:
-                tmp_exons[-1][1] = exons[i][1]
+    try:
+        # Match fisheye: identify transcripts by gene_id and transcript_id,
+        # and write FASTA headers as >{gene_id}_{transcript_id}.
+        exons_df = read_gtf(gtf_path, filter_by_type='exon', extract_fields=["gene_id", "transcript_id"])
+        # NCBI primary chromosome names such as NC_000067.7 contain underscores.
+        # Keep references actually present in FASTA, accepting chr aliases.
+        fasta_keys = set(fa.keys())
+        def resolve_chrom(chrom):
+            chrom = str(chrom)
+            alias = chrom[3:] if chrom.startswith("chr") else "chr" + chrom
+            return next((name for name in (chrom, alias) if name in fasta_keys), None)
+        resolved = exons_df["chr"].map(resolve_chrom)
+        unmatched = resolved.isna()
+        if unmatched.any():
+            log.warning(f"Skipping {int(unmatched.sum())} exons on references absent from FASTA")
+        exons_df = exons_df.loc[~unmatched].copy()
+        exons_df["chr"] = resolved.loc[~unmatched]
+        exons_df = exons_df[exons_df.start <= exons_df.end]
+        for field in ("gene_id", "transcript_id"):
+            invalid = exons_df[field].isna() | exons_df[field].astype(str).str.strip().eq("")
+            if invalid.any():
+                raise ValueError(f"Missing {field} for {int(invalid.sum())} matched exons in {gtf_path}")
+        if exons_df.empty:
+            raise ValueError(f"No usable transcript exons: check GTF/FASTA reference names in {gtf_path}, {fa_path}")
+        exons_df = exons_df[['chr','start','end','strand','gene_id','transcript_id']]
+        trans = {}  # (gene_id, trans_id) -> [chr, strand, exons],  exons: (start, end)
+        for (_, row) in exons_df.iterrows():
+            key_ = (row['gene_id'], row['transcript_id'])
+            chrom, strand, left, right = str(row['chr']), row['strand'], row['start'], row['end']
+            if key_ not in trans:
+                trans[key_] = [chrom, strand, [[left, right]]]
             else:
-                tmp_exons.append(exons[i])
-        trans[key_] = [chrom, strand, tmp_exons]
-    seq_dict = {}
-    fasta_keys = set(fa.keys())
-    for key_, [chrom, strand, exons] in list(trans.items()):
-        # fisheye accepts both GTF/FASTA naming conventions (1 vs chr1).
-        chrom = str(chrom)
-        chrom_candidates = [chrom]
-        if chrom.startswith('chr'):
-            chrom_candidates.append(chrom[3:])
-        else:
-            chrom_candidates.append('chr' + chrom)
-        fasta_chrom = next((candidate for candidate in chrom_candidates
-                            if candidate in fasta_keys), None)
-        if fasta_chrom is None:
-            raise KeyError(
-                f"Chromosome {chrom!r} from GTF was not found in FASTA "
-                f"(also tried {chrom_candidates[1]!r})"
-            )
-        seq_lst = []
-        for i in range(len(exons)):
-            seq = fa[fasta_chrom][exons[i][0]:exons[i][1]].seq
-            if strand == '-':
-                seq = reverse_complement(seq)
-                seq_lst.append(seq)
+                trans[key_][2].append([left, right])
+        adjacent_thresh = 5
+        for key_, [chrom, strand, exons] in list(trans.items()):  # merge adjacent exons
+            exons.sort()
+            tmp_exons = [exons[0]]
+            for i in range(1, len(exons)):
+                if exons[i][0] - tmp_exons[-1][1] <= adjacent_thresh:
+                    tmp_exons[-1][1] = max(tmp_exons[-1][1], exons[i][1])
+                else:
+                    tmp_exons.append(exons[i])
+            trans[key_] = [chrom, strand, tmp_exons]
+        seq_dict = {}
+        fasta_keys = set(fa.keys())
+        for key_, [chrom, strand, exons] in list(trans.items()):
+            # fisheye accepts both GTF/FASTA naming conventions (1 vs chr1).
+            chrom = str(chrom)
+            chrom_candidates = [chrom]
+            if chrom.startswith('chr'):
+                chrom_candidates.append(chrom[3:])
             else:
-                seq_lst.append(seq)
-        seq = "".join(seq_lst)
-        seq_dict[key_] = seq
-    log.info(f"save results to {output_fa_path}")
-    with open(output_fa_path, 'w') as f:
-        for (gene_name, tran_id), seq in seq_dict.items():
-            f.write(f">{gene_name}_{tran_id}\n")
-            f.write(f"{seq}\n")
+                chrom_candidates.append('chr' + chrom)
+            fasta_chrom = next((candidate for candidate in chrom_candidates
+                                if candidate in fasta_keys), None)
+            if fasta_chrom is None:
+                raise KeyError(
+                    f"Chromosome {chrom!r} from GTF was not found in FASTA "
+                    f"(also tried {chrom_candidates[1]!r})"
+                )
+            seq_lst = []
+            for i in range(len(exons)):
+                seq = fa[fasta_chrom][exons[i][0] - 1:exons[i][1]].seq
+                if strand == '-':
+                    seq = reverse_complement(seq)
+                    seq_lst.append(seq)
+                else:
+                    seq_lst.append(seq)
+            if strand == "-":
+                seq_lst.reverse()
+            seq = "".join(seq_lst)
+            seq_dict[key_] = seq
+        if not seq_dict or any(not seq for seq in seq_dict.values()):
+            raise ValueError("Transcript extraction produced no sequences or an empty sequence")
+        # Publish only a complete FASTA; failed extraction must not leave an empty file.
+        output_dir = os.path.dirname(os.path.abspath(output_fa_path))
+        fd, temp_path = tempfile.mkstemp(prefix=".transcript-", suffix=".fa", dir=output_dir)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                for (gene_id, tran_id), seq in seq_dict.items():
+                    f.write(f">{gene_id}_{tran_id}\n{seq}\n")
+            os.replace(temp_path, output_fa_path)
+        finally:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+        log.info(f"Saved {len(seq_dict)} transcripts to {output_fa_path}")
+    finally:
+        fa.close()
 
 def generate_target_seqs(
                         source,

@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import zipfile
 
-RESULT_SUFFIXES = frozenset({".csv", ".html"})
+RESULT_SUFFIXES = frozenset({".xlsx", ".html"})
 
 
 def restrict_result_archive(archive_path: Path) -> None:

@@ -106,6 +106,8 @@ class TaskRead(TaskBase):
     result_url: Optional[str] = None
     yaml_content: Optional[str] = None
     error_message: Optional[str] = None
+    no_filtered_probes: bool = False
+    raw_file: Optional[str] = None
     paused_from: Optional[Literal["pending", "running"]] = None
 
 # --- Helper Function ---
@@ -180,6 +182,14 @@ async def get_tasks(
     """
     tasks_dicts = load_user_tasks(current_user.username)
     filtered_tasks = [TaskRead(**t) for t in tasks_dicts]
+    for task in filtered_tasks:
+        if task.status == "completed" and not task.no_filtered_probes:
+            directory = get_results_dir() / task.id
+            log_path = directory / "run.log"
+            if log_path.exists() and "Using raw data for final result" in log_path.read_text(encoding="utf-8", errors="replace"):
+                task.no_filtered_probes = True
+                task.raw_file = next((p.name for p in directory.glob("*_raw.xlsx")), None)
+
     
     # Filter by status
     if status_filter and status_filter != "all":
@@ -504,6 +514,8 @@ async def _run_uprobe_task(username: str, task_id: str):
                 update_task_in_db(username, task)
                 return
             task.status = "completed"
+            task.no_filtered_probes = result.get("no_filtered_probes", False)
+            task.raw_file = result.get("raw_file")
             task.progress = 100
             task.result_url = str(zip_path.relative_to(results_base_dir))
             task.updated_at = datetime.now()
@@ -574,11 +586,11 @@ async def list_task_files(
     
     files = []
     for file_path in task_results_dir.iterdir():
-        if file_path.is_file() and not file_path.name.endswith('.zip'):
+        if file_path.is_file() and file_path.suffix in {'.xlsx', '.html'}:
             file_info = {
                 "name": file_path.name,
                 "size": file_path.stat().st_size,
-                "type": "csv" if file_path.suffix == ".csv" else "html" if file_path.suffix == ".html" else "other",
+                "type": "xlsx" if file_path.suffix == ".xlsx" else "csv" if file_path.suffix == ".csv" else "html" if file_path.suffix == ".html" else "other",
                 "url": f"/task/{task_id}/file/{file_path.name}"
             }
             files.append(file_info)
@@ -612,7 +624,7 @@ async def download_single_file(
     if not str(file_path.resolve()).startswith(str(task_results_dir.resolve())):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    media_type = "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
     
     return FileResponse(
         path=str(file_path),

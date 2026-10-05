@@ -1,3 +1,4 @@
+from uprobe.core.report.excel import save_xlsx
 import time
 import typing as T
 from pathlib import Path
@@ -223,15 +224,18 @@ class UProbeAPI:
         return probe_df
 
     def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False) -> pd.DataFrame:
+        self.no_filtered_probes = False
+        self.raw_file = None
         log.info("Adding attributes to probes...")
         df_final = add_attributes(df_probes, self.protocol, self.genome)
+        self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
-        self._csv_filename = f"{name}_{time_str}.csv"
+        self._csv_filename = f"{name}_{time_str}.xlsx"
         if raw_csv:
-            raw_path = self.output_dir / f"{name}_{time_str}_raw.csv"
+            raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
             log.info(f"Saving raw results to {raw_path}")
-            df_final.to_csv(raw_path, index=False)
+            save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
@@ -242,21 +246,26 @@ class UProbeAPI:
             df_processed = post_process(df_final, self.protocol)
             
             if df_processed.empty:
-                log.warning("No probes remaining after post-processing filters. Using raw data for final result.")
-                output_path = self.output_dir / f"{name}_{time_str}.csv"
-                log.info(f"Saving {df_final.shape[0]} raw probes to {output_path} (post-processing resulted in empty dataset)")
-                df_final.to_csv(output_path, index=False)
-                return df_final
+                log.warning("No probes passed post-processing. Raw candidates are available for inspection only.")
+                raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
+                save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
+                self.no_filtered_probes = True
+                self.raw_file = raw_path.name
+                # Preserve column headers even if post_process returns a bare
+                # empty DataFrame. Raw candidates are not passing probes.
+                df_processed = df_final.iloc[:0].copy()
+                save_xlsx(df_processed, self.protocol, (self.output_dir / self._csv_filename).with_suffix(".xlsx"))
+                return df_processed
             else:
-                output_path = self.output_dir / f"{name}_{time_str}.csv"
+                output_path = self.output_dir / f"{name}_{time_str}.xlsx"
                 log.info(f"Saving {df_processed.shape[0]} processed probes to {output_path}")
-                df_processed.to_csv(output_path, index=False)
+                save_xlsx(df_processed, self.protocol, (output_path).with_suffix(".xlsx"))
                 return df_processed
         else:
             log.info("No post-processing steps configured, using raw data as final result")
-            output_path = self.output_dir / f"{name}_{time_str}.csv"
+            output_path = self.output_dir / f"{name}_{time_str}.xlsx"
             log.info(f"Saving {df_final.shape[0]} probes to {output_path}")
-            df_final.to_csv(output_path, index=False)
+            save_xlsx(df_final, self.protocol, (output_path).with_suffix(".xlsx"))
             return df_final
 
     def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False, threads: int = 10) -> pd.DataFrame:      
