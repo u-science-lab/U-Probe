@@ -253,7 +253,9 @@ class UProbeAPI:
                 self.raw_file = raw_path.name
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
+                stages = df_processed.attrs.get('post_process_stages', [])
                 df_processed = df_final.iloc[:0].copy()
+                df_processed.attrs['post_process_stages'] = stages
                 save_xlsx(df_processed, self.protocol, (self.output_dir / self._csv_filename).with_suffix(".xlsx"))
                 return df_processed
             else:

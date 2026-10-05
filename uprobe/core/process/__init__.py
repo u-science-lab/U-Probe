@@ -3,6 +3,7 @@ import re
 from .otp import avoid_otp
 from .equal_space import equal_space
 from .summary import process_summary
+from .sequence_filter import apply_sequence_filter
 from uprobe.core.utils import get_logger
 
 logger = get_logger(__name__)
@@ -51,6 +52,9 @@ def filter_table(df: pd.DataFrame,
                   filters: dict
                   ) -> pd.DataFrame:
     for filter_name, filter_config in filters.items():
+        if isinstance(filter_config, dict) and filter_config.get('type') == 'sequence_pattern':
+            df = apply_sequence_filter(df, filter_config)
+            continue
         if isinstance(filter_config, dict) and 'condition' in filter_config:
             condition = filter_config['condition']
             if isinstance(condition, str):
@@ -113,11 +117,18 @@ def remove_overlap(df: pd.DataFrame,
 def post_process(df: pd.DataFrame, 
                  config: dict
                  ) -> pd.DataFrame:
+    stages = []
+    previous_count = len(df)
+    def record(name):
+        nonlocal previous_count
+        stages.append({'stage': name, 'before': previous_count, 'after': len(df), 'removed': previous_count - len(df)})
+        previous_count = len(df)
     processes = config.get('post_process', {})
     if 'filters' in processes and processes['filters']:
         logger.info("Filtering the table")
         filters = processes['filters']
         df = filter_table(df, filters)
+        record('Filters')
     if "avoid_otp" in processes and processes['avoid_otp']:
         logger.info("Avoiding OTP")
         config = processes['avoid_otp']
@@ -204,13 +215,16 @@ def post_process(df: pd.DataFrame,
                         df = df[df['target'] != target].reset_index(drop=True)
         else:
             logger.error("No mapped_sites columns found in DataFrame, please check the input data")
+        record('Avoid off-target priming')
     if "remove_overlap" in processes and processes['remove_overlap']:
         logger.info("Removing overlap")
         location_interval = processes['remove_overlap'].get('location_interval', 0)
         df = remove_overlap(df, config, location_interval)
+        record('Remove overlap')
     if "equal_space" in processes and processes['equal_space']:
         logger.info("Equalizing space")
         df = equal_space(df, processes['equal_space'])
+        record('Equal spacing')
     if 'sorts' in processes and processes['sorts']:
         logger.info("Sorting the table")
         sorts = processes['sorts']
@@ -219,6 +233,8 @@ def post_process(df: pd.DataFrame,
         sort_keys = pos_fields + neg_fields
         is_ascending = [True] * len(pos_fields) + [False] * len(neg_fields)
         df = sort_table(df, sort_keys, is_ascending)
+        record('Sort')
     if 'summary' in processes and processes['summary']:
         logger.info("Summary configuration found - will be processed during report generation")
+    df.attrs['post_process_stages'] = stages
     return df
