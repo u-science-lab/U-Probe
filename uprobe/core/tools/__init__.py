@@ -31,8 +31,8 @@ def _bowtie2_index_exists(index_prefix: Path) -> bool:
     )
 
 def build_transcripts_index(gtf: Path,
-                             fasta: Path, 
-                             outdir: Path, 
+                             fasta: Path,
+                             outdir: Path,
                              threads: int = 10,
                              aligner: str = "bowtie2"
                             ) -> str:
@@ -76,7 +76,7 @@ def build_genome(genome: dict,
                     f"{prefix}.rev.1.bt2",
                     f"{prefix}.rev.2.bt2"
                     ]
-    blast_index_files = [ 
+    blast_index_files = [
                     f"{prefix}.ndb",
                     f"{prefix}.nin",
                     f"{prefix}.nhr",
@@ -105,7 +105,7 @@ def build_genome(genome: dict,
             elif aligner == "blast":
                 if all((index_dir.parent / file_name).exists() for file_name in blast_index_files):
                     log.info(f"index already exists: {index_dir.parent}")
-                else:          
+                else:
                     build_blast_db(fasta_path, index_dir, title=prefix)
             elif aligner == "mmseqs":
                 if all((index_dir.parent / file_name).exists() for file_name in mmseqs_index_files):
@@ -118,9 +118,9 @@ def build_genome(genome: dict,
         if aligner not in {"bowtie2", "blast"}:
             continue
         tran_index_dir = fasta_path.parent / f"{aligner}_transcript"
-        build_transcripts_index(gtf=Path(genome['gtf']), 
-                                fasta=fasta_path, 
-                                outdir=tran_index_dir, 
+        build_transcripts_index(gtf=Path(genome['gtf']),
+                                fasta=fasta_path,
+                                outdir=tran_index_dir,
                                 threads=threads,
                                 aligner=aligner)
     return genome

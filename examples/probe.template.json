@@ -10,21 +10,33 @@
     "barcodes": {
       "count": 1,
       "barcodes": {
-        "BC1": { "name": "BC1" }
+        "BC1": {
+          "name": "BC1"
+        }
       }
     },
     "probes": {
       "example_probe": {
         "template": "{binding}{barcode}",
         "parts": {
-          "binding": { "expr": "rc(target_region)" },
-          "barcode": { "expr": "encoding[target]['BC1']" }
+          "binding": {
+            "expr": "rc(target_region)"
+          },
+          "barcode": {
+            "expr": "encoding[target]['BC1']"
+          }
         }
       }
     },
     "attributes": {
-      "example_gc": { "target": "target_region", "type": "gc_content" },
-      "example_tm": { "target": "example_probe.binding", "type": "annealing_temperature" },
+      "example_gc": {
+        "target": "target_region",
+        "type": "gc_content"
+      },
+      "example_tm": {
+        "target": "example_probe.binding",
+        "type": "annealing_temperature"
+      },
       "example_mapped_genes": {
         "target": "target_region",
         "type": "mapped_genes",
@@ -33,14 +45,32 @@
     },
     "post_process": {
       "filters": {
-        "example_gc": { "condition": "example_gc >= 0.4 & example_gc < 0.6" },
-        "example_tm": { "condition": "example_tm >= 36" }
+        "example_gc": {
+          "condition": "example_gc >= 0.4 & example_gc < 0.6"
+        },
+        "example_tm": {
+          "condition": "example_tm >= 36"
+        },
+        "example_sequence_ends": {
+          "type": "sequence_pattern",
+          "target": "example_probe",
+          "exclude_patterns": [
+            "^[GC]{2}",
+            "[GC]{2}$"
+          ]
+        }
       },
       "sorts": {
-        "is_ascending": ["example_mapped_genes"],
-        "is_descending": ["n_trans"]
+        "is_ascending": [
+          "example_mapped_genes"
+        ],
+        "is_descending": [
+          "n_trans"
+        ]
       },
-      "remove_overlap": { "location_interval": 25 }
+      "remove_overlap": {
+        "location_interval": 25
+      }
     }
   }
 }

@@ -46,4 +46,3 @@ class TranscriptExtractionTests(unittest.TestCase):
         self.assertFalse(self.out.exists())
 
 if __name__=='__main__': unittest.main()
-

@@ -8,6 +8,7 @@ import yaml
 from uprobe.http.utils.result_archive import RESULT_SUFFIXES
 
 def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, output_dir: str, threads: int, raw_csv: bool, continue_invalid_targets: bool, log_path: str) -> dict:
+    # An absolute Python executable does not activate its Conda toolchain.
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
