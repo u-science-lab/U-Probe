@@ -13,6 +13,8 @@ __pycache__/
 **/config.ini
 **/fisheye
 **/cloudflare deploy.md
+**/benchmarks
+
 # Windows Alternate Data Streams (Zone.Identifier files)
 *:Zone.Identifier
 *:Zone.Identifier:Zone.Identifier
