@@ -5,7 +5,7 @@ import sys
 import os
 import traceback
 import yaml
-from uprobe.http.utils.result_archive import RESULT_SUFFIXES
+from uprobe.http.utils.result_archive import RESULT_SUFFIXES, restrict_result_archive
 
 def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, output_dir: str, threads: int, raw_csv: bool, continue_invalid_targets: bool, log_path: str) -> dict:
     # An absolute Python executable does not activate its Conda toolchain.
@@ -56,6 +56,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
             for p in out_dir.iterdir():
                 if p.is_file() and p.suffix in RESULT_SUFFIXES:
                     zf.write(p, p.name)
+        restrict_result_archive(zip_path)
         return {"ok": True, "zip_name": zip_name, "xlsx_files": xlsx_files, "html_files": html_files, "no_filtered_probes": getattr(api, "no_filtered_probes", False), "raw_file": getattr(api, "raw_file", None)}
     except Exception:
         tb = traceback.format_exc()

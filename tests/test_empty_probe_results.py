@@ -20,8 +20,7 @@ def test_empty_filters_preserve_raw_without_returning_it(tmp_path, monkeypatch, 
     assert not list(tmp_path.glob("*.csv"))
     with ZipFile(tmp_path / api.raw_file) as book:
         assert b"p1" in book.read("xl/sharedStrings.xml")
-    with ZipFile(tmp_path / api._csv_filename) as book:
-        assert b'r="2"' not in book.read("xl/worksheets/sheet1.xml")
+    assert not (tmp_path / api._csv_filename).exists()
 
 
 def test_passing_probes_clear_previous_warning(tmp_path, monkeypatch):
