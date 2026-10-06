@@ -35,6 +35,13 @@ class TranscriptExtractionTests(unittest.TestCase):
     def test_explicit_gene_id_takes_precedence(self):
         self.run_extract('chr1',[self.exon('chr1',1,4,'gene_id "ENSG1"; transcript_id "tx"; db_xref "GeneID:42";')])
         self.assertTrue(self.out.read_text().startswith('>ENSG1_tx\n'))
+    def test_short_intron_is_spliced_on_both_strands(self):
+        for strand, expected in [('+', 'AAAACCGG'), ('-', 'CCGGTTTT')]:
+            with self.subTest(strand=strand):
+                attrs='gene_id "g"; transcript_id "t";'
+                self.run_extract('chr1', [self.exon('chr1',7,10,attrs,strand),
+                    self.exon('chr1',1,4,attrs,strand)])
+                self.assertEqual(self.out.read_text(), f'>g_t\n{expected}\n')
     def test_no_matching_reference_does_not_overwrite_file(self):
         self.out.write_text('previous valid output')
         with self.assertRaisesRegex(ValueError,'No usable transcript exons'):

@@ -266,16 +266,9 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
                 trans[key_] = [chrom, strand, [[left, right]]]
             else:
                 trans[key_][2].append([left, right])
-        adjacent_thresh = 5
-        for key_, [chrom, strand, exons] in list(trans.items()):  # merge adjacent exons
+        # Splice annotated exons exactly: even a short gap is not mature RNA.
+        for chrom, strand, exons in trans.values():
             exons.sort()
-            tmp_exons = [exons[0]]
-            for i in range(1, len(exons)):
-                if exons[i][0] - tmp_exons[-1][1] <= adjacent_thresh:
-                    tmp_exons[-1][1] = max(tmp_exons[-1][1], exons[i][1])
-                else:
-                    tmp_exons.append(exons[i])
-            trans[key_] = [chrom, strand, tmp_exons]
         seq_dict = {}
         fasta_keys = set(fa.keys())
         for key_, [chrom, strand, exons] in list(trans.items()):
