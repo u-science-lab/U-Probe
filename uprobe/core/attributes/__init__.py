@@ -10,6 +10,9 @@ def add_attributes(
         genome: dict,
 ) -> pd.DataFrame:
     attributes: dict = protocol['attributes']
+    def cached(series, function):
+        values = {sequence: function(sequence) for sequence in series.unique()}
+        return series.map(values)
     task_id = secrets.token_hex(6)  
     for attr_name, attr in attributes.items():
         target = attr.get('target')
@@ -90,24 +93,15 @@ def add_attributes(
                 index_prefix = fasta_path.parent / 'bowtie2_transcript' / fasta_path.stem
                 tmp_dir = Path("tmp")
                 tmp_dir.mkdir(exist_ok=True, parents=True)
-                if 'exon_name' in df_probes.columns and 'start' in df_probes.columns:
-                    # RNA format (source: exon)
-                    recname2seq = {f"{row['exon_name']}_{row['start']}": row[actual_target] for _, row in df_probes.iterrows()}
-                    n_mapped_genes = count_n_bowtie2_aligned_genes(
-                        str(tmp_dir), recname2seq, task_id, str(index_prefix),
-                        attr.get("threads", 10)
-                    )
-                    mapped_genes_values = [n_mapped_genes.get(f"{row['exon_name']}_{row['start']}", 0) for _, row in df_probes.iterrows()]
-                elif 'probe_id' in df_probes.columns:
-                    # DNA format (source: genome)
-                    recname2seq = {f"{row['probe_id']}": row[actual_target] for _, row in df_probes.iterrows()}
-                    n_mapped_genes = count_n_bowtie2_aligned_genes(
-                        str(tmp_dir), recname2seq, task_id, str(index_prefix),
-                        attr.get("threads", 10)
-                    )
-                    mapped_genes_values = [n_mapped_genes.get(f"{row['probe_id']}", 0) for _, row in df_probes.iterrows()]
-                else:
-                    raise ValueError(f"Unsupported DataFrame structure for n_mapped_genes attribute")
+                # Row keys distinguish lengths at the same exon/start position.
+                unique_sequences = list(dict.fromkeys(df_probes[actual_target]))
+                recname2seq = {str(i): seq for i, seq in enumerate(unique_sequences)}
+                n_mapped_genes = count_n_bowtie2_aligned_genes(
+                    str(tmp_dir), recname2seq, task_id, str(index_prefix),
+                    attr.get("threads", 10)
+                )
+                sequence_hits = {seq: n_mapped_genes.get(str(i), 0) for i, seq in enumerate(unique_sequences)}
+                mapped_genes_values = [sequence_hits[seq] for seq in df_probes[actual_target]]
                 df_probes[attr_name] = mapped_genes_values
                 import shutil
                 shutil.rmtree(tmp_dir)
@@ -116,16 +110,18 @@ def add_attributes(
                     f"Aligner {attr['aligner']} is not implemented."
                 )
         elif attr_type == "annealing_temperature":
-            vals = df_probes[actual_target].apply(cal_temp)
+            vals = cached(df_probes[actual_target], cal_temp)
             df_probes[attr_name] = vals
         elif attr_type == "gc_content":
-            vals = df_probes[actual_target].apply(cal_gc_content).round(2)
+            vals = cached(df_probes[actual_target], cal_gc_content).round(2)
             df_probes[attr_name] = vals
+        elif attr_type == "length":
+            df_probes[attr_name] = df_probes[actual_target].str.len().astype("Int64")
         elif attr_type == "fold_score":
-            vals = df_probes[actual_target].apply(cal_target_fold_score).round(2)
+            vals = cached(df_probes[actual_target], cal_target_fold_score).round(2)
             df_probes[attr_name] = vals
         elif attr_type == "self_match":
-            vals = df_probes[actual_target].apply(cal_self_match).round(2)
+            vals = cached(df_probes[actual_target], cal_self_match).round(2)
             df_probes[attr_name] = vals
         elif attr_type == "blocks":
             if 'start' not in df_probes.columns:

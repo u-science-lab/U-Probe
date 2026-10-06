@@ -4,6 +4,7 @@ import os
 from os.path import exists
 import typing as t
 from pyfaidx import Fasta
+from .sampling import iter_target_windows
 import shutil
 import subprocess
 
@@ -78,25 +79,18 @@ def write_fastq(outdir, gene, recname2seq: t.Mapping[str, str]):
             f.write("~"*len(seq)+"\n")
     return fq
 
-def extract_fasta(fasta_path, target, 
-                    min_length, overlap):
-    fa = Fasta(str(fasta_path))
-    chrom, region = target.split(':')
-    start, end = region.split('-')
-    seq = fa[chrom][int(start):int(end)].seq.upper()
-    seq_list = []
-    m = 1
-    for i in range(0, len(seq) - min_length + 1,  min_length - overlap):
-        tem = seq[i:i + min_length]
-        if len(tem) == min_length: 
-            sub_start = i + 1  
-            sub_end = i + min_length
-            sub_region = f"{sub_start}-{sub_end}"
-            id = f"{target}_{m}"
-            seq_list.append([id, target, sub_region, tem])
-            m += 1
-    return seq_list
-    
+def extract_fasta(fasta_path, target, min_length, overlap=None, step=None):
+    with Fasta(str(fasta_path)) as fa:
+        chrom, region = target.split(':')
+        start, end = region.split('-')
+        seq = fa[chrom][int(start):int(end)].seq.upper()
+    return [
+        [f"{target}_{n}", target, f"{i + 1}-{end}", tem]
+        for n, (i, end, tem) in enumerate(
+            iter_target_windows(seq, min_length, step, overlap), start=1
+        )
+    ]
+
 def gene_barcode(config: dict) -> dict:
     """
     Generates a dictionary of gene names to anchor barcodes

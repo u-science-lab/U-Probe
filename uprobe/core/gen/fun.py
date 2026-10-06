@@ -6,6 +6,7 @@ import typing as t
 from pyfaidx import Fasta
 
 from uprobe.core.utils import *
+from uprobe.core.sampling import normalize_sampling, iter_target_windows
 
 log = get_logger(__name__)
 
@@ -104,7 +105,7 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
         df_exons = df_gene[df_gene.type == 'CDS'].copy()
         if df_exons.shape[0] == 0:
             df_exons = df_gene[df_gene.type == 'exon'].copy()
-        df_exons = df_exons[df_exons.length > min_length]
+        df_exons = df_exons[df_exons.length >= min_length]
         if df_exons.shape[0] == 0:
             raise ValueError(f"Gene {gene} can't found any exon records.")
         df_exons['transcript_name'] = df_exons['info'].str.extract(r'transcript_id\s+"([^"]+)"')[0]
@@ -143,11 +144,11 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             gene2exons[gene].append(exon)
     return gene2exons
 
-def get_exon_seq(genes, fa, gtf):
+def get_exon_seq(genes, fa, gtf, min_length=40):
     fa = Fasta(fa)
     genelist = pd.DataFrame(genes, columns=['geneID'])
     df_gtf = read_gtf(gtf, extract_fields=['gene_name', "transcript_id"], get_length=True)
-    gene2exons = extract_exons_rca(df_gtf, fa, genelist)
+    gene2exons = extract_exons_rca(df_gtf, fa, genelist, min_length)
     return gene2exons
 
 def change_chrom_name(chrom):
@@ -171,7 +172,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             raise ValueError(f"Gene {gene} not exists in GTF file.")
         # extract CDS/exon
         df_exons = df_gene[df_gene.type.isin(['CDS', 'exon'])].copy()
-        df_exons = df_exons[df_exons.length > min_length]
+        df_exons = df_exons[df_exons.length >= min_length]
         if df_exons.shape[0] == 0:
             raise ValueError(f"Gene {gene} can't find any exon records.")
         gene_features[gene] = []
@@ -201,7 +202,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             gene_features[gene].append(("exon", name, seq, n_trans))
         # extract utr
         df_utrs = df_gene[df_gene.type == 'UTR'].copy()
-        df_utrs = df_utrs[df_utrs.length > min_length]
+        df_utrs = df_utrs[df_utrs.length >= min_length]
         if df_utrs.shape[0] > 0:
             for idx, row in df_utrs.iterrows():
                 chr_, start, end, strand = str(row['chr']), row['start'], row['end'], row['strand']
@@ -321,51 +322,54 @@ def generate_target_seqs(
                         fasta_path, 
                         gtf_path, 
                         min_length: int = 40, 
-                        overlap: int = 20
+                        overlap: t.Optional[int] = None,
+                        step: t.Optional[int] = None
                          ):
+    lower, _, step = normalize_sampling(min_length, step, overlap)
     if source == 'exon' or source == 'CDS':
-        exon_info = get_exon_seq(targets, fasta_path, gtf_path)
+        exon_info = get_exon_seq(targets, fasta_path, gtf_path, lower)
         data_list = [] 
         for gene_name, exon_list in exon_info.items():
             n = 1
             for j, exon_data in enumerate(exon_list, start=1):
                 exon_name, trans_name, seq, n_trans = exon_data
-                for i in range(0, len(seq) - min_length + 1,  min_length - overlap):
-                    tem = seq[i:i + min_length]
-                    if len(tem) == min_length: 
-                        start = i + 1  
-                        end = i + min_length
-                        gene_id = f"{gene_name}_{n}"
-                        sub_region = f"{start}_{end}"
-                        n += 1
-                        data_list.append([gene_id, gene_name, sub_region, exon_name, trans_name, start, end, tem, n_trans])
+                for i, window_end, tem in iter_target_windows(seq, min_length, step):
+                    start = i + 1
+                    end = window_end
+                    gene_id = f"{gene_name}_{n}"
+                    sub_region = f"{start}_{end}"
+                    n += 1
+                    data_list.append([gene_id, gene_name, sub_region, exon_name, trans_name, start, end, tem, n_trans])
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region','exon_name', 'transcript_names','start', 
                                                 'end', 'target_region', 'n_trans'])
         return data
     elif source == 'UTR':
-        utr_info = extract_gene_features(targets, fasta_path, gtf_path)
+        with Fasta(fasta_path) as fa:
+            df_gtf = read_gtf(gtf_path, extract_fields=['gene_name', 'transcript_id'])
+            utr_info = extract_gene_features(df_gtf, fa, pd.DataFrame(targets, columns=['geneID']), lower)
         data_list = []
         for gene_name, utr_list in utr_info.items():
             n = 1
             for j, utr_data in enumerate(utr_list, start=1):
-                utr_name, trans_name, seq, n_trans = utr_data
+                utr_type, utr_name, seq, n_trans = utr_data
+                if utr_type == 'exon':
+                    continue
+                trans_name = []
                 # extract target region seqs
-                for i in range(0, len(seq) - min_length + 1,  min_length - overlap):
-                    tem = seq[i:i + min_length]
-                    if len(tem) == min_length: 
-                        start = i + 1  
-                        end = i + min_length
-                        gene_id = f"{gene_name}_{n}"
-                        sub_region = f"{start}_{end}"
-                        n += 1
-                        data_list.append([gene_id, gene_name, sub_region, utr_name, trans_name, start, end, tem, n_trans])
+                for i, window_end, tem in iter_target_windows(seq, min_length, step):
+                    start = i + 1
+                    end = window_end
+                    gene_id = f"{gene_name}_{n}"
+                    sub_region = f"{start}_{end}"
+                    n += 1
+                    data_list.append([gene_id, gene_name, sub_region, utr_name, trans_name, start, end, tem, n_trans])
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'utr_name', 'transcript_names','start', 
                                                 'end', 'target_region', 'n_trans'])
         return data
     elif source == 'genome':
         data_list = []
         for target in targets:
-            seq_list = extract_fasta(fasta_path, target, min_length, overlap)
+            seq_list = extract_fasta(fasta_path, target, min_length, step=step)
             data_list.extend(seq_list)
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'target_region'])
         return data

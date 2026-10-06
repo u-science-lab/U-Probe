@@ -20,7 +20,7 @@ def format_transcripts(value):
 
 def sequence_groups(protocol):
     """Use configured sequence names, preserving the protocol's order."""
-    return list(dict.fromkeys(["target_region", *protocol.get("extracts", {}), *protocol.get("probes", {})]))
+    return list(dict.fromkeys(["target_region", *(["target_parts"] if protocol.get("extracts", {}).get("target_region", {}).get("layout") else []), *protocol.get("extracts", {}), *protocol.get("probes", {})]))
 
 
 def column_group(column, protocol):

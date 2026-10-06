@@ -15,8 +15,8 @@ encoding:
 extracts:
   target_region:
     source:   # genome | exon | CDS | UTR
-    length:   # int
-    overlap:   # int
+    length:   # positive int or [min, max], inclusive
+    step:   # positive int; distance between candidate starts
 
 probes:
 

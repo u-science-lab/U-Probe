@@ -265,6 +265,19 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     if 'target_region' not in protocol_config.get('extracts', {}):
         raise ValueError("Protocol must define 'extracts.target_region'")
     
+    from .sampling import normalize_sampling
+    region = protocol_config['extracts']['target_region']
+    _, _, region['step'] = normalize_sampling(region.get('length'), region.get('step'), region.get('overlap'))
+    region.pop('overlap', None)
+    if 'layout' in region:
+        from .layout import compile_layout
+        compile_layout(region['layout'], region['length'])
+        if 'target_parts' in protocol_config.get('probes', {}):
+            raise ValueError('target_parts is reserved for layout references')
+
+    from .layout import validate_layout_references
+    validate_layout_references(protocol_config)
+
     # 2. Determine mode (DNA vs RNA)
     source = protocol_config['extracts']['target_region'].get('source', 'genome')
     is_dna_mode = (source == 'genome')

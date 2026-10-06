@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from .sampling import normalize_sampling, iter_target_windows
+from .layout import compile_layout, expand_layout_candidates, validate_layout_references
 from .attributes import add_attributes
 from .gen.barcodes import quick_generate
 from .gen.fun import generate_target_seqs, validate_targets
@@ -141,6 +143,10 @@ class UProbeAPI:
         sys.stdout.flush()
         log.info("Generating target region sequences...")
         extract_params = self.protocol['extracts']['target_region']
+        _, _, step = normalize_sampling(extract_params['length'], extract_params.get('step'), extract_params.get('overlap'))
+        validate_layout_references(self.protocol)
+        compiled = compile_layout(extract_params['layout'], extract_params['length']) if 'layout' in extract_params else None
+        extraction_length = [min(compiled[1]), max(compiled[1])] if compiled else extract_params['length']
         genome_targets, direct_targets = self._parse_targets()
         dfs = []
         # 1. Process Genome Targets
@@ -152,8 +158,8 @@ class UProbeAPI:
                     targets=genome_targets,
                     fasta_path=self.genome['fasta'],
                     gtf_path=self.genome['gtf'],
-                    min_length=extract_params['length'],
-                    overlap=extract_params['overlap']
+                    min_length=extraction_length,
+                    step=step
                 )
                 if not df_genome.empty:
                     dfs.append(df_genome)
@@ -164,20 +170,16 @@ class UProbeAPI:
         # 2. Process Direct Targets
         if direct_targets:
             log.info(f"Processing {len(direct_targets)} custom sequence targets...")
-            min_length = extract_params['length']
-            overlap = extract_params['overlap']
+            min_length = extraction_length
             data_list = []
             for target_name, seq in direct_targets.items():
                 n = 1
-                for i in range(0, len(seq) - min_length + 1, min_length - overlap):
-                    tem = seq[i:i + min_length]
-                    if len(tem) == min_length:
-                        start = i + 1
-                        end = i + min_length
-                        probe_id = f"{target_name}_{n}"
-                        n += 1
-                        sub_region = f"{start}-{end}"
-                        data_list.append([probe_id, target_name, sub_region, tem])
+                for i, end, tem in iter_target_windows(seq, min_length, step):
+                    start = i + 1
+                    probe_id = f"{target_name}_{n}"
+                    n += 1
+                    sub_region = f"{start}-{end}"
+                    data_list.append([probe_id, target_name, sub_region, tem])
             
             df_direct = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region','target_region'])
             if not df_direct.empty:
@@ -204,6 +206,8 @@ class UProbeAPI:
                     lambda row: f"{int(row['start'])}-{int(row['end'])}" if pd.notnull(row['start']) else None, 
                     axis=1
                 )
+        if compiled:
+            df_final = expand_layout_candidates(df_final, compiled)
         log.info(f"Total generated target sequences: {len(df_final)}")
         return df_final
 
@@ -214,6 +218,8 @@ class UProbeAPI:
                 "target_region": row['target_region'],
                 "target": row.get('target') or row.get('gene'),
                 "encoding": self.protocol['encoding'],
+                "target_parts": {name: row[f'target_parts.{name}'] for name in
+                                 self.protocol.get('extracts', {}).get('target_region', {}).get('layout', {}).get('parts', {})},
             }
             for _, row in df_targets.iterrows()
         ]

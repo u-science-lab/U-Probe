@@ -124,7 +124,7 @@ targets:
 extracts:
   source: <genome|exon|CDS|UTR; omit if supplied by selected probe_method preset>
   length: <int_bp; omit if supplied by selected probe_method preset>
-  overlap: <int_bp; omit if supplied by selected probe_method preset>
+  step: <positive_int_bp; omit if supplied by selected probe_method preset>
 probe_method: <optional method name such as MiP-Seq, OpenFISH, MERFISH>
 probe_structure_mode: <preset_probe_json|advanced_yaml>
 probes_yaml: <only if advanced_yaml; must include root key 'probes'>
@@ -432,7 +432,7 @@ Follow this SOP exactly. Do not skip steps.
   - `encoding` only when resolved `probes` reference `encoding[target]['BCx']`
   - `extracts.target_region.source`
   - `extracts.target_region.length`
-  - `extracts.target_region.overlap`
+  - `extracts.target_region.step`
   - `probes`
 - Auto-generate `name` and `description` when the user does not provide them.
 - Collect `probe_method` when the user names a known assay or design method such as `MiP-Seq`.
@@ -512,7 +512,7 @@ Follow this SOP exactly. Do not skip steps.
 - If `probes` references `encoding[target]['BCx']` and barcode sequences are not user-provided, verify `barcode_length` is present before barcode generation. Missing `barcode_length` is a user-facing required parameter, not an auto-fixable validation issue.
 - If `probes` does not reference `encoding[target]`, verify barcode fields are not being invented unnecessarily.
 - Verify `extracts.target_region.source` is one of `genome`, `exon`, `CDS`, or `UTR`.
-- Verify `length` and `overlap` are integers.
+- Verify `length` is a positive integer or an inclusive `[min, max]` range, and `step` is a positive integer.
 - Verify `probes` came from either user-provided YAML or a selected `probe.json` preset.
 - If `probes` came from `probe.json`, verify the protocol `probes` mapping is structurally identical to the selected preset unless the user explicitly requested a subset or override.
 - For `MiP-Seq`, verify `mRNA`, `pad_probe`, and `amp_probe` are present when using the full preset.
@@ -651,3 +651,14 @@ Follow this SOP exactly. Do not skip steps.
 - If CLI execution fails, report the command, exit code, log path, and the last 20 relevant lines from the log.
 - If results are empty or missing, verify the output directory once and report the expected CSV and HTML paths.
 - On failure, still return the structured YAML block with `status: failed`, available paths, logs, command strings, and warnings.
+
+
+### Variable binding-part lengths
+When a method requires variable lengths for individual target parts, use
+`extracts.target_region.layout`, with `template` containing contiguous named
+placeholders and `parts.<name>.length` set to an integer or inclusive range.
+Gap parts may have length 0. Their sum must satisfy target_region.length.
+Reference actual sequences in probes as `target_parts['name']` or
+`rc(target_parts['name'])`; relative slices such as `[-6:]` are supported.
+Do not freeze dynamic part lengths into fixed target_region slices. Omit
+layout for fixed-slice presets such as MiP-seq unless explicitly requested.

@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Literal
+from typing import Union, List, Optional, Dict, Any, Literal
 from datetime import datetime
 import asyncio
 import yaml
@@ -76,7 +76,7 @@ class TaskParameters(BaseModel):
     target_regions: Optional[str] = None
     target_genes: Optional[str] = None
     whole_genome: Optional[bool] = None
-    probe_length: int
+    probe_length: Union[int, List[int]]
     probe_type: Optional[str] = None
     probe_name: Optional[str] = None
 
@@ -93,7 +93,7 @@ class TaskCreateBody(BaseModel):
     genome: str
     target_type: Literal["regions", "genes", "whole_genome"]
     target_value: Optional[str] = None # For regions or genes
-    probe_length: int
+    probe_length: Union[int, List[int]]
     tm_range: str
     gc_range: str
 

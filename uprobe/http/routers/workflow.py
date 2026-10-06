@@ -139,7 +139,18 @@ async def submit_task(
     try:
         contents = await file.read()
         yaml_content = yaml.safe_load(contents)
-        print("Received yaml content:", yaml_content)
+        from uprobe.core.sampling import normalize_sampling
+        region = yaml_content.get('extracts', {}).get('target_region', {})
+        try:
+            _, _, region['step'] = normalize_sampling(region.get('length'), region.get('step'), region.get('overlap'))
+            if 'layout' in region:
+                from uprobe.core.layout import compile_layout
+                compile_layout(region['layout'], region.get('length'))
+            from uprobe.core.layout import validate_layout_references
+            validate_layout_references(yaml_content)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        region.pop('overlap', None)
         
         # Generate unique task ID
         task_id = f"task-{uuid.uuid4()}"
@@ -193,6 +204,8 @@ async def submit_task(
             "message": "Task created successfully", 
             "data": {"job_id": task_id, "task_id": task_id}
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing task: {str(e)}")
 
