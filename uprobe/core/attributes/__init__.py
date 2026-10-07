@@ -1,5 +1,6 @@
 import secrets
 import os
+import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
@@ -8,6 +9,18 @@ def add_attributes(
         df_probes: pd.DataFrame,
         protocol: dict,
         genome: dict,
+) -> pd.DataFrame:
+    # A private scratch directory per call: concurrent workflows sharing a
+    # working directory must not share (and delete) each other's alignment files.
+    with tempfile.TemporaryDirectory(prefix=".uprobe-tmp-", dir=".") as tmp_root:
+        return _add_attributes(df_probes, protocol, genome, Path(tmp_root))
+
+
+def _add_attributes(
+        df_probes: pd.DataFrame,
+        protocol: dict,
+        genome: dict,
+        tmp_root: Path,
 ) -> pd.DataFrame:
     attributes: dict = protocol['attributes']
     def cached(series, function):
@@ -34,8 +47,8 @@ def add_attributes(
                 assert 'bowtie2' in genome.get('align_index', []), "Bowtie2 must be enabled in genome align_index" 
                 fasta_path = Path(genome['fasta'])
                 index_prefix = fasta_path.parent / 'bowtie2_genome' / fasta_path.stem
-                tmp_dir = Path("tmp")
-                tmp_dir.mkdir(exist_ok=True, parents=True)
+                tmp_dir = tmp_root / attr_name
+                tmp_dir.mkdir()
                 if 'probe_id' in df_probes.columns and 'target' in df_probes.columns:
                     # DNA format (source: genome)
                     recname2seq = {f"{row['probe_id']}": row[actual_target] for _, row in df_probes.iterrows()}
@@ -50,8 +63,6 @@ def add_attributes(
                     raise ValueError(f"Unsupported DataFrame structure for mapped_sites attribute")
                 df_probes[f"{attr_name}_num"] = [len(sites) for sites in mapped_sites]
                 df_probes[attr_name] = [sites for sites in mapped_sites]
-                import shutil
-                shutil.rmtree(tmp_dir)
             else:
                 raise NotImplementedError(
                     f"Aligner {attr['aligner']} is not implemented."
@@ -67,8 +78,8 @@ def add_attributes(
                     os.makedirs(str(index_prefix.parent), exist_ok=True)
                     from uprobe.core.tools.aligner import build_jf_index
                     build_jf_index(str(fasta_path), kmer_len, str(if_path), attr.get("threads", 10), attr.get("size", "1G"))
-                tmp_dir = Path("tmp")
-                tmp_dir.mkdir(exist_ok=True, parents=True)
+                tmp_dir = tmp_root / attr_name
+                tmp_dir.mkdir()
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}
                 kmer_counts = cal_kmer_count(
                     str(tmp_dir), 
@@ -80,8 +91,6 @@ def add_attributes(
                 )
                 kmer_count_values = [kmer_counts[f"{i}"] for i in range(len(df_probes))]
                 df_probes[attr_name] = kmer_count_values
-                import shutil
-                shutil.rmtree(tmp_dir)
             else:
                 raise NotImplementedError(f"Aligner {attr['aligner']} is not implemented.")
         elif attr_type in {"mapped_genes"}:
@@ -91,8 +100,8 @@ def add_attributes(
                 # fisheye calculates mapped genes against a transcriptome index,
                 # not against the genomic chromosome index.
                 index_prefix = fasta_path.parent / 'bowtie2_transcript' / fasta_path.stem
-                tmp_dir = Path("tmp")
-                tmp_dir.mkdir(exist_ok=True, parents=True)
+                tmp_dir = tmp_root / attr_name
+                tmp_dir.mkdir()
                 # Row keys distinguish lengths at the same exon/start position.
                 unique_sequences = list(dict.fromkeys(df_probes[actual_target]))
                 recname2seq = {str(i): seq for i, seq in enumerate(unique_sequences)}
@@ -103,8 +112,6 @@ def add_attributes(
                 sequence_hits = {seq: n_mapped_genes.get(str(i), 0) for i, seq in enumerate(unique_sequences)}
                 mapped_genes_values = [sequence_hits[seq] for seq in df_probes[actual_target]]
                 df_probes[attr_name] = mapped_genes_values
-                import shutil
-                shutil.rmtree(tmp_dir)
             else:
                 raise NotImplementedError(
                     f"Aligner {attr['aligner']} is not implemented."

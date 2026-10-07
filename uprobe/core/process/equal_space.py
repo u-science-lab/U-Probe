@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 from uprobe.core.utils import get_logger
+from .regions import region_bounds
 
 log = get_logger(__name__)
 
@@ -31,10 +32,10 @@ def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
             result_dfs.append(target_df)
         else:
             # if there is a sub_region column, sort by location and select evenly
-            if 'sub_region' in target_df.columns:
-                # extract the start position of sub_region and sort
-                target_df['_start_pos'] = target_df['sub_region'].str.split('-').str[0].astype(int)
-                target_df = target_df.sort_values('_start_pos')
+            if 'sub_region' in target_df.columns or 'start' in target_df.columns:
+                # sub_region is "start-end" or "start_end" depending on the source
+                target_df['_start_pos'] = region_bounds(target_df)['start']
+                target_df = target_df.sort_values('_start_pos', kind='stable')
                 target_df = target_df.drop('_start_pos', axis=1)
             indices = np.linspace(0, current_count - 1, number_desired, dtype=int)
             selected_df = target_df.iloc[indices].copy()
