@@ -11,23 +11,40 @@ import re
 import random
 import string
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 
 from uprobe.http.utils.paths import get_data_dir, get_config
+from uprobe.http.utils.agent_store import atomic_write_json, file_lock
 import secrets
 
 # --- Configuration ---
 config = get_config()
 
-# Read SECRET_KEY from environment variables, fallback to generating a random one
-# It is highly recommended to set SECRET_KEY in .env file for production
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    # Generate a random 32-byte hex string if not provided
-    SECRET_KEY = secrets.token_hex(32)
-    print(f"Warning: SECRET_KEY not found in environment. Using a randomly generated key for this session.")
+
+def load_or_create_secret_key(path) -> str:
+    """Return a signing key that survives restarts and is shared by all workers."""
+    try:
+        # O_EXCL: when several workers start together, exactly one creates the key.
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        for _ in range(50):
+            key = path.read_text(encoding="utf-8").strip()
+            if key:
+                return key
+            time.sleep(0.1)  # The creating worker has not written it yet.
+        raise RuntimeError(f"Secret key file {path} is empty; delete it or set SECRET_KEY")
+    key = secrets.token_hex(32)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(key)
+    print(f"Warning: SECRET_KEY not set in environment; generated one and saved it to {path}")
+    return key
+
+
+# Prefer SECRET_KEY from the environment (recommended for production).
+SECRET_KEY = os.environ.get("SECRET_KEY") or load_or_create_secret_key(get_data_dir() / ".secret_key")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -214,22 +231,25 @@ class UserInDB(User):
 # --- User Database File ---
 USERS_DB_FILE = get_data_dir() / "users_db.json"
 
+USERS_DB_LOCK = USERS_DB_FILE.with_suffix(".lock")
+
 def load_users_db():
     """Load users from JSON file, create default if not exists"""
     if os.path.exists(USERS_DB_FILE):
-        try:
-            with open(USERS_DB_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            pass
-    
-    # Create default user database
-    default_db = {
-        "root": {
+        # Never fall back to the default database here: saving it would wipe
+        # every registered user because of one unreadable file.
+        with open(USERS_DB_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    # Seed a root account only when the operator supplies its password.
+    default_db = {}
+    root_password = os.environ.get("UPROBE_ROOT_PASSWORD")
+    if root_password:
+        default_db["root"] = {
             "username": "root",
             "full_name": "Zhang Qian",
             "email": "qian.zhang@uprobe.com",
-            "hashed_password": pwd_context.hash("123456"),
+            "hashed_password": pwd_context.hash(root_password),
             "disabled": False,
             "avatar_url": None,
             "title": "Researcher",
@@ -238,16 +258,15 @@ def load_users_db():
             "phone": "Not set",
             "bio": "Researcher specializing in probe design and bioinformatics analysis."
         }
-    }
     save_users_db(default_db)
     return default_db
 
 def save_users_db(users_db):
     """Save users to JSON file"""
     try:
-        with open(USERS_DB_FILE, 'w', encoding='utf-8') as f:
-            # Save all user data including hashed passwords
-            json.dump(users_db, f, indent=2, ensure_ascii=False)
+        # Atomic replace: concurrent readers in other workers never see a partial file.
+        with file_lock(USERS_DB_LOCK):
+            atomic_write_json(USERS_DB_FILE, users_db)
     except IOError as e:
         print(f"Error saving users database: {e}")
 

@@ -1,6 +1,7 @@
 import ast
 from pathlib import Path
 import secrets
+import tempfile
 import unittest
 import warnings
 import pandas as pd
@@ -16,8 +17,9 @@ def function(path, name, namespace):
 
 class TemperatureCompatibilityTests(unittest.TestCase):
     def test_fisheye_values_and_precision_reach_attribute_table(self):
-        namespace = dict(primer3=primer3, pd=pd, secrets=secrets)
+        namespace = dict(primer3=primer3, pd=pd, secrets=secrets, tempfile=tempfile, Path=Path)
         calc = function(ROOT/'uprobe/core/attributes/_attributes.py', 'cal_temp', namespace)
+        function(ROOT/'uprobe/core/attributes/__init__.py', '_add_attributes', namespace)
         add = function(ROOT/'uprobe/core/attributes/__init__.py', 'add_attributes', namespace)
         for sequence in ('ACGTACGTACGTA', 'GCGCATATGCGCA', 'ACGTNCGTACGTA'):
             with self.subTest(sequence=sequence), warnings.catch_warnings():

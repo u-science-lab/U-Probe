@@ -1,8 +1,10 @@
 import asyncio
+import contextlib
+import fcntl
 import multiprocessing
 import os
 import logging
-from uprobe.http.utils.paths import get_config
+from uprobe.http.utils.paths import get_config, get_data_dir
 
 log = logging.getLogger(__name__)
 
@@ -52,3 +54,39 @@ def get_task_semaphore() -> asyncio.Semaphore:
         log.info(f"Init task queue: total_cores={multiprocessing.cpu_count()}, threads_per_task={TASK_THREADS}, max_concurrent_tasks={MAX_CONCURRENT_TASKS}")
         _task_semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
     return _task_semaphore
+
+
+def _try_acquire_slot_file():
+    """Return an flock-held slot file, or None when every slot is taken."""
+    slot_dir = get_data_dir() / "task_slots"
+    slot_dir.mkdir(parents=True, exist_ok=True)
+    for i in range(MAX_CONCURRENT_TASKS):
+        handle = open(slot_dir / f"slot-{i}.lock", "a")
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return handle
+        except BlockingIOError:
+            handle.close()
+    return None
+
+
+@contextlib.asynccontextmanager
+async def task_slot(poll_seconds: float = 1.0):
+    """
+    Hold one of MAX_CONCURRENT_TASKS execution slots.
+
+    The asyncio semaphore only limits a single server worker; the slot files
+    extend the limit to all uvicorn workers sharing the same data_dir. flock
+    locks are released when the holding process exits, so a crashed worker
+    does not leak its slot.
+    """
+    async with get_task_semaphore():
+        handle = _try_acquire_slot_file()
+        while handle is None:
+            await asyncio.sleep(poll_seconds)
+            handle = _try_acquire_slot_file()
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            handle.close()

@@ -33,10 +33,6 @@ def read_gtf(
         pattern = rf'(?:^|;)\s*{re.escape(key)}\s+"([^"\r\n]*)"'
         return df[basic_fields[-1]].str.extract(pattern, expand=False)
 
-    def extract_attribute(key):
-        pattern = rf'(?:^|;)\s*{re.escape(key)}\s+"([^"\r\n]*)"'
-        return df[basic_fields[-1]].str.extract(pattern, expand=False)
-
     for f in extract_fields:
         df[f] = extract_attribute(f)
         if f == "gene_name":
@@ -121,8 +117,6 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             chr_, start, end, strand, trans_name = str(row['chr']), row['start'], row['end'], row['strand'], row['transcript_name']
             exon_name = '_'.join([chr_, str(start), str(end), strand])
             n_trans = row['count']
-            #chr_ = chr_.replace('chr', '')
-            print(f"STDOUT DEBUG: Processing chr={chr_}, FASTA keys={list(fa.keys())[:5]}")
             if str(chr_) not in fa.keys():
                 chr_fixed = str(chr_).replace('chr', '')
                 if chr_fixed in fa.keys():
@@ -133,11 +127,9 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
                         chr_ = chr_fixed
             try:
                 seq = fa[chr_][start - 1:end].seq.upper()
-            except Exception as e:
-                import sys
-                print(f"STDOUT ERROR: KeyError accessing {chr_}. FASTA keys: {list(fa.keys())[:5]}", file=sys.stdout)
-                sys.stdout.flush()
-                raise e
+            except Exception:
+                log.error(f"Cannot read {chr_}:{start}-{end} from FASTA (first keys: {list(fa.keys())[:5]})")
+                raise
             if strand == '-':
                 seq = reverse_complement(seq)
             exon = (exon_name, trans_name, seq, n_trans)

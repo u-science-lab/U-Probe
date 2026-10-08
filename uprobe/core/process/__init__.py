@@ -2,6 +2,7 @@ import pandas as pd
 import re
 from .otp import avoid_otp
 from .equal_space import equal_space
+from .regions import region_bounds
 from .summary import process_summary
 from .sequence_filter import apply_sequence_filter
 from uprobe.core.utils import get_logger
@@ -98,19 +99,19 @@ def remove_overlap(df: pd.DataFrame,
                     current_end = row['end']
         return pd.DataFrame(non_overlapping).reset_index(drop=True)
     elif 'target' in df.columns:
-        df = df.sort_values(by=['target', 'sub_region'])
+        # Sort numerically: as strings, "101-140" would precede "21-60".
+        bounds = region_bounds(df)
+        df = df.assign(_start=bounds['start'], _end=bounds['end'])
+        df = df.sort_values(by=['target', '_start'], kind='stable')
         non_overlapping = []
-        for target_name, group in df.groupby('target'):
-            group = group.sort_values('sub_region')
+        for target_name, group in df.groupby('target', sort=False):
             current_end = None
             for _, row in group.iterrows():
-                s, e = row['sub_region'].split('-')
-                start = int(s)
-                end = int(e)
-                if current_end is None or start > current_end + location_interval:
+                if current_end is None or row['_start'] > current_end + location_interval:
                     non_overlapping.append(row)
-                    current_end = end
-        return pd.DataFrame(non_overlapping).reset_index(drop=True)
+                    current_end = row['_end']
+        result = pd.DataFrame(non_overlapping, columns=df.columns)
+        return result.drop(columns=['_start', '_end']).reset_index(drop=True)
     else:
         return df
 

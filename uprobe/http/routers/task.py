@@ -20,6 +20,7 @@ from uprobe.http.utils.process_pool import get_process_pool
 from uprobe.http.utils.result_archive import restrict_result_archive
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.http.utils.paths import get_data_dir, get_tasks_dir, get_results_dir
+from uprobe.http.utils.agent_store import atomic_write_json, file_lock
 
 router = APIRouter(
     prefix="/task",
@@ -62,11 +63,17 @@ def load_user_tasks(username: str) -> List[Dict[str, Any]]:
         logging.error(f"Error loading tasks for {username}: {e}")
         return []
 
+def user_tasks_lock(username: str):
+    """Serialize read-modify-write of tasks.json across requests and server workers.
+
+    Not re-entrant: never nest it, and hold it around both the load and the save.
+    """
+    return file_lock(get_user_tasks_file(username).with_suffix(".lock"))
+
 def save_user_tasks(username: str, tasks: List[Dict[str, Any]]):
     file_path = get_user_tasks_file(username)
     try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(tasks, f, indent=2, ensure_ascii=False)
+        atomic_write_json(file_path, tasks)
     except Exception as e:
         logging.error(f"Error saving tasks for {username}: {e}")
 
@@ -120,6 +127,10 @@ def find_task_by_id(username: str, task_id: str) -> Optional[TaskRead]:
     return None
 
 def update_task_in_db(username: str, updated_task: TaskRead):
+    with user_tasks_lock(username):
+        _update_task_in_db(username, updated_task)
+
+def _update_task_in_db(username: str, updated_task: TaskRead):
     tasks = load_user_tasks(username)
     for i, task_dict in enumerate(tasks):
         if task_dict.get("id") == updated_task.id:
@@ -150,22 +161,24 @@ def reset_stuck_tasks_on_startup():
     for user_dir in tasks_dir.iterdir():
         if user_dir.is_dir():
             username = user_dir.name
-            tasks = load_user_tasks(username)
-            modified = False
-            for task_dict in tasks:
-                was_active = task_dict.get("status") == "running"
-                was_active = was_active or (
-                    task_dict.get("status") == "paused"
-                    and task_dict.get("paused_from") == "running"
-                )
-                if was_active:
-                    task_dict["status"] = "failed"
-                    task_dict["progress"] = 0
-                    task_dict["description"] = (task_dict.get("description") or "") + " [System restarted, task failed]"
-                    task_dict["paused_from"] = None
-                    modified = True
+            with user_tasks_lock(username):
+                tasks = load_user_tasks(username)
+                modified = False
+                for task_dict in tasks:
+                    was_active = task_dict.get("status") == "running"
+                    was_active = was_active or (
+                        task_dict.get("status") == "paused"
+                        and task_dict.get("paused_from") == "running"
+                    )
+                    if was_active:
+                        task_dict["status"] = "failed"
+                        task_dict["progress"] = 0
+                        task_dict["description"] = (task_dict.get("description") or "") + " [System restarted, task failed]"
+                        task_dict["paused_from"] = None
+                        modified = True
+                if modified:
+                    save_user_tasks(username, tasks)
             if modified:
-                save_user_tasks(username, tasks)
                 logging.info(f"Reset stuck tasks for user {username} on startup.")
 
 # --- API Endpoints ---
@@ -287,14 +300,15 @@ async def delete_task(
             detail="A running task cannot be deleted; wait for it to finish",
         )
 
-    tasks = load_user_tasks(current_user.username)
-    initial_length = len(tasks)
-    tasks = [t for t in tasks if t.get("id") != task_id]
-            
-    if len(tasks) == initial_length:
-        raise HTTPException(status_code=404, detail="Task not found")
+    with user_tasks_lock(current_user.username):
+        tasks = load_user_tasks(current_user.username)
+        initial_length = len(tasks)
+        tasks = [t for t in tasks if t.get("id") != task_id]
 
-    save_user_tasks(current_user.username, tasks)
+        if len(tasks) == initial_length:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        save_user_tasks(current_user.username, tasks)
     return
 
 
@@ -403,7 +417,7 @@ async def _run_uprobe_task(username: str, task_id: str):
     """
     Internal async function to run uprobe task with queue waiting logic.
     """
-    from uprobe.http.utils.task_queue import get_task_semaphore, TASK_THREADS
+    from uprobe.http.utils.task_queue import get_task_semaphore, task_slot, TASK_THREADS
     
     semaphore = get_task_semaphore()
     should_wait = getattr(semaphore, "locked", None) and semaphore.locked()
@@ -411,7 +425,7 @@ async def _run_uprobe_task(username: str, task_id: str):
         logging.info(f"Task {task_id} for user {username} is queued, waiting for CPU resources...")
     else:
         logging.info(f"Task {task_id} for user {username} submitted and will start soon.")
-    async with semaphore:
+    async with task_slot():
         task = find_task_by_id(username, task_id)
         if not task or task.status != "pending":
             logging.info(f"Task {task_id} was cancelled or removed from queue.")

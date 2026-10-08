@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
-from ..routers.auth import get_current_active_user, User, save_users_db, fake_users_db
+from ..routers.auth import get_current_active_user, User, save_users_db, load_users_db
 from uprobe.http.utils.paths import get_data_dir
 import shutil
 import os
@@ -44,13 +44,16 @@ async def upload_avatar(
     # Update user's avatar URL in the database
     # We serve avatars via a new endpoint or mount
     avatar_url = f"/user/avatars/{avatar_filename}"
-    if current_user.username in fake_users_db:
-        fake_users_db[current_user.username]["avatar_url"] = avatar_url
-        save_users_db(fake_users_db)
+    # Reload: the auth module rebinds its users dict on every request, so an
+    # imported reference would be stale and saving it would drop newer users.
+    users_db = load_users_db()
+    if current_user.username in users_db:
+        users_db[current_user.username]["avatar_url"] = avatar_url
+        save_users_db(users_db)
     else:
         raise HTTPException(status_code=404, detail="User not found")
         
     # Manually create a user model to return, as get_user doesn't have avatar_url
-    updated_user_data = fake_users_db[current_user.username]
+    updated_user_data = users_db[current_user.username]
     
     return User(**updated_user_data)
