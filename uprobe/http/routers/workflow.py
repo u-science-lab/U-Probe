@@ -1,12 +1,10 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body, Depends
-from fastapi.responses import StreamingResponse
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from ..utils.file import load_barcodes_from_csv
 import logging
-import asyncio
 import tempfile
 import os
 import uuid
@@ -15,7 +13,7 @@ from datetime import datetime
 from uprobe.http.routers.task import TaskRead, TaskParameters, update_task_in_db
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.core.api import UProbeAPI
-from uprobe.http.utils.paths import get_genomes_yaml, get_barcodes_csv, get_probe_json
+from uprobe.http.utils.paths import get_barcodes_csv, get_probe_json
 
 CSV_FILE_PATH = get_barcodes_csv()
 
@@ -208,90 +206,3 @@ async def submit_task(
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing task: {str(e)}")
-
-@workflow.post("/run_uprobe")
-async def run_uprobe(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user)):
-    contents = await file.read()
-    try:
-        yaml.safe_load(contents)
-    except yaml.YAMLError:
-        raise HTTPException(status_code=400, detail="Invalid YAML file provided.")
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        protocol_filepath = temp_dir_path / "protocol.yaml"
-        protocol_filepath.write_bytes(contents)
-        
-        # Merge public_genomes.yaml and user_genomes.yaml
-        from uprobe.http.utils.paths import get_genomes_yaml, get_user_genomes_yaml
-        merged_genomes = {}
-        
-        public_yaml = get_genomes_yaml()
-        if public_yaml.exists():
-            try:
-                with open(public_yaml, 'r', encoding='utf-8') as f:
-                    public_data = yaml.safe_load(f) or {}
-                    merged_genomes.update(public_data)
-            except Exception as e:
-                logging.error(f"Error loading public genomes.yaml: {e}")
-                
-        user_yaml = get_user_genomes_yaml(current_user.username)
-        if user_yaml.exists():
-            try:
-                with open(user_yaml, 'r', encoding='utf-8') as f:
-                    user_data = yaml.safe_load(f) or {}
-                    merged_genomes.update(user_data)
-            except Exception as e:
-                logging.error(f"Error loading user genomes.yaml: {e}")
-        
-        merged_genomes_path = temp_dir_path / "merged_genomes.yaml"
-        with open(merged_genomes_path, 'w', encoding='utf-8') as f:
-            yaml.dump(merged_genomes, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-
-        output_dir = temp_dir_path / "results"
-        output_dir.mkdir()
-
-        # Build uprobe command with --threads limit
-        from uprobe.http.utils.task_queue import TASK_THREADS
-        cmd = [
-            "python", "-m", "uprobe", "run",
-            "--protocol", str(protocol_filepath),
-            "--genomes", str(merged_genomes_path),
-            "--output", str(output_dir),
-            "--raw",
-            "--threads", str(TASK_THREADS)
-        ]
-        
-        logging.info(f"Running command: {' '.join(cmd)}")
-
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_message = stderr.decode()
-            logging.error(f"Uprobe CLI failed with code {process.returncode}: {error_message}")
-            raise HTTPException(status_code=500, detail=f"Uprobe CLI Error: {error_message}")
-
-        csv_files = list(output_dir.glob('*.csv'))
-        if not csv_files:
-            log_output = stdout.decode()
-            logging.warning(f"Uprobe command stdout: {log_output}")
-            raise HTTPException(status_code=404, detail="Uprobe process did not generate an output CSV file.")
-        
-        result_csv_path = csv_files[0]
-        if len(csv_files) > 1:
-            logging.warning(f"Multiple CSV files found, returning the first one: {result_csv_path.name}")
-
-        def file_iterator(file_path: Path):
-            with open(file_path, 'rb') as f:
-                yield from f
-
-        return StreamingResponse(
-            file_iterator(result_csv_path),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={result_csv_path.name}"}
-        )

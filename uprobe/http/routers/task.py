@@ -604,7 +604,7 @@ async def list_task_files(
             file_info = {
                 "name": file_path.name,
                 "size": file_path.stat().st_size,
-                "type": "xlsx" if file_path.suffix == ".xlsx" else "csv" if file_path.suffix == ".csv" else "html" if file_path.suffix == ".html" else "other",
+                "type": file_path.suffix.lstrip("."),
                 "url": f"/task/{task_id}/file/{file_path.name}"
             }
             files.append(file_info)
