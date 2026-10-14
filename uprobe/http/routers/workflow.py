@@ -144,6 +144,10 @@ async def submit_task(
             if 'layout' in region:
                 from uprobe.core.layout import compile_layout
                 compile_layout(region['layout'], region.get('length'))
+            from uprobe.core.gen.expression import check_probe_expressions
+            expression_errors = check_probe_expressions(yaml_content.get('probes'))
+            if expression_errors:
+                raise ValueError('; '.join(expression_errors))
             from uprobe.core.layout import validate_layout_references
             validate_layout_references(yaml_content)
         except ValueError as exc:

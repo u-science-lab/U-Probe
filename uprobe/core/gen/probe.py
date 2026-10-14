@@ -1,8 +1,9 @@
 from pathlib import Path
 import typing as T
 import pandas as pd
-from ..utils import reverse_complement, get_logger
+from ..utils import get_logger
 from .utils import parse_expression
+from .expression import ExpressionError, check_probe_expressions, evaluate_expression
 from collections import deque
 
 log = get_logger(__name__)
@@ -85,7 +86,10 @@ class ExprProbe(Probe):
         self.external_deps: T.List[str] = []
 
     def parse_expr(self):
-        deps = parse_expression(self.expr)
+        try:
+            deps = parse_expression(self.expr)
+        except ExpressionError as e:
+            raise ExpressionError(f"probe part {self.name!r}: {e}") from None
         for dep in deps:
             node = self.dag.get_node_by_name(dep)
             if node is None:
@@ -94,30 +98,18 @@ class ExprProbe(Probe):
                 self.deps.append(node)
     
     def build(self, context: dict):
-        eval_globals = {
-            "rc": reverse_complement
-        } 
-        eval_locals = context.copy()
-        dep_name_map = {}
+        # Dependencies override context names; dotted part names such as
+        # `probe_1.part1` are looked up as-is by the expression evaluator.
+        namespace = context.copy()
         for dep in self.deps:
             if not dep.done:
                 raise RuntimeError(f"dependency {dep.name} was not built before {self.name}")
-            try:
-                if dep.result is not None:
-                    dep_value = str(dep.result)
-                else:
-                    raise RuntimeError(f"dependency {dep.name} has no result in memory")
-                safe_dep_name = dep.name.replace('.', '_') 
-                dep_name_map[dep.name] = safe_dep_name
-                eval_locals[safe_dep_name] = dep_value 
-            except Exception as e:
-                 raise RuntimeError(f"error reading result for dependency {dep.name}: {e}")
-        modified_expr = self.expr
-        for original_name in sorted(dep_name_map.keys(), key=len, reverse=True):
-            safe_name = dep_name_map[original_name]
-            modified_expr = modified_expr.replace(original_name, safe_name)
+            if dep.result is None:
+                raise RuntimeError(f"error reading result for dependency {dep.name}: "
+                                   f"dependency {dep.name} has no result in memory")
+            namespace[dep.name] = str(dep.result)
         try:
-            result = eval(modified_expr, eval_globals, eval_locals)
+            result = evaluate_expression(self.expr, namespace)
             self.result = str(result)  # Store only in memory
             self.done = True
             #log.info(f"successfully built {self.name}")
@@ -180,6 +172,10 @@ def construct_probes(config, contexts):
     """
     Construct probes for each target context.
     """
+    # Reject invalid or unsafe expressions once, before any target is processed.
+    errors = check_probe_expressions(config.get('probes'), check_names=False)
+    if errors:
+        raise ExpressionError("invalid probe expressions:\n" + "\n".join(errors))
     if not isinstance(contexts, list):
         context = contexts
         dag = DAG()
