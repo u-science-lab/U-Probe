@@ -400,6 +400,30 @@ def run(protocol, genomes, output, raw, continue_invalid, threads):
         sys.exit(1)
 
 
+@cli.command()
+@click.option('--protocol', '-p', required=True, type=click.Path(exists=True, dir_okay=False),
+              help='Path to probe design protocol configuration file (YAML).')
+@click.option('--genomes', '-g', type=click.Path(exists=True, dir_okay=False),
+              help='Path to genome configuration file (YAML). Enables genome and aligner checks.')
+@click.option('--json', 'as_json', is_flag=True,
+              help='Print the findings and a summary as JSON.')
+@click.option('--check-targets', is_flag=True,
+              help='Also look up genome targets in the GTF (gene names) or FASTA (regions). Requires --genomes.')
+def validate(protocol, genomes, as_json, check_targets):
+    """
+    Check a protocol before running it.
+
+    Reports every problem with its location in the YAML and a suggested fix.
+    Exits with status 1 when there are errors; warnings alone exit with 0.
+    """
+    from .validate import validate_files, render_json, render_text, summarize
+    if check_targets and not genomes:
+        raise click.UsageError("'--check-targets' requires '--genomes'.")
+    findings = validate_files(Path(protocol), Path(genomes) if genomes else None, check_targets=check_targets)
+    click.echo(render_json(findings) if as_json else render_text(findings))
+    sys.exit(0 if summarize(findings)['valid'] else 1)
+
+
 @cli.command(name='build-index')
 @click.option('--protocol', '-p', required=True, type=click.Path(exists=True),
               help='Path to probe design protocol configuration file (YAML).')

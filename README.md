@@ -126,6 +126,16 @@ Useful flags:
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
 
+#### ✅ Validate a Protocol
+Check a protocol (and optionally the genome config) before running it. Every problem is reported with its location in the YAML and a suggested fix; the exit status is 1 when there are errors.
+
+```bash
+uprobe validate -p protocol.yaml
+uprobe validate -p protocol.yaml -g genomes.yaml --check-targets --json
+```
+
+`-g` adds genome checks (files, aligner indexes required by the attributes), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
+
 #### 🔧 Step-by-Step Execution
 For advanced users who need intermediate results or custom workflows, you can execute each step individually:
 
