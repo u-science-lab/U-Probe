@@ -8,6 +8,7 @@ import pandas as pd
 import xlsxwriter
 
 from .formatting import prepare_result_table, sequence_groups, column_group
+from ..hybridization import declares_hybridization, effective_conditions
 
 
 PALETTE = [
@@ -71,6 +72,11 @@ def workbook_bytes(df, protocol):
                 sheet.write(row_index, column_index, value, formats[column])
     if len(table.columns):
         sheet.autofilter(0, 0, len(table), len(table.columns) - 1)
+    # Record declared hybridization conditions as document properties, not as
+    # a worksheet: result archiving inspects every worksheet for probe rows.
+    if protocol and declares_hybridization(protocol):
+        for name, conditions in effective_conditions(protocol).items():
+            book.set_custom_property(f"hybridization:{name}", json.dumps(conditions))
     book.close()
     return stream.getvalue()
 

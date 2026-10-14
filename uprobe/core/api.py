@@ -8,6 +8,7 @@ import yaml
 from .sampling import normalize_sampling, iter_target_windows
 from .layout import compile_layout, expand_layout_candidates, validate_layout_references
 from .attributes import add_attributes
+from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
 from .gen.fun import generate_target_seqs, validate_targets
 from .gen.probe import construct_probes
@@ -228,6 +229,8 @@ class UProbeAPI:
         self.no_filtered_probes = False
         self.raw_file = None
         log.info("Adding attributes to probes...")
+        for line in describe_conditions(self.protocol):
+            log.info(f"Hybridization conditions: {line}")
         df_final = add_attributes(df_probes, self.protocol, self.genome)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")

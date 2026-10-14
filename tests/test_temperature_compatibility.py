@@ -6,6 +6,7 @@ import unittest
 import warnings
 import pandas as pd
 import primer3
+from uprobe.core.hybridization import resolve_conditions, tm_arguments
 
 ROOT = Path(__file__).parents[1]
 
@@ -17,7 +18,8 @@ def function(path, name, namespace):
 
 class TemperatureCompatibilityTests(unittest.TestCase):
     def test_fisheye_values_and_precision_reach_attribute_table(self):
-        namespace = dict(primer3=primer3, pd=pd, secrets=secrets, tempfile=tempfile, Path=Path)
+        namespace = dict(primer3=primer3, pd=pd, secrets=secrets, tempfile=tempfile, Path=Path,
+                         resolve_conditions=resolve_conditions, tm_arguments=tm_arguments)
         calc = function(ROOT/'uprobe/core/attributes/_attributes.py', 'cal_temp', namespace)
         function(ROOT/'uprobe/core/attributes/__init__.py', '_add_attributes', namespace)
         add = function(ROOT/'uprobe/core/attributes/__init__.py', 'add_attributes', namespace)
