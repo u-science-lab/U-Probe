@@ -119,10 +119,16 @@ def post_process(df: pd.DataFrame,
                  config: dict
                  ) -> pd.DataFrame:
     stages = []
+    # Per-target counts after each stage (aligned with `stages`) for the run summary.
+    target_counts = []
+    target_col = next((c for c in ('target', 'gene') if c in df.columns), None)
     previous_count = len(df)
     def record(name):
         nonlocal previous_count
         stages.append({'stage': name, 'before': previous_count, 'after': len(df), 'removed': previous_count - len(df)})
+        if target_col:
+            counts = df[target_col].dropna().astype(str).value_counts() if target_col in df.columns else {}
+            target_counts.append({str(k): int(v) for k, v in counts.items()})
         previous_count = len(df)
     processes = config.get('post_process', {})
     if 'filters' in processes and processes['filters']:
@@ -238,4 +244,5 @@ def post_process(df: pd.DataFrame,
     if 'summary' in processes and processes['summary']:
         logger.info("Summary configuration found - will be processed during report generation")
     df.attrs['post_process_stages'] = stages
+    df.attrs['post_process_target_counts'] = target_counts
     return df
