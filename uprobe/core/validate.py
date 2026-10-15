@@ -763,7 +763,10 @@ class _Validator:
         level = logger.level
         logger.setLevel(logging.WARNING)
         try:
-            return _validate_and_normalize_protocol(copy.deepcopy(p)), generated
+            # As `uprobe run`, which picks the aligner of a generated off-target attribute by genome.
+            genome = self.genomes.get(p['genome']) if isinstance(self.genomes, dict) \
+                and isinstance(p.get('genome'), str) else None
+            return _validate_and_normalize_protocol(copy.deepcopy(p), genome), generated
         except Exception as exc:
             if not any(f.severity == 'error' for f in self.findings):  # otherwise already explained
                 self.error((), f'`uprobe run` rejects this protocol: {exc}', 'fix the section named in the message')

@@ -317,7 +317,7 @@ class UProbeAPI:
         # Normalize protocol (inject attributes/post_process/summary defaults if missing)
         # This ensures DNA/RNA-specific attributes are auto-generated
         from uprobe.core.cli import _validate_and_normalize_protocol
-        self.protocol = _validate_and_normalize_protocol(self.protocol)
+        self.protocol = _validate_and_normalize_protocol(self.protocol, self.genome)
     
         # 1. Build Genome Index (if needed)
         run['step'] = 'build_index'

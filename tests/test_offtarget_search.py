@@ -242,3 +242,114 @@ def test_genome_list_shows_transcript_index_only_for_bowtie(tmp_path):
     result = CliRunner().invoke(cli, ['genome', 'list', '-g', str(genomes)])
     assert 'bowtie2 index: genome missing, transcript missing' in result.output
     assert 'bowtie index: transcript missing' in result.output
+
+
+# -- generated attributes (protocols without `attributes`) ----------------
+
+def installed_tools(monkeypatch, tools):
+    """Make shutil.which find exactly `tools`."""
+    from uprobe.core import offtarget
+    monkeypatch.setattr(offtarget.shutil, 'which', lambda name, *args, **kwargs: f'/opt/bin/{name}'
+                        if name in tools else None)
+
+
+def test_bowtie_unavailable_reasons(tmp_path, monkeypatch):
+    from uprobe.core import tools
+    from uprobe.core.offtarget import bowtie_unavailable
+    genome = {'fasta': str(tmp_path / 'g.fa'), 'align_index': ['bowtie2', 'bowtie']}
+    installed_tools(monkeypatch, {'bowtie', 'bowtie-build'})
+    assert bowtie_unavailable(genome) == ''
+    assert bowtie_unavailable(None) == 'the genome configuration is not known'
+    assert bowtie_unavailable({**genome, 'align_index': ['bowtie2']}) == "the genome's align_index has no bowtie"
+    installed_tools(monkeypatch, {'bowtie'})
+    assert 'index is not built and bowtie-build is not on PATH' in bowtie_unavailable(genome)
+    (tmp_path / 'bowtie_transcript').mkdir()
+    for suffix in tools._BOWTIE_SMALL_SUFFIXES:
+        (tmp_path / 'bowtie_transcript' / f'g{suffix}').write_text('index')
+    assert bowtie_unavailable(genome) == ''
+    installed_tools(monkeypatch, {'bowtie-build'})
+    assert bowtie_unavailable(genome) == 'bowtie (Bowtie 1) is not on PATH'
+
+
+@pytest.fixture
+def rna_defaults(rna):
+    """RNA_format.yaml with 20-nt windows and no attributes, post_process or summary: all generated."""
+    for key in ('attributes', 'post_process', 'summary'):
+        del rna[key]
+    rna['extracts']['target_region'] = {'source': 'exon', 'length': 20, 'step': 10}
+    rna['probes'] = {'probe_1': {'template': '{b}', 'parts': {'b': {'expr': 'rc(target_region)'}}}}
+    return rna
+
+
+def test_generated_off_target_attribute_uses_bowtie_when_the_genome_can(rna_defaults, genomes, monkeypatch):
+    import copy
+    from uprobe.core import cli as cli_module
+    from uprobe.core.cli import _validate_and_normalize_protocol
+    warnings = []
+    monkeypatch.setattr(cli_module.log, 'warning', warnings.append)
+    installed_tools(monkeypatch, {'bowtie', 'bowtie-build'})
+    genome = {**genomes['test'], 'align_index': ['bowtie2', 'bowtie']}
+    attr = _validate_and_normalize_protocol(copy.deepcopy(rna_defaults), genome)['attributes']['target_mapped_genes']
+    assert attr == {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie',
+                    'max_mismatches': 2, 'strand': 'sense'}
+    assert warnings == []
+    # Without bowtie in align_index (or without a genome entry): Bowtie2, with a warning for 20-nt windows.
+    for entry in (genomes['test'], None):
+        attr = _validate_and_normalize_protocol(copy.deepcopy(rna_defaults), entry)['attributes']['target_mapped_genes']
+        assert attr == {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}
+    assert len(warnings) == 2 and "align_index has no bowtie" in warnings[0]
+    assert 'the 20-nt windows count no off-target gene' in warnings[0]
+
+
+def test_validate_reports_the_generated_aligner(rna_defaults, genomes, monkeypatch):
+    installed_tools(monkeypatch, {'bowtie', 'bowtie-build'})
+    short = 'cannot align sequences shorter than 22 nt'
+    finding = paths(validate_protocol(rna_defaults, genomes), 'warning')['attributes']
+    assert short in finding.message
+    genomes['test']['align_index'] = ['bowtie2', 'bowtie']
+    findings = validate_protocol(rna_defaults, genomes)
+    assert not any(short in f.message for f in findings)
+    assert not paths(findings, 'error')
+
+
+def test_cli_run_generates_attributes_for_its_genome(tmp_path, monkeypatch):
+    from click.testing import CliRunner
+    from uprobe.core import cli as cli_module
+    seen = []
+
+    def normalize(protocol, genome=None):
+        seen.append(genome)
+        raise ValueError('stop here')
+    monkeypatch.setattr(cli_module, '_validate_and_normalize_protocol', normalize)
+    entry = {'fasta': 'g.fa', 'gtf': 'g.gtf', 'align_index': ['bowtie']}
+    genomes = tmp_path / 'genomes.yaml'
+    genomes.write_text(yaml.safe_dump({'other': {}, 'g': entry}))
+    protocol = tmp_path / 'protocol.yaml'
+    protocol.write_text(yaml.safe_dump({'genome': 'g'}))
+    result = CliRunner().invoke(cli_module.cli, ['run', '-p', str(protocol), '-g', str(genomes),
+                                                 '-o', str(tmp_path / 'out')])
+    assert result.exit_code == 1 and seen == [entry]
+
+
+@needs_bowtie
+def test_run_without_attributes_searches_off_targets_with_bowtie(tmp_path):
+    # The toy genome (3 genes), with only a Bowtie 1 index: the generated
+    # target_mapped_genes must use it, exhaustively and on the sense strand.
+    import json
+    from click.testing import CliRunner
+    from uprobe.core.cli import cli
+    from test_run_summary import toy_genome
+    genomes = toy_genome(tmp_path, align_index=['bowtie'])
+    protocol = tmp_path / 'protocol.yaml'
+    protocol.write_text(yaml.safe_dump({
+        'name': 'toy', 'genome': 'toy', 'encoding': {}, 'targets': ['ToyGeneA', 'ToyGeneC'],
+        'extracts': {'target_region': {'source': 'exon', 'length': 20, 'step': 50}},
+        'probes': {'probe': {'template': '{b}', 'parts': {'b': {'expr': 'rc(target_region)'}}}}}))
+    result = CliRunner().invoke(cli, ['run', '-p', str(protocol), '-g', str(genomes), '-o', str(tmp_path / 'out'),
+                                      '--threads', '2', '--json'])
+    assert result.exit_code == 0, result.output
+    summary = json.loads(result.stdout)
+    stats = summary['off_targets']['attributes']['target_mapped_genes']
+    assert (stats['aligner'], stats['max_mismatches'], stats['strand']) == ('bowtie', 2, 'sense')
+    table = pd.read_csv(tmp_path / 'out' / summary['output_files']['tsv'], sep='\t')
+    assert len(table) > 0 and (table['target_mapped_genes'] >= 1).all()

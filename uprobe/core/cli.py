@@ -60,10 +60,42 @@ def _extract_probe_targets(probes_config: dict) -> list:
     return targets
 
 
-def _generate_default_attributes(protocol_config: dict) -> dict:
+def _default_mapped_genes(protocol_config: dict, genome) -> dict:
+    """The generated target_mapped_genes: Bowtie 1 when the genome can use it, else Bowtie2.
+
+    Bowtie2's local mode aligns no sequence shorter than 22 nt and misses
+    sites of somewhat longer ones; Bowtie 1 finds every site within 2
+    substitutions. target_region is the RNA sequence, which the probes bind
+    where it occurs: strand sense.
+    """
+    from .offtarget import BOWTIE2_LOCAL_MIN_LENGTH, DEFAULT_MAX_MISMATCHES, bowtie_unavailable
+    from .sampling import normalize_sampling
+    reason = bowtie_unavailable(genome)
+    if not reason:
+        log.info(f"Auto-generated target_mapped_genes: aligner bowtie, every transcript site within "
+                 f"{DEFAULT_MAX_MISMATCHES} substitutions (strand sense)")
+        return {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie',
+                'max_mismatches': DEFAULT_MAX_MISMATCHES, 'strand': 'sense'}
+    message = (f"Auto-generated target_mapped_genes: aligner bowtie2, because {reason}. Install Bowtie 1 "
+               "(conda install -c bioconda bowtie) and add bowtie to the genome's align_index for an exhaustive "
+               "off-target search")
+    try:
+        shortest = normalize_sampling(protocol_config['extracts']['target_region'].get('length'))[0]
+    except (TypeError, ValueError):
+        shortest = None
+    if shortest is not None and shortest < BOWTIE2_LOCAL_MIN_LENGTH:
+        log.warning(f"{message}: Bowtie2 aligns no sequence shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt, so the "
+                    f"{shortest}-nt windows count no off-target gene.")
+    else:
+        log.info(message + ".")
+    return {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}
+
+
+def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> dict:
     """
     Generate default attributes based on probes structure and mode (DNA/RNA).
     DNA mode focuses on probe parts; RNA mode includes target_region + all probes/parts.
+    `genome` is the genome entry of the run, if known: it decides the aligner of target_mapped_genes.
     """
     source = protocol_config['extracts']['target_region'].get('source', 'genome')
     is_dna_mode = (source == 'genome')
@@ -91,11 +123,7 @@ def _generate_default_attributes(protocol_config: dict) -> dict:
             'target': 'target_region',
             'type': 'self_match'
         }
-        attributes['target_mapped_genes'] = {
-            'target': 'target_region',
-            'type': 'mapped_genes',
-            'aligner': 'bowtie2'
-        }
+        attributes['target_mapped_genes'] = _default_mapped_genes(protocol_config, genome)
     
     # Extract probe targets and generate attributes
     probe_targets = _extract_probe_targets(probes_config)
@@ -296,10 +324,12 @@ def _is_blank_step(value) -> bool:
     return value in ({}, [], None)
 
 
-def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
+def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None) -> dict:
     """
     Validate protocol configuration and inject defaults for optional fields.
     Dynamically generates attributes and post_process based on probes structure.
+    `genome`, the genome entry of the run (genomes.yaml), decides whether a
+    generated off-target attribute can use Bowtie 1; without it, Bowtie2.
     """
     # 1. Check required top-level keys
     required_keys = ['genome', 'targets', 'extracts', 'encoding', 'probes']
@@ -348,7 +378,7 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     # 3. Auto-complete attributes if missing (dynamic generation based on probes structure)
     if 'attributes' not in protocol_config or not protocol_config['attributes']:
         log.info(f"Attributes missing or empty. Auto-generating from probes structure for mode: {'DNA' if is_dna_mode else 'RNA'}")
-        protocol_config['attributes'] = _generate_default_attributes(protocol_config)
+        protocol_config['attributes'] = _generate_default_attributes(protocol_config, genome)
     
     # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
     from .hybridization import validate_protocol_hybridization
@@ -460,8 +490,9 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
         if not isinstance(protocol_config, dict):
             raise ValueError("Protocol YAML must be a mapping (dict)")
             
-        # Normalize protocol (inject defaults)
-        protocol_config = _validate_and_normalize_protocol(protocol_config)
+        # Normalize protocol (inject defaults); the genome entry decides the
+        # aligner of a generated off-target attribute.
+        protocol_config = _validate_and_normalize_protocol(protocol_config, _genome_entry(genomes, protocol_config))
         
         uprobe = UProbeAPI(
             protocol_config=protocol_config,
@@ -494,6 +525,15 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
         log.error(f"No probes designed (status {summary['status']}): {summary.get('message')} "
                   f"See {Path(output) / 'summary.json'}.")
         sys.exit(EXIT_NO_PROBES)
+
+
+def _genome_entry(genomes_path, protocol_config: dict):
+    """The protocol's genome entry in the genome config, or None (UProbeAPI reports a missing one)."""
+    with open(genomes_path, 'r', encoding='utf-8') as f:
+        genomes = yaml.safe_load(f)
+    name = protocol_config.get('genome')
+    entry = genomes.get(name) if isinstance(genomes, dict) and isinstance(name, str) else None
+    return entry if isinstance(entry, dict) else None
 
 
 @contextlib.contextmanager

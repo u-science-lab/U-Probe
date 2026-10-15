@@ -37,6 +37,7 @@ are not counted and are listed in ``<attribute>_unexpressed`` instead.
 """
 import functools
 import re
+import shutil
 from collections import defaultdict
 from pathlib import Path
 
@@ -63,6 +64,27 @@ def short_for_bowtie2(attr_name: str, short: int, total: int) -> str:
     return (f'{attr_name}: {short} of {total} sequences are shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt, which '
             f'Bowtie2\'s local mode cannot align (its minimum score exceeds a perfect match), so they count 0 '
             f'genes; use aligner: bowtie for an exhaustive search of short sequences')
+
+
+def bowtie_unavailable(genome) -> str:
+    """Why mapped_genes cannot search ``genome`` with aligner: bowtie; '' if it can.
+
+    It can when the genome entry lists bowtie in align_index (the workflow
+    then builds the Bowtie 1 transcriptome index if it is missing) and
+    Bowtie 1 is installed: bowtie, and bowtie-build while there is no index.
+    """
+    if not isinstance(genome, dict):
+        return 'the genome configuration is not known'
+    if 'bowtie' not in (genome.get('align_index') or []):
+        return "the genome's align_index has no bowtie"
+    if not shutil.which('bowtie'):
+        return 'bowtie (Bowtie 1) is not on PATH'
+    if genome.get('fasta') and not shutil.which('bowtie-build'):
+        from .tools import _bowtie_index_exists
+        fasta = Path(genome['fasta'])
+        if not _bowtie_index_exists(fasta.parent / 'bowtie_transcript' / fasta.stem):
+            return 'its transcriptome index is not built and bowtie-build is not on PATH'
+    return ''
 
 
 def mapped_genes_settings(attr: dict, where: str = '') -> dict:
