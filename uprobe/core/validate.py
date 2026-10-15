@@ -29,7 +29,7 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
-from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, validate_protocol_hybridization
+from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .process import parse_condition
 from .sampling import normalize_sampling
@@ -319,6 +319,8 @@ class _Validator:
         self.check_hybridization()
         protocol, generated = self.normalize()
         self.check_attributes(protocol, 'attributes' in generated)
+        if 'post_process' in generated:
+            self.check_default_tm_filters(protocol)
         self.check_post_process(protocol)
         self.check_summary(protocol)
         if self.genomes is not None:
@@ -709,6 +711,25 @@ class _Validator:
                 hint = ('remove it; conditions apply to Tm and fold_score attributes or to the whole protocol '
                         '(top-level hybridization)') if 'only supported' in str(exc) else HYBRIDIZATION_HINT
                 self.error(path, str(exc), hint)
+
+    def check_default_tm_filters(self, protocol):
+        """Generated Tm filters start at the hybridization temperature, or at 37 °C when none is declared."""
+        filters = (protocol.get('post_process') or {}).get('filters')
+        assumed = {}
+        for name in (filters if isinstance(filters, dict) else {}):
+            if not name.endswith('_tm'):
+                continue
+            try:
+                low, high, source = default_tm_window(protocol, name)
+            except ValueError:
+                return  # invalid conditions are reported by check_hybridization
+            if source == 'default':
+                assumed[name] = f'{low:g}-{high:g} °C'
+        if assumed:
+            self.warning(('hybridization',), 'salt, probe or formamide conditions are set but temperature_c is not, '
+                         f'so the generated Tm filters ({", ".join(assumed)}) assume the default 37 °C and keep '
+                         f'{next(iter(assumed.values()))}',
+                         'add temperature_c: <your hybridization temperature>, or write post_process.filters')
 
     # -- runtime normalization -------------------------------------------
     def normalize(self):

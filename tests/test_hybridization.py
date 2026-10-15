@@ -11,7 +11,7 @@ import RNA
 from uprobe.core.attributes import add_attributes, cal_temp, cal_target_fold_score
 from uprobe.core.cli import _validate_and_normalize_protocol
 from uprobe.core.hybridization import (
-    FORMAMIDE_MOLAR_PER_PCT, describe_conditions, effective_conditions,
+    FORMAMIDE_MOLAR_PER_PCT, default_tm_window, describe_conditions, effective_conditions,
     validate_hybridization, validate_protocol_hybridization,
 )
 from uprobe.core.report.compact import build_report_data
@@ -172,3 +172,81 @@ def test_legacy_outputs_record_nothing_new():
     assert build_report_data(df, protocol)['hybridization'] == []
     with ZipFile(BytesIO(workbook_bytes(df, protocol))) as book:
         assert 'docProps/custom.xml' not in book.namelist()
+
+
+def tm_filters(protocol):
+    """Auto-generated Tm filter conditions of a protocol without post_process."""
+    filters = _validate_and_normalize_protocol(copy.deepcopy(protocol))['post_process']['filters']
+    return {name: spec['condition'] for name, spec in filters.items() if name.endswith('_tm')}
+
+
+def windows(filters):
+    return {name: condition.replace(f'{name} ', '') for name, condition in filters.items()}
+
+
+@pytest.mark.parametrize('source', ['exon', 'genome'])
+def test_default_tm_filters_follow_the_hybridization_temperature(source, monkeypatch):
+    from unittest import mock
+    from uprobe.core import cli as cli_module
+    protocol = minimal_protocol()
+    if source == 'genome':
+        protocol['extracts']['target_region']['source'] = 'genome'
+        protocol['targets'] = ['1:1-200']
+    # RNA: target_tm, probe_1_tm and probe_1_part1_tm; DNA: only the part.
+    names = ['target_tm', 'probe_1_tm', 'probe_1_part1_tm'] if source == 'exon' else ['probe_1_part1_tm']
+    # Without declared conditions, or with an empty block: the legacy 50-90 °C, unchanged.
+    legacy = {name: f'{name} >= 50 & {name} <= 90' for name in names}
+    assert tm_filters(protocol) == legacy
+    assert tm_filters({**protocol, 'hybridization': {}}) == legacy
+    # Oligopaint-like: 42 °C, 2x SSC, 50% formamide -> 42-82 °C.
+    log = mock.Mock()
+    monkeypatch.setattr(cli_module, 'log', log)
+    oligopaint = {**protocol, 'hybridization': {'temperature_c': 42, 'na_mM': 390, 'formamide_pct': 50}}
+    assert windows(tm_filters(oligopaint)) == {name: '>= 42 & <= 82' for name in names}
+    assert any('Tm filter 42-82 °C (hybridization.temperature_c' in str(call) for call in log.info.call_args_list)
+    assert not log.warning.called
+    assert windows(tm_filters({**protocol, 'hybridization': {'temperature_c': 37.5}})) == {
+        name: '>= 37.5 & <= 77.5' for name in names}
+    # Salt and formamide without a temperature: the default 37 °C, with a warning.
+    assert windows(tm_filters({**protocol, 'hybridization': {'na_mM': 390, 'formamide_pct': 50}})) == {
+        name: '>= 37 & <= 77' for name in names}
+    assert 'temperature_c' in str(log.warning.call_args)
+
+
+def test_default_tm_window_with_attribute_overrides():
+    block = {'temperature_c': 37, 'na_mM': 390, 'formamide_pct': 30}
+    attributes = {
+        'plain': {},
+        # The block's own values: still the hybridization conditions.
+        'same': {'na_mM': 390},
+        # Design conditions of a published window (MERFISH template): not at the hybridization temperature.
+        'design': {'na_mM': 300, 'probe_nM': 5, 'formamide_pct': 0},
+        'own': {'temperature_c': 45, 'formamide_pct': 10},
+    }
+    protocol = tm_protocol(block)
+    for name, override in attributes.items():
+        attr = {'target': 's', 'type': 'annealing_temperature'}
+        protocol['attributes'][name] = {**attr, 'hybridization': override} if override else attr
+    assert {name: default_tm_window(protocol, name) for name in attributes} == {
+        'plain': (37, 77, 'protocol'), 'same': (37, 77, 'protocol'),
+        'design': (50, 90, None), 'own': (45, 85, 'attribute')}
+    # Without a protocol block only an attribute's own temperature moves its window.
+    assert default_tm_window(tm_protocol(None, hybridization={'formamide_pct': 50}), 'tm') == (50, 90, None)
+    assert default_tm_window(tm_protocol(None, hybridization={'temperature_c': 30}), 'tm') == (30, 70, 'attribute')
+    assert default_tm_window(tm_protocol({'formamide_pct': 50}), 'tm') == (37, 77, 'default')
+    # User-written attributes with post_process left out get one window each.
+    rna = {**minimal_protocol(), 'hybridization': block, 'attributes': {
+        'target_tm': {'target': 'target_region', 'type': 'annealing_temperature'},
+        'design_tm': {'target': 'target_region', 'type': 'annealing_temperature',
+                      'hybridization': attributes['design']}}}
+    assert tm_filters(rna) == {'target_tm': 'target_tm >= 37 & target_tm <= 77',
+                               'design_tm': 'design_tm >= 50 & design_tm <= 90'}
+
+
+def test_validate_warns_when_generated_tm_filters_assume_37_c():
+    from uprobe.core.validate import validate_protocol
+    protocol = {**minimal_protocol(), 'hybridization': {'na_mM': 390, 'formamide_pct': 50}}
+    warnings = [f for f in validate_protocol(protocol) if f.path == 'hybridization']
+    assert len(warnings) == 1 and '37 °C' in warnings[0].message and 'temperature_c' in warnings[0].suggestion
+    protocol['hybridization']['temperature_c'] = 42
+    assert not [f for f in validate_protocol(protocol) if f.path == 'hybridization']

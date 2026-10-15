@@ -373,7 +373,7 @@ By default, Tm is computed under PCR-like conditions (50 mM Na+, 0.6 mM dNTP, 50
 
 ```yaml
 hybridization:
-  temperature_c: 37     # hybridization temperature (°C); used by fold_score
+  temperature_c: 37     # hybridization temperature (°C); used by fold_score and auto-generated Tm filters
   na_mM: 390            # monovalent cations; 2x SSC (0.3 M NaCl + 0.03 M Na3-citrate) = 390 mM Na+
   mg_mM: 0              # divalent cations
   dntp_mM: 0            # dNTPs (chelate Mg2+; no effect when mg_mM is 0)
@@ -393,7 +393,7 @@ attributes:
 
 | Field | Unit | Default when unset | Used by |
 | --- | --- | --- | --- |
-| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score` |
+| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score`, auto-generated Tm filters |
 | `na_mM` | mM | 50 | `annealing_temperature` |
 | `mg_mM` | mM | 0 | `annealing_temperature` |
 | `dntp_mM` | mM | 0.6 | `annealing_temperature` |
@@ -407,7 +407,7 @@ attributes:
 - **Folding**: `fold_score` folds at `temperature_c`; ViennaRNA does not model formamide, and salt is left at its default.
 - A per-attribute override suits a published Tm window that was computed under other conditions than the experiment's. The MERFISH template, for example, hybridizes in 2x SSC with 30% formamide (top-level block) but computes `binding_tm` at 300 mM Na+, 5 nM probe and no formamide, the conditions of its 66-76 °C window.
 - `uprobe validate` reports an invalid block or override with its path. The conditions in effect are logged for every Tm/fold attribute and recorded in `summary.json` (`inputs.hybridization_conditions`). When a protocol declares them, they are also shown in the HTML report header and stored in the result `.xlsx` as custom document properties (`hybridization:<attribute>`).
-- Auto-generated Tm filters (50-90 °C) are not adjusted. Review them when you declare FISH conditions; U-Probe logs a warning when it generates them.
+- **Auto-generated Tm filters** (when `post_process` is left out) follow the hybridization temperature: each Tm attribute keeps [`temperature_c`, `temperature_c` + 40] °C, the 40 °C width of the legacy window, since Tm under declared FISH conditions (e.g. 50% formamide) can fall tens of degrees below the legacy 50-90 °C. An attribute's own `temperature_c` wins; an override that changes salt, probe or formamide without its own `temperature_c` (such as the MERFISH design conditions above) keeps 50-90 °C. Conditions declared without `temperature_c` use the default 37 °C (37-77 °C), with a warning from `uprobe run` and `uprobe validate`. Without the block (or with an empty one) the filters stay at 50-90 °C. The chosen windows are logged.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 

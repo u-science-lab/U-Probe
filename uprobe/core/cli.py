@@ -182,12 +182,45 @@ def _generate_default_summary(protocol_config: dict, attributes: dict) -> dict:
     return summary
 
 
+def _number(value: float) -> str:
+    """A number as filter conditions read it: plain decimal notation."""
+    return f'{value:f}'.rstrip('0').rstrip('.')
+
+
+def _tm_condition(protocol_config: dict, attr_name: str) -> str:
+    """Tm filter: 50-90 °C, or [T, T + 40] °C at the declared hybridization temperature T."""
+    from .hybridization import default_tm_window
+    low, high, _ = default_tm_window(protocol_config, attr_name)
+    return f'{attr_name} >= {_number(low)} & {attr_name} <= {_number(high)}'
+
+
+def _log_tm_windows(protocol_config: dict) -> None:
+    """Log the window of each auto-generated Tm filter and why it was chosen."""
+    from .hybridization import default_tm_window
+    reasons = {'protocol': 'hybridization.temperature_c to +40 °C',
+               'attribute': "the attribute's hybridization.temperature_c to +40 °C",
+               'default': 'default 37 °C to +40 °C; hybridization.temperature_c is not set',
+               None: 'legacy window for the legacy Tm conditions'}
+    windows = {}
+    for name in protocol_config['post_process'].get('filters', {}):
+        if name.endswith('_tm'):
+            windows.setdefault(default_tm_window(protocol_config, name), []).append(name)
+    for (low, high, source), names in windows.items():
+        log.info(f"Auto-generated Tm filter {_number(low)}-{_number(high)} °C ({reasons[source]}): {', '.join(names)}")
+        if source == 'default':
+            log.warning("hybridization sets Tm conditions but no temperature_c, so the auto-generated Tm "
+                        f"filters assume 37 °C ({_number(low)}-{_number(high)} °C); declare your "
+                        "hybridization temperature as hybridization.temperature_c.")
+
+
 def _generate_default_post_process(protocol_config: dict, attributes: dict) -> dict:
     """
     Generate default post_process configuration based on attributes.
+    Tm filters are 50-90 °C, or [T, T + 40] °C at the declared hybridization temperature T.
     """
     source = protocol_config['extracts']['target_region'].get('source', 'genome')
     is_dna_mode = (source == 'genome')
+    tm_protocol = {**protocol_config, 'attributes': attributes}
     
     post_process = {
         'filters': {},
@@ -205,7 +238,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
     
     if 'target_tm' in attributes:
         post_process['filters']['target_tm'] = {
-            'condition': 'target_tm >= 50 & target_tm <= 90'  # Tm in Celsius
+            'condition': _tm_condition(tm_protocol, 'target_tm')  # Tm in Celsius
         }
     
     # Mode-specific filters
@@ -228,7 +261,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
         # Add Tm filters for all probes/parts
         if attr_name.endswith('_tm'):
             post_process['filters'][attr_name] = {
-                'condition': f'{attr_name} >= 50 & {attr_name} <= 90'
+                'condition': _tm_condition(tm_protocol, attr_name)
             }
         
         # Add GC filters for probe-level only (not parts)
@@ -314,7 +347,7 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         protocol_config['attributes'] = _generate_default_attributes(protocol_config)
     
     # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
-    from .hybridization import validate_protocol_hybridization, TM_DEFAULTS
+    from .hybridization import validate_protocol_hybridization
     validate_protocol_hybridization(protocol_config)
     
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
@@ -324,9 +357,7 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
             protocol_config, 
             protocol_config['attributes']
         )
-        if any(key in (protocol_config.get('hybridization') or {}) for key in TM_DEFAULTS):
-            log.warning("Auto-generated Tm filters (50-90 °C) were chosen for the legacy primer3 "
-                        "conditions; review them for the declared hybridization conditions.")
+        _log_tm_windows(protocol_config)
     
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:
