@@ -7,13 +7,13 @@ silently do nothing (an unknown filter column, a misspelled post_process step);
 warnings are suspicious but harmless.
 
 The checks reuse the runtime validators (normalize_sampling, compile_layout,
-validate_layout_references, parse_expression, parse_condition, the probe DAG and
+validate_layout_references, check_expression, parse_condition, the probe DAG and
 _validate_and_normalize_protocol) and turn their exceptions into findings.
 Once the static checks pass, every probe is built for each target on synthetic
-target regions, so expressions that fail at run time are reported too.
+target regions with the safe expression evaluator, so expressions that fail at
+run time are reported too.
 """
 import ast
-import builtins
 import copy
 import difflib
 import json
@@ -28,8 +28,7 @@ from types import SimpleNamespace
 
 import yaml
 
-from .gen.expression import ExpressionError
-from .gen.utils import parse_expression
+from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
 from .layout import compile_layout, validate_layout_references
 from .process import parse_condition
 from .sampling import normalize_sampling
@@ -47,10 +46,6 @@ OPTIONAL_KEYS = (
 SOURCES = ('genome', 'exon', 'CDS', 'UTR')
 REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
-# Names visible to probe expressions: the per-row context built by
-# UProbeAPI.construct_probes and the globals of ExprProbe.build.
-EXPR_CONTEXT = ('target_region', 'target', 'encoding', 'target_parts')
-EXPR_FUNCTIONS = ('rc',)
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> required aligner.
 ATTRIBUTE_TYPES = {
@@ -185,15 +180,14 @@ def _sampling_hint(message: str) -> T.Tuple[str, str]:
 
 
 def _failure_hint(message: str, lengths) -> str:
-    if message.startswith('IndexError') or 'out of range' in message:
+    """Suggestion for an ExpressionError raised while building a probe."""
+    detail = message.split(': ', 1)[-1]
+    if detail.startswith('index ') and 'out of range' in detail:
         return (f'an index is outside target_region, which is {lengths[0]}-{lengths[1]} nt long; '
                 'keep indices below the minimum length or count from the end, e.g. target_region[-13:]')
-    if message.startswith('KeyError'):
+    if detail.startswith('key '):
         return 'a lookup key is missing; check the encoding entries and part names'
-    if message.startswith('NameError'):
-        return ('a name is undefined when the probe is built; reference probes and parts by their full '
-                'dotted name (probe_1.part1) and do not call methods on them')
-    if message.startswith('TypeError'):
+    if detail.startswith(('cannot ', 'slice bounds')) or 'expects a sequence' in detail:
         return 'pass sequences (strings) to functions, e.g. rc(target_region[0:20])'
     return 'fix the expression so that it returns a nucleotide string'
 
@@ -222,50 +216,6 @@ def _topological_order(nodes):
         if node not in state:
             visit(node, [])
     return order, cycles
-
-
-def _dotted_name(node) -> T.Optional[str]:
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        base = _dotted_name(node.value)
-        return f'{base}.{node.attr}' if base else None
-    return None
-
-
-def _evaluable(tree, node_names) -> bool:
-    """True if an expression only slices, concatenates, repeats a little and calls rc().
-
-    Probes are test-built (and so evaluated) only when every expression passes,
-    so validating a protocol never runs arbitrary code.
-    """
-    allowed = (ast.Expression, ast.Name, ast.Load, ast.Constant, ast.Subscript, ast.Slice, ast.Tuple,
-               ast.BinOp, ast.Add, ast.Mult, ast.UnaryOp, ast.USub, ast.Call, ast.Attribute)
-    for node in ast.walk(tree):
-        if not isinstance(node, allowed):
-            return False
-        if isinstance(node, ast.Call) and not (isinstance(node.func, ast.Name) and node.func.id in EXPR_FUNCTIONS
-                                               and not node.keywords):
-            return False
-        if isinstance(node, ast.Attribute) and _dotted_name(node) not in node_names:
-            return False
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult) and not any(
-                isinstance(side, ast.Constant) and type(side.value) is int and side.value <= 10000
-                for side in (node.left, node.right)):
-            return False
-    return True
-
-
-def _safe_expression_problems(expr: str, known_names: T.Set[str]) -> T.List[str]:
-    """HOOK for the safe expression checker (task 1: replace eval in uprobe/core/gen).
-
-    TODO(integration): the checker's final module and name are not known yet;
-    this assumes ``check_expression(expr, known_names) -> list[str]`` in
-    uprobe/core/gen/utils.py, returning one message per disallowed construct.
-    Adjust the import when that work lands. Until then this returns no problems.
-    """
-    from .gen.expression import check_expression
-    return [str(problem) for problem in check_expression(expr, known_names)]
 
 
 def _fasta_lengths(fasta) -> T.Dict[str, int]:
@@ -302,7 +252,6 @@ class _Validator:
         self.lookups: T.List[tuple] = []  # encoding lookups: (path, target keys or None, barcode)
         self.referenced: T.Set[str] = set()
         self.dag_ok = False
-        self.evaluable = True  # every expression passes _evaluable
         self.attributes: dict = {}
 
     # -- bookkeeping -----------------------------------------------------
@@ -608,54 +557,36 @@ class _Validator:
 
     def _check_expressions(self):
         names = set(self.nodes)
-        known = names | set(EXPR_CONTEXT) | set(EXPR_FUNCTIONS)
+        known = names | set(CONTEXT_NAMES)
         region, layout_parts = self.region(), self.layout_parts()
         for node, path, expr in self.exprs:
-            try:
-                tree = ast.parse(expr, mode='eval')
-            except SyntaxError as exc:
-                self.error(path, f'invalid expression syntax: {exc.msg} in {expr!r}', EXPR_HINT)
+            # The grammar of the safe evaluator that builds the probes; names
+            # are checked below so that unknown ones get a suggestion.
+            problems = check_expression(expr)
+            for problem in problems:
+                self.error(path, problem, EXPR_HINT)
+            if problems:
                 continue
-            loaded = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
-            bound = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and not isinstance(n.ctx, ast.Load)}
-            bound |= {a.arg for n in ast.walk(tree) if isinstance(n, ast.Lambda) for a in n.args.args}
-            # parse_expression gives the DAG's dependency names; Name nodes it
-            # misses (e.g. inside method-call chains) are checked as well.
-            try:
-                refs = set(parse_expression(expr))
-            except ExpressionError:
-                refs = set()  # reported by the safe-expression checker below
-            refs |= loaded - {ref.split('.')[0] for ref in refs}
-            for ref in sorted(refs):
+            for ref in sorted(expression_references(expr)):
                 head = ref.split('.')[0]
-                if head not in loaded or head in bound:
-                    continue  # a method of a literal (''.join) or a comprehension variable
                 if ref in names:
                     self.referenced.add(ref)
-                elif ref in known or head in EXPR_CONTEXT or head in EXPR_FUNCTIONS:
+                elif ref in known:
                     continue
                 elif head in names:
                     options = [n for n in names if n == head or n.startswith(head + '.')]
                     self.error(path, f'{ref!r} is not a probe or part', _did_you_mean(ref, options, f'parts of {head}'))
+                elif '.' in ref:
+                    self.error(path, f'unknown name {ref!r}: dotted names must refer to a probe part '
+                               '(attribute access is not allowed)', EXPR_HINT)
                 elif head in LEGACY_TARGET_NAMES:
                     fixed = re.sub(rf'\b{re.escape(head)}\b', 'target', expr)
                     self.error(path, f'unknown name {head!r}; the current target name is `target`',
                                f'replace {head} with target: expr: {json.dumps(fixed)}')
                 elif re.fullmatch(r'[ACGTUNacgtun]+', head):
                     self.error(path, f'unknown name {head!r}', f'quote literal sequences: expr: "\'{head}\'"')
-                elif hasattr(builtins, head):
-                    self.warning(path, f'uses the Python builtin {head!r}',
-                                 'prefer rc(), slicing and +; builtins may be rejected once expressions are '
-                                 'evaluated safely')
                 else:
                     self.error(path, f'unknown name {head!r}', _did_you_mean(head, sorted(known), 'available names'))
-            if any(isinstance(n, ast.Attribute) and n.attr.startswith('__') for n in ast.walk(tree)) or \
-                    any(name.startswith('__') for name in loaded):
-                self.error(path, 'dunder names (__x__) are not allowed in probe expressions', EXPR_HINT)
-            self.evaluable = self.evaluable and _evaluable(tree, names)
-            # HOOK: safe-expression checker (task 1); see _safe_expression_problems.
-            for problem in _safe_expression_problems(expr, known):
-                self.error(path, problem, EXPR_HINT)
             try:
                 validate_layout_references({'extracts': {'target_region': region}, 'probes': {node: {'expr': expr}}})
             except Exception as exc:
@@ -667,12 +598,13 @@ class _Validator:
                 else:
                     hint = 'layout parts: ' + ', '.join(layout_parts)
                 self.error(path, str(exc), hint)
-            self._collect_encoding_lookups(path, tree)
+            self._collect_encoding_lookups(path, ast.parse(expr.strip(), mode='eval'))
 
     def _collect_encoding_lookups(self, path, tree):
         parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
         for node in ast.walk(tree):
-            if not (isinstance(node, ast.Subscript) and _dotted_name(node.value) == 'encoding'):
+            if not (isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)
+                    and node.value.id == 'encoding'):
                 continue
             key = node.slice
             if isinstance(key, ast.Name) and key.id == 'target':
@@ -1185,7 +1117,9 @@ class _Validator:
 
     # -- probe construction on synthetic targets -------------------------
     def dry_run(self):
-        if self.has_errors('probes', 'encoding', 'extracts') or not (self.dag_ok and self.evaluable) \
+        # ExprProbe.build uses the safe expression evaluator, so building the
+        # probes never runs arbitrary code.
+        if self.has_errors('probes', 'encoding', 'extracts') or not self.dag_ok \
                 or not self.target_names or self.lengths is None:
             return
         from .gen.probe import DAG

@@ -7,6 +7,7 @@ import yaml
 from click.testing import CliRunner
 
 from uprobe.core.cli import cli
+from uprobe.core.gen.expression import check_probe_expressions
 from uprobe.core.validate import ATTRIBUTE_TYPES, render_text, validate_files, validate_protocol
 
 DATA = Path(__file__).parent / 'data'
@@ -197,12 +198,22 @@ def test_encoding_lookups(dna):
     assert "did you mean 'BC_2'" in find(findings, f"encoding['{DNA_TARGET}']").suggestion
 
 
-def test_safe_expression_hook(dna, monkeypatch):
-    from uprobe.core.gen import expression
-    monkeypatch.setattr(expression, 'check_expression', lambda expr, names: ['no slicing'] if '[:]' in expr else [],
-                        raising=False)
-    finding = find(validate_protocol(dna), 'probes.probe_1.parts.part2.expr')
-    assert finding.message == 'no slicing'
+@pytest.mark.parametrize('expr,message', [
+    ('target_region[0:20].lower()', 'method or attribute call is not allowed'),
+    ("'A' * 20", "operator '*' is not allowed"),
+    ("__import__('os')", "call to '__import__()' is not allowed"),
+    ('[b for b in target_region]', 'list comprehension is not allowed'),
+    ('target_region.__class__', 'dunder name is not allowed'),
+    ('target.upper', 'attribute access is not allowed'),
+    ('rc(target_regoin[0:20])', "unknown name 'target_regoin'"),
+])
+def test_expressions_checked_like_the_evaluator(dna, expr, message):
+    # The validator uses the grammar of uprobe.core.gen.expression and reports each problem once.
+    dna['probes']['probe_1']['parts']['part2']['expr'] = expr
+    path = 'probes.probe_1.parts.part2.expr'
+    [finding] = [f for f in errors(validate_protocol(dna)) if f.path == path]
+    assert message in finding.message
+    assert check_probe_expressions(dna['probes'])  # `uprobe run` and the HTTP API reject it too
 
 
 # -- attributes ----------------------------------------------------------
@@ -334,11 +345,12 @@ def test_dry_run_reports_runtime_problems(rna):
     assert 'empty' in find(findings, 'probes.probe_3.parts.a.expr', 'warning').message
 
 
-def test_dry_run_never_runs_arbitrary_code(rna, tmp_path):
+@pytest.mark.parametrize('template', ["open({!r}, 'w').name", "open({!r}, 'w')"])
+def test_dry_run_never_runs_arbitrary_code(rna, tmp_path, template):
     marker = tmp_path / 'marker'
-    rna['probes']['probe_2']['parts']['part2']['expr'] = f"open({str(marker)!r}, 'w').name"
+    rna['probes']['probe_2']['parts']['part2']['expr'] = template.format(str(marker))
     findings = validate_protocol(rna)
-    assert 'builtin' in find(findings, 'probes.probe_2.parts.part2.expr', 'warning').message
+    assert 'not allowed' in find(findings, 'probes.probe_2.parts.part2.expr').message
     assert not marker.exists()
 
 
