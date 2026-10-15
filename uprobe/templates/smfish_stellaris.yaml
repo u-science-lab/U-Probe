@@ -61,6 +61,7 @@ meta:
       formamide in 2x SSC with 100 mg/mL dextran sulfate.
   limitations:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
+    - With aligner bowtie2, 20-mers do not align (Bowtie2's local mode needs at least 22 nt), so target_mapped_genes is 0 and does not filter; aligner bowtie (see the attribute) searches every site within max_mismatches substitutions.
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here)"
@@ -98,6 +99,13 @@ hybridization:
   na_mM: 390
   formamide_pct: 10
 
+# Optional: genes not expressed in your sample are not counted as off-targets
+# (they stay listed in target_mapped_genes_unexpressed). Supply your own table:
+# gene_expression:
+#   table: expression.tsv   # a gene id or name column and a numeric column
+#   value_column: TPM
+#   min_value: 1
+
 attributes:
   target_gc:
     target: target_region
@@ -109,6 +117,13 @@ attributes:
     target: target_region
     type: mapped_genes
     aligner: bowtie2
+    # Bowtie2's local mode cannot align sequences shorter than 22 nt, so for
+    # these 20-mers this attribute is 0 and its filter keeps every probe. For
+    # every transcript site within 2 substitutions on the strand the probe
+    # binds, add bowtie to the genome's align_index and use instead:
+    #   aligner: bowtie
+    #   max_mismatches: 2
+    #   strand: sense
 
 post_process:
   filters:
@@ -119,6 +134,13 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 2
+  # Optional, with aligner: bowtie (and gene_expression) above: a false spot
+  # needs many probes on the same RNA, so instead of the target_mapped_genes
+  # filter, let at most 2 probes of a gene's set hit the same off-target gene.
+  # It runs after remove_overlap and before equal_space picks the 48.
+  # off_target_pool:
+  #   attribute: target_mapped_genes
+  #   max_probes_per_gene: 2
   equal_space:
     number_desired: 48
 

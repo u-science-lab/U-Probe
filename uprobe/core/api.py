@@ -240,7 +240,9 @@ class UProbeAPI:
         log.info("Adding attributes to probes...")
         for line in describe_conditions(self.protocol):
             log.info(f"Hybridization conditions: {line}")
-        df_final = add_attributes(df_probes, self.protocol, self.genome)
+        # Off-target statistics of mapped_genes attributes, for summary.json.
+        self.off_target_report = {}
+        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
@@ -255,7 +257,7 @@ class UProbeAPI:
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
-                                ['filters', 'sorts', 'remove_overlap', 'equal_space', 'avoid_otp'])
+                                ['filters', 'sorts', 'remove_overlap', 'off_target_pool', 'equal_space', 'avoid_otp'])
         
         if has_post_processing:
             log.info("Post-processing probes...")
@@ -270,11 +272,9 @@ class UProbeAPI:
                 self.output_files['raw_xlsx'] = raw_path.name
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
-                stages = df_processed.attrs.get('post_process_stages', [])
-                target_counts = df_processed.attrs.get('post_process_target_counts', [])
+                attrs = dict(df_processed.attrs)  # stages and off-target pool report
                 df_processed = df_final.iloc[:0].copy()
-                df_processed.attrs['post_process_stages'] = stages
-                df_processed.attrs['post_process_target_counts'] = target_counts
+                df_processed.attrs.update(attrs)
                 # Do not leave a header-only result table (including on reruns).
                 (self.output_dir / self._csv_filename).unlink(missing_ok=True)
                 tsv_path.unlink(missing_ok=True)
@@ -356,7 +356,8 @@ class UProbeAPI:
         run['step'] = 'post_process'
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
-                   no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file)
+                   no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file,
+                   off_targets=self.off_target_report)
         # 6. Generate Report (if configured)
         run['step'] = 'report'
         summary_config = self.protocol.get('summary', {})

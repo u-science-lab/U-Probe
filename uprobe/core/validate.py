@@ -31,6 +31,8 @@ import yaml
 from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
 from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
+from .offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS, MAX_MISMATCHES_LIMIT,
+                        mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
 
@@ -41,6 +43,7 @@ OPTIONAL_KEYS = (
     'name', 'description', 'attributes', 'post_process', 'summary',
     'barcode_generation',  # uprobe generate-barcodes -p
     'hybridization',  # hybridization conditions for Tm
+    'gene_expression',  # expression table for off-target counting
     'meta',  # probe-template metadata
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
@@ -48,22 +51,24 @@ SOURCES = ('genome', 'exon', 'CDS', 'UTR')
 REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
-# Attribute types dispatched by attributes.add_attributes -> required aligner.
+# Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
 ATTRIBUTE_TYPES = {
     'gc_content': None, 'annealing_temperature': None, 'length': None,
     'fold_score': None, 'self_match': None, 'blocks': None,
-    'mapped_sites': 'bowtie2', 'mapped_genes': 'bowtie2', 'kmer_count': 'jellyfish',
+    'mapped_sites': ('bowtie2',), 'mapped_genes': MAPPED_GENES_ALIGNERS, 'kmer_count': ('jellyfish',),
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
-ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization')
-POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'equal_space', 'summary')
+ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
+                  'max_mismatches', 'strand')
+POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
 OPERATORS = ('<=', '>=', '<', '>', '==')
 OPERATOR_FIXES = {'=>': '>=', '=<': '<=', '=': '=='}
 SUMMARY_KEYS = ('report_name', 'attributes', 'report')
 SUMMARY_STATS = ('count', 'mean', 'std', 'min', 'max', 'median', 'q25', 'q75', 'range')
-ALIGN_INDEXES = {'bowtie2': ('bowtie2-build', 'bowtie2'), 'blast': ('makeblastdb',), 'mmseqs': ('mmseqs',)}
+ALIGN_INDEXES = {'bowtie2': ('bowtie2-build', 'bowtie2'), 'bowtie': ('bowtie-build', 'bowtie'),
+                 'blast': ('makeblastdb',), 'mmseqs': ('mmseqs',)}
 # Columns written by UProbeAPI.generate_target_seqs, and by avoid_otp.
 TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_start', 'target_end',
                   'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
@@ -122,6 +127,11 @@ OTP_SNIPPET = ('avoid_otp:\n'
                '  chr1:1000-2000:          # a target\n'
                '    target_regions: [chr1:1000-2000]\n'
                '    density_thresh: 0.00001')
+GENE_EXPRESSION_SNIPPET = ('gene_expression:\n'
+                           '  table: expression.tsv   # TSV/CSV with a gene id or name column and a numeric column\n'
+                           '  gene_column: gene_id    # default: the first column\n'
+                           '  value_column: TPM       # default: the only numeric column\n'
+                           '  min_value: 1            # off-target genes below it are not counted')
 
 
 @dataclass
@@ -259,6 +269,7 @@ class _Validator:
         self.referenced: T.Set[str] = set()
         self.dag_ok = False
         self.attributes: dict = {}
+        self.built_lengths: T.Dict[str, int] = {}  # probe/part name -> shortest sequence in the dry run
 
     # -- bookkeeping -----------------------------------------------------
     def add(self, severity, path, message, suggestion='', doc='protocol'):
@@ -319,6 +330,7 @@ class _Validator:
         self.check_hybridization()
         protocol, generated = self.normalize()
         self.check_attributes(protocol, 'attributes' in generated)
+        self.check_gene_expression(protocol)
         if 'post_process' in generated:
             self.check_default_tm_filters(protocol)
         self.check_post_process(protocol)
@@ -326,6 +338,7 @@ class _Validator:
         if self.genomes is not None:
             self.check_genome(protocol, 'attributes' in generated)
         self.dry_run()
+        self.check_alignment_lengths(protocol, 'attributes' in generated)
         return self.findings
 
     # -- top level -------------------------------------------------------
@@ -784,10 +797,13 @@ class _Validator:
                         else _did_you_mean(kind, ATTRIBUTE_TYPES, 'valid types'))
                 self.error(path + ('type',), f'unknown attribute type {attr["type"]!r}', hint)
             else:
-                aligner = ATTRIBUTE_TYPES[kind]
-                if aligner and attr.get('aligner') != aligner:
+                aligners = ATTRIBUTE_TYPES[kind]
+                if aligners and attr.get('aligner') not in aligners:
                     got = f', got {attr["aligner"]!r}' if attr.get('aligner') else ''
-                    self.error(path + ('aligner',), f'{kind} requires aligner {aligner}{got}', f'aligner: {aligner}')
+                    self.error(path + ('aligner',), f'{kind} requires aligner {" or ".join(aligners)}{got}',
+                               f'aligner: {aligners[0]}')
+                elif kind == 'mapped_genes':
+                    self._check_mapped_genes(path, attr)
                 if kind == 'blocks' and self.source == 'genome' and not self.direct_targets:
                     self.warning(path + ('type',), 'blocks needs a start column, which source: genome does not '
                                  'produce; the attribute is skipped', 'remove it, or use source exon, CDS or UTR')
@@ -802,6 +818,53 @@ class _Validator:
             if name in columns or name in TARGET_COLUMNS:
                 self.warning(path, f'attribute name {name!r} overwrites the column of the same name',
                              f'rename it, e.g. {name}_{kind or "value"}')
+
+    def _check_mapped_genes(self, path, attr):
+        hints = {'strand': 'strand: sense   # both, sense (for target_region) or antisense (for a probe binding part)',
+                 'max_mismatches': f'max_mismatches: 2   # substitutions, 0-{MAX_MISMATCHES_LIMIT}'}
+        for option, hint in hints.items():
+            if option in attr:
+                try:
+                    mapped_genes_settings({'aligner': attr['aligner'], option: attr[option]})
+                except ValueError as exc:
+                    self.error(path + (option,), str(exc), hint)
+        if attr['aligner'] == 'bowtie2' and 'max_mismatches' in attr:
+            self.warning(path + ('max_mismatches',), 'max_mismatches only applies to aligner: bowtie and is ignored',
+                         'aligner: bowtie   # every site within max_mismatches substitutions (Bowtie 1)')
+
+    # -- gene_expression ---------------------------------------------------
+    def check_gene_expression(self, protocol):
+        from .gene_expression import read_table, resolve_columns, validate_gene_expression
+        if self.protocol.get('gene_expression') is None:
+            return
+        path = ('gene_expression',)
+        try:
+            settings = validate_gene_expression(self.protocol['gene_expression'])
+        except ValueError as exc:
+            self.error(path, str(exc), 'e.g.\n' + GENE_EXPRESSION_SNIPPET)
+            return
+        attributes = protocol.get('attributes')
+        if not any(isinstance(attr, dict) and str(attr.get('type', '')).lower() == 'mapped_genes'
+                   for attr in (attributes.values() if isinstance(attributes, dict) else [])):
+            self.warning(path, 'gene_expression only changes how mapped_genes attributes count off-target genes, '
+                         'and there is none', 'add e.g.\ntarget_mapped_genes:\n  target: target_region\n'
+                         '  type: mapped_genes\n  aligner: bowtie')
+        table = Path(settings['table'])
+        if not table.is_file():
+            self.error(path + ('table',), f'expression table not found: {table}',
+                       'fix the path; relative paths are resolved from the directory where uprobe runs')
+            return
+        try:
+            df = read_table(table)
+        except Exception as exc:
+            self.error(path + ('table',), f'cannot read {table}: {exc}',
+                       'use a tab-separated table (comma-separated when the name contains .csv) with a header row')
+            return
+        try:
+            resolve_columns(df, settings)
+        except ValueError as exc:
+            key = 'value_column' if 'value_column' in str(exc) else 'gene_column'
+            self.error(path + (key,), f'{table}: {exc}', f'{key}: one of {", ".join(map(str, df.columns))}')
 
     # -- post_process ----------------------------------------------------
     def check_post_process(self, protocol):
@@ -834,6 +897,7 @@ class _Validator:
         self._check_remove_overlap(post_process.get('remove_overlap'))
         self._check_equal_space(post_process.get('equal_space'), post_process.get('remove_overlap'))
         self._check_avoid_otp(post_process.get('avoid_otp'))
+        self._check_off_target_pool(post_process.get('off_target_pool'), post_process.get('filters'))
 
     def _check_filters(self, filters, columns):
         path = ('post_process', 'filters')
@@ -993,6 +1057,57 @@ class _Validator:
             self.warning(path, 'without remove_overlap, overlapping candidate windows can be selected',
                          'add remove_overlap:\n  location_interval: 2   # minimum gap in bases between probes')
 
+    def _check_off_target_pool(self, config, filters):
+        from .process.off_target_pool import OPTIONS, pool_settings
+        path = ('post_process', 'off_target_pool')
+        if config is None:
+            return
+        snippet = ('off_target_pool:\n  attribute: target_mapped_genes   # a mapped_genes attribute\n'
+                   '  max_probes_per_gene: 2   # probes of one target that may hit the same off-target gene')
+        if not isinstance(config, dict):
+            self.error(path, 'off_target_pool must be a mapping', snippet)
+            return
+        for key in config:
+            if key not in OPTIONS:
+                self.error(path + (key,), f'unknown option {key!r} of off_target_pool',
+                           _did_you_mean(key, OPTIONS, 'options'))
+        limit = config.get('max_probes_per_gene')
+        if type(limit) is not int or limit < 0:
+            self.error(path + ('max_probes_per_gene',), f'max_probes_per_gene must be an integer >= 0, got {limit!r}',
+                       'max_probes_per_gene: 2   # 0 keeps only probes without off-target genes')
+        try:
+            names = pool_settings({'attribute': config.get('attribute'), 'max_probes_per_gene': 0})[0]
+        except ValueError as exc:
+            self.error(path + ('attribute',), str(exc), snippet)
+            return
+        mapped = [name for name, attr in self.attributes.items()
+                  if isinstance(attr, dict) and str(attr.get('type', '')).lower() == 'mapped_genes']
+        for name in names:
+            if name not in mapped:
+                self.error(path + ('attribute',), f'{name!r} is not a mapped_genes attribute, whose off-target '
+                           'genes the limit counts', _did_you_mean(name, mapped, 'mapped_genes attributes')
+                           or 'add one, e.g.\ntarget_mapped_genes:\n  target: target_region\n  type: mapped_genes\n'
+                              '  aligner: bowtie')
+            elif self._filters_out_off_targets(name, filters):
+                self.warning(path, f'the filter {name} <= 1 already removes every probe with an off-target gene '
+                             '(filters run first), so off_target_pool removes nothing',
+                             f'relax the filter on {name} (e.g. {name} <= 4) or remove it')
+
+    @staticmethod
+    def _filters_out_off_targets(name, filters):
+        """True if a filter keeps only rows where mapped_genes attribute `name` is at most 1."""
+        for config in (filters.values() if isinstance(filters, dict) else []):
+            conditions = config.get('condition') if isinstance(config, dict) else None
+            for condition in conditions if isinstance(conditions, list) else [conditions]:
+                try:
+                    parsed = parse_condition(condition) if isinstance(condition, str) else []
+                except ValueError:
+                    continue
+                if any(column == name and ((op in ('<=', '==') and value <= 1) or (op == '<' and value <= 2))
+                       for column, op, value in parsed):
+                    return True
+        return False
+
     def _check_avoid_otp(self, config):
         from .process.otp import parse_region
         path = ('post_process', 'avoid_otp')
@@ -1119,13 +1234,16 @@ class _Validator:
                                  f'aligning with {aligner} will fail',
                                  f'install it, e.g. conda install -c bioconda {aligner}', doc)
         attributes = protocol.get('attributes')
-        needs = {'bowtie2': [], 'jellyfish': []}
+        needs = {'bowtie2': [], 'bowtie': [], 'jellyfish': []}
         for attr_name, attr in (attributes.items() if isinstance(attributes, dict) else []):
-            required = ATTRIBUTE_TYPES.get(str(attr.get('type', '')).lower()) if isinstance(attr, dict) else None
-            if required:
-                needs[required].append(attr_name)
-        enabled = {'bowtie2': 'bowtie2' in align, 'jellyfish': entry.get('jellyfish', False) is True}
+            aligners = ATTRIBUTE_TYPES.get(str(attr.get('type', '')).lower()) if isinstance(attr, dict) else None
+            if aligners:
+                needs[attr.get('aligner') if attr.get('aligner') in aligners else aligners[0]].append(attr_name)
+        enabled = {'bowtie2': 'bowtie2' in align, 'bowtie': 'bowtie' in align,
+                   'jellyfish': entry.get('jellyfish', False) is True}
         fixes = {'bowtie2': f'add bowtie2 to align_index of {name!r} in the genome config',
+                 'bowtie': f'add bowtie to align_index of {name!r} in the genome config '
+                           '(`uprobe build-index` then builds its transcriptome index)',
                  'jellyfish': f'set jellyfish: true for {name!r} in the genome config'}
         for required, names in needs.items():
             if not names:
@@ -1220,6 +1338,7 @@ class _Validator:
                             failures.setdefault((node.name, f'{type(exc).__name__}: {exc}'), []).append((target, size))
                             continue
                         result = str(node.result)
+                        self.built_lengths[node.name] = min(len(result), self.built_lengths.get(node.name, len(result)))
                         is_expr = self.nodes[node.name][0][-1] == 'expr'
                         if is_expr and not result and all(dep.result for dep in node.deps):
                             empties.setdefault(node.name, (target, size))  # root causes only
@@ -1249,6 +1368,25 @@ class _Validator:
         for name, (declared, actual, size) in lengths.items():
             self.warning(self.nodes[name][0][:-1] + ('length',), f'declared length {declared} but the part builds '
                          f'{actual} nt (with a {size} nt target_region)', 'fix the expression or the declared length')
+
+    def check_alignment_lengths(self, protocol, auto):
+        """Warn when a bowtie2 mapped_genes attribute aligns sequences too short for Bowtie2's local mode."""
+        attributes = protocol.get('attributes')
+        for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
+            if not isinstance(attr, dict) or str(attr.get('type', '')).lower() != 'mapped_genes' \
+                    or attr.get('aligner') != 'bowtie2' or not isinstance(attr.get('target'), str):
+                continue
+            target = attr['target'].replace(':', '.')
+            shortest = self.lengths[0] if target == 'target_region' and self.lengths else self.built_lengths.get(target)
+            if not shortest or shortest >= BOWTIE2_LOCAL_MIN_LENGTH:
+                continue
+            path = ('attributes',) if auto else ('attributes', name, 'aligner')
+            generated = ' (generated because `attributes` is empty)' if auto else ''
+            self.warning(path, f'{name}{generated} aligns {target} ({shortest} nt) with bowtie2, whose local mode '
+                         f'cannot align sequences shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt: they count 0 genes, '
+                         f'so filters on {name} keep them',
+                         'aligner: bowtie   # every site within max_mismatches substitutions; add bowtie to the '
+                         "genome's align_index")
 
 
 def validate_protocol(protocol, genomes=None, check_targets: bool = False, *,

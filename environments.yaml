@@ -9,6 +9,7 @@ dependencies:
   - python=3.10
   - pysam
   - bowtie2
+  - bowtie      # Bowtie 1: exhaustive off-target search (mapped_genes with aligner: bowtie)
   - blast
   - mmseqs2
   - jellyfish

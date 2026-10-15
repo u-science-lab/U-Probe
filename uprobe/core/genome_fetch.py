@@ -55,7 +55,7 @@ MANIFEST_NAME = "genome_source.json"
 CHECKSUM_ALGORITHM = "BSD sum (16-bit checksum, 1 KiB blocks)"
 # Files U-Probe derives from the FASTA/GTF next to them (see uprobe.core.tools).
 _DERIVED = ("bowtie2_genome", "blast_genome", "mmseqs_genome",
-            "bowtie2_transcript", "blast_transcript", "jf_genome", "transcript.fa")
+            "bowtie2_transcript", "bowtie_transcript", "blast_transcript", "jf_genome", "transcript.fa")
 # Rough "gz + decompressed" size factors, only used for a disk-space warning.
 _SPACE_FACTOR = {"fasta": 5, "gtf": 12}
 _NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -688,12 +688,14 @@ def search(query: str, division: str = "vertebrates", release: T.Union[int, str,
 
 
 def _index_status(fasta: T.Optional[Path], aligner: str) -> T.Dict[str, T.Optional[bool]]:
-    from .tools import _blast_index_exists, _bowtie2_index_exists
-    check = {"bowtie2": _bowtie2_index_exists, "blast": _blast_index_exists}.get(aligner)
+    from .tools import _TRANSCRIPT_ONLY, _blast_index_exists, _bowtie2_index_exists, _bowtie_index_exists
+    check = {"bowtie2": _bowtie2_index_exists, "bowtie": _bowtie_index_exists,
+             "blast": _blast_index_exists}.get(aligner)
+    # Bowtie 1 indexes only the transcriptome (mapped_genes with aligner: bowtie).
+    kinds = ("transcript",) if aligner in _TRANSCRIPT_ONLY else ("genome", "transcript")
     if fasta is None or check is None:
-        return {"genome": None, "transcript": None}
-    return {"genome": check(fasta.parent / f"{aligner}_genome" / fasta.stem),
-            "transcript": check(fasta.parent / f"{aligner}_transcript" / fasta.stem)}
+        return {kind: None for kind in kinds}
+    return {kind: check(fasta.parent / f"{aligner}_{kind}" / fasta.stem) for kind in kinds}
 
 
 def describe_genomes(genomes_yaml: T.Union[str, Path]) -> T.List[dict]:

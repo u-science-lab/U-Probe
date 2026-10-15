@@ -2,6 +2,7 @@ import pandas as pd
 import re
 from .otp import avoid_otp
 from .equal_space import equal_space
+from .off_target_pool import limit_off_target_pool
 from .regions import region_bounds
 from .summary import process_summary
 from .sequence_filter import apply_sequence_filter
@@ -121,10 +122,19 @@ def remove_overlap(df: pd.DataFrame,
     else:
         return df
 
+# post_process runs its steps in this order, whatever their order in the protocol.
+STEP_ORDER = ('filters', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'sorts')
+
 def post_process(df: pd.DataFrame, 
                  config: dict
                  ) -> pd.DataFrame:
+    """Apply the post_process steps in STEP_ORDER.
+
+    off_target_pool limits the probes per off-target gene among the
+    non-overlapping candidates, before equal_space keeps N per target.
+    """
     stages = []
+    pool_report = None
     # Per-target counts after each stage (aligned with `stages`) for the run summary.
     target_counts = []
     target_col = next((c for c in ('target', 'gene') if c in df.columns), None)
@@ -234,6 +244,10 @@ def post_process(df: pd.DataFrame,
         location_interval = processes['remove_overlap'].get('location_interval', 0)
         df = remove_overlap(df, config, location_interval)
         record('Remove overlap')
+    if processes.get('off_target_pool'):
+        logger.info("Limiting probes per off-target gene")
+        df, pool_report = limit_off_target_pool(df, processes['off_target_pool'], processes.get('sorts'))
+        record('Off-target pool limit')
     if "equal_space" in processes and processes['equal_space']:
         logger.info("Equalizing space")
         df = equal_space(df, processes['equal_space'])
@@ -251,4 +265,6 @@ def post_process(df: pd.DataFrame,
         logger.info("Summary configuration found - will be processed during report generation")
     df.attrs['post_process_stages'] = stages
     df.attrs['post_process_target_counts'] = target_counts
+    if pool_report is not None:
+        df.attrs['off_target_pool'] = pool_report
     return df

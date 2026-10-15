@@ -125,6 +125,15 @@ hybridization:
   probe_nM: 10
   formamide_pct: 20
 
+# Optional: genes not expressed in your sample are not counted as off-targets
+# (they stay listed in target_mapped_genes_unexpressed). A single padlock makes
+# signal after RCA, so keep target_mapped_genes <= 1: no expressed off-target
+# per probe. Supply your own table:
+# gene_expression:
+#   table: expression.tsv   # a gene id or name column and a numeric column
+#   value_column: TPM
+#   min_value: 1
+
 attributes:
   target_gc:
     target: target_region
@@ -144,6 +153,12 @@ attributes:
     target: target_region
     type: mapped_genes
     aligner: bowtie2
+    # Bowtie2 local alignments find exact and 1-mismatch sites of 30-mers but
+    # only some 2-mismatch sites. For every transcript site within 2
+    # substitutions, add bowtie to the genome's align_index and use instead:
+    #   aligner: bowtie
+    #   max_mismatches: 2
+    #   strand: sense    # mRNA sites like target_region; the padlock binds their cDNA
 
 post_process:
   filters:

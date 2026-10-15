@@ -145,8 +145,8 @@ def test_alignment_reused_across_layouts(monkeypatch,tmp_path):
     monkeypatch.chdir(tmp_path)
     def align(_,records,*args):
         assert records=={'0':'ACGT','1':'ACG'}
-        return {'0':2,'1':3}
-    monkeypatch.setattr(attributes,'count_n_bowtie2_aligned_genes',align)
+        return {'0':dict.fromkeys('ab'),'1':dict.fromkeys('abc')}
+    monkeypatch.setattr(attributes,'bowtie2_gene_hits',align)
     result=add_attributes(pd.DataFrame({'s':['ACGT','ACGT','ACG']}),
                           {'attributes':{'hits':{'target':'s','type':'mapped_genes','aligner':'bowtie2'}}},
                           {'fasta':str(tmp_path/'ref.fa'),'align_index':['bowtie2']})

@@ -17,6 +17,18 @@ def build_bowtie2_index(fasta_path: Path,
     log.info(f"Call cmd: {cmd}")
     subp.check_call(cmd, shell=True)
     
+def build_bowtie_index(fasta_path: Path,
+                       index_prefix: Path,
+                       threads: int=10
+                       ) -> None:
+    """Bowtie 1 index, searched by mapped_genes with aligner: bowtie."""
+    cmd = ["bowtie-build", "--threads",
+           str(threads),
+           str(fasta_path),
+           str(index_prefix)]
+    log.info(f"Call cmd: {' '.join(cmd)}")
+    subp.check_call(cmd)
+
 def build_blast_db(fasta_path: Path, 
                    db_prefix: Path, 
                    title: str = "blast_db"

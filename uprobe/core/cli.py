@@ -353,6 +353,11 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
     from .hybridization import validate_protocol_hybridization
     validate_protocol_hybridization(protocol_config)
+
+    # 3.2 Validate the gene_expression block; its table is read when mapped_genes attributes run.
+    if protocol_config.get('gene_expression') is not None:
+        from .gene_expression import validate_gene_expression
+        validate_gene_expression(protocol_config['gene_expression'])
     
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
     if 'post_process' not in protocol_config or not protocol_config['post_process']:
@@ -363,6 +368,12 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         )
         _log_tm_windows(protocol_config)
     
+    # 4.1 Check off_target_pool before the slow steps: it reads mapped_genes attributes.
+    pool = (protocol_config.get('post_process') or {}).get('off_target_pool')
+    if pool:
+        from .process.off_target_pool import check_pool_attributes, pool_settings
+        check_pool_attributes(pool_settings(pool)[0], protocol_config['attributes'])
+
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:
         log.info(f"Summary configuration missing or empty. Auto-generating with report_name: {'dna_report' if is_dna_mode else 'rna_report'}")
@@ -1104,8 +1115,7 @@ def genome_list(genomes, as_json):
         click.echo(f"  fasta: {row['fasta']} ({'ok' if row['fasta_exists'] else 'MISSING'})")
         click.echo(f"  gtf:   {row['gtf']} ({'ok' if row['gtf_exists'] else 'MISSING'})")
         for aligner, status in row['indexes'].items():
-            click.echo(f"  {aligner} index: genome {state[status['genome']]}, "
-                       f"transcript {state[status['transcript']]}")
+            click.echo(f"  {aligner} index: " + ", ".join(f"{kind} {state[value]}" for kind, value in status.items()))
         click.echo(f"  jellyfish: {'on' if row['jellyfish'] else 'off'}")
         source = row['source'] or {}
         if source.get('release'):

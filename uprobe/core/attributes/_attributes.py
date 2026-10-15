@@ -4,6 +4,7 @@ import primer3
 import RNA
 import subprocess as subp
 from uprobe.core.utils import get_logger, reverse_complement, write_fastq
+from uprobe.core.offtarget import STRAND_OPTIONS
 
 log = get_logger(__name__)
 
@@ -47,11 +48,12 @@ def bowtie2_align_se_sen(
         threads: int = 10,
         log_file: t.Optional[str] = 'bowtie2.log',
         header: bool = True,
+        strand: str = 'both',
         ) -> str:
     cmd = ["bowtie2", "-x", str(index), "-U", str(fq_path)]
     if not header:
         cmd.append("--no-hd")
-    cmd += ["-t", "-k", "100", "--very-sensitive-local"]
+    cmd += ["-t", "-k", "100", "--very-sensitive-local"] + STRAND_OPTIONS[strand]
     cmd += ["-p", str(threads)]
     cmd += ["-S", str(sam_path)]
     cmd_str = " ".join(cmd)
@@ -174,17 +176,26 @@ def cal_kmer_count(outdir: str,
         pass
     return seq_kmer_counts 
 
-def count_n_bowtie2_aligned_genes(
+def transcript_gene(ref_name: str) -> str:
+    """Gene of a ``transcript.fa`` record named ``{gene_id}_{transcript_id}``."""
+    # Keep this extraction identical to fisheye/primer_design/seq_features.py.
+    return ref_name.split("_")[0]
+
+def bowtie2_gene_hits(
         outdir: str,
         recname2seq: t.Mapping[str, str],
         name: str,
         index_prefix: str,
-        threads: int = 10):
-    """Count distinct genes hit by each query, matching fisheye semantics.
+        threads: int = 10,
+        strand: str = 'both',
+        ) -> t.Dict[str, t.Dict[str, None]]:
+    """Genes hit by each query among Bowtie2's local alignments (up to ``-k 100``).
 
     The Bowtie2 index must be built from ``transcript.fa`` whose record names
     follow fisheye's ``{gene_id}_{transcript_id}`` convention.  Multiple
     transcript hits from the same gene therefore contribute one mapped gene.
+    Returns query -> {gene: None}: local alignments may be clipped, so they
+    carry no mismatch count comparable to :func:`bowtie_gene_hits`.
     """
     fq_path = write_fastq(outdir, name, recname2seq)
     sam_path = f"{outdir}/{name}.sam"
@@ -192,15 +203,65 @@ def count_n_bowtie2_aligned_genes(
         bowtie2_align_se_sen(
             fq_path, index_prefix,
             sam_path, threads=threads,
-            log_file=f"{outdir}/{name}.bowtie2.log")
-    # Include queries without an alignment explicitly as zero.
-    n_mapped_genes = {rec_name: 0 for rec_name in recname2seq}
+            log_file=f"{outdir}/{name}.bowtie2.log", strand=strand)
+    # Include queries without an alignment explicitly.
+    hits = {rec_name: {} for rec_name in recname2seq}
     for rec_name, seq, alns in read_sam_align_blocks(sam_path):
-        # Keep this extraction identical to fisheye/primer_design/seq_features.py.
-        n_genes = len(set([ref_name.split("_")[0]
-                           for ref_name, start, end in alns]))
-        n_mapped_genes[rec_name] = n_genes
-    return n_mapped_genes
+        hits[rec_name] = {transcript_gene(ref_name): None for ref_name, start, end in alns}
+    return hits
+
+def count_n_bowtie2_aligned_genes(
+        outdir: str,
+        recname2seq: t.Mapping[str, str],
+        name: str,
+        index_prefix: str,
+        threads: int = 10):
+    """Count distinct genes hit by each query, matching fisheye semantics."""
+    hits = bowtie2_gene_hits(outdir, recname2seq, name, index_prefix, threads)
+    return {rec_name: len(genes) for rec_name, genes in hits.items()}
+
+def bowtie_gene_hits(
+        outdir: str,
+        recname2seq: t.Mapping[str, str],
+        name: str,
+        index_prefix: str,
+        max_mismatches: int = 2,
+        threads: int = 10,
+        strand: str = 'both',
+        ) -> t.Dict[str, t.Dict[str, int]]:
+    """Genes with a site within ``max_mismatches`` substitutions of each query.
+
+    Bowtie 1 in ``-v`` mode ignores base qualities, and with ``-a`` it reports
+    every end-to-end alignment with at most ``max_mismatches`` (0-3)
+    mismatches, so no such site is missed; indels are not considered.
+    Returns query -> {gene: fewest mismatches over the gene's sites}.
+    """
+    fa_path = f"{outdir}/{name}.fa"
+    with open(fa_path, "w") as f:
+        for rec_name, seq in recname2seq.items():
+            f.write(f">{rec_name}\n{seq}\n")
+    cmd = ["bowtie", "-f", "-v", str(max_mismatches), "-a", "-p", str(threads),
+           "--suppress", "5,6,7"] + STRAND_OPTIONS[strand] + [str(index_prefix), fa_path]
+    log_file = f"{outdir}/{name}.bowtie.log"
+    log.info(f"Call cmd: {' '.join(cmd)} 2> {log_file}")
+    hits = {rec_name: {} for rec_name in recname2seq}
+    with open(log_file, "w") as err:
+        # Stream the output: with -a, repeat-like queries can have many alignments.
+        proc = subp.Popen(cmd, stdout=subp.PIPE, stderr=err, text=True)
+        for line in proc.stdout:
+            # query, strand, reference, offset, mismatches (e.g. "3:G>T,10:A>C")
+            fields = line.rstrip("\n").split("\t")
+            mismatches = len(fields[4].split(",")) if len(fields) > 4 and fields[4] else 0
+            genes = hits[fields[0]]
+            gene = transcript_gene(fields[2])
+            if mismatches < genes.get(gene, max_mismatches + 1):
+                genes[gene] = mismatches
+        returncode = proc.wait()
+    if returncode != 0:
+        with open(log_file) as f:
+            log.error(f.read())
+        raise subp.CalledProcessError(returncode, cmd)
+    return hits
 
 def self_match(probe: str, min_match = 4):
     length = len(probe)

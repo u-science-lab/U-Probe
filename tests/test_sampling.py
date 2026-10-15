@@ -80,8 +80,8 @@ def test_same_start_mapping_does_not_overwrite(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     def align(_, records, *args):
         assert len(records) == 2
-        return {key: len(seq) for key, seq in records.items()}
-    monkeypatch.setattr(attributes, 'count_n_bowtie2_aligned_genes', align)
+        return {key: dict.fromkeys(range(len(seq))) for key, seq in records.items()}
+    monkeypatch.setattr(attributes, 'bowtie2_gene_hits', align)
     df = pd.DataFrame({'target_region': ['A' * 40, 'A' * 46], 'exon_name': ['E', 'E'], 'start': [1, 1]})
     config = {'attributes': {'hits': {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}}}
     result = add_attributes(df, config, {'fasta': str(tmp_path / 'ref.fa'), 'align_index': ['bowtie2']})
