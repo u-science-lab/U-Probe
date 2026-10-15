@@ -164,7 +164,8 @@ def test_smfish_limits_probes_per_off_target_gene():
     # A false spot needs many probes on one RNA: a pool limit instead of no off-target per probe.
     pp = load_template('smfish_stellaris')['post_process']
     assert pp['off_target_pool'] == {'attribute': 'target_mapped_genes', 'max_probes_per_gene': 2}
-    assert pp['filters']['target_mapped_genes']['condition'] == 'target_mapped_genes <= 11'
+    # At most one off-target gene per probe, and each hit by at most 2 probes of a set.
+    assert pp['filters']['target_mapped_genes']['condition'] == 'target_mapped_genes <= 2'
     assert 'gene_expression:' in read_template('smfish_stellaris')
 
 
