@@ -304,6 +304,10 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         log.info(f"Attributes missing or empty. Auto-generating from probes structure for mode: {'DNA' if is_dna_mode else 'RNA'}")
         protocol_config['attributes'] = _generate_default_attributes(protocol_config)
     
+    # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
+    from .hybridization import validate_protocol_hybridization, TM_DEFAULTS
+    validate_protocol_hybridization(protocol_config)
+    
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
     if 'post_process' not in protocol_config or not protocol_config['post_process']:
         log.info("Post-process configuration missing or empty. Auto-generating from attributes.")
@@ -311,6 +315,9 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
             protocol_config, 
             protocol_config['attributes']
         )
+        if any(key in (protocol_config.get('hybridization') or {}) for key in TM_DEFAULTS):
+            log.warning("Auto-generated Tm filters (50-90 °C) were chosen for the legacy primer3 "
+                        "conditions; review them for the declared hybridization conditions.")
     
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:

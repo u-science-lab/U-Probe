@@ -214,12 +214,17 @@ def self_match(probe: str, min_match = 4):
                 match_pairs = match_pairs + 1
     return match_pairs
 
-def cal_temp(seq: str): # Tm
-    """Use explicit reaction conditions matching the fisheye reference output."""
+def cal_temp(seq: str, mv_conc=50, dv_conc=0, dntp_conc=0.6, dna_conc=50,
+             formamide_conc=0): # Tm
+    """Defaults are the reaction conditions matching the fisheye reference output.
+
+    Protocol ``hybridization`` conditions override them (mM, mM, mM, nM and
+    mol/l formamide); see uprobe.core.hybridization.
+    """
     return primer3.calc_tm(
-        seq, mv_conc=50, dv_conc=0, dntp_conc=0.6, dna_conc=50,
-        formamide_conc=0, dmso_conc=0, tm_method="santalucia",
-        salt_corrections_method="santalucia",
+        seq, mv_conc=mv_conc, dv_conc=dv_conc, dntp_conc=dntp_conc,
+        dna_conc=dna_conc, formamide_conc=formamide_conc, dmso_conc=0,
+        tm_method="santalucia", salt_corrections_method="santalucia",
     )
 
 def cal_fold(seq: str): # RNA fold
@@ -228,7 +233,7 @@ def cal_fold(seq: str): # RNA fold
 def cal_gc_content(seq: str):
     return (seq.count('G') + seq.count('C')) / len(seq)
 
-def cal_target_fold_score(seq: str):
+def cal_target_fold_score(seq: str, temperature_c=None):
     if not seq or seq is None:
         return float('nan')
     clean_seq = seq.upper().replace('T', 'U')
@@ -237,7 +242,12 @@ def cal_target_fold_score(seq: str):
     if not clean_seq:
         return float('nan')
     try:
-        return -RNA.fold_compound(clean_seq).mfe()[1]
+        if temperature_c is None:
+            return -RNA.fold_compound(clean_seq).mfe()[1]
+        # Fold at the hybridization temperature instead of ViennaRNA's 37 °C.
+        md = RNA.md()
+        md.temperature = temperature_c
+        return -RNA.fold_compound(clean_seq, md).mfe()[1]
     except Exception as e:
         print(f"Warning: RNA folding failed for sequence '{seq[:20]}...': {e}")
         return float('nan')

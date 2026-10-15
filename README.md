@@ -301,15 +301,57 @@ summary:
   - **DAG References**: Because of the DAG structure, subsequent probes or parts can dynamically reference the sequences of previously defined probes/parts in their expressions.
 - **`attributes`**: Define the biochemical or physical properties you want to calculate for specific targets or probe parts. Available attribute types include:
   - `gc_content`: Calculates the GC ratio of the sequence.
-  - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3.
-  - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable).
+  - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3, under the protocol's `hybridization` conditions.
+  - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable), at `hybridization.temperature_c` when set.
   - `self_match`: Calculates the potential for self-dimerization.
   - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites.
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to (via Bowtie2).
   - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
+- **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
+
+#### Hybridization conditions
+
+By default, Tm is computed under PCR-like conditions (50 mM Na+, 0.6 mM dNTP, 50 nM oligo, no formamide; these match the fisheye reference pipeline). FISH hybridizations usually run in SSC buffer with formamide, so declare the conditions of your experiment with a top-level `hybridization` block:
+
+```yaml
+hybridization:
+  temperature_c: 37     # hybridization temperature (°C); used by fold_score
+  na_mM: 390            # monovalent cations; 2x SSC (0.3 M NaCl + 0.03 M Na3-citrate) = 390 mM Na+
+  mg_mM: 0              # divalent cations
+  dntp_mM: 0            # dNTPs (chelate Mg2+; no effect when mg_mM is 0)
+  probe_nM: 50          # concentration of each probe oligo
+  formamide_pct: 30     # formamide, % (v/v)
+
+attributes:
+  probe_1_tm:
+    target: probe_1.part1
+    type: annealing_temperature          # uses the block above
+  readout_tm:
+    target: probe_2
+    type: annealing_temperature
+    hybridization:                       # per-attribute override, merged over the block
+      formamide_pct: 10
+```
+
+| Field | Unit | Default when unset | Used by |
+| --- | --- | --- | --- |
+| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score` |
+| `na_mM` | mM | 50 | `annealing_temperature` |
+| `mg_mM` | mM | 0 | `annealing_temperature` |
+| `dntp_mM` | mM | 0.6 | `annealing_temperature` |
+| `probe_nM` | nM | 50 | `annealing_temperature` |
+| `formamide_pct` | % (v/v) | 0 | `annealing_temperature` |
+
+- Every field is optional. Without the block (or with an empty one) results are identical to earlier versions. An `annealing_temperature` or `fold_score` attribute may carry its own `hybridization` mapping with the same fields, overriding the top-level values for that attribute only.
+- Values must be numbers and `>= 0`; `na_mM` and `probe_nM` must be `> 0`, `formamide_pct` and `temperature_c` at most 100, and unknown field names are rejected.
+- **Tm model**: Primer3 nearest-neighbor Tm (SantaLucia 1998, PNAS 95:1460-65) with SantaLucia salt correction; Mg2+ is converted to a Na+ equivalent as in von Ahsen et al. 2001 (Clin Chem 47:1956-61). Primer3 parameters describe DNA/DNA duplexes, so Tm against RNA targets is an approximation.
+- **Formamide**: U-Probe uses Primer3's correction, which lowers Tm by (2.88 − 0.453 × GC fraction) °C per mol/l formamide (Blake & Delcourt 1996, Nucleic Acids Res 24:2095-2103, [doi:10.1093/nar/24.11.2095](https://doi.org/10.1093/nar/24.11.2095)). `formamide_pct` is converted to mol/l with formamide's density (1.1334 g/ml at 20 °C) and molar mass (45.04 g/mol), so 1% (v/v) = 0.252 M and Tm drops 0.61-0.72 °C per percent depending on GC content, close to the linear 0.60 °C/% measured by Hutton 1977 (Nucleic Acids Res 4:3537-3555, [doi:10.1093/nar/4.10.3537](https://doi.org/10.1093/nar/4.10.3537)). It is preferred over a fixed linear factor because it accounts for GC content and is applied inside the same Primer3 call.
+- **Folding**: `fold_score` folds at `temperature_c`; ViennaRNA does not model formamide, and salt is left at its default.
+- The conditions in effect are logged for every Tm/fold attribute. When a protocol declares them, they are also shown in the HTML report header and stored in the result `.xlsx` as custom document properties (`hybridization:<attribute>`).
+- Auto-generated Tm filters (50-90 °C) are not adjusted. Review them when you declare FISH conditions; U-Probe logs a warning when it generates them.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory.
 
