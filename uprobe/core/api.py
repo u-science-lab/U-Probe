@@ -1,5 +1,6 @@
 import time
 import typing as T
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +9,7 @@ import yaml
 from .sampling import normalize_sampling, iter_target_windows
 from .layout import compile_layout, expand_layout_candidates, validate_layout_references
 from .attributes import add_attributes
+from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
 from .gen.fun import generate_target_seqs, validate_targets
 from .gen.probe import construct_probes
@@ -16,6 +18,7 @@ from .report import generate_plot_report
 from .report.html import save_html_report
 from .report.formatting import prepare_result_table
 from .report.excel import save_xlsx
+from .report.run_summary import SUMMARY_FILENAME, build_run_summary, save_tsv, write_run_summary
 
 from .tools import build_genome
 from .utils import get_logger
@@ -111,6 +114,7 @@ class UProbeAPI:
         log.info("Validating targets...")
         
         valid_genome_targets = []
+        invalid_list = []
         if genome_targets:
             gtf_path = Path(self.genome['gtf'])
             _, valid_list, invalid_list = validate_targets(genome_targets, gtf_path, DTF_NAME_FIX=True)
@@ -126,6 +130,7 @@ class UProbeAPI:
         for name, seq in direct_targets.items():
             new_targets.append({name: seq})
         self.protocol["targets"] = new_targets
+        self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
         if not new_targets:
             log.error("No valid targets remaining after validation.")
             if not continue_on_invalid:
@@ -227,16 +232,22 @@ class UProbeAPI:
     def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False) -> pd.DataFrame:
         self.no_filtered_probes = False
         self.raw_file = None
+        self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None}
         log.info("Adding attributes to probes...")
+        for line in describe_conditions(self.protocol):
+            log.info(f"Hybridization conditions: {line}")
         df_final = add_attributes(df_probes, self.protocol, self.genome)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
         self._csv_filename = f"{name}_{time_str}.xlsx"
+        # Plain-text copy of the final table for scripts and agents.
+        tsv_path = self.output_dir / f"{name}_{time_str}_probes.tsv"
         if raw_csv:
             raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
             log.info(f"Saving raw results to {raw_path}")
             save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
+            self.output_files['raw_xlsx'] = raw_path.name
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
@@ -252,28 +263,52 @@ class UProbeAPI:
                 save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
                 self.no_filtered_probes = True
                 self.raw_file = raw_path.name
+                self.output_files['raw_xlsx'] = raw_path.name
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
                 stages = df_processed.attrs.get('post_process_stages', [])
+                target_counts = df_processed.attrs.get('post_process_target_counts', [])
                 df_processed = df_final.iloc[:0].copy()
                 df_processed.attrs['post_process_stages'] = stages
+                df_processed.attrs['post_process_target_counts'] = target_counts
                 # Do not leave a header-only result table (including on reruns).
                 (self.output_dir / self._csv_filename).unlink(missing_ok=True)
+                tsv_path.unlink(missing_ok=True)
                 return df_processed
             else:
                 output_path = self.output_dir / f"{name}_{time_str}.xlsx"
                 log.info(f"Saving {df_processed.shape[0]} processed probes to {output_path}")
                 save_xlsx(df_processed, self.protocol, (output_path).with_suffix(".xlsx"))
+                save_tsv(df_processed, tsv_path)
+                self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
                 return df_processed
         else:
             log.info("No post-processing steps configured, using raw data as final result")
             output_path = self.output_dir / f"{name}_{time_str}.xlsx"
             log.info(f"Saving {df_final.shape[0]} probes to {output_path}")
             save_xlsx(df_final, self.protocol, (output_path).with_suffix(".xlsx"))
+            save_tsv(df_final, tsv_path)
+            self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
             return df_final
 
     def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False, threads: int = 10) -> pd.DataFrame:      
+        """Run all steps and write summary.json, also after early exits and errors."""
+        run = {'started': datetime.now().astimezone(), 'step': 'normalize_protocol'}
+        self.summary = None
+        self.target_validation = None
+        try:
+            result = self._run_workflow(run, raw_csv, continue_on_invalid_targets, threads)
+        except Exception as error:
+            run['error'] = error
+            self._write_run_summary(run)
+            raise
+        self._write_run_summary(run)
+        return result
+
+    def _run_workflow(self, run: dict, raw_csv: bool, continue_on_invalid_targets: bool, threads: int) -> pd.DataFrame:
         log.info("--- Starting U-Probe Workflow ---")
+        genome_targets, direct_targets = self._parse_targets()
+        run['requested_targets'] = genome_targets + list(direct_targets)
         
         # Normalize protocol (inject attributes/post_process/summary defaults if missing)
         # This ensures DNA/RNA-specific attributes are auto-generated
@@ -281,34 +316,70 @@ class UProbeAPI:
         self.protocol = _validate_and_normalize_protocol(self.protocol)
     
         # 1. Build Genome Index (if needed)
+        run['step'] = 'build_index'
         self.build_genome_index(threads=threads)
         # 2. Validate Targets(RNA)
+        run['step'] = 'validate_targets'
         source = self.protocol['extracts']['target_region']['source']
         if source != 'genome':
             if not self.validate_targets(continue_on_invalid=continue_on_invalid_targets):
                 log.error("Workflow halted due to target validation failure.")
+                run['status'] = 'no_valid_targets'
                 return pd.DataFrame()
         # 3. Generate Target Region Sequences
+        run['step'] = 'extract_target_regions'
         df_targets = self.generate_target_seqs()
+        run['targets'] = df_targets
         if df_targets.empty:
+            run['status'] = 'no_target_sequences'
             return pd.DataFrame()
         # 4. Construct Probes
+        run['step'] = 'construct_probes'
         df_probes = self.construct_probes(df_targets)
         if df_probes.empty:
+            run['status'] = 'no_probes_constructed'
+            return pd.DataFrame()
+        df_combined = pd.concat([df_targets.reset_index(drop=True), df_probes.reset_index(drop=True)], axis=1)
+        run['combined'] = df_combined
+        # Probes that failed to build are ''; stop if that is every candidate
+        # (e.g. a blank encoding) instead of reporting empty probes.
+        probe_names = [name for name in (self.protocol.get('probes') or {}) if name in df_probes.columns]
+        if probe_names and not df_probes[probe_names].astype(str).ne('').all(axis=1).any():
+            log.error("No probe could be built for any candidate. Check the probe expressions and encoding.")
+            run['status'] = 'no_probes_constructed'
             return pd.DataFrame()
         # 5. Post-process
-        df_combined = pd.concat([df_targets.reset_index(drop=True), df_probes.reset_index(drop=True)], axis=1)
+        run['step'] = 'post_process'
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
+        run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
+                   no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file)
         # 6. Generate Report (if configured)
+        run['step'] = 'report'
         summary_config = self.protocol.get('summary', {})
         if summary_config.get('report_name'):
             log.info("Generating final report with summary statistics...")
-            self.generate_report(df_processed, 
+            reports = self.generate_report(df_processed, 
                                include_plots=self._include_plots,
                                generate_html=self._generate_html,
                                embed_plots=self._embed_plots)
+            # A name in output_dir like the tables; output_dir / name is relative for a relative -o.
+            html = next(iter(reports.get('html_reports', [])), None)
+            run['files']['html'] = Path(html).name if html else None
         log.info("--- U-Probe Workflow Completed ---")
         return df_processed
+
+    def _write_run_summary(self, run: dict) -> None:
+        """Write summary.json; failing to summarize never fails the run itself."""
+        run['finished'] = datetime.now().astimezone()
+        run['target_validation'] = getattr(self, 'target_validation', None)
+        genome = getattr(self, 'genome', None)
+        run['genome_source'] = genome.get('source') if isinstance(genome, dict) else None
+        try:
+            self.summary = build_run_summary(self.protocol, run, self.output_dir)
+            path = write_run_summary(self.summary, self.output_dir / SUMMARY_FILENAME)
+            log.info(f"Run summary ({self.summary['status']}) saved to {path}")
+        except Exception:
+            log.exception("Failed to write run summary")
 
     def generate_report(self, df_processed: pd.DataFrame, include_plots: bool = True,
                         report_suffix: str = "", generate_html: bool = True,

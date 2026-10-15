@@ -4,8 +4,8 @@ description: Protocol for designing double hybrid ISS probes from species Mus mu
 genome: test
 
 targets:
-  - xxx: 'ATCGATCGATCGATCGATCGATCGATCGA'
-  - ccc: 'TTGGAAACCCCCCCCTTGGAAACCCCCCCCTTG'
+  - xxx: 'ATCGATCGATCGATCGATCGATCGATCGACCTGGGGCTGTTGCATGTGGTCAGCATAAAGGTATTACCGGAGCACAGAAGAGTAGAGAATACACCGCGGACCACCACGGCCCAATTTTAT'
+  - ccc: 'TTGGAAACCCCCCCCTTGGAAACCCCCCCCTTGTGGCGATTGGCTTTGTTTCTTGGTACTCCTACGGGTCTTAGATAACCTGGCGTAGCTGCACGAACTCAGTCGCTCGAACTGATGAAC'
 
 encoding:
   xxx:
@@ -54,7 +54,7 @@ attributes:
     type: annealing_temperature
   target_mappedGenes:
     target: target_region
-    type: n_mapped_genes
+    type: mapped_genes
     aligner: bowtie2
     min_mapq: 30
   target_selfMatch:

@@ -1,0 +1,186 @@
+# U-Probe protocol template: HCR v3.0 split-initiator probe pairs.
+# Copy: `uprobe templates show hcr_v3 -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: hcr_v3
+  technology: HCR v3.0 split-initiator probe pairs
+  description: >-
+    Each probe pair covers a 52-nt window of the RNA: two 25-nt binding sites
+    separated by a 2-nt gap. The odd probe is 5'-[initiator half 1, 18 nt]
+    [spacer, 2 nt][rc of window nt 1-25]-3' and the even probe is
+    5'-[rc of window nt 28-52][spacer, 2 nt][initiator half 2, 18 nt]-3', so the
+    two halves of the 36-nt HCR initiator are colocalized only when both probes
+    bind next to each other; a lone probe cannot trigger amplification. The
+    initiator halves and spacers depend on the amplifier (B1-B5) assigned to
+    each target. Orientation and spacers follow the Choi et al. 2018 probe
+    tables and the open-source insitu_probe_generator.
+  citations:
+    - short: Choi et al. 2018, Development
+      title: >-
+        Third-generation in situ hybridization chain reaction: multiplexed,
+        quantitative, sensitive, versatile, robust
+      doi: 10.1242/dev.165753
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6031405/
+    - short: Choi et al. 2014, ACS Nano
+      title: >-
+        Next-generation in situ hybridization chain reaction: higher gain, lower
+        cost, greater durability
+      doi: 10.1021/nn405717p
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4046802/
+    - short: Kuehn et al. 2021, J Exp Zool B (insitu_probe_generator)
+      title: >-
+        Segment number threshold determines juvenile onset of germline cluster
+        expansion in Platynereis dumerilii
+      doi: 10.1002/jez.b.23100
+      url: https://github.com/rwnull/insitu_probe_generator
+  parameter_sources:
+    - parameter: extracts.target_region.layout (left 25, gap 2, right 25)
+      value: 25 + 2 + 25 = 52 nt
+      source: Choi 2018, SI section S3.2
+      quote: >-
+        each split-initiator probe has a 25-nt target-binding site and carries
+        half an HCR initiator ... the two probes within a pair are separated by
+        2 nt along the target so the overall target binding site for a probe
+        pair is 52 nt
+    - parameter: probe_odd / probe_even templates (initiator side and spacer)
+      value: "odd: init half 1 + spacer + 25 nt; even: 25 nt + spacer + init half 2"
+      source: Choi 2018, SI section S4.2 probe table headers; insitu_probe_generator maker37cb.py lines 364-367
+      quote: 1st Half of Initiator I1 / Spacer / Probe Sequence (25 nt) / ... / Spacer / 2nd Half of Initiator I1
+    - parameter: encoding initiator halves and spacers (B1, B2)
+      value: B1 GAGGAGGGCAGCAAACGG|AA ... TA|GAAGAGTCTTCCTTTACG; B2 CCTCGTAAATCCTCATCA|AA ... AA|ATCATCCAGTAAACCGCC
+      source: >-
+        insitu_probe_generator v0.3.2 amplifier table; halves concatenate to the
+        36-nt initiators of Choi 2014 SI section S6 and match the Choi 2018 SI
+        probe tables
+      quote: "I1 36 gAggAgggCAgCAAACgggAAgAgTCTTCCTTTACg (Choi 2018 SI Table S1)"
+    - parameter: post_process.remove_overlap.location_interval
+      value: 3
+      source: insitu_probe_generator maker37cb.py line 284 (Choi 2018 states no spacing rule)
+      quote: "if pos[a][0] > (stp + 2):  (successive 52-nt windows at least 3 nt apart)"
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 1"
+      source: U-Probe approximation of target specificity; not specified by Choi 2018.
+  hybridization:
+    ssc: 5x
+    source: >-
+      Choi 2018, SI S2.1.3-S2.1.4 (30% formamide, 5x SSC, 9 mM citric acid,
+      0.1% Tween 20, heparin, Denhardt's, 10% dextran sulfate; overnight at
+      37 C; 4 pmol probe in 1 mL)
+    notes: >-
+      [Na+] computed from 5x SSC (0.75 M NaCl + 0.075 M trisodium citrate);
+      the source states the SSC concentration, not [Na+]. Molecular Instruments
+      protocols use the same 37 C overnight step (e.g. 1.2 pmol per probe in
+      300 uL) without disclosing the buffer.
+  limitations:
+    - >-
+      Choi 2018 recommends 20 probe pairs per target for quantitative imaging
+      and at least 25 for single-molecule imaging; U-Probe keeps every passing
+      non-overlapping window (RNA mode has no per-gene count).
+    - "TODO: verify GC, Tm and homopolymer criteria for HCR v3 probes; none are given in Choi 2018, so no GC or Tm filter is applied."
+  replace:
+    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "targets: your gene names (GAPDH, ACTB here)"
+    - "encoding: per gene, the halves and spacers of its HCR amplifier; targets imaged together need different amplifiers (B1 and B2 here)"
+
+name: hcr_v3
+description: HCR v3.0 split-initiator probe pairs, 2 x 25 nt with a 2-nt gap (Choi et al. 2018)
+
+genome: hg38
+
+targets:
+  - GAPDH
+  - ACTB
+
+encoding:
+  GAPDH:
+    amplifier: B1
+    init_odd: GAGGAGGGCAGCAAACGG
+    spacer_odd: AA
+    spacer_even: TA
+    init_even: GAAGAGTCTTCCTTTACG
+  ACTB:
+    amplifier: B2
+    init_odd: CCTCGTAAATCCTCATCA
+    spacer_odd: AA
+    spacer_even: AA
+    init_even: ATCATCCAGTAAACCGCC
+
+extracts:
+  target_region:
+    source: exon
+    length: 52
+    step: 1
+    layout:
+      template: "{left}{gap}{right}"
+      parts:
+        left:
+          length: 25
+        gap:
+          length: 2
+        right:
+          length: 25
+
+probes:
+  probe_odd:
+    template: "{initiator}{spacer}{binding}"
+    parts:
+      initiator:
+        expr: "encoding[target]['init_odd']"
+      spacer:
+        expr: "encoding[target]['spacer_odd']"
+      binding:
+        expr: "rc(target_parts['left'])"
+  probe_even:
+    template: "{binding}{spacer}{initiator}"
+    parts:
+      binding:
+        expr: "rc(target_parts['right'])"
+      spacer:
+        expr: "encoding[target]['spacer_even']"
+      initiator:
+        expr: "encoding[target]['init_even']"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 975
+  probe_nM: 4
+  formamide_pct: 30
+
+attributes:
+  odd_gc:
+    target: probe_odd.binding
+    type: gc_content
+  even_gc:
+    target: probe_even.binding
+    type: gc_content
+  odd_tm:
+    target: probe_odd.binding
+    type: annealing_temperature
+  even_tm:
+    target: probe_even.binding
+    type: annealing_temperature
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 3
+
+summary:
+  report_name: rna_report
+  attributes:
+    - odd_gc
+    - even_gc
+    - odd_tm
+    - even_tm
+    - target_mapped_genes

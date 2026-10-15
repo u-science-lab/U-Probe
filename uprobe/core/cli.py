@@ -1,4 +1,6 @@
 import sys
+import os
+import contextlib
 from pathlib import Path
 import logging
 import click
@@ -250,6 +252,13 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
     return post_process
 
 
+def _is_blank_step(value) -> bool:
+    """True for a post_process step left as a placeholder: empty, or every option blank."""
+    if isinstance(value, dict) and value:
+        return all(option is None or option == '' for option in value.values())
+    return value in ({}, [], None)
+
+
 def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     """
     Validate protocol configuration and inject defaults for optional fields.
@@ -295,14 +304,19 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         if not is_dna_mode:
             pp.pop('avoid_otp', None)
             pp.pop('equal_space', None)
-        # Drop empty/None/list stubs at top-level
-        pp = {k: v for k, v in pp.items() if v not in ({}, [], None)}
+        # Drop empty/None/list stubs at top-level, and steps whose options are
+        # all blank, e.g. `remove_overlap: {location_interval: }`
+        pp = {k: v for k, v in pp.items() if not _is_blank_step(v)}
         protocol_config['post_process'] = pp
     
     # 3. Auto-complete attributes if missing (dynamic generation based on probes structure)
     if 'attributes' not in protocol_config or not protocol_config['attributes']:
         log.info(f"Attributes missing or empty. Auto-generating from probes structure for mode: {'DNA' if is_dna_mode else 'RNA'}")
         protocol_config['attributes'] = _generate_default_attributes(protocol_config)
+    
+    # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
+    from .hybridization import validate_protocol_hybridization, TM_DEFAULTS
+    validate_protocol_hybridization(protocol_config)
     
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
     if 'post_process' not in protocol_config or not protocol_config['post_process']:
@@ -311,6 +325,9 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
             protocol_config, 
             protocol_config['attributes']
         )
+        if any(key in (protocol_config.get('hybridization') or {}) for key in TM_DEFAULTS):
+            log.warning("Auto-generated Tm filters (50-90 °C) were chosen for the legacy primer3 "
+                        "conditions; review them for the declared hybridization conditions.")
     
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:
@@ -363,12 +380,22 @@ def cli(ctx, verbose, quiet):
               help='Continue execution even if some targets are invalid.')
 @click.option('--threads', '-t', default=10, type=int,
               help='Number of threads for computation. [default: 10]')
-def run(protocol, genomes, output, raw, continue_invalid, threads):
+@click.option('--json', 'json_output', is_flag=True,
+              help='Print the run summary (summary.json) to stdout; logs and tool output go to stderr.')
+def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     """
     Execute the complete probe design workflow.
     
     This command runs the entire pipeline from genome index building to final probe generation.
+    Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
     """
+    uprobe = None
+    protocol_config = None
+    error = None
+    # --json: keep stdout clean for the summary; logs and tool output go to stderr.
+    stdout_guard = contextlib.ExitStack()
+    if json_output:
+        stdout_guard.enter_context(_stdout_to_stderr())
     try:
         log.info("Starting U-Probe complete workflow...")
         
@@ -397,7 +424,76 @@ def run(protocol, genomes, output, raw, continue_invalid, threads):
             log.info(f"Workflow completed successfully with {len(result_df)} final probes!")
     except Exception as e:
         log.error(f"Workflow failed: {e}")
+        error = e
+    finally:
+        stdout_guard.close()
+    summary = getattr(uprobe, 'summary', None)
+    if summary is None:
+        summary = _write_failure_summary(protocol_config, error, Path(output))
+    if json_output:
+        from .report.run_summary import summary_json
+        click.echo(summary_json(summary))
+    if error is not None:
         sys.exit(1)
+
+
+@contextlib.contextmanager
+def _stdout_to_stderr():
+    """Send everything written to stdout, including tool subprocesses, to stderr."""
+    try:
+        stdout_fd, stderr_fd = sys.stdout.fileno(), sys.stderr.fileno()
+    except (AttributeError, OSError, ValueError):
+        # No real descriptors (e.g. click's CliRunner): redirect Python writes only.
+        with contextlib.redirect_stdout(sys.stderr):
+            yield
+        return
+    sys.stdout.flush()
+    saved_fd = os.dup(stdout_fd)
+    os.dup2(stderr_fd, stdout_fd)
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            yield
+    finally:
+        sys.stdout.flush()
+        os.dup2(saved_fd, stdout_fd)
+        os.close(saved_fd)
+
+
+def _write_failure_summary(protocol_config, error, output_dir: Path) -> dict:
+    """Summarize a run that failed before the workflow could write summary.json."""
+    from .report.run_summary import SUMMARY_FILENAME, build_run_summary, write_run_summary
+    summary = build_run_summary(protocol_config or {}, {'step': 'load_inputs',
+                                                        'error': error or RuntimeError('Run summary unavailable')})
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        write_run_summary(summary, output_dir / SUMMARY_FILENAME)
+    except OSError as e:
+        log.error(f"Could not write run summary: {e}")
+    return summary
+
+
+@cli.command()
+@click.option('--protocol', '-p', required=True, type=click.Path(exists=True, dir_okay=False),
+              help='Path to probe design protocol configuration file (YAML).')
+@click.option('--genomes', '-g', type=click.Path(exists=True, dir_okay=False),
+              help='Path to genome configuration file (YAML). Enables genome and aligner checks.')
+@click.option('--json', 'as_json', is_flag=True,
+              help='Print the findings and a summary as JSON.')
+@click.option('--check-targets', is_flag=True,
+              help='Also look up genome targets in the GTF (gene names) or FASTA (regions). Requires --genomes.')
+def validate(protocol, genomes, as_json, check_targets):
+    """
+    Check a protocol before running it.
+
+    Reports every problem with its location in the YAML and a suggested fix.
+    Exits with status 1 when there are errors; warnings alone exit with 0.
+    """
+    from .validate import validate_files, render_json, render_text, summarize
+    if check_targets and not genomes:
+        raise click.UsageError("'--check-targets' requires '--genomes'.")
+    findings = validate_files(Path(protocol), Path(genomes) if genomes else None, check_targets=check_targets)
+    click.echo(render_json(findings) if as_json else render_text(findings))
+    sys.exit(0 if summarize(findings)['valid'] else 1)
 
 
 @cli.command(name='build-index')
@@ -837,6 +933,188 @@ def generate_report(protocol, genomes, probes, output, no_plots, pdf, no_pdf):
     except Exception as e:
         log.error(f"Report generation failed: {e}")
         sys.exit(1)
+
+
+_DIVISION_CHOICE = click.Choice(['vertebrates', 'plants', 'fungi', 'metazoa', 'protists'])
+
+
+def _dump_yaml(data) -> str:
+    return yaml.safe_dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True)
+
+
+@cli.group(name='genome')
+def genome():
+    """
+    Download reference genomes and inspect genomes.yaml.
+
+    Sources: Ensembl (vertebrates, plus yeast, worm and fly) and Ensembl Genomes
+    plants, fungi, metazoa and protists. Ensembl Bacteria is not supported.
+    """
+
+
+@genome.command(name='fetch')
+@click.option('--species', '-s', required=True,
+              help='Ensembl species name (homo_sapiens), display name (human) or taxonomy id (9606).')
+@click.option('--release', '-r', default='latest',
+              help='Ensembl release number, or "latest" (resolved and recorded). [default: latest]')
+@click.option('--division', '-d', type=_DIVISION_CHOICE, default='vertebrates',
+              help='Ensembl division; Ensembl Genomes divisions have their own release numbers. [default: vertebrates]')
+@click.option('--out', '-o', default='./genomes', type=click.Path(file_okay=False),
+              help='Directory for genome files; each genome gets a sub-directory. [default: ./genomes]')
+@click.option('--genomes', '-g', default='genomes.yaml', type=click.Path(dir_okay=False),
+              help='genomes.yaml to create or update. [default: genomes.yaml]')
+@click.option('--name', help='Entry name in genomes.yaml. [default: <species>_<assembly>_e<release>]')
+@click.option('--align-index', help='Comma-separated aligners for the entry, e.g. "bowtie2,blast". '
+                                    '[default: keep the existing value, else bowtie2]')
+@click.option('--jellyfish/--no-jellyfish', default=None,
+              help='Enable kmer_count for the entry. [default: keep the existing value, else on if jellyfish is installed]')
+@click.option('--build-index', is_flag=True, help='Build aligner indices afterwards (same as `uprobe build-index`).')
+@click.option('--threads', '-t', default=10, type=int, help='Threads for --build-index. [default: 10]')
+@click.option('--keep-compressed', is_flag=True, help='Keep the downloaded .gz files.')
+@click.option('--force', is_flag=True,
+              help='Re-download verified files, and replace a different genome already in the target directory.')
+@click.option('--dry-run', is_flag=True, help='Resolve release, species and URLs, print the plan, download nothing.')
+@click.option('--mirror', help='Base URL replacing https://ftp.ensembl.org/pub '
+                               '(or https://ftp.ensemblgenomes.ebi.ac.uk/pub for other divisions).')
+def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, build_index,
+                 threads, keep_compressed, force, dry_run, mirror):
+    """
+    Download an Ensembl genome FASTA and GTF and register them in genomes.yaml.
+
+    Prefers the primary assembly FASTA and falls back to toplevel. Files are
+    verified against Ensembl's CHECKSUMS, decompressed, and recorded with their
+    release and URLs. Re-running skips verified files and resumes partial
+    downloads. The resulting entry is printed to stdout as YAML.
+
+    Example: uprobe genome fetch --species homo_sapiens --release latest --build-index
+    """
+    from .genome_fetch import GenomeFetchError, fetch_genome
+    aligners = [a.strip() for a in align_index.split(',') if a.strip()] if align_index else None
+    try:
+        result = fetch_genome(
+            species, release=release, division=division, out_dir=out, genomes_yaml=genomes, name=name,
+            align_index=aligners, jellyfish=jellyfish, build_index=build_index, threads=threads,
+            keep_compressed=keep_compressed, force=force, dry_run=dry_run, mirror=mirror,
+        )
+    except GenomeFetchError as e:
+        log.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        log.error(f"Genome fetch failed: {e}")
+        sys.exit(1)
+    if dry_run:
+        click.echo("# Dry run: nothing was downloaded.")
+        click.echo(_dump_yaml({'plan': result['plan'].to_dict(), 'directory': str(result['directory']),
+                               'genomes_yaml': str(result['genomes_yaml']),
+                               'entry': {result['name']: result['entry']}}), nl=False)
+        return
+    click.echo(f"# Registered in {result['genomes_yaml']}; use `genome: {result['name']}` in your protocol.")
+    if not build_index:
+        click.echo(f"# Build indices with: uprobe build-index -p <protocol.yaml> -g {genomes} "
+                   "(or re-run with --build-index).")
+    click.echo(_dump_yaml({result['name']: result['entry']}), nl=False)
+
+
+@genome.command(name='list')
+@click.option('--genomes', '-g', default='genomes.yaml', type=click.Path(exists=True, dir_okay=False),
+              help='Path to genome configuration file (YAML). [default: genomes.yaml]')
+@click.option('--json', 'as_json', is_flag=True, help='Print machine-readable JSON.')
+def genome_list(genomes, as_json):
+    """Show genomes.yaml entries and whether their files and indices exist."""
+    import json
+    from .genome_fetch import GenomeFetchError, describe_genomes
+    try:
+        rows = describe_genomes(genomes)
+    except (GenomeFetchError, yaml.YAMLError) as e:
+        log.error(f"Cannot read {genomes}: {e}")
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(rows, indent=2))
+        return
+    if not rows:
+        click.echo(f"No genomes in {genomes}.")
+    state = {True: 'ready', False: 'missing', None: 'unknown'}
+    for row in rows:
+        click.echo(row['name'])
+        if row['description']:
+            click.echo(f"  description: {row['description']}")
+        click.echo(f"  fasta: {row['fasta']} ({'ok' if row['fasta_exists'] else 'MISSING'})")
+        click.echo(f"  gtf:   {row['gtf']} ({'ok' if row['gtf_exists'] else 'MISSING'})")
+        for aligner, status in row['indexes'].items():
+            click.echo(f"  {aligner} index: genome {state[status['genome']]}, "
+                       f"transcript {state[status['transcript']]}")
+        click.echo(f"  jellyfish: {'on' if row['jellyfish'] else 'off'}")
+        source = row['source'] or {}
+        if source.get('release'):
+            click.echo(f"  source: {source.get('provider', 'Ensembl')} {source.get('division', '')} "
+                       f"release {source['release']} ({source.get('fasta_url')})")
+
+
+@genome.command(name='search')
+@click.argument('query')
+@click.option('--division', '-d', type=_DIVISION_CHOICE, default='vertebrates',
+              help='Ensembl division to search. [default: vertebrates]')
+@click.option('--release', '-r', default='latest', help='Ensembl release number or "latest". [default: latest]')
+@click.option('--limit', default=20, type=int, help='Maximum number of matches. [default: 20]')
+@click.option('--mirror', help='Base URL replacing the Ensembl FTP "pub" URL.')
+def genome_search(query, division, release, limit, mirror):
+    """Find Ensembl species names by name, common name or taxonomy id."""
+    from .genome_fetch import GenomeFetchError, search
+    try:
+        release, rows = search(query, division=division, release=release, mirror=mirror, limit=limit)
+    except GenomeFetchError as e:
+        log.error(str(e))
+        sys.exit(1)
+    if not rows:
+        click.echo(f"No species matching '{query}' in Ensembl {division} release {release}.")
+        sys.exit(1)
+    for row in rows:
+        click.echo(f"{row.get('species')}\t{row.get('name', '')}\t{row.get('assembly', '')}\t"
+                   f"taxid {row.get('taxonomy_id', '')}")
+
+
+@cli.group()
+def templates():
+    """
+    Protocol templates for published probe technologies.
+
+    Each template is a complete protocol, including the source protocol's
+    hybridization conditions; its `meta` block lists the cited sources and
+    what to replace.
+    """
+
+
+@templates.command(name='list')
+def templates_list():
+    """List available templates with technology and primary citation."""
+    from uprobe.templates import list_templates
+    rows = list_templates()
+    headers = {'name': 'NAME', 'technology': 'TECHNOLOGY', 'citation': 'CITATION'}
+    widths = {k: max(len(r[k]) for r in [headers, *rows]) for k in headers}
+    for row in [headers, *rows]:
+        click.echo(f"{row['name']:<{widths['name']}}  {row['technology']:<{widths['technology']}}  {row['citation']}")
+
+
+@templates.command(name='show')
+@click.argument('name')
+@click.option('--output', '-o', type=click.Path(dir_okay=False),
+              help='Write the template to this file instead of stdout.')
+@click.option('--force', is_flag=True, help='Overwrite the output file if it exists.')
+def templates_show(name, output, force):
+    """Print template NAME, or save it with -o as a starting protocol."""
+    from uprobe.templates import read_template
+    try:
+        text = read_template(name)
+    except KeyError as e:
+        raise click.BadParameter(e.args[0], param_hint='NAME')
+    if not output:
+        click.echo(text, nl=False)
+        return
+    path = Path(output)
+    if path.exists() and not force:
+        raise click.UsageError(f"{path} exists; use --force to overwrite.")
+    path.write_text(text, encoding='utf-8')
+    click.echo(f"Template {name!r} written to {path}", err=True)
 
 
 @cli.command()

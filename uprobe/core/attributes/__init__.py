@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
+from ..hybridization import resolve_conditions, tm_arguments
 
 def add_attributes(
         df_probes: pd.DataFrame,
@@ -117,7 +118,9 @@ def _add_attributes(
                     f"Aligner {attr['aligner']} is not implemented."
                 )
         elif attr_type == "annealing_temperature":
-            vals = cached(df_probes[actual_target], cal_temp)
+            # Only declared hybridization fields are passed; the rest keep cal_temp's defaults.
+            conditions = tm_arguments(resolve_conditions(protocol, attr_name))
+            vals = cached(df_probes[actual_target], lambda seq: cal_temp(seq, **conditions))
             df_probes[attr_name] = vals
         elif attr_type == "gc_content":
             vals = cached(df_probes[actual_target], cal_gc_content).round(2)
@@ -125,7 +128,8 @@ def _add_attributes(
         elif attr_type == "length":
             df_probes[attr_name] = df_probes[actual_target].str.len().astype("Int64")
         elif attr_type == "fold_score":
-            vals = cached(df_probes[actual_target], cal_target_fold_score).round(2)
+            temperature = resolve_conditions(protocol, attr_name).get('temperature_c')
+            vals = cached(df_probes[actual_target], lambda seq: cal_target_fold_score(seq, temperature)).round(2)
             df_probes[attr_name] = vals
         elif attr_type == "self_match":
             vals = cached(df_probes[actual_target], cal_self_match).round(2)

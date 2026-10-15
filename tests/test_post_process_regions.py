@@ -50,3 +50,36 @@ def test_remove_overlap_genome_windows_with_empty_input():
     df = pd.DataFrame(columns=['probe_id', 'target', 'sub_region'])
     result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
     assert result.empty and list(result.columns) == ['probe_id', 'target', 'sub_region']
+
+
+def test_remove_overlap_keeps_windows_of_each_direct_target():
+    # Direct-sequence targets all have transcript_names 'custom'; windows of
+    # different targets at the same positions must not remove each other.
+    df = pd.DataFrame({
+        'probe_id': ['a1', 'a2', 'b1', 'b2'],
+        'target': ['A', 'A', 'B', 'B'],
+        'transcript_names': ['custom'] * 4,
+        'start': [0, 20, 0, 20],
+        'end': [39, 59, 39, 59],
+    })
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert result['probe_id'].tolist() == ['a1', 'b1']
+    df['start'], df['end'] = [0, 40, 0, 40], [39, 79, 39, 79]
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert result['probe_id'].tolist() == ['a1', 'a2', 'b1', 'b2']
+
+
+def test_remove_overlap_keeps_windows_of_each_exon():
+    # Exon and UTR windows are numbered within their exon or UTR, so windows of
+    # different exons of one transcript at the same positions do not overlap.
+    df = pd.DataFrame({
+        'probe_id': ['e1a', 'e1b', 'e1c', 'e2a', 'e2b', 'u1', 'c1'],
+        'target': ['G'] * 6 + ['C'],
+        'exon_name': ['1_101_200_+'] * 3 + ['1_301_400_+'] * 2 + [None, '.'],
+        'utr_name': [None] * 5 + ['1_501_600_+', None],
+        'transcript_names': [['T1']] * 5 + [['T1']] + ['custom'],
+        'start': [1, 21, 41, 1, 41, 1, 1],
+        'end': [40, 60, 80, 40, 80, 40, 40],
+    })
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert sorted(result['probe_id']) == ['c1', 'e1a', 'e1c', 'e2a', 'e2b', 'u1']

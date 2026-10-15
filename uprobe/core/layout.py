@@ -31,7 +31,8 @@ def validate_layout_references(protocol):
                 walk(child)
 
     walk(protocol.get('probes', {}))
-    for attr in protocol.get('attributes', {}).values():
+    # A blank `attributes:` is None; defaults are generated after this check.
+    for attr in (protocol.get('attributes') or {}).values():
         target = attr.get('target', '').replace(':', '.')
         if target.startswith('target_parts.') and target[len('target_parts.'):] not in names:
             raise ValueError(f'Attribute references missing target part {target}')

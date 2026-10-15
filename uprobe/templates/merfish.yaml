@@ -1,0 +1,183 @@
+# U-Probe protocol template: MERFISH encoding probes (3 x 20-nt readout design).
+# Copy: `uprobe templates show merfish -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: merfish
+  technology: MERFISH encoding probes
+  description: >-
+    Each encoding probe is 5'-[PCR primer 1, 20 nt][A][readout 1, 20 nt]
+    [target-binding region, 30 nt][A][readout 2, 20 nt][readout 3, 20 nt]
+    [reverse complement of PCR primer 2, 20 nt]-3'. The 30-nt region is the
+    reverse complement of the RNA; the readouts are the reverse complements of
+    the dye-labelled readout probes assigned to the gene's code word; single A
+    spacers avoid terminal G triplets. This is the design of Moffitt et al. 2016
+    (PNAS), as written by the official ZhuangLab library_design_example.m
+    script (readout placement "configuration A"). Target regions are tiled
+    without overlap from the 5' end. The earlier Chen et al. 2015 design used
+    two 30-nt readouts instead (one on each side of the target region).
+  citations:
+    - short: Moffitt et al. 2016, PNAS
+      title: >-
+        High-throughput single-cell gene-expression profiling with multiplexed
+        error-robust fluorescence in situ hybridization
+      doi: 10.1073/pnas.1612826113
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5047202/
+    - short: Chen et al. 2015, Science
+      title: Spatially resolved, highly multiplexed RNA profiling in single cells
+      doi: 10.1126/science.aaa6090
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4662681/
+    - short: Moffitt and Zhuang 2016, Methods in Enzymology
+      title: >-
+        RNA imaging with multiplexed error-robust fluorescence in situ
+        hybridization (MERFISH)
+      doi: 10.1016/bs.mie.2016.03.020
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5023431/
+    - short: ZhuangLab MERFISH_analysis library design example (code)
+      title: example_scripts/library_design_example.m
+      url: https://github.com/ZhuangLab/MERFISH_analysis/blob/master/example_scripts/library_design_example.m
+  parameter_sources:
+    - parameter: extracts.target_region.length
+      value: 30
+      source: Moffitt 2016, Fig. S1 legend
+      quote: a 30-nt target region (black) that binds to the target RNA and three 20-nt readout sequences
+    - parameter: encoding_probe readout count, length and placement
+      value: 3 x 20 nt; one or two 5' of the target region, the rest 3'
+      source: Moffitt 2016, SI Methods
+      quote: with one or two readout sequences at the 5' end of the target region and with the remaining sequences at the 3' end of the target region
+    - parameter: encoding_probe.template (order and A spacers)
+      value: "A rc(R1) rc(target) A rc(R2) rc(R3), primers on either side"
+      source: ZhuangLab library_design_example.m
+      quote: Additional adenosine nucleotide spacers were added between readout sequences and target regions to prevent terminal G triplets (Moffitt 2016, SI)
+    - parameter: PCR primers
+      value: 2 x 20 nt; the 3' primer is added as its reverse complement
+      source: Moffitt and Zhuang 2016
+      quote: The sequence of the primer that is added to the 3' end of the encoding probe should be the reverse complement
+    - parameter: post_process.filters.target_gc
+      value: 0.43-0.63
+      source: Moffitt 2016, SI Methods; also 'GC', [43 63]/100 in library_design_example.m
+      quote: designed with a GC range of 43-63%, a TM range of 66-76 C
+    - parameter: post_process.filters.binding_tm (with attributes.binding_tm.hybridization)
+      value: 66-76 C at 300 mM monovalent salt, 5 nM probe, no formamide
+      source: Moffitt 2016, SI Methods (quoted under meta.tm_window and the target_gc row)
+    - parameter: post_process.remove_overlap.location_interval
+      value: 0
+      source: Moffitt 2016, SI Methods; threePrimeSpace default 0 in TRDesigner.m
+      quote: we identified nonoverlapping regions starting with the first valid target region at the 5' end of each isoform
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 1"
+      source: >-
+        U-Probe approximation. Chen 2015 rejected probes mapping to more than one
+        RNA species; Moffitt 2016 used 17-mer isoform/gene specificity indices of
+        75-100%, which U-Probe does not compute.
+      quote: all potential probes that mapped to more than one cellular RNA species were rejected (Chen 2015)
+  hybridization:
+    ssc: 2x
+    source: Chen 2015 and Moffitt 2016, encoding-probe hybridization (37 C, 2x SSC, 30% formamide, 10% dextran sulfate)
+    notes: >-
+      [Na+] of 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate) is 390 mM.
+      Readout probes are hybridized separately (Moffitt 2016: 2x SSC, 1%
+      ethylene carbonate, room temperature).
+  tm_window:
+    applied: true
+    value: [66, 76]
+    target: encoding_probe.binding
+    attribute: binding_tm
+    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, method: SantaLucia nearest-neighbour}
+    source: Moffitt 2016, SI Methods ("assuming a monovalent salt concentration of 300 mM ... and a probe concentration of 5 nM")
+    note: >-
+      Applied: attributes.binding_tm.hybridization sets these design
+      conditions (not the experimental ones of the hybridization block) and
+      post_process.filters.binding_tm keeps 66-76 C.
+  limitations:
+    - >-
+      Moffitt 2016 picks 3 of the gene's 4 code-word readouts at random for each
+      encoding probe and randomly uses 1 or 2 readouts on the 5' side. U-Probe
+      expressions are deterministic, so every probe here carries R1, R2 and R3 in
+      configuration A. Permute readouts across probes after design if needed.
+    - Moffitt 2016 used 92 encoding probes per gene; U-Probe keeps all passing non-overlapping regions (RNA mode has no per-gene count).
+  replace:
+    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "targets: your gene names (GAPDH here)"
+    - "encoding: per gene, the readout PROBE sequences (R1-R3) of its code word; the template inserts their reverse complements. The values here are three published readout probes from Moffitt 2016 Table S1 (RS0015, RS0083, RS0095) used as an example assignment only."
+    - "encoding_probe.primer_1 / primer_2_rc: 20-nt PCR primer placeholders (N)"
+
+name: merfish_encoding
+description: MERFISH encoding probes, 30-nt target region with three 20-nt readouts (Moffitt et al. 2016)
+
+genome: hg38
+
+targets:
+  - GAPDH
+
+encoding:
+  GAPDH:
+    R1: ATCCTCCTTCAATACATCCC  # RS0015 (Moffitt 2016 Table S1); example assignment
+    R2: ACACTACCACCATTTCCTAT  # RS0083 (Moffitt 2016 Table S1); example assignment
+    R3: ACTCCACTACTACTCACTCT  # RS0095 (Moffitt 2016 Table S1); example assignment
+
+extracts:
+  target_region:
+    source: exon
+    length: 30
+    step: 1
+
+probes:
+  encoding_probe:
+    template: "{primer_1}A{readout_1}{binding}A{readout_2}{readout_3}{primer_2_rc}"
+    parts:
+      primer_1:
+        template: "NNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 20-nt forward PCR primer
+        parts: {}
+      readout_1:
+        expr: "rc(encoding[target]['R1'])"
+      binding:
+        expr: "rc(target_region)"
+      readout_2:
+        expr: "rc(encoding[target]['R2'])"
+      readout_3:
+        expr: "rc(encoding[target]['R3'])"
+      primer_2_rc:
+        template: "NNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: reverse complement of the 20-nt reverse PCR primer
+        parts: {}
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  formamide_pct: 30
+
+attributes:
+  target_gc:
+    target: target_region
+    type: gc_content
+  binding_tm:
+    target: encoding_probe.binding
+    type: annealing_temperature
+    # Design conditions of the 66-76 C window (meta.tm_window), not the hybridization block.
+    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_gc:
+      condition: target_gc >= 0.43 & target_gc <= 0.63
+    binding_tm:
+      condition: binding_tm >= 66 & binding_tm <= 76
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 0
+
+summary:
+  report_name: rna_report
+  attributes:
+    - target_gc
+    - binding_tm
+    - target_mapped_genes

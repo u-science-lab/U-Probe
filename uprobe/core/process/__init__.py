@@ -89,9 +89,15 @@ def remove_overlap(df: pd.DataFrame,
     if transcript_col:
         df[transcript_col] = df[transcript_col].apply(lambda x: 
                                                      ', '.join(x) if isinstance(x, list) else x)
-        df = df.sort_values(by=[transcript_col, 'start'])
+        # Positions are per target and per extracted exon or UTR: exon/UTR
+        # windows are numbered within their exon or UTR, and direct-sequence
+        # targets all share the transcript name 'custom'. Keep rows whose
+        # exon_name or utr_name is missing (genome and direct targets mixed).
+        region_cols = [col for col in ('exon_name', 'utr_name') if col in df.columns]
+        group_cols = (['target'] if 'target' in df.columns else []) + region_cols + [transcript_col]
+        df = df.sort_values(by=group_cols + ['start'])
         non_overlapping = []
-        for _, group in df.groupby(transcript_col):
+        for _, group in df.groupby(group_cols, dropna=False):
             current_end = None
             for _, row in group.iterrows():
                 if current_end is None or row['start'] > current_end + location_interval:
@@ -119,10 +125,16 @@ def post_process(df: pd.DataFrame,
                  config: dict
                  ) -> pd.DataFrame:
     stages = []
+    # Per-target counts after each stage (aligned with `stages`) for the run summary.
+    target_counts = []
+    target_col = next((c for c in ('target', 'gene') if c in df.columns), None)
     previous_count = len(df)
     def record(name):
         nonlocal previous_count
         stages.append({'stage': name, 'before': previous_count, 'after': len(df), 'removed': previous_count - len(df)})
+        if target_col:
+            counts = df[target_col].dropna().astype(str).value_counts() if target_col in df.columns else {}
+            target_counts.append({str(k): int(v) for k, v in counts.items()})
         previous_count = len(df)
     processes = config.get('post_process', {})
     if 'filters' in processes and processes['filters']:
@@ -238,4 +250,5 @@ def post_process(df: pd.DataFrame,
     if 'summary' in processes and processes['summary']:
         logger.info("Summary configuration found - will be processed during report generation")
     df.attrs['post_process_stages'] = stages
+    df.attrs['post_process_target_counts'] = target_counts
     return df

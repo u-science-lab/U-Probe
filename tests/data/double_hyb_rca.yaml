@@ -32,9 +32,9 @@ probes:
         template: "{barcode1}N{barcode2}"
         parts:
           barcode1:
-            expr: "encoding[gene_id]['barcode1']"
+            expr: "encoding[target]['barcode1']"
           barcode2:
-            expr: "encoding[gene_id]['barcode2']"
+            expr: "encoding[target]['barcode2']"
       part3:
         length: 13
         expr: "rc(target_region[13:26])"
@@ -53,7 +53,7 @@ attributes:
     type: fold_score
   n_mapped_genes:
     target: target_region
-    type: n_mapped_genes
+    type: mapped_genes
     aligner: bowtie2
     similarity_threshold_ratio: 0.75
   target_gc_content:

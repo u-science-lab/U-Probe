@@ -1,0 +1,124 @@
+# U-Probe protocol template: smFISH with multiple singly labelled oligos (Stellaris-style).
+# Copy: `uprobe templates show smfish_stellaris -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: smfish_stellaris
+  technology: smFISH, multiple singly labelled oligos (Stellaris-style)
+  description: >-
+    Each probe is a single 20-nt oligo, the reverse complement of the RNA,
+    labelled with one fluorophore at its 3' end (3' amine + NHS-ester dye, a
+    synthesis modification that is not part of the designed sequence). Up to
+    48 probes tile one RNA with a minimum gap between binding sites; the
+    combined signal of many singly labelled oligos makes each RNA molecule a
+    diffraction-limited spot. Raj et al. 2008 used 17-22-nt oligos (20-mers in
+    the GFP test), GC as close to 45% as possible and at least 3 nt between
+    binding sites; the Stellaris Probe Designer uses 18-22-nt oligos and a
+    default spacing of 2 nt.
+  citations:
+    - short: Raj et al. 2008, Nature Methods
+      title: Imaging individual mRNA molecules using multiple singly labeled probes
+      doi: 10.1038/nmeth.1253
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3126653/
+    - short: LGC Biosearch Technologies, Stellaris RNA FISH protocol (adherent cells)
+      title: Stellaris RNA FISH protocol for adherent cells
+      url: https://biosearchassets.biosearchtech.com/assetsv6/bti_stellaris_protocol_adherent_cell.pdf
+    - short: LGC Biosearch Technologies, Stellaris probe design considerations
+      title: Considerations for optimizing Stellaris RNA FISH probe design
+      url: https://blog.biosearchtech.com/considerations-for-optimizing-stellaris-rna-fish-probe-design
+  parameter_sources:
+    - parameter: extracts.target_region.length
+      value: 20
+      source: Raj 2008, Supplementary Methods and Supp. Fig. 4; Stellaris oligos are 18-22 nt
+      quote: they should be roughly 17-22 bases long ... 48 probes (20 bp, singly labeled)
+    - parameter: smfish_probe.binding
+      value: rc(target_region), one 3'-labelled oligo per binding site
+      source: Raj 2008, Supplementary Methods
+      quote: ordered with 3'-amino modifications from BioSearch Technologies
+    - parameter: post_process.remove_overlap.location_interval
+      value: 2
+      source: Stellaris Probe Designer default spacing (Biosearch); Raj 2008 used at least 3
+      quote: The default setting is 2, but can be reduced to 1
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 1"
+      source: >-
+        U-Probe approximation. The Stellaris designer excludes 20-mers with
+        more than 16 nt matching other RNAs, which U-Probe does not model.
+      quote: exclude 20-mer oligonucleotides with >16 nucleotide matches to other RNA(s) (Stellaris Getting Started Guide)
+  hybridization:
+    ssc: 2x
+    source: >-
+      Raj 2008, Supplementary Methods (10% dextran sulfate, 2x SSC, 10%
+      formamide, 3-24 h at 37 C); Stellaris protocol (10% formamide in
+      hybridization buffer, 37 C for 4-16 h, 125 nM probe)
+    notes: >-
+      [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate), the
+      value OligoMiner uses for 2x SSC FISH buffers. The current Stellaris
+      buffer contains proprietary additives; its older recipe was 10%
+      formamide in 2x SSC with 100 mg/mL dextran sulfate.
+  limitations:
+    - Stellaris orders hold at most 48 probes (at least 25 recommended); U-Probe keeps every passing non-overlapping site (RNA mode has no per-gene count).
+    - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
+  replace:
+    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "targets: your gene names (GAPDH here)"
+    - "smfish_probe: order with a 3' amine (or a 3' dye) for single-fluorophore labelling"
+
+name: smfish_stellaris
+description: smFISH probe set of 20-nt singly labelled oligos (Raj et al. 2008, Stellaris-style)
+
+genome: hg38
+
+targets:
+  - GAPDH
+
+encoding:
+  GAPDH: {}
+
+extracts:
+  target_region:
+    source: exon
+    length: 20
+    step: 1
+
+probes:
+  smfish_probe:
+    template: "{binding}"
+    parts:
+      binding:
+        expr: "rc(target_region)"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  formamide_pct: 10
+
+attributes:
+  target_gc:
+    target: target_region
+    type: gc_content
+  probe_tm:
+    target: smfish_probe.binding
+    type: annealing_temperature
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 2
+
+summary:
+  report_name: rna_report
+  attributes:
+    - target_gc
+    - probe_tm
+    - target_mapped_genes

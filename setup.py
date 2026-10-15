@@ -69,6 +69,7 @@ setup(
     url=URL,
     packages=find_packages(),
     include_package_data=True,
+    package_data={'uprobe.templates': ['*.yaml']},
     zip_safe=False,
     classifiers=classifiers,
     install_requires=get_install_requires(),

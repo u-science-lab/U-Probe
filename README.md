@@ -71,7 +71,14 @@ Most workflow commands require two YAML files:
 
 ### 1. Command Line Interface (CLI)
 
-The CLI is perfect for running tasks quickly in the terminal or shell scripts.
+The CLI is perfect for running tasks quickly in the terminal or shell scripts. A typical session, also the path for scripts and AI agents, fetches a reference genome, starts from a published template, checks the protocol and runs it; each step is described below.
+
+```bash
+uprobe genome fetch --species mus_musculus --release latest --genomes genomes.yaml
+uprobe templates show padlock_iss -o protocol.yaml    # then set genome, targets and encoding
+uprobe validate -p protocol.yaml -g genomes.yaml --check-targets
+uprobe run -p protocol.yaml -g genomes.yaml -o ./results --json
+```
 
 #### 🤖 AI Smart Assistant 
 U-Probe includes an interactive AI Agent powered by Pantheon. You can design probes through natural language conversation without writing YAML files manually.
@@ -113,6 +120,41 @@ pnpm dev --host 127.0.0.1 --port 5173
 
 The frontend proxies `/api` to backend port `8005`. No separate database service is needed; users and tasks are stored locally. Create a test account through `POST /auth/register` in the API docs; this endpoint needs no email verification. Full probe workflows also require FASTA/GTF data and the relevant bioinformatics tools.
 
+#### 📥 Fetch a Reference Genome
+Download an Ensembl genome FASTA and GTF, verify them against Ensembl's `CHECKSUMS`, and register them in `genomes.yaml`:
+
+```bash
+uprobe genome fetch --species homo_sapiens --release latest --out ./genomes --genomes genomes.yaml
+uprobe genome fetch --species arabidopsis_thaliana --division plants --build-index -t 10
+uprobe genome search mouse            # find Ensembl species names
+uprobe genome list -g genomes.yaml    # entries, file and index status (--json for scripts)
+```
+
+- `--species` takes an Ensembl name (`homo_sapiens`), display name (`human`) or taxonomy id (`9606`). `--release latest` is resolved to a number, which is recorded in the entry.
+- Sources: Ensembl (vertebrates plus yeast, worm and fly) and the Ensembl Genomes divisions `plants`, `fungi`, `metazoa` and `protists` (`--division`; they have their own release numbers). Ensembl Bacteria is not supported.
+- The unmasked primary assembly FASTA is used when Ensembl provides one, otherwise the toplevel FASTA. Files are decompressed (U-Probe's tools need plain FASTA) into `<out>/<name>/`; the entry name defaults to `<species>_<assembly>_e<release>` (`_eg<release>` for Ensembl Genomes).
+- Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
+- `--build-index` runs the same index build as `uprobe build-index`.
+
+#### Protocol Templates
+
+U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter. A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`.
+
+```bash
+uprobe templates list
+uprobe templates show hcr_v3 -o protocol.yaml
+```
+
+#### ✅ Validate a Protocol
+Check a protocol (and optionally the genome config) before running it. Every problem is reported with its location in the YAML and a suggested fix; the exit status is 1 when there are errors.
+
+```bash
+uprobe validate -p protocol.yaml
+uprobe validate -p protocol.yaml -g genomes.yaml --check-targets --json
+```
+
+Probe expressions are checked with the grammar of the safe evaluator that `uprobe run` uses, hybridization blocks with the same rules as the run, and the probes are then built on synthetic target regions, so expressions that would fail at run time are reported too. `-g` adds genome checks (files, aligner indexes required by the attributes), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
+
 #### 🌟 Complete Workflow (Recommended)
 To run the entire pipeline from genome index construction to final probe generation in one go:
 
@@ -125,6 +167,8 @@ Useful flags:
 ```bash
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
+
+Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr; the exit status is 1 when the run fails.
 
 #### 🔧 Step-by-Step Execution
 For advanced users who need intermediate results or custom workflows, you can execute each step individually:
@@ -217,6 +261,8 @@ GRCh38:
   jellyfish: false  
 ```
 
+Entries written by `uprobe genome fetch` also record their origin under `source` (Ensembl division, release, assembly and URLs), which each run copies into `summary.json`; the verified checksums are kept in `genome_source.json` next to the files. The workflow ignores keys it does not use.
+
 ### 2. `protocol.yaml`
 This is the core configuration file that defines all parameters for a specific probe design run. It is highly customizable.
 
@@ -297,21 +343,65 @@ summary:
 - **`encoding`**: Mapping of specific genes to custom barcodes or identifiers (e.g., assigning `BC1` and `BC2` to `CD4`).
 - **`probes`**: The core of the design, powered by a **Directed Acyclic Graph (DAG)** architecture. This allows for complex, modular probe construction where parts and probes can reference each other.
   - **`template`**: Construct sequences using placeholders (e.g., `{part1}{part2}`).
-  - **`expr`**: Apply Python-like expressions. You can use built-in functions like `rc()` (reverse complement), slice sequences (`[0:20]`), or fetch from the `encoding` map (`encoding[target]['BC1']`).
+  - **`expr`**: Apply Python-like expressions. You can use built-in functions like `rc()` (reverse complement), slice sequences (`[0:20]`), or fetch from the `encoding` map (`encoding[target]['BC1']`). Expressions are evaluated safely (never with Python `eval`): only string/integer literals, the names `target_region`, `target`, `encoding`, `target_parts` and probe/part names (e.g. `probe_1.part1`), subscripts and slices, `+` concatenation and `rc()` are allowed; anything else (other function calls, attribute or method access, comprehensions, lambdas, ...) is rejected with an error naming the probe part.
   - **DAG References**: Because of the DAG structure, subsequent probes or parts can dynamically reference the sequences of previously defined probes/parts in their expressions.
 - **`attributes`**: Define the biochemical or physical properties you want to calculate for specific targets or probe parts. Available attribute types include:
   - `gc_content`: Calculates the GC ratio of the sequence.
-  - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3.
-  - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable).
+  - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3, under the protocol's `hybridization` conditions.
+  - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable), at `hybridization.temperature_c` when set.
   - `self_match`: Calculates the potential for self-dimerization.
   - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites.
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to (via Bowtie2).
   - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
+- **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
+- **`meta`** (optional): Free-form documentation that the workflow ignores; the built-in templates use it for citations and parameter sources.
 
-For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory.
+#### Hybridization conditions
+
+By default, Tm is computed under PCR-like conditions (50 mM Na+, 0.6 mM dNTP, 50 nM oligo, no formamide; these match the fisheye reference pipeline). FISH hybridizations usually run in SSC buffer with formamide, so declare the conditions of your experiment with a top-level `hybridization` block:
+
+```yaml
+hybridization:
+  temperature_c: 37     # hybridization temperature (°C); used by fold_score
+  na_mM: 390            # monovalent cations; 2x SSC (0.3 M NaCl + 0.03 M Na3-citrate) = 390 mM Na+
+  mg_mM: 0              # divalent cations
+  dntp_mM: 0            # dNTPs (chelate Mg2+; no effect when mg_mM is 0)
+  probe_nM: 50          # concentration of each probe oligo
+  formamide_pct: 30     # formamide, % (v/v)
+
+attributes:
+  probe_1_tm:
+    target: probe_1.part1
+    type: annealing_temperature          # uses the block above
+  readout_tm:
+    target: probe_2
+    type: annealing_temperature
+    hybridization:                       # per-attribute override, merged over the block
+      formamide_pct: 10
+```
+
+| Field | Unit | Default when unset | Used by |
+| --- | --- | --- | --- |
+| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score` |
+| `na_mM` | mM | 50 | `annealing_temperature` |
+| `mg_mM` | mM | 0 | `annealing_temperature` |
+| `dntp_mM` | mM | 0.6 | `annealing_temperature` |
+| `probe_nM` | nM | 50 | `annealing_temperature` |
+| `formamide_pct` | % (v/v) | 0 | `annealing_temperature` |
+
+- Every field is optional. Without the block (or with an empty one) results are identical to earlier versions. An `annealing_temperature` or `fold_score` attribute may carry its own `hybridization` mapping with the same fields, overriding the top-level values for that attribute only.
+- Values must be numbers and `>= 0`; `na_mM` and `probe_nM` must be `> 0`, `formamide_pct` and `temperature_c` at most 100, and unknown field names are rejected.
+- **Tm model**: Primer3 nearest-neighbor Tm (SantaLucia 1998, PNAS 95:1460-65) with SantaLucia salt correction; Mg2+ is converted to a Na+ equivalent as in von Ahsen et al. 2001 (Clin Chem 47:1956-61). Primer3 parameters describe DNA/DNA duplexes, so Tm against RNA targets is an approximation.
+- **Formamide**: U-Probe uses Primer3's correction, which lowers Tm by (2.88 − 0.453 × GC fraction) °C per mol/l formamide (Blake & Delcourt 1996, Nucleic Acids Res 24:2095-2103, [doi:10.1093/nar/24.11.2095](https://doi.org/10.1093/nar/24.11.2095)). `formamide_pct` is converted to mol/l with formamide's density (1.1334 g/ml at 20 °C) and molar mass (45.04 g/mol), so 1% (v/v) = 0.252 M and Tm drops 0.61-0.72 °C per percent depending on GC content, close to the linear 0.60 °C/% measured by Hutton 1977 (Nucleic Acids Res 4:3537-3555, [doi:10.1093/nar/4.10.3537](https://doi.org/10.1093/nar/4.10.3537)). It is preferred over a fixed linear factor because it accounts for GC content and is applied inside the same Primer3 call.
+- **Folding**: `fold_score` folds at `temperature_c`; ViennaRNA does not model formamide, and salt is left at its default.
+- A per-attribute override suits a published Tm window that was computed under other conditions than the experiment's. The MERFISH template, for example, hybridizes in 2x SSC with 30% formamide (top-level block) but computes `binding_tm` at 300 mM Na+, 5 nM probe and no formamide, the conditions of its 66-76 °C window.
+- `uprobe validate` reports an invalid block or override with its path. The conditions in effect are logged for every Tm/fold attribute and recorded in `summary.json` (`inputs.hybridization_conditions`). When a protocol declares them, they are also shown in the HTML report header and stored in the result `.xlsx` as custom document properties (`hybridization:<attribute>`).
+- Auto-generated Tm filters (50-90 °C) are not adjusted. Review them when you declare FISH conditions; U-Probe logs a warning when it generates them.
+
+For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 
 ## Community & Support
 

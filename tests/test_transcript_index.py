@@ -64,5 +64,34 @@ class TranscriptIndexTests(unittest.TestCase):
             self.ns['build_transcripts_index'](self.root/'toy.gtf', self.fasta,
                 self.root/'bowtie2_transcript', aligner='blast')
 
+    def test_interrupted_genome_index_is_rebuilt(self):
+        def mmseqs(source, prefix):
+            for suffix in self.ns['_MMSEQS_SUFFIXES']:
+                Path(str(prefix) + suffix).write_text('index')
+        self.ns['build_mmseqs_index'] = Mock(side_effect=mmseqs)
+        self.ns['build_transcripts_index'] = Mock()
+        builders = {'bowtie2': 'build_bowtie2_index', 'blast': 'build_blast_db', 'mmseqs': 'build_mmseqs_index'}
+        genome = {'fasta': str(self.fasta), 'gtf': str(self.root/'toy.gtf'), 'align_index': list(builders)}
+        # An interrupted build leaves each <aligner>_genome folder with a partial index.
+        for aligner in builders:
+            (self.root/f'{aligner}_genome').mkdir()
+        (self.root/'bowtie2_genome/toy.1.bt2').write_text('index')
+        (self.root/'blast_genome/toy.nsq').write_text('index')
+        (self.root/'mmseqs_genome/toy').write_text('index')
+        self.ns['build_genome'](genome)
+        for aligner, builder in builders.items():
+            self.ns[builder].assert_called_once()
+            self.assertEqual(Path(self.ns[builder].call_args.args[1]), self.root/f'{aligner}_genome/toy')
+        self.ns['build_genome'](genome)  # complete now
+        for builder in builders.values():
+            self.ns[builder].assert_called_once()
+        # A complete large-genome bowtie2 index (.bt2l) is not rebuilt either.
+        for suffix in self.ns['_BOWTIE2_SMALL_SUFFIXES']:
+            (self.root/('bowtie2_genome/toy' + suffix)).unlink()
+        for suffix in self.ns['_BOWTIE2_LARGE_SUFFIXES']:
+            (self.root/('bowtie2_genome/toy' + suffix)).write_text('index')
+        self.ns['build_genome'](genome)
+        self.ns['build_bowtie2_index'].assert_called_once()
+
 if __name__ == '__main__':
     unittest.main()
