@@ -339,10 +339,17 @@ class UProbeAPI:
         if df_probes.empty:
             run['status'] = 'no_probes_constructed'
             return pd.DataFrame()
-        # 5. Post-process
-        run['step'] = 'post_process'
         df_combined = pd.concat([df_targets.reset_index(drop=True), df_probes.reset_index(drop=True)], axis=1)
         run['combined'] = df_combined
+        # Probes that failed to build are ''; stop if that is every candidate
+        # (e.g. a blank encoding) instead of reporting empty probes.
+        probe_names = [name for name in (self.protocol.get('probes') or {}) if name in df_probes.columns]
+        if probe_names and not df_probes[probe_names].astype(str).ne('').all(axis=1).any():
+            log.error("No probe could be built for any candidate. Check the probe expressions and encoding.")
+            run['status'] = 'no_probes_constructed'
+            return pd.DataFrame()
+        # 5. Post-process
+        run['step'] = 'post_process'
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
                    no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file)

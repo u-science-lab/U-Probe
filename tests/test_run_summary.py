@@ -148,6 +148,21 @@ def test_summary_when_no_target_sequences(tmp_path):
     assert summary['output_files']['xlsx'] is None
 
 
+def test_summary_when_no_probe_can_be_built(tmp_path):
+    # A blank encoding: every probe fails to build, so the run stops instead of
+    # reporting candidates with empty probe sequences as designed probes.
+    api = make_api(tmp_path)
+    api.protocol['probes']['pad']['parts']['part1']['expr'] = "encoding[target]['BC1']"
+    api.protocol['encoding'] = None
+    assert api.run_workflow().empty
+    summary = read_summary(tmp_path)
+    assert summary['status'] == 'no_probes_constructed' and summary['stopped_at'] == 'construct_probes'
+    assert summary['counts']['probes_constructed'] == 0 and summary['counts']['final_probes'] == 0
+    windows = summary['counts']['candidate_windows']
+    assert [w for w in summary['warnings'] if w['code'] == 'probe_construction_failed'][0]['count'] == windows
+    assert summary['output_files']['tsv'] is None and not list(tmp_path.glob('*.tsv'))
+
+
 def test_summary_for_invalid_targets(tmp_path):
     gtf = tmp_path / 'ref.gtf'
     gtf.write_text('1\ttest\texon\t1\t48\t.\t-\t.\tgene_name "G"; transcript_id "T";\n')
