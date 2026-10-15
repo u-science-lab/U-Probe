@@ -109,6 +109,12 @@ def test_missing_reference_fails_before_generation():
     with pytest.raises(ValueError): validate_layout_references({'probes':api.protocol['probes']})
 
 
+def test_blank_attributes_section_is_accepted():
+    # `attributes:` with nothing under it loads as None (DEFAULT_PROTOCOL.yaml).
+    api = make_api(layout(left=20,right=20))
+    validate_layout_references({**api.protocol, 'attributes': None})
+
+
 def test_attribute_calculation_cached(monkeypatch):
     from uprobe.core import attributes
     calls=[]

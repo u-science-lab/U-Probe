@@ -351,10 +351,6 @@ class _Validator:
             self.error(('genome',), f'genome must be the name of a genome, got {p["genome"]!r}', SNIPPETS['genome'])
         if 'name' in p and (not isinstance(p['name'], str) or not p['name'].strip()):
             self.warning(('name',), f'name is {p["name"]!r}; output files are named after it', 'name: my_probe_design')
-        if 'attributes' in p and p['attributes'] is None:
-            # validate_layout_references reads attributes before defaults are generated.
-            self.error(('attributes',), '`attributes:` is blank; `uprobe run` fails on a blank attributes section',
-                       'delete the `attributes:` line (or write `attributes: {}`) to generate default attributes')
 
     # -- extracts --------------------------------------------------------
     def check_extracts(self):
@@ -720,15 +716,15 @@ class _Validator:
         p = self.protocol
         if any(key not in p for key in REQUIRED_KEYS):
             return p, set()
+        from .cli import _is_blank_step, _validate_and_normalize_protocol
         generated = {key for key in ('attributes', 'summary') if not p.get(key)}
         rna = self.region().get('source', 'genome') != 'genome'
         post_process = p.get('post_process')
         if isinstance(post_process, dict):
             post_process = {k: v for k, v in post_process.items()
-                            if v not in ({}, [], None) and not (rna and k in DNA_ONLY_STEPS)}
+                            if not _is_blank_step(v) and not (rna and k in DNA_ONLY_STEPS)}
         if not post_process:
             generated.add('post_process')
-        from .cli import _validate_and_normalize_protocol
         logger = logging.getLogger('uprobe.core.cli')
         level = logger.level
         logger.setLevel(logging.WARNING)
@@ -788,6 +784,7 @@ class _Validator:
 
     # -- post_process ----------------------------------------------------
     def check_post_process(self, protocol):
+        from .cli import _is_blank_step
         raw = self.protocol.get('post_process')
         rna = self.source not in (None, 'genome')
         if isinstance(raw, dict) and rna:
@@ -795,11 +792,16 @@ class _Validator:
                 if raw.get(key):
                     self.warning(('post_process', key), f'{key} only applies to source: genome and is dropped '
                                  f'for source: {self.source}', f'remove post_process.{key}')
+        for key, value in (raw.items() if isinstance(raw, dict) else []):
+            if isinstance(value, dict) and value and _is_blank_step(value):
+                self.warning(('post_process', key), f'every option of {key} is blank, so `uprobe run` skips it',
+                             'fill in its options (e.g. remove_overlap: {location_interval: 0}), or delete it')
         post_process = protocol.get('post_process')
         if not isinstance(post_process, dict) or not post_process:
             return
-        if rna:  # as in _validate_and_normalize_protocol, when normalization was skipped
-            post_process = {k: v for k, v in post_process.items() if k not in DNA_ONLY_STEPS}
+        # As in _validate_and_normalize_protocol, when normalization was skipped.
+        post_process = {k: v for k, v in post_process.items()
+                        if not _is_blank_step(v) and not (rna and k in DNA_ONLY_STEPS)}
         columns = self.known_columns(protocol)
         for key in post_process:
             if key not in POST_PROCESS_KEYS:

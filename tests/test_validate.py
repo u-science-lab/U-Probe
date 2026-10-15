@@ -1,3 +1,4 @@
+import copy
 import inspect
 import json
 from pathlib import Path
@@ -6,7 +7,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from uprobe.core.cli import cli
+from uprobe.core.cli import _validate_and_normalize_protocol, cli
 from uprobe.core.gen.expression import check_probe_expressions
 from uprobe.core.validate import ATTRIBUTE_TYPES, render_text, validate_files, validate_protocol
 
@@ -82,19 +83,22 @@ def test_known_problems_in_test_data():
 
 def test_default_protocol_template():
     findings = validate_files(DEFAULT_PROTOCOL)
-    # Only the blank placeholders of the template are errors. A blank
-    # `attributes:` makes `uprobe run` fail in validate_layout_references.
+    # Only the required placeholders of the template are errors; `uprobe run`
+    # generates a blank `attributes:` and skips an all-blank post_process step.
     assert {f.path for f in errors(findings)} == {
-        'genome', 'probes', 'attributes', 'extracts.target_region.source', 'extracts.target_region.length',
-        'post_process.remove_overlap.location_interval'}
+        'genome', 'probes', 'extracts.target_region.source', 'extracts.target_region.length'}
+    assert 'skips it' in find(findings, 'post_process.remove_overlap', 'warning').message
     protocol = yaml.safe_load(DEFAULT_PROTOCOL.read_text(encoding='utf-8'))
-    del protocol['attributes']
     protocol.update(name='filled', genome='hg38', encoding={'xxx1': {'BC1': 'ACGTACGTAC', 'BC2': 'TTGCAAGGTC'}})
     protocol['extracts']['target_region'].update(source='exon', length=40, step=20)
     protocol['probes'] = {'probe_1': {'template': '{part1}{part2}', 'parts': {
         'part1': {'expr': 'rc(target_region[0:20])'}, 'part2': {'expr': "encoding[target]['BC1']"}}}}
-    protocol['post_process']['remove_overlap']['location_interval'] = 0
     protocol['summary']['report_name'] = 'rna_report'
+    # As `uprobe run` normalizes it: defaults for the blank attributes and post_process.
+    normalized = _validate_and_normalize_protocol(copy.deepcopy(protocol))
+    assert normalized['attributes'] and normalized['post_process']['filters']
+    assert 'remove_overlap' not in normalized['post_process']
+    protocol['post_process']['remove_overlap']['location_interval'] = 0
     assert validate_protocol(protocol) == []
 
 

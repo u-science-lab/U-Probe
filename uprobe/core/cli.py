@@ -252,6 +252,13 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
     return post_process
 
 
+def _is_blank_step(value) -> bool:
+    """True for a post_process step left as a placeholder: empty, or every option blank."""
+    if isinstance(value, dict) and value:
+        return all(option is None or option == '' for option in value.values())
+    return value in ({}, [], None)
+
+
 def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     """
     Validate protocol configuration and inject defaults for optional fields.
@@ -297,8 +304,9 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         if not is_dna_mode:
             pp.pop('avoid_otp', None)
             pp.pop('equal_space', None)
-        # Drop empty/None/list stubs at top-level
-        pp = {k: v for k, v in pp.items() if v not in ({}, [], None)}
+        # Drop empty/None/list stubs at top-level, and steps whose options are
+        # all blank, e.g. `remove_overlap: {location_interval: }`
+        pp = {k: v for k, v in pp.items() if not _is_blank_step(v)}
         protocol_config['post_process'] = pp
     
     # 3. Auto-complete attributes if missing (dynamic generation based on probes structure)
