@@ -54,7 +54,7 @@ conda activate uprobe
 pip install -e .
 ```
 
-The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`; Bowtie 1 (`bowtie`) is only needed for the [exhaustive off-target search](#off-target-search).
+The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use from bioconda, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`. Bowtie 1 (bioconda package `bowtie`) runs the [exhaustive off-target search](#off-target-search), which short probes need: the smFISH, seqFISH+, MERFISH and HybISS templates use it, and so does the generated off-target attribute of a protocol without `attributes` when the genome enables it. `uprobe genome fetch` adds `bowtie` to a new genome's `align_index` when Bowtie 1 is installed.
 
 ## Usage Guide
 
@@ -136,11 +136,12 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 - Sources: Ensembl (vertebrates plus yeast, worm and fly) and the Ensembl Genomes divisions `plants`, `fungi`, `metazoa` and `protists` (`--division`; they have their own release numbers). Ensembl Bacteria is not supported.
 - The unmasked primary assembly FASTA is used when Ensembl provides one, otherwise the toplevel FASTA. Files are decompressed (U-Probe's tools need plain FASTA) into `<out>/<name>/`; the entry name defaults to `<species>_<assembly>_e<release>` (`_eg<release>` for Ensembl Genomes).
 - Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
+- A new entry gets `align_index: [bowtie2]`, plus `bowtie` when Bowtie 1 (`bowtie-build`) is installed, for the [exhaustive off-target search](#off-target-search) (the log says so when it is not), and `jellyfish: true` when Jellyfish is installed. `--align-index` and `--jellyfish/--no-jellyfish` set them; re-fetching keeps the settings of an existing entry.
 - `--build-index` runs the same index build as `uprobe build-index`.
 
 #### Protocol Templates
 
-U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter. A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`.
+U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter. A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`. Templates whose target windows are 30 nt or shorter (smFISH, seqFISH+, MERFISH, HybISS) count off-target genes with the exhaustive Bowtie 1 search, so their genome needs `bowtie` in `align_index`; the smFISH template keeps only probes without an off-target gene and offers `off_target_pool` as a commented-out option for genes with many paralogs; see [Off-target search](#off-target-search).
 
 ```bash
 uprobe templates list
@@ -155,7 +156,7 @@ uprobe validate -p protocol.yaml
 uprobe validate -p protocol.yaml -g genomes.yaml --check-targets --json
 ```
 
-Probe expressions are checked with the grammar of the safe evaluator that `uprobe run` uses, hybridization blocks with the same rules as the run, and the probes are then built on synthetic target regions, so expressions that would fail at run time are reported too. `-g` adds genome checks (files, aligner indexes required by the attributes), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
+Probe expressions are checked with the grammar of the safe evaluator that `uprobe run` uses, hybridization blocks with the same rules as the run, and the probes are then built on synthetic target regions, so expressions that would fail at run time are reported too. `-g` adds genome checks (files, aligner indexes required by the attributes, installed aligners), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
 
 #### 🌟 Complete Workflow (Recommended)
 To run the entire pipeline from genome index construction to final probe generation in one go:
@@ -268,7 +269,7 @@ GRCh38:
   gtf: "/path/to/GRCh38.gtf"
   align_index:
     - bowtie2
-    - bowtie     # optional: Bowtie 1 transcriptome index for mapped_genes with aligner: bowtie
+    - bowtie     # Bowtie 1 transcriptome index for mapped_genes with aligner: bowtie (exhaustive off-target search)
     - blast
   jellyfish: false  
 ```
@@ -370,7 +371,7 @@ summary:
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
-- **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
+- **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`. It visits each target's candidates in order of position and keeps one when it starts more than `location_interval` bases after the end of the last kept one. In RNA mode the positions are those on the gene's merged exon model (`target_start`/`target_end`, see [Probes per target](#probes-per-target)), so windows from alternative exons of different transcripts are compared too, and a site that several exon entries contain is kept once, with the transcripts of all of them in `transcript_names` (and their number in `n_trans`).
 - **`off_target_pool`**: Optional post-processing step that lets at most `max_probes_per_gene` probes of a target's set hit the same off-target gene, e.g. `post_process: { off_target_pool: { attribute: target_mapped_genes, max_probes_per_gene: 2 } }`. See [Off-target pool limit](#off-target-pool-limit).
 - **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
@@ -433,7 +434,7 @@ A `mapped_genes` attribute aligns a sequence to the transcriptome and counts the
 
 | `aligner` | Search | Needs |
 | --- | --- | --- |
-| `bowtie2` (templates and generated attributes) | Bowtie2 `--very-sensitive-local -k 100`: local alignments, which may cover only part of the sequence, found by a seed heuristic | `bowtie2` in `align_index` |
+| `bowtie2` | Bowtie2 `--very-sensitive-local -k 100`: local alignments, which may cover only part of the sequence, found by a seed heuristic | `bowtie2` in `align_index` |
 | `bowtie` | Bowtie 1 `-v <max_mismatches> -a`: every end-to-end site with at most `max_mismatches` substitutions (0-3, default 2); indels are not considered | `bowtie` in `align_index` and Bowtie 1 installed |
 
 ```yaml
@@ -447,8 +448,10 @@ attributes:
 ```
 
 - `strand` (both aligners): `both` (default) counts sites on either transcript strand; `sense` only sites where the sequence itself occurs in a transcript, right for `target_region`, whose probes bind exactly there; `antisense` only sites of its reverse complement, right for a probe's binding sequence. A probe does not bind an RNA that contains its own sequence, so `both` also counts antisense transcripts the probe cannot bind.
-- Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos.
+- Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos. `uprobe validate` also warns when Bowtie2 aligns sequences of 22-30 nt, whose off-target sites it finds only in part (see below).
 - On the Ensembl 113 human transcriptome (386,885 primary-assembly transcripts), for all 15,295 18-22-mers of the ACTB and GAPDH MANE Select transcripts: `aligner: bowtie` (`max_mismatches: 2`) reported exactly the sites a brute-force scan of every transcript window found, for a random sample of 1,000 of them (147,426 sites); `bowtie2` found 1.5% of the off-target genes with a site within 2 substitutions (none for 18-21-mers; for 30- and 40-mers it found 56% and 82%). The Bowtie 1 search took 4.6 s for the 15,295 sequences with 8 threads (2.5 s with `strand: sense`; Bowtie2 1.6 s); its index took about 5 minutes to build and 650 MB of disk.
+- Per window, which is what a filter such as `target_mapped_genes <= 1` sees: for 1,500 random windows of each length from 400 random MANE Select mRNAs, searched in the 410,909 Ensembl 113 human cDNA and ncRNA transcripts (patches included, genes counted by name) with `strand: sense`, Bowtie2 flagged none of the 20-mers, 69% of the 25-mers, 88% of the 28-mers, 87% of the 30-mers and 97-99% of the 40-, 46- and 52-mers that have a site within 2 substitutions in another gene, listing on average 0%, 49%, 71%, 70% and 87-94% of those genes. It reports at most 100 alignments, so it misses most genes of windows in repeats; from 40 nt on it also reports partial matches (about 25 nt or more), indels and sites with 3 or more mismatches, which a search within 2 substitutions cannot see (3-5% of the windows had only such hits). The templates therefore use `aligner: bowtie` for windows of 30 nt or less (smFISH, seqFISH+, MERFISH, HybISS) and Bowtie2 for the 40-52-nt windows of MiP-seq, STARmap, the double-hybridization RCA design and HCR v3, all with `strand: sense`.
+- Protocols without `attributes`: in RNA mode the generated `target_mapped_genes` uses `aligner: bowtie` (`max_mismatches: 2`, `strand: sense`) when the genome's `align_index` includes `bowtie` and Bowtie 1 is installed (the run builds the index if it is missing), and `bowtie2` otherwise; the log says which and why, with a warning when the windows are shorter than 22 nt. `uprobe validate -g` makes the same choice.
 - Each `mapped_genes` attribute also writes `<attribute>_off_targets` to the result tables (`.xlsx` and `_probes.tsv`, next to the attribute): the genes other than the row's target that the sequence hits, each with its fewest mismatches, e.g. `ACTG1:0, POTEF:2` (names only with `bowtie2`). Genes are named after the GTF's `gene_name`; a name that several gene ids share is written `name(gene_id)`.
 
 #### Expression-aware off-target counting
@@ -474,6 +477,9 @@ In smFISH a false spot needs many probes of the set on the same off-target RNA, 
 
 ```yaml
 post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 2   # at most one off-target gene per probe
   remove_overlap:
     location_interval: 2
   off_target_pool:
@@ -488,7 +494,20 @@ post_process:
 - For each target, probes are visited from best to worst rank, the order `sorts` defines (the current order when there are no `sorts`), and a probe is dropped when one of its off-target genes (`<attribute>_off_targets`, all listed attributes together) is already hit by `max_probes_per_gene` kept probes. With a `gene_expression` table only expressed off-target genes are listed, so only they are limited. `max_probes_per_gene: 0` keeps only probes without off-target genes.
 - It runs after `remove_overlap`, so the limit applies to probes that can end up in the same set, and before `equal_space`, which then chooses the final N among the probes that respect it (any subset still does). Per-probe filters such as `target_mapped_genes <= 3` still apply first.
 - `summary.json` reports the stage in `stages` and, in `off_targets.pool`, how many probes it removed and the genes that reached the limit most often.
+- A probe in a repeat can hit hundreds of genes, each of them by no other probe of the set, so the limit alone keeps it; combine the limit with a per-probe filter such as `target_mapped_genes <= 2` (at most one off-target gene per probe).
+- `equal_space` picks the final probes by position, not by their off-target genes, so when a target has more candidates than it needs, the limit mostly swaps clean probes for probes with an off-target gene instead of adding probes (measured below). It would pay off with an `equal_space` that prefers probes without off-target genes, which U-Probe does not have yet.
 - For padlock/RCA probes a single probe makes signal, so allow no expressed off-target per probe with a filter instead: `target_mapped_genes <= 1` (with `gene_expression`).
+
+Measured on Ensembl 113 human genes with the smFISH template (all 20-mers of the MANE Select mRNAs, off-targets within 2 substitutions by Bowtie 1, `remove_overlap` 2, 48 probes per gene): `target_mapped_genes <= 1` alone, against `target_mapped_genes <= 2` with `max_probes_per_gene: 2`.
+
+| Genes | Expression table | `<= 1`: probes (genes with 48) | `<= 2` + pool: probes (genes with 48) | Final probes with an off-target gene, `<= 2` + pool |
+| --- | --- | --- | --- | --- |
+| 30 random protein-coding genes | none | 1,294 (26) | 1,302 (26) | 46% |
+| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,356 (27) | 1,361 (27) | 33% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 119 (1) | 132 (1) | 46% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 184 (2) | 194 (2) | 34% |
+
+The limit added 5-13 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 62 and 65 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 

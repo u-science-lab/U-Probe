@@ -53,7 +53,7 @@ meta:
       source: Gyllborg 2020, Methods
       quote: five targets were selected randomly per gene
     - parameter: post_process.filters.target_mapped_genes
-      value: "<= 1"
+      value: "<= 1, no other gene with a site within 2 substitutions of the 30-nt arm pair (Bowtie 1, exhaustive)"
       source: >-
         U-Probe approximation. multi_padlock_design rejects targets with any
         database hit above 50% coverage and 80% homology around the ligation
@@ -83,7 +83,7 @@ meta:
     - The padlock binds cDNA, so in situ reverse transcription is required; for direct RNA padlocks (e.g. SplintR ligase) the arms would be the reverse complements instead.
     - "TODO: verify GC criteria for HybISS padlock arms (none stated)."
   replace:
-    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "genome: a genome name from your genomes.yaml (mm10 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (Pvalb here)"
     - "encoding: per gene, the 20-nt ID (bridge-probe site); TAGACGTAGTGAGCATGACT is the published mouse Pvalb ID from Gyllborg 2020 Supplementary Table 1, an example only"
 
@@ -152,13 +152,14 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    aligner: bowtie2
-    # Bowtie2 local alignments find exact and 1-mismatch sites of 30-mers but
-    # only some 2-mismatch sites. For every transcript site within 2
-    # substitutions, add bowtie to the genome's align_index and use instead:
-    #   aligner: bowtie
-    #   max_mismatches: 2
-    #   strand: sense    # mRNA sites like target_region; the padlock binds their cDNA
+    # The 30-nt site of both arms, which ligation needs. Bowtie 1 finds every
+    # transcript site within 2 substitutions; it needs bowtie in the genome's
+    # align_index. Bowtie2 (aligner: bowtie2, a local seed heuristic) flagged
+    # only 87% of random 30-nt windows of human mRNAs that have such a site in
+    # another gene (Ensembl 113 transcriptome).
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense    # mRNA sites like target_region; the padlock binds their cDNA
 
 post_process:
   filters:

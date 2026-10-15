@@ -119,6 +119,7 @@ def test_remove_overlap_keeps_windows_of_each_direct_target():
 def test_remove_overlap_keeps_windows_of_each_exon():
     # Exon and UTR windows are numbered within their exon or UTR, so windows of
     # different exons of one transcript at the same positions do not overlap.
+    # Without target_start (an older table), windows are compared per exon or UTR.
     df = pd.DataFrame({
         'probe_id': ['e1a', 'e1b', 'e1c', 'e2a', 'e2b', 'u1', 'c1'],
         'target': ['G'] * 6 + ['C'],
@@ -130,3 +131,81 @@ def test_remove_overlap_keeps_windows_of_each_exon():
     })
     result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
     assert sorted(result['probe_id']) == ['c1', 'e1a', 'e1c', 'e2a', 'e2b', 'u1']
+
+
+def dna_windows(tmp_path, targets):
+    """Candidate windows of a DNA-mode (source: genome) run, as UProbeAPI extracts them."""
+    import random
+    from uprobe.core.api import UProbeAPI
+    rng = random.Random(5)
+    (tmp_path / 'g.fa').write_text('>1\n' + ''.join(rng.choice('ACGT') for _ in range(400)) + '\n')
+    api = object.__new__(UProbeAPI)
+    api.genome = {'fasta': str(tmp_path / 'g.fa'), 'gtf': None}
+    api.protocol = {'targets': targets, 'extracts': {'target_region': {'source': 'genome', 'length': 40, 'step': 20}}}
+    return api.generate_target_seqs()
+
+
+def test_remove_overlap_in_dna_mode_with_regions_and_direct_sequences(tmp_path):
+    # Direct sequences add transcript_names and start/end columns that genome
+    # windows lack (NaN), so all but the first window of each region were dropped.
+    sequence = 'ACGTTGCAAGCTTCGATGCA' * 10
+    mixed = dna_windows(tmp_path, ['1:0-200', '1:200-400', {'S': sequence}])
+    assert mixed['transcript_names'].isna().any() and mixed['start'].isna().any()
+    config = {'post_process': {'remove_overlap': {'location_interval': 0}}}
+    result = post_process(mixed, config)
+    assert result.groupby('target').size().to_dict() == {'1:0-200': 5, '1:200-400': 5, 'S': 5}
+    assert result.loc[result['target'] == '1:0-200', 'sub_region'].tolist() == \
+        ['1-40', '41-80', '81-120', '121-160', '161-200']
+    # The same windows as runs with only the regions or only the sequence.
+    alone = pd.concat([post_process(dna_windows(tmp_path, ['1:0-200', '1:200-400']), config),
+                       post_process(dna_windows(tmp_path, [{'S': sequence}]), config)])
+    assert sorted(result['probe_id']) == sorted(alone['probe_id'])
+
+
+def alternative_exon_genome(tmp_path):
+    """Gene G (+ strand) and gene H (- strand), each with two transcripts whose exons share sites."""
+    import random
+    rng = random.Random(3)
+    seq = ''.join(rng.choice('ACGT') for _ in range(1000))
+    (tmp_path / 'g.fa').write_text(f'>1\n{seq}\n')
+    exons = [('G', 'T1', 101, 300, '+'), ('G', 'T1', 501, 600, '+'),
+             ('G', 'T2', 101, 250, '+'), ('G', 'T2', 501, 650, '+'),
+             ('H', 'T3', 701, 900, '-'), ('H', 'T4', 751, 900, '-')]
+    (tmp_path / 'g.gtf').write_text(''.join(
+        f'1\ttest\texon\t{start}\t{end}\t.\t{strand}\t.\tgene_id "{gene}"; gene_name "{gene}"; transcript_id "{t}";\n'
+        for gene, t, start, end, strand in exons))
+    return str(tmp_path / 'g.fa'), str(tmp_path / 'g.gtf')
+
+
+def genomic_interval(row):
+    _, exon_start, exon_end, strand = row['exon_name'].split('_')
+    if strand == '+':
+        return int(exon_start) + row['start'] - 1, int(exon_start) + row['end'] - 1
+    return int(exon_end) - row['end'] + 1, int(exon_end) - row['start'] + 1
+
+
+@pytest.mark.parametrize('location_interval', [0, 2])
+def test_remove_overlap_compares_alternative_exon_entries(tmp_path, location_interval):
+    # Windows are numbered within each exon entry, and entries of different
+    # transcripts (101-300 and 101-250 of G) contain the same sites; they were
+    # never compared, so the same window was selected once per entry.
+    from uprobe.core.gen.fun import generate_target_seqs
+    fasta, gtf = alternative_exon_genome(tmp_path)
+    df = generate_target_seqs('exon', ['G', 'H'], fasta, gtf, min_length=40, step=10)
+    assert df.duplicated(['target', 'target_start', 'target_end']).any()
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': location_interval}}})
+    for target, group in result.groupby('target'):
+        intervals = sorted(genomic_interval(row) for _, row in group.iterrows())
+        assert all(b[0] > a[1] + location_interval for a, b in zip(intervals, intervals[1:])), target
+        assert group['target_region'].is_unique
+    # The kept windows tile the merged exon model of each gene.
+    assert sorted(result.loc[result['target'] == 'G', 'target_start'])[:3] == \
+        ([1, 41, 81] if location_interval == 0 else [1, 51, 101])
+    # A site in two entries is kept once and lists the transcripts of both.
+    for target, transcripts in (('G', 'T1, T2'), ('H', 'T3, T4')):
+        first = result[(result['target'] == target) & (result['target_start'] == 1)]
+        assert first['transcript_names'].tolist() == [transcripts] and first['n_trans'].tolist() == [2]
+    # Model positions 151-200 lie only in T1's exon 101-300.
+    only_t1 = result[(result['target'] == 'G') & (result['target_start'] > 150) & (result['target_end'] <= 200)]
+    assert len(only_t1) == 1 and only_t1['transcript_names'].tolist() == ['T1']
+    assert only_t1['n_trans'].tolist() == [1]

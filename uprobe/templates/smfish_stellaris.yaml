@@ -43,7 +43,7 @@ meta:
       source: Raj 2008, abstract and Supp. Fig. 4; Stellaris probe sets hold at most 48 oligos
       quote: probing each mRNA species with 48 or more short, singly labeled oligonucleotide probes
     - parameter: post_process.filters.target_mapped_genes
-      value: "<= 1"
+      value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
         U-Probe approximation. The Stellaris designer excludes 20-mers with
         more than 16 nt matching other RNAs, which U-Probe does not model.
@@ -61,10 +61,12 @@ meta:
       formamide in 2x SSC with 100 mg/mL dextran sulfate.
   limitations:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
-    - With aligner bowtie2, 20-mers do not align (Bowtie2's local mode needs at least 22 nt), so target_mapped_genes is 0 and does not filter; aligner bowtie (see the attribute) searches every site within max_mismatches substitutions.
+    - target_mapped_genes uses Bowtie 1 (aligner bowtie), so the genome's align_index must include bowtie; Bowtie2 cannot align 20-mers (its local mode needs at least 22 nt) and would count no off-target gene.
+    - Without gene_expression every annotated gene counts as an off-target, including genes and pseudogenes the sample does not express, so target_mapped_genes <= 1 drops more probes than needed; add your expression table (see gene_expression below).
+    - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 16, GAPDH 6, RPL13A 1 on Ensembl 113 human, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 33-46% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets.
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
     - "smfish_probe: order with a 3' amine (or a 3' dye) for single-fluorophore labelling"
 
@@ -99,8 +101,12 @@ hybridization:
   na_mM: 390
   formamide_pct: 10
 
-# Optional: genes not expressed in your sample are not counted as off-targets
-# (they stay listed in target_mapped_genes_unexpressed). Supply your own table:
+# Recommended: genes not expressed in your sample are not counted as
+# off-targets (they stay listed in target_mapped_genes_unexpressed), so only
+# RNAs that are present remove probes. With a HeLa table (TPM >= 1), 53% instead
+# of 37% of the 20-mers of 30 random human genes had no off-target gene, and
+# ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 184 instead of 119 probes.
+# Supply your own table:
 # gene_expression:
 #   table: expression.tsv   # a gene id or name column and a numeric column
 #   value_column: TPM
@@ -116,17 +122,17 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    aligner: bowtie2
-    # Bowtie2's local mode cannot align sequences shorter than 22 nt, so for
-    # these 20-mers this attribute is 0 and its filter keeps every probe. For
-    # every transcript site within 2 substitutions on the strand the probe
-    # binds, add bowtie to the genome's align_index and use instead:
-    #   aligner: bowtie
-    #   max_mismatches: 2
-    #   strand: sense
+    # Bowtie 1 finds every transcript site within 2 substitutions; it needs
+    # bowtie in the genome's align_index. Bowtie2's local mode cannot align
+    # sequences shorter than 22 nt, so with aligner: bowtie2 these 20-mers
+    # would count no off-target gene at all.
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense   # sites where target_region occurs, which rc(target_region) binds
 
 post_process:
   filters:
+    # No other gene with a site within 2 substitutions (the count includes the target).
     target_mapped_genes:
       condition: target_mapped_genes <= 1
   sorts:
@@ -134,10 +140,23 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 2
-  # Optional, with aligner: bowtie (and gene_expression) above: a false spot
-  # needs many probes on the same RNA, so instead of the target_mapped_genes
-  # filter, let at most 2 probes of a gene's set hit the same off-target gene.
-  # It runs after remove_overlap and before equal_space picks the 48.
+  # Option for genes with many paralogs or pseudogenes: a false spot needs many
+  # probes of the set on one RNA, so allow one off-target gene per probe (set
+  # the filter above to target_mapped_genes <= 2) and at most 2 probes of the
+  # set per off-target gene (uncomment off_target_pool). It runs after
+  # remove_overlap and before equal_space picks the 48. The gain is small and
+  # costs cleanliness, measured on Ensembl 113 human genes (all 20-mers of the
+  # MANE Select mRNAs; probes with <= 1 / with the option, and the share of
+  # final probes with an off-target gene under the option):
+  #   30 random genes, no expression table:  1,294 / 1,302 probes (26 genes
+  #                                          get 48 either way); 46%
+  #   same, HeLa expression (TPM >= 1):      1,356 / 1,361 (27 get 48); 33%
+  #   ACTB, EEF1A1, GAPDH, HSPA8, RPL13A,
+  #   TUBB, no expression table:             119 / 132 (1 gets 48); 46%
+  #   same, HeLa expression:                 184 / 194 (2 get 48); 34%
+  # equal_space picks by position, not by cleanliness, so the option mostly
+  # swaps clean probes for probes with an off-target gene; it would pay off
+  # with an equal_space that prefers probes free of off-targets.
   # off_target_pool:
   #   attribute: target_mapped_genes
   #   max_probes_per_gene: 2

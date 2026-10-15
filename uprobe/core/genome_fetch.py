@@ -572,6 +572,22 @@ def update_genomes_yaml(path: T.Union[str, Path], name: str, entry: dict) -> boo
     return True
 
 
+def default_align_index() -> T.List[str]:
+    """align_index of a new entry: bowtie2, plus bowtie when Bowtie 1 is installed.
+
+    Bowtie 1 serves the exhaustive off-target search (mapped_genes with
+    aligner: bowtie), which short probes need: Bowtie2's local mode does not
+    align sequences shorter than 22 nt.
+    """
+    if shutil.which("bowtie-build"):
+        return ["bowtie2", "bowtie"]
+    log.warning("bowtie-build (Bowtie 1) is not on PATH, so the entry's align_index has no bowtie: mapped_genes "
+                "attributes with aligner: bowtie (the exhaustive off-target search of the smFISH, seqFISH+, "
+                "MERFISH and HybISS templates) cannot run. Install it (conda install -c bioconda bowtie), then add "
+                "bowtie to align_index (e.g. re-run with --align-index bowtie2,bowtie).")
+    return ["bowtie2"]
+
+
 def _make_entry(plan: FetchPlan, directory: Path, existing: T.Optional[dict],
                 align_index: T.Optional[T.List[str]], jellyfish: T.Optional[bool]) -> dict:
     """genomes.yaml entry in the format UProbeAPI reads; user settings
@@ -588,8 +604,8 @@ def _make_entry(plan: FetchPlan, directory: Path, existing: T.Optional[dict],
     })
     if align_index is not None:
         entry["align_index"] = list(align_index)
-    else:
-        entry.setdefault("align_index", ["bowtie2"])
+    elif "align_index" not in entry:
+        entry["align_index"] = default_align_index()
     if jellyfish is not None:
         entry["jellyfish"] = bool(jellyfish)
     else:
