@@ -136,6 +136,7 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 - Sources: Ensembl (vertebrates plus yeast, worm and fly) and the Ensembl Genomes divisions `plants`, `fungi`, `metazoa` and `protists` (`--division`; they have their own release numbers). Ensembl Bacteria is not supported.
 - The unmasked primary assembly FASTA is used when Ensembl provides one, otherwise the toplevel FASTA. Files are decompressed (U-Probe's tools need plain FASTA) into `<out>/<name>/`; the entry name defaults to `<species>_<assembly>_e<release>` (`_eg<release>` for Ensembl Genomes).
 - Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
+- A new entry gets `align_index: [bowtie2]`, plus `bowtie` when Bowtie 1 (`bowtie-build`) is installed, for the [exhaustive off-target search](#off-target-search) (the log says so when it is not), and `jellyfish: true` when Jellyfish is installed. `--align-index` and `--jellyfish/--no-jellyfish` set them; re-fetching keeps the settings of an existing entry.
 - `--build-index` runs the same index build as `uprobe build-index`.
 
 #### Protocol Templates

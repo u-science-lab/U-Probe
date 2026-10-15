@@ -1039,7 +1039,8 @@ def genome():
               help='genomes.yaml to create or update. [default: genomes.yaml]')
 @click.option('--name', help='Entry name in genomes.yaml. [default: <species>_<assembly>_e<release>]')
 @click.option('--align-index', help='Comma-separated aligners for the entry, e.g. "bowtie2,blast". '
-                                    '[default: keep the existing value, else bowtie2]')
+                                    '[default: keep the existing value, else bowtie2, plus bowtie if '
+                                    'bowtie-build (Bowtie 1) is installed]')
 @click.option('--jellyfish/--no-jellyfish', default=None,
               help='Enable kmer_count for the entry. [default: keep the existing value, else on if jellyfish is installed]')
 @click.option('--build-index', is_flag=True, help='Build aligner indices afterwards (same as `uprobe build-index`).')

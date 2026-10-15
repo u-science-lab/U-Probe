@@ -221,7 +221,27 @@ def test_species_resolution_and_suggestions(ensembl):
     assert rows[0]["species"] == "mus_musculus"
 
 
-def test_fetch_registers_primary_assembly(ensembl, fetch, tmp_path):
+def _bowtie_build(monkeypatch, installed):
+    """Make shutil.which find bowtie-build (Bowtie 1) or not."""
+    which = shutil.which
+    monkeypatch.setattr(gf.shutil, "which", lambda name, *args, **kwargs: (
+        ("/opt/bin/bowtie-build" if installed else None) if name == "bowtie-build" else which(name, *args, **kwargs)))
+
+
+@pytest.mark.parametrize("installed", [True, False])
+def test_default_align_index_adds_bowtie_when_installed(fetch, monkeypatch, installed):
+    _bowtie_build(monkeypatch, installed)
+    warnings = []
+    monkeypatch.setattr(gf.log, "warning", warnings.append)
+    entry = fetch(dry_run=True)["entry"]
+    assert entry["align_index"] == (["bowtie2", "bowtie"] if installed else ["bowtie2"])
+    assert any("bowtie-build (Bowtie 1) is not on PATH" in w for w in warnings) is not installed
+    # An explicit --align-index is used as given.
+    assert fetch(dry_run=True, align_index=["bowtie2"])["entry"]["align_index"] == ["bowtie2"]
+
+
+def test_fetch_registers_primary_assembly(ensembl, fetch, tmp_path, monkeypatch):
+    _bowtie_build(monkeypatch, False)
     result = fetch(release="latest")
     name = result["name"]
     assert name == "homo_sapiens_GRCh38_e116"
