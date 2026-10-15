@@ -1,0 +1,171 @@
+# U-Probe protocol template: STARmap SNAIL probes (padlock + primer).
+# Copy: `uprobe templates show starmap -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: starmap
+  technology: STARmap SNAIL (padlock + primer pair)
+  description: >-
+    SNAIL (specific amplification of nucleic acids via intramolecular
+    ligation) uses two oligos on a 40-46-nt RNA region split into two 19-25-nt
+    sites with a 0-2-nt gap. Reading the RNA 5'->3', the padlock binds the
+    upstream site and the primer the downstream site. The primer's 12-nt tail
+    pairs 6 nt with each end of the padlock, so the padlock can be circularized
+    by ligation and rolling-circle-amplified only when both oligos hybridize to
+    the same RNA molecule. The padlock (5' phosphate) is
+    5'-[A][code][TA][rc of padlock site][AATTATTAC][code][CATACACTAAAGATA]-3' and
+    the primer is 5'-[rc of primer site][TA][rc(code)][T][TATCTT]-3', where
+    code is the gene barcode read by SEDAL sequencing. The backbone sequences
+    are those of the published STARmap PLUS 64-gene probe set (Zeng et al.
+    2023), which uses the 6 + 6 primer/padlock split of Wang et al. 2018.
+  citations:
+    - short: Wang et al. 2018, Science
+      title: Three-dimensional intact-tissue sequencing of single-cell transcriptional states
+      doi: 10.1126/science.aat5691
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6339868/
+    - short: Zeng et al. 2023, Nature Neuroscience (STARmap PLUS)
+      title: >-
+        Integrative in situ mapping of single-cell transcriptional states and
+        tissue histopathology in a mouse model of Alzheimer's disease
+      doi: 10.1038/s41593-022-01251-x
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11332722/
+  parameter_sources:
+    - parameter: extracts.target_region.length and layout
+      value: "40-46 nt = padlock site 19-25 + gap 0-2 + primer site 19-25"
+      source: Wang 2018, Supplementary Materials (probe design) and Fig. S1A legend
+      quote: >-
+        with length restriction of 40-46 nucleotide ... split into halves of
+        20-25 nt, with an 0-2 nt gap in between ... each primer or padlock probe
+        has 19-25 nt (the paper gives 20-25 in the methods text and 19-25 in
+        Fig. S1A)
+    - parameter: extracts.target_region.source
+      value: CDS
+      source: Wang 2018, Supplementary Materials
+      quote: only the shortest isoforms were considered and the coding regions were used
+    - parameter: primer tail / padlock ends
+      value: 6 nt on each padlock end (12-nt primer tail)
+      source: Wang 2018, Fig. S1A legend
+      quote: the complementary sequence between the primer and padlock is only 6 nt on each arm ... with Tm below room temperature
+    - parameter: padlock and primer backbones
+      value: "padlock /5Phos/A[code]TA-[site]-AATTATTAC[code]CATACACTAAAGATA; primer [site]-TA[rc code]TTATCTT"
+      source: >-
+        Zeng 2023, Supplementary Table 1 (64-gene set), e.g. ALDOC_01
+        /5Phos/AAAATAACGAGAATGCCCTTATCCTGGAATTATTACAAACATACACTAAAGATA and
+        ALDOC_11 ACCCTTGTCAACCTTGATGCTATTTTTATCTT; positions on the RNA
+        (padlock upstream, primer downstream) checked against RefSeq mRNAs
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 1"
+      source: U-Probe approximation of target specificity; Wang 2018 names Picky 2.2 without further criteria.
+  hybridization:
+    temperature_c: 40
+    na_mM: 390
+    formamide_pct: 10
+    ssc: 2x
+    probe_nM: 100
+    source: >-
+      Wang 2018, Supplementary Materials (2X SSC, 10% formamide, 1% Tween-20,
+      20 mM RVC, salmon sperm DNA, SNAIL probes at 100 nM per oligo, 40 C
+      overnight); STARmap PLUS used 1 nM per oligo for 36 h
+    notes: >-
+      [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate).
+      Ligation: T4 DNA ligase at room temperature for 2 h.
+  tm_window:
+    applied: false
+    value: 60
+    target: padlock.binding and primer.binding
+    conditions: "unknown (Picky 2.2 defaults; TODO: verify)"
+    source: Wang 2018, Fig. S1A legend ("with a designed Tm of 60oC"); halves are chosen with the best Tm match
+    note: >-
+      The design conditions are not stated and U-Probe's annealing_temperature
+      assumes 50 mM Na+, 50 nM oligo and no formamide, so the Tm target is
+      recorded and not used as a filter. Both half Tms are reported.
+  limitations:
+    - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); U-Probe keeps every passing non-overlapping region (RNA mode has no per-gene count).
+    - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference.
+    - "TODO: verify the minimum spacing between probe pairs; regions are only required not to overlap here."
+    - "TODO: verify the 2018 backbone (Table S1 was not accessible); Wang 2018 used a 5-nt barcode within a 35-nt coding space, whereas the 64-gene STARmap PLUS set used here repeats a 3-nt code. The 2,766-gene STARmap PLUS set uses a different backbone with an 8 + 6 split."
+  replace:
+    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "targets: your gene names (Aldoc here)"
+    - "encoding: per gene, the 3-nt SEDAL code (AAA is the published ALDOC code of the 64-gene set, an example only)"
+
+name: starmap
+description: STARmap SNAIL padlock and primer pairs on 40-46-nt regions (Wang et al. 2018; Zeng et al. 2023 backbone)
+
+genome: mm10
+
+targets:
+  - Aldoc
+
+encoding:
+  Aldoc:
+    code: AAA
+
+extracts:
+  target_region:
+    source: CDS
+    length: [40, 46]
+    step: 1
+    layout:
+      template: "{padlock_site}{gap}{primer_site}"
+      parts:
+        padlock_site:
+          length: [19, 25]
+        gap:
+          length: [0, 2]
+        primer_site:
+          length: [19, 25]
+
+probes:
+  padlock:
+    template: "A{code_5}TA{binding}AATTATTAC{code}CATACACTAAAGATA"
+    parts:
+      code_5:
+        expr: "encoding[target]['code']"
+      binding:
+        expr: "rc(target_parts['padlock_site'])"
+      code:
+        expr: "encoding[target]['code']"
+  primer:
+    template: "{binding}TA{code_rc}TTATCTT"
+    parts:
+      binding:
+        expr: "rc(target_parts['primer_site'])"
+      code_rc:
+        expr: "rc(encoding[target]['code'])"
+
+attributes:
+  padlock_tm:
+    target: padlock.binding
+    type: annealing_temperature
+  primer_tm:
+    target: primer.binding
+    type: annealing_temperature
+  padlock_gc:
+    target: padlock.binding
+    type: gc_content
+  primer_gc:
+    target: primer.binding
+    type: gc_content
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 0
+
+summary:
+  report_name: rna_report
+  attributes:
+    - padlock_tm
+    - primer_tm
+    - padlock_gc
+    - primer_gc
+    - target_mapped_genes

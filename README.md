@@ -163,6 +163,15 @@ uprobe generate-barcodes \
 
 This writes `barcodes.csv` (column `sequence`) and `barcodes.txt`.
 
+#### Protocol Templates
+
+U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template starts with a `meta` block that cites the source papers, maps every parameter to its source, records the source hybridization conditions and lists what you must replace (genome, targets, barcodes/readouts).
+
+```bash
+uprobe templates list
+uprobe templates show hcr_v3 -o protocol.yaml
+```
+
 ### 2. Python API (Ideal for Backend Integration)
 
 If you are developing a web backend or data analysis pipeline, we recommend directly using `UProbeAPI`. It returns Pandas DataFrames, making it easy to process further.
@@ -310,6 +319,7 @@ summary:
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
+- **`meta`** (optional): Free-form documentation that the workflow ignores; the built-in templates use it for citations and parameter sources.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory.
 

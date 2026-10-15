@@ -1,0 +1,157 @@
+# U-Probe protocol template: MiP-seq padlock probe + RCA initiator primer.
+# Copy: `uprobe templates show mipseq -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: mipseq
+  technology: MiP-seq (padlock + RCA initiator primer, pairwise sequencing)
+  description: >-
+    Two oligos bind a 40-nt RNA window: reading the RNA 5'->3', the padlock's
+    5' arm site (13 nt), its 3' arm site (13 nt), one unbound nucleotide and the
+    primer site (13 nt). The 58-nt padlock (5' phosphate added with T4 PNK) is
+    5'-[rc of 5' arm site][CC][B1, 3 nt][TGCGTCTATTT][GT][B2, 3 nt]
+    [TAGTGGAGCCT][rc of 3' arm site]-3'; SplintR ligase joins its ends on the
+    RNA. The RCA initiator primer is 5'-[rc of primer site][spacer]
+    [AGGCTCCACTA]-3': its 5' part binds the RNA next to the padlock and its 3'
+    end binds the padlock's TAGTGGAGCCT, so Phi29 amplifies only circles that
+    sit on the target together with the primer. The two barcodes B1 and B2 are
+    read pairwise by sequencing by ligation from the TGCGTCTATTT and
+    TAGTGGAGCCT anchor sites. Backbones are the published 217-gene probe set.
+  citations:
+    - short: Wu et al. 2024, Nature Biomedical Engineering
+      title: Spatial multi-omics at subcellular resolution via high-throughput in situ pairwise sequencing
+      doi: 10.1038/s41551-024-01205-7
+    - short: Wu et al. 2023, bioRxiv (MiP-Seq preprint, Methods)
+      title: Development of Multiomics in situ Pairwise Sequencing (MiP-Seq)
+      doi: 10.1101/2023.01.07.523058
+      url: https://www.biorxiv.org/content/10.1101/2023.01.07.523058v1
+  parameter_sources:
+    - parameter: padlock arms (layout arm5_site, arm3_site)
+      value: 13 nt each, adjacent on the RNA (no ligation gap)
+      source: >-
+        Preprint Methods (12-16 nt); 13 + 13 in 433/435 padlocks of the
+        217-gene set (Nat Biomed Eng Supplementary Table, sheet "Fig 3")
+      quote: Both ends of the padlock probe are complementary to the target sequence (12-16 bp)
+    - parameter: padlock backbone
+      value: "CC[B1]TGCGTCTATTTGT[B2]TAGTGGAGCCT"
+      source: >-
+        217-gene set, e.g. Th-1-PLP-1
+        GGTGGATTTTGGC CC GAG TGCGTCTATTT GT CAT TAGTGGAGCCT CGGGTCTCTAAGT
+      quote: each padlock probe contains two barcodes (B1 and B2)
+    - parameter: primer orientation and padlock-binding tail
+      value: "5' rc(primer site, 13 nt) ... AGGCTCCACTA 3' (rc of the padlock's TAGTGGAGCCT)"
+      source: Preprint Methods; 217-gene set, e.g. Th-1-RCA-2 GCCTCTGGGCAGG C AGGCTCCACTA
+      quote: The 5' end of the RCA initiator primer is complementary to the 3' end of the targeting sequence (12-16 bp), and the 3' end is complementary to the padlock probe
+    - parameter: layout gap (1 nt) and primer spacer (sense gap base + C)
+      value: "primer = rc(primer_site) + gap base + C + AGGCTCCACTA"
+      source: >-
+        Derived from the published 217-gene sequences mapped to mouse RefSeq
+        mRNAs (116 pairs from 60 genes): the primer site starts 1 nt after the
+        3' arm site, and the spacer is the (sense) skipped base followed by C
+        in 91 pairs, a single C in 14 and another 2-nt spacer in 11. TODO:
+        verify the spacer rule with the authors.
+  hybridization:
+    temperature_c: 37
+    na_mM: 390
+    formamide_pct: 10
+    ssc: 2x
+    probe_nM: 30
+    source: >-
+      MiP-Seq preprint Methods (padlock probes 30 nM/probe and equimolar RCA
+      initiator in 2X SSC, 10% formamide, 20 mM RVC, overnight at 37 C)
+    notes: >-
+      [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate).
+      Ligation: SplintR ligase 1 U/uL, 37 C for 2 h; RCA: Phi29, 30 C for 2 h.
+  limitations:
+    - MiP-seq selects 2 target sites per gene in an exon close to the 5' end; U-Probe keeps every passing non-overlapping window (RNA mode has no per-gene count).
+    - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) is applied."
+  replace:
+    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "targets: your gene names (Th here)"
+    - "encoding: per gene, the 3-nt barcodes B1 and B2 (GAG/CAT are from the published Th-1-PLP-1, an example only)"
+
+name: mipseq
+description: MiP-seq padlock with two 3-nt barcodes and RCA initiator primer on a 40-nt window (Wu et al. 2024)
+
+genome: mm10
+
+targets:
+  - Th
+
+encoding:
+  Th:
+    B1: GAG
+    B2: CAT
+
+extracts:
+  target_region:
+    source: exon
+    length: 40
+    step: 1
+    layout:
+      template: "{arm5_site}{arm3_site}{gap}{primer_site}"
+      parts:
+        arm5_site:
+          length: 13
+        arm3_site:
+          length: 13
+        gap:
+          length: 1
+        primer_site:
+          length: 13
+
+probes:
+  padlock:
+    template: "{arm_5}CC{b1}TGCGTCTATTTGT{b2}TAGTGGAGCCT{arm_3}"
+    parts:
+      arm_5:
+        expr: "rc(target_parts['arm5_site'])"
+      b1:
+        expr: "encoding[target]['B1']"
+      b2:
+        expr: "encoding[target]['B2']"
+      arm_3:
+        expr: "rc(target_parts['arm3_site'])"
+  rca_primer:
+    template: "{binding}{gap_base}CAGGCTCCACTA"
+    parts:
+      binding:
+        expr: "rc(target_parts['primer_site'])"
+      gap_base:
+        expr: "target_parts['gap']"
+
+attributes:
+  target_gc:
+    target: target_region
+    type: gc_content
+  arm_5_tm:
+    target: padlock.arm_5
+    type: annealing_temperature
+  arm_3_tm:
+    target: padlock.arm_3
+    type: annealing_temperature
+  primer_tm:
+    target: rca_primer.binding
+    type: annealing_temperature
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 0
+
+summary:
+  report_name: rna_report
+  attributes:
+    - target_gc
+    - arm_5_tm
+    - arm_3_tm
+    - primer_tm
+    - target_mapped_genes

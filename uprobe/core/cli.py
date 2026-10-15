@@ -839,6 +839,49 @@ def generate_report(protocol, genomes, probes, output, no_plots, pdf, no_pdf):
         sys.exit(1)
 
 
+@cli.group()
+def templates():
+    """
+    Protocol templates for published probe technologies.
+
+    Each template is a complete protocol whose `meta` block lists the cited
+    sources, the source hybridization conditions and what to replace.
+    """
+
+
+@templates.command(name='list')
+def templates_list():
+    """List available templates with technology and primary citation."""
+    from uprobe.templates import list_templates
+    rows = list_templates()
+    headers = {'name': 'NAME', 'technology': 'TECHNOLOGY', 'citation': 'CITATION'}
+    widths = {k: max(len(r[k]) for r in [headers, *rows]) for k in headers}
+    for row in [headers, *rows]:
+        click.echo(f"{row['name']:<{widths['name']}}  {row['technology']:<{widths['technology']}}  {row['citation']}")
+
+
+@templates.command(name='show')
+@click.argument('name')
+@click.option('--output', '-o', type=click.Path(dir_okay=False),
+              help='Write the template to this file instead of stdout.')
+@click.option('--force', is_flag=True, help='Overwrite the output file if it exists.')
+def templates_show(name, output, force):
+    """Print template NAME, or save it with -o as a starting protocol."""
+    from uprobe.templates import read_template
+    try:
+        text = read_template(name)
+    except KeyError as e:
+        raise click.BadParameter(e.args[0], param_hint='NAME')
+    if not output:
+        click.echo(text, nl=False)
+        return
+    path = Path(output)
+    if path.exists() and not force:
+        raise click.UsageError(f"{path} exists; use --force to overwrite.")
+    path.write_text(text, encoding='utf-8')
+    click.echo(f"Template {name!r} written to {path}", err=True)
+
+
 @cli.command()
 @click.option('--workspace', default='.', help='Workspace directory to install templates into.')
 @click.option('--force', is_flag=True, help='Overwrite existing team template.')
