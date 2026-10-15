@@ -2,8 +2,9 @@
 
 Each ``<name>.yaml`` in this package is a complete U-Probe protocol. Its
 top-level ``meta`` block documents the probe architecture, the cited sources
-of every parameter, the hybridization conditions of the source protocol and
-what the user must replace. The workflow ignores ``meta``.
+of every parameter and of the source protocol's hybridization conditions
+(which the top-level ``hybridization`` block applies), and what the user must
+replace. The workflow ignores ``meta``.
 """
 from importlib import resources
 

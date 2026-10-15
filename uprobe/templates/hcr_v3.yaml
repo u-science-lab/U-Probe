@@ -61,11 +61,7 @@ meta:
       value: "<= 1"
       source: U-Probe approximation of target specificity; not specified by Choi 2018.
   hybridization:
-    temperature_c: 37
-    na_mM: 975
-    formamide_pct: 30
     ssc: 5x
-    probe_nM: 4
     source: >-
       Choi 2018, SI S2.1.3-S2.1.4 (30% formamide, 5x SSC, 9 mM citric acid,
       0.1% Tween 20, heparin, Denhardt's, 10% dextran sulfate; overnight at
@@ -143,6 +139,14 @@ probes:
         expr: "encoding[target]['spacer_even']"
       initiator:
         expr: "encoding[target]['init_even']"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 975
+  probe_nM: 4
+  formamide_pct: 30
 
 attributes:
   odd_gc:

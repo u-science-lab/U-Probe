@@ -38,6 +38,9 @@ meta:
       value: 0.20-0.80
       source: OligoMiner blockParse.py -g/-G defaults
       quote: minimum allowed percent G + C, default is 20 ... default is 80
+    - parameter: post_process.filters.homology_tm (with attributes.homology_tm.hybridization)
+      value: 42-47 C at 390 mM Na+, 50% formamide, 25 nM probe
+      source: OligoMiner blockParse.py -t/-T, -s and -F defaults (see meta.tm_window)
     - parameter: post_process.filters.homopolymers
       value: AAAAA, TTTTT, CCCCC, GGGGG excluded
       source: OligoMiner blockParse.py -X default
@@ -57,9 +60,6 @@ meta:
       source: Beliveau 2012
       quote: each oligo contains 32 bases of genomic sequence flanked by 21-base primer sequences
   hybridization:
-    temperature_c: 42
-    na_mM: 390
-    formamide_pct: 50
     ssc: 2x (2x SSCT)
     source: >-
       Beliveau 2018 Fig. 2A "Balance" preset (42 C hybridization) and
@@ -70,16 +70,18 @@ meta:
       2.5 min; Beliveau 2018 3D DNA FISH: 78 C for 3 min, then >24 h at
       47-52 C with the stringent settings).
   tm_window:
-    applied: false
+    applied: true
     value: [42, 47]
     target: oligopaint_oligo.homology
+    attribute: homology_tm
     conditions: {na_mM: 390, formamide_pct: 50, probe_nM: 25, method: "Biopython Tm_NN, DNA_NN3, saltcorr 5, 0.65 C per % formamide"}
     source: OligoMiner blockParse.py -t/-T defaults ("The minimum allowed Tm, default is 42" / "default is 47")
     note: >-
-      U-Probe's annealing_temperature currently assumes 50 mM Na+, 50 nM oligo
-      and no formamide, so this window is recorded and not used as a filter.
+      Applied: attributes.homology_tm.hybridization sets these design
+      conditions and post_process.filters.homology_tm keeps 42-47 C.
   limitations:
     - OligoMiner's outputClean step (Bowtie2 alignment scored with an LDA model of duplex stability) is not reproduced; the k-mer filter is the only specificity filter here.
+    - U-Probe computes Tm with primer3 (SantaLucia 1998 parameters and salt correction; formamide after Blake and Delcourt 1996, about 0.61-0.72 C per %), not with OligoMiner's Biopython Tm_NN (DNA_NN3, 0.65 C per %), so oligos close to 42 or 47 C may be classified differently.
     - "TODO: verify the Oligopaint primer sequences (Beliveau 2012 SI); the 21-nt primers here are N placeholders."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); it must set `jellyfish: true` for kmer_count"
@@ -116,6 +118,13 @@ probes:
         template: "NNNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 21-nt reverse primer site
         parts: {}
 
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 42
+  na_mM: 390
+  formamide_pct: 50
+
 attributes:
   homology_gc:
     target: oligopaint_oligo.homology
@@ -123,6 +132,8 @@ attributes:
   homology_tm:
     target: oligopaint_oligo.homology
     type: annealing_temperature
+    # Design conditions of the 42-47 C window (meta.tm_window).
+    hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25}
   homology_kmer_count:
     target: oligopaint_oligo.homology
     type: kmer_count
@@ -133,6 +144,8 @@ post_process:
   filters:
     homology_gc:
       condition: homology_gc >= 0.2 & homology_gc <= 0.8
+    homology_tm:
+      condition: homology_tm >= 42 & homology_tm <= 47
     homopolymers:
       type: sequence_pattern
       target: oligopaint_oligo.homology

@@ -33,6 +33,9 @@ meta:
       value: 30
       source: Gyllborg 2020, Methods
       quote: arm length, 15; Tm, low 65, high 75; space between targets, 15 ... five targets were selected randomly per gene
+    - parameter: post_process.filters.target_tm (with attributes.target_tm.hybridization)
+      value: 65-75 C at 75 mM monovalent, 10 mM divalent salt, 100 nM probe, 20% formamide
+      source: Gyllborg 2020, Methods (quoted above); conditions from multi_padlock_design (see meta.tm_window)
     - parameter: padlock template (arm order, ID and anchor)
       value: "target_region[15:30] + ID (20) + anchor (20) + target_region[0:15]"
       source: >-
@@ -52,11 +55,6 @@ meta:
         database hit above 50% coverage and 80% homology around the ligation
         site, which U-Probe does not model.
   hybridization:
-    temperature_c: 45
-    na_mM: 75
-    formamide_pct: 20
-    mg_mM: 10
-    probe_nM: 10
     source: >-
       Gyllborg 2020, Methods (10 nM per PLP, hybridized and ligated with Tth
       ligase and RNase H, 37 C for 30 min then 45 C for 1.5 h; HybISS
@@ -66,15 +64,16 @@ meta:
       multi_padlock_design assumes for its Tm window (0.1 uM probe, 75 mM
       monovalent, 10 mM divalent, 20% formamide); the buffer itself is not SSC.
   tm_window:
-    applied: false
+    applied: true
     value: [65, 75]
     target: target_region (the whole 30-nt arm pair)
+    attribute: target_tm
     conditions: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
     source: Gyllborg 2020, Methods; multi_padlock_design readme.txt and lib/screenseq.py
     note: >-
-      U-Probe's annealing_temperature currently assumes 50 mM Na+, 50 nM oligo,
-      no Mg2+ and no formamide, so this window is recorded and not used as a
-      filter.
+      Applied: attributes.target_tm.hybridization sets these design conditions
+      and post_process.filters.target_tm keeps 65-75 C. The published Pvalb
+      target (Supplementary Table 1) computes to about 67 C under them.
   limitations:
     - Gyllborg 2020 picked 5 targets per gene at random; U-Probe keeps every passing site 15 nt apart (RNA mode has no per-gene count).
     - The padlock binds cDNA, so in situ reverse transcription is required; for direct RNA padlocks (e.g. SplintR ligase) the arms would be the reverse complements instead.
@@ -113,6 +112,15 @@ probes:
       arm_3:
         expr: "target_region[0:15]"
 
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 45
+  na_mM: 75
+  mg_mM: 10
+  probe_nM: 10
+  formamide_pct: 20
+
 attributes:
   target_gc:
     target: target_region
@@ -120,6 +128,8 @@ attributes:
   target_tm:
     target: target_region
     type: annealing_temperature
+    # Design conditions of the 65-75 C window (meta.tm_window).
+    hybridization: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
   arm_5_tm:
     target: padlock.arm_5
     type: annealing_temperature
@@ -133,6 +143,8 @@ attributes:
 
 post_process:
   filters:
+    target_tm:
+      condition: target_tm >= 65 & target_tm <= 75
     target_mapped_genes:
       condition: target_mapped_genes <= 1
   sorts:

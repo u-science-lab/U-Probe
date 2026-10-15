@@ -10,9 +10,11 @@ from click.testing import CliRunner
 from uprobe.core.api import UProbeAPI
 from uprobe.core.attributes import add_attributes
 from uprobe.core.cli import cli, _extract_probe_targets, _validate_and_normalize_protocol
+from uprobe.core.hybridization import FIELDS as HYBRIDIZATION_FIELDS, TM_DEFAULTS, effective_conditions
 from uprobe.core.layout import validate_layout_references
 from uprobe.core.process import post_process
 from uprobe.core.utils import reverse_complement
+from uprobe.core.validate import render_text, validate_files
 from uprobe.templates import list_templates, load_template, read_template, template_names
 
 NAMES = template_names()
@@ -33,7 +35,8 @@ def test_library_has_every_technology():
 
 @pytest.mark.parametrize('name', NAMES)
 def test_meta_documents_sources(name):
-    meta = load_template(name)['meta']
+    template = load_template(name)
+    meta = template['meta']
     assert meta['name'] == name
     assert all(meta.get(key) for key in META_KEYS)
     # The primary citation is a paper; protocols and code may be cited by URL.
@@ -43,9 +46,44 @@ def test_meta_documents_sources(name):
         assert citation.get('doi') or citation.get('url')
         if 'doi' in citation:
             assert re.fullmatch(r'10\.\d{4,9}/\S+', citation['doi'])
-    assert {'temperature_c', 'na_mM', 'formamide_pct', 'source'} <= set(meta['hybridization'])
+    # The source protocol's conditions apply to the workflow; meta records where they come from.
+    assert {'temperature_c', 'na_mM', 'formamide_pct'} <= set(template['hybridization'])
+    assert meta['hybridization']['source']
     for row in meta['parameter_sources']:
         assert row['parameter'] and row['source']
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_template_passes_uprobe_validate(name, tmp_path):
+    path = tmp_path / f'{name}.yaml'
+    path.write_text(read_template(name), encoding='utf-8')
+    findings = validate_files(path)
+    assert not [f for f in findings if f.severity == 'error'], render_text(findings)
+
+
+@pytest.mark.parametrize('name', [name for name in NAMES if load_template(name)['meta'].get('tm_window')])
+def test_tm_window_applied_only_when_verified(name):
+    protocol = load_template(name)
+    window = protocol['meta']['tm_window']
+    verified = isinstance(window['conditions'], dict) and 'TODO' not in str(window)
+    assert window['applied'] is verified
+    attributes = protocol['attributes']
+    if not verified:
+        assert not any('hybridization' in attr for attr in attributes.values())
+        return
+    name = window['attribute']
+    design = {key: value for key, value in window['conditions'].items() if key in HYBRIDIZATION_FIELDS}
+    assert attributes[name]['hybridization'] == design
+    assert effective_conditions(protocol)[name] == {**TM_DEFAULTS, **design}
+    low, high = window['value']
+    assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
+
+
+def test_double_hyb_rca_tm_filters_keep_legacy_conditions():
+    # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones.
+    conditions = effective_conditions(load_template('double_hyb_rca'))
+    assert conditions['tm1'] == conditions['tm2'] == conditions['tm3'] == TM_DEFAULTS
+    assert conditions['circle_fold_score'] == {'temperature_c': 37}
 
 
 def offline_api(protocol, seq=SEQ, encoding=None):
@@ -95,7 +133,7 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     assert set(protocol['summary'].get('attributes', [])) <= set(attributes)
 
     offline = {k: v for k, v in attributes.items() if v['type'] in OFFLINE_TYPES}
-    result = add_attributes(combined, {'attributes': offline}, {})
+    result = add_attributes(combined, {**protocol, 'attributes': offline}, {})
     assert result[list(offline)].notna().all().all()
     # Post-processing runs on the offline attributes (genome-only filters skip missing columns).
     offline_pp = {k: v for k, v in pp.items() if k not in ('avoid_otp', 'equal_space')}
@@ -105,9 +143,14 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
 # Published target windows and oligos: the templates must rebuild them exactly.
 def test_padlock_iss_reproduces_hybiss_pvalb():
     # Gyllborg et al. 2020, Supplementary Table 1 (mouse Pvalb, BpID_0015).
-    _, probes = design('padlock_iss', 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG', {'ID': 'TAGACGTAGTGAGCATGACT'})
+    targets, probes = design('padlock_iss', 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG', {'ID': 'TAGACGTAGTGAGCATGACT'})
     assert probes['padlock'].tolist() == [
         'CTCGCGGCCCTCCTGTAGACGTAGTGAGCATGACTTCTACGAGTTTGCAGTCACGCCCATCTCAGTCCTT']
+    # The published target passes the applied Tm window under its design conditions.
+    protocol = load_template('padlock_iss')
+    combined = pd.concat([targets.reset_index(drop=True), probes], axis=1)
+    tm = add_attributes(combined, {**protocol, 'attributes': {'target_tm': protocol['attributes']['target_tm']}}, {})
+    assert 65 <= tm['target_tm'][0] <= 75
 
 
 def test_mipseq_reproduces_published_pair():

@@ -56,11 +56,7 @@ meta:
       value: "<= 1"
       source: U-Probe approximation of target specificity; Wang 2018 names Picky 2.2 without further criteria.
   hybridization:
-    temperature_c: 40
-    na_mM: 390
-    formamide_pct: 10
     ssc: 2x
-    probe_nM: 100
     source: >-
       Wang 2018, Supplementary Materials (2X SSC, 10% formamide, 1% Tween-20,
       20 mM RVC, salmon sperm DNA, SNAIL probes at 100 nM per oligo, 40 C
@@ -75,9 +71,9 @@ meta:
     conditions: "unknown (Picky 2.2 defaults; TODO: verify)"
     source: Wang 2018, Fig. S1A legend ("with a designed Tm of 60oC"); halves are chosen with the best Tm match
     note: >-
-      The design conditions are not stated and U-Probe's annealing_temperature
-      assumes 50 mM Na+, 50 nM oligo and no formamide, so the Tm target is
-      recorded and not used as a filter. Both half Tms are reported.
+      The design conditions are not stated, so the Tm target is recorded and
+      not used as a filter. Both half Tms are reported under the
+      hybridization block's conditions.
   limitations:
     - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); U-Probe keeps every passing non-overlapping region (RNA mode has no per-gene count).
     - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference.
@@ -132,6 +128,14 @@ probes:
         expr: "rc(target_parts['primer_site'])"
       code_rc:
         expr: "rc(encoding[target]['code'])"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 40
+  na_mM: 390
+  probe_nM: 100
+  formamide_pct: 10
 
 attributes:
   padlock_tm:

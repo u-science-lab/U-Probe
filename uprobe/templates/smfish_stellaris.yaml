@@ -45,9 +45,6 @@ meta:
         more than 16 nt matching other RNAs, which U-Probe does not model.
       quote: exclude 20-mer oligonucleotides with >16 nucleotide matches to other RNA(s) (Stellaris Getting Started Guide)
   hybridization:
-    temperature_c: 37
-    na_mM: 390
-    formamide_pct: 10
     ssc: 2x
     source: >-
       Raj 2008, Supplementary Methods (10% dextran sulfate, 2x SSC, 10%
@@ -89,6 +86,13 @@ probes:
     parts:
       binding:
         expr: "rc(target_region)"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  formamide_pct: 10
 
 attributes:
   target_gc:

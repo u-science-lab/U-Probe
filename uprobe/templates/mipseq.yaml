@@ -50,11 +50,7 @@ meta:
         in 91 pairs, a single C in 14 and another 2-nt spacer in 11. TODO:
         verify the spacer rule with the authors.
   hybridization:
-    temperature_c: 37
-    na_mM: 390
-    formamide_pct: 10
     ssc: 2x
-    probe_nM: 30
     source: >-
       MiP-Seq preprint Methods (padlock probes 30 nM/probe and equimolar RCA
       initiator in 2X SSC, 10% formamide, 20 mM RVC, overnight at 37 C)
@@ -118,6 +114,14 @@ probes:
         expr: "rc(target_parts['primer_site'])"
       gap_base:
         expr: "target_parts['gap']"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  probe_nM: 30
+  formamide_pct: 10
 
 attributes:
   target_gc:

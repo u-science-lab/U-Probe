@@ -56,6 +56,9 @@ meta:
       value: 0.43-0.63
       source: Moffitt 2016, SI Methods; also 'GC', [43 63]/100 in library_design_example.m
       quote: designed with a GC range of 43-63%, a TM range of 66-76 C
+    - parameter: post_process.filters.binding_tm (with attributes.binding_tm.hybridization)
+      value: 66-76 C at 300 mM monovalent salt, 5 nM probe, no formamide
+      source: Moffitt 2016, SI Methods (quoted under meta.tm_window and the target_gc row)
     - parameter: post_process.remove_overlap.location_interval
       value: 0
       source: Moffitt 2016, SI Methods; threePrimeSpace default 0 in TRDesigner.m
@@ -68,9 +71,6 @@ meta:
         75-100%, which U-Probe does not compute.
       quote: all potential probes that mapped to more than one cellular RNA species were rejected (Chen 2015)
   hybridization:
-    temperature_c: 37
-    na_mM: 390
-    formamide_pct: 30
     ssc: 2x
     source: Chen 2015 and Moffitt 2016, encoding-probe hybridization (37 C, 2x SSC, 30% formamide, 10% dextran sulfate)
     notes: >-
@@ -78,14 +78,16 @@ meta:
       Readout probes are hybridized separately (Moffitt 2016: 2x SSC, 1%
       ethylene carbonate, room temperature).
   tm_window:
-    applied: false
+    applied: true
     value: [66, 76]
     target: encoding_probe.binding
+    attribute: binding_tm
     conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, method: SantaLucia nearest-neighbour}
     source: Moffitt 2016, SI Methods ("assuming a monovalent salt concentration of 300 mM ... and a probe concentration of 5 nM")
     note: >-
-      U-Probe's annealing_temperature currently assumes 50 mM Na+, 50 nM oligo
-      and no formamide, so this window is recorded and not used as a filter.
+      Applied: attributes.binding_tm.hybridization sets these design
+      conditions (not the experimental ones of the hybridization block) and
+      post_process.filters.binding_tm keeps 66-76 C.
   limitations:
     - >-
       Moffitt 2016 picks 3 of the gene's 4 code-word readouts at random for each
@@ -138,6 +140,13 @@ probes:
         template: "NNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: reverse complement of the 20-nt reverse PCR primer
         parts: {}
 
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  formamide_pct: 30
+
 attributes:
   target_gc:
     target: target_region
@@ -145,6 +154,8 @@ attributes:
   binding_tm:
     target: encoding_probe.binding
     type: annealing_temperature
+    # Design conditions of the 66-76 C window (meta.tm_window), not the hybridization block.
+    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}
   target_mapped_genes:
     target: target_region
     type: mapped_genes
@@ -154,6 +165,8 @@ post_process:
   filters:
     target_gc:
       condition: target_gc >= 0.43 & target_gc <= 0.63
+    binding_tm:
+      condition: binding_tm >= 66 & binding_tm <= 76
     target_mapped_genes:
       condition: target_mapped_genes <= 1
   sorts:

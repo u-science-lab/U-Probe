@@ -1070,8 +1070,9 @@ def templates():
     """
     Protocol templates for published probe technologies.
 
-    Each template is a complete protocol whose `meta` block lists the cited
-    sources, the source hybridization conditions and what to replace.
+    Each template is a complete protocol, including the source protocol's
+    hybridization conditions; its `meta` block lists the cited sources and
+    what to replace.
     """
 
 

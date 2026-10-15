@@ -43,11 +43,7 @@ meta:
         expression exceeded 10,000 FPKM, which U-Probe does not model.
       quote: BLAST hits on any sequences other than the target gene with a 15-nt match were considered off targets
   hybridization:
-    temperature_c: 37
-    na_mM: 390
-    formamide_pct: 40
     ssc: 2x
-    probe_nM: 1
     source: >-
       Eng 2019, Methods (40% formamide, 2x SSC, 10% dextran sulfate; 37 C for
       36-48 h in cells); Cai lab seqFISH+ protocol (about 1 nM per probe)
@@ -99,6 +95,14 @@ probes:
         expr: "rc(encoding[target]['III'])"
       overhang_4:
         expr: "rc(encoding[target]['IV'])"
+
+# Hybridization conditions of the source protocol (sources: meta.hybridization).
+# annealing_temperature and fold_score attributes are computed under them.
+hybridization:
+  temperature_c: 37
+  na_mM: 390
+  probe_nM: 1
+  formamide_pct: 40
 
 attributes:
   target_gc:
