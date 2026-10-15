@@ -240,7 +240,9 @@ class UProbeAPI:
         log.info("Adding attributes to probes...")
         for line in describe_conditions(self.protocol):
             log.info(f"Hybridization conditions: {line}")
-        df_final = add_attributes(df_probes, self.protocol, self.genome)
+        # Off-target statistics of mapped_genes attributes, for summary.json.
+        self.off_target_report = {}
+        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
@@ -356,7 +358,8 @@ class UProbeAPI:
         run['step'] = 'post_process'
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
-                   no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file)
+                   no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file,
+                   off_targets=self.off_target_report)
         # 6. Generate Report (if configured)
         run['step'] = 'report'
         summary_config = self.protocol.get('summary', {})

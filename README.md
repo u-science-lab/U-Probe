@@ -170,7 +170,7 @@ Useful flags:
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
 
-Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr.
+Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the off-target genes found by `mapped_genes` attributes (`off_targets`), the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr.
 
 Exit status of `uprobe run` (`summary.json` and the `--json` output are written before it exits):
 
@@ -368,6 +368,7 @@ summary:
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search).
   - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
+- **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
 - **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).
@@ -445,6 +446,24 @@ attributes:
 - `strand` (both aligners): `both` (default) counts sites on either transcript strand; `sense` only sites where the sequence itself occurs in a transcript, right for `target_region`, whose probes bind exactly there; `antisense` only sites of its reverse complement, right for a probe's binding sequence. A probe does not bind an RNA that contains its own sequence, so `both` also counts antisense transcripts the probe cannot bind.
 - Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos.
 - On the Ensembl 113 human transcriptome (386,885 primary-assembly transcripts), for all 15,295 18-22-mers of the ACTB and GAPDH MANE Select transcripts: `aligner: bowtie` (`max_mismatches: 2`) reported exactly the sites a brute-force scan of every transcript window found, for a random sample of 1,000 of them (147,426 sites); `bowtie2` found 1.5% of the off-target genes with a site within 2 substitutions (none for 18-21-mers; for 30- and 40-mers it found 56% and 82%). The Bowtie 1 search took 4.6 s for the 15,295 sequences with 8 threads (2.5 s with `strand: sense`; Bowtie2 1.6 s); its index took about 5 minutes to build and 650 MB of disk.
+- Each `mapped_genes` attribute also writes `<attribute>_off_targets` to the result tables (`.xlsx` and `_probes.tsv`, next to the attribute): the genes other than the row's target that the sequence hits, each with its fewest mismatches, e.g. `ACTG1:0, POTEF:2` (names only with `bowtie2`). Genes are named after the GTF's `gene_name`; a name that several gene ids share is written `name(gene_id)`.
+
+#### Expression-aware off-target counting
+
+A probe can only bind RNAs that are present. Supply an expression table of your sample, and `mapped_genes` attributes no longer count off-target genes that are not expressed:
+
+```yaml
+gene_expression:
+  table: hek293_tpm.tsv   # your table: tab-separated (comma-separated when the name contains .csv), may be gzipped
+  gene_column: gene_id    # Ensembl gene ids (with or without version) or gene names; default: the first column
+  value_column: TPM       # default: the only numeric column
+  min_value: 1            # off-target genes with a lower value are not counted
+```
+
+- Genes are looked up by Ensembl gene id, then by gene name; `gene_column` may list several columns, e.g. `[gene_id, gene_name]`. A gene listed more than once counts with its highest value. Leading `#` comment lines are skipped, and GTEx `.gct` files can be used directly (choose the tissue with `value_column`).
+- An off-target gene below `min_value` is not counted in `<attribute>` and is listed in `<attribute>_unexpressed` instead of `<attribute>_off_targets`. The target gene always counts, so `<attribute> <= 1` still means "no (expressed) off-target gene".
+- Off-target genes that the table does not list count as expressed. The log and `summary.json` (`off_targets`, with a warning `off_target_genes_not_in_expression_table`) report how many there were, with examples, and which of them the final probes hit. A table that matches no gene of the annotation stops the run: its identifiers or species do not fit the genome.
+- The table applies to every `mapped_genes` attribute. Relative paths are resolved from the directory where uprobe runs. `uprobe validate` checks the block, the file and its columns.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 

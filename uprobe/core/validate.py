@@ -43,6 +43,7 @@ OPTIONAL_KEYS = (
     'name', 'description', 'attributes', 'post_process', 'summary',
     'barcode_generation',  # uprobe generate-barcodes -p
     'hybridization',  # hybridization conditions for Tm
+    'gene_expression',  # expression table for off-target counting
     'meta',  # probe-template metadata
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
@@ -126,6 +127,11 @@ OTP_SNIPPET = ('avoid_otp:\n'
                '  chr1:1000-2000:          # a target\n'
                '    target_regions: [chr1:1000-2000]\n'
                '    density_thresh: 0.00001')
+GENE_EXPRESSION_SNIPPET = ('gene_expression:\n'
+                           '  table: expression.tsv   # TSV/CSV with a gene id or name column and a numeric column\n'
+                           '  gene_column: gene_id    # default: the first column\n'
+                           '  value_column: TPM       # default: the only numeric column\n'
+                           '  min_value: 1            # off-target genes below it are not counted')
 
 
 @dataclass
@@ -324,6 +330,7 @@ class _Validator:
         self.check_hybridization()
         protocol, generated = self.normalize()
         self.check_attributes(protocol, 'attributes' in generated)
+        self.check_gene_expression(protocol)
         if 'post_process' in generated:
             self.check_default_tm_filters(protocol)
         self.check_post_process(protocol)
@@ -824,6 +831,40 @@ class _Validator:
         if attr['aligner'] == 'bowtie2' and 'max_mismatches' in attr:
             self.warning(path + ('max_mismatches',), 'max_mismatches only applies to aligner: bowtie and is ignored',
                          'aligner: bowtie   # every site within max_mismatches substitutions (Bowtie 1)')
+
+    # -- gene_expression ---------------------------------------------------
+    def check_gene_expression(self, protocol):
+        from .gene_expression import read_table, resolve_columns, validate_gene_expression
+        if self.protocol.get('gene_expression') is None:
+            return
+        path = ('gene_expression',)
+        try:
+            settings = validate_gene_expression(self.protocol['gene_expression'])
+        except ValueError as exc:
+            self.error(path, str(exc), 'e.g.\n' + GENE_EXPRESSION_SNIPPET)
+            return
+        attributes = protocol.get('attributes')
+        if not any(isinstance(attr, dict) and str(attr.get('type', '')).lower() == 'mapped_genes'
+                   for attr in (attributes.values() if isinstance(attributes, dict) else [])):
+            self.warning(path, 'gene_expression only changes how mapped_genes attributes count off-target genes, '
+                         'and there is none', 'add e.g.\ntarget_mapped_genes:\n  target: target_region\n'
+                         '  type: mapped_genes\n  aligner: bowtie')
+        table = Path(settings['table'])
+        if not table.is_file():
+            self.error(path + ('table',), f'expression table not found: {table}',
+                       'fix the path; relative paths are resolved from the directory where uprobe runs')
+            return
+        try:
+            df = read_table(table)
+        except Exception as exc:
+            self.error(path + ('table',), f'cannot read {table}: {exc}',
+                       'use a tab-separated table (comma-separated when the name contains .csv) with a header row')
+            return
+        try:
+            resolve_columns(df, settings)
+        except ValueError as exc:
+            key = 'value_column' if 'value_column' in str(exc) else 'gene_column'
+            self.error(path + (key,), f'{table}: {exc}', f'{key}: one of {", ".join(map(str, df.columns))}')
 
     # -- post_process ----------------------------------------------------
     def check_post_process(self, protocol):

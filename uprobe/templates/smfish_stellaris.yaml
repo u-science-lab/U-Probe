@@ -99,6 +99,13 @@ hybridization:
   na_mM: 390
   formamide_pct: 10
 
+# Optional: genes not expressed in your sample are not counted as off-targets
+# (they stay listed in target_mapped_genes_unexpressed). Supply your own table:
+# gene_expression:
+#   table: expression.tsv   # a gene id or name column and a numeric column
+#   value_column: TPM
+#   min_value: 1
+
 attributes:
   target_gc:
     target: target_region

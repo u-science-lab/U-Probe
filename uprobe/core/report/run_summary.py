@@ -16,6 +16,7 @@ import pandas as pd
 
 from uprobe import __version__
 from ..hybridization import effective_conditions
+from ..offtarget import OFF_TARGETS_SUFFIX, parse_gene_hits
 from ..process.equal_space import number_desired
 
 SUMMARY_FILENAME = "summary.json"
@@ -123,6 +124,27 @@ def _requested_probes(protocol, target):
     return value if type(value) is int and value > 0 else None
 
 
+def _off_target_summary(report, final):
+    """The expression table in use and, per mapped_genes attribute, the off-target genes found.
+
+    ``report`` is what add_attributes recorded; final_* counts come from the
+    <attribute>_off_targets column of the final table.
+    """
+    if not isinstance(report, dict) or not report.get("attributes"):
+        return None
+    attributes = {}
+    for name, stats in report["attributes"].items():
+        entry = {key: value for key, value in stats.items() if key != "missing_labels"}
+        column = name + OFF_TARGETS_SUFFIX
+        if final is not None and column in final.columns:
+            genes = {label for cell in final[column] for label in parse_gene_hits(cell)}
+            entry["final_off_target_genes"] = len(genes)
+            if "missing_labels" in stats:
+                entry["final_missing_from_table"] = sorted(genes & set(stats["missing_labels"]))
+        attributes[name] = entry
+    return {"gene_expression": report.get("gene_expression"), "attributes": attributes}
+
+
 def _relative(path, output_dir):
     if not path:
         return None
@@ -147,7 +169,8 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     targets (extracted windows), combined (targets + constructed probes),
     raw (after attributes), final (after post-processing), files
     ({'xlsx', 'raw_xlsx', 'tsv', 'html'}), no_filtered_probes, raw_file,
-    genome_source (the genome entry's ``source``, as written by ``uprobe genome fetch``).
+    genome_source (the genome entry's ``source``, as written by ``uprobe genome fetch``),
+    off_targets (the off-target statistics add_attributes recorded).
     """
     protocol = protocol if isinstance(protocol, dict) else {}
     region = (protocol.get("extracts") or {}).get("target_region") or {}
@@ -246,6 +269,13 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         warnings.append({"code": "fewer_probes_than_requested", "targets": list(shortfall), "counts": shortfall,
                          "message": f"{len(shortfall)} target(s) have fewer probes than requested "
                                     "(post_process.equal_space.number_desired); all their passing probes were kept."})
+    off_targets = _off_target_summary(run.get("off_targets"), final)
+    missing = {name: entry["missing_from_table"] for name, entry in (off_targets or {}).get("attributes", {}).items()
+               if entry.get("missing_from_table")}
+    if missing:
+        warnings.append({"code": "off_target_genes_not_in_expression_table", "attributes": missing,
+                         "message": f"{sum(missing.values())} off-target gene(s) are not in the gene_expression "
+                                    "table and were counted as expressed (see off_targets)."})
 
     if status == "error":
         message = f"Run failed during {run.get('step')}: {error}"
@@ -301,6 +331,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         "stages": stages,
         "targets": targets,
         "attributes": _attribute_stats(final, protocol),
+        "off_targets": off_targets,
         "output_files": output_files,
         "flags": {"no_filtered_probes": bool(run.get("no_filtered_probes")), "raw_file": raw_file},
         "warnings": warnings,

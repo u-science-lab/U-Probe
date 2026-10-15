@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from ._attributes import *
 from ..hybridization import resolve_conditions, tm_arguments
-from ..offtarget import BOWTIE2_LOCAL_MIN_LENGTH, mapped_genes_settings, short_for_bowtie2
+from ..offtarget import BOWTIE2_LOCAL_MIN_LENGTH, OffTargetCounter, mapped_genes_settings, short_for_bowtie2
 from ..utils import get_logger
 
 log = get_logger(__name__)
@@ -14,11 +14,13 @@ def add_attributes(
         df_probes: pd.DataFrame,
         protocol: dict,
         genome: dict,
+        report: dict = None,
 ) -> pd.DataFrame:
+    """Compute protocol['attributes']; ``report`` (a dict) receives off-target statistics."""
     # A private scratch directory per call: concurrent workflows sharing a
     # working directory must not share (and delete) each other's alignment files.
     with tempfile.TemporaryDirectory(prefix=".uprobe-tmp-", dir=".") as tmp_root:
-        return _add_attributes(df_probes, protocol, genome, Path(tmp_root))
+        return _add_attributes(df_probes, protocol, genome, Path(tmp_root), report)
 
 
 def _add_attributes(
@@ -26,8 +28,10 @@ def _add_attributes(
         protocol: dict,
         genome: dict,
         tmp_root: Path,
+        report: dict = None,
 ) -> pd.DataFrame:
     attributes: dict = protocol['attributes']
+    off_targets = None  # created by the first mapped_genes attribute
     def cached(series, function):
         values = {sequence: function(sequence) for sequence in series.unique()}
         return series.map(values)
@@ -126,8 +130,10 @@ def _add_attributes(
                         attr.get("threads", 10), settings['strand']
                     )
                 sequence_hits = {seq: gene_hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
-                mapped_genes_values = [len(sequence_hits[seq]) for seq in df_probes[actual_target]]
-                df_probes[attr_name] = mapped_genes_values
+                # Count, off-target list and (with gene_expression) unexpressed genes per row.
+                if off_targets is None:
+                    off_targets = OffTargetCounter(protocol, genome, report)
+                off_targets.annotate(df_probes, attr_name, actual_target, sequence_hits, settings)
             else:
                 raise NotImplementedError(
                     f"Aligner {attr['aligner']} is not implemented."

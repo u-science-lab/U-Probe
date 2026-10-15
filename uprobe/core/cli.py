@@ -353,6 +353,11 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
     from .hybridization import validate_protocol_hybridization
     validate_protocol_hybridization(protocol_config)
+
+    # 3.2 Validate the gene_expression block; its table is read when mapped_genes attributes run.
+    if protocol_config.get('gene_expression') is not None:
+        from .gene_expression import validate_gene_expression
+        validate_gene_expression(protocol_config['gene_expression'])
     
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
     if 'post_process' not in protocol_config or not protocol_config['post_process']:
