@@ -12,6 +12,8 @@ _BOWTIE2_SMALL_SUFFIXES = (
 )
 _BOWTIE2_LARGE_SUFFIXES = tuple(suffix + "l" for suffix in _BOWTIE2_SMALL_SUFFIXES)
 _BLAST_SUFFIXES = (".nin", ".nhr", ".nsq")
+# mmseqs createdb writes <prefix>, <prefix>_h and their .dbtype/.index; createindex adds <prefix>.idx*.
+_MMSEQS_SUFFIXES = ("", ".dbtype", ".index", "_h", "_h.dbtype", "_h.index", ".idx", ".idx.dbtype", ".idx.index")
 
 
 def _blast_index_exists(index_prefix: Path) -> bool:
@@ -29,6 +31,19 @@ def _bowtie2_index_exists(index_prefix: Path) -> bool:
         or all(Path(prefix + suffix).is_file() and Path(prefix + suffix).stat().st_size > 0
                for suffix in _BOWTIE2_LARGE_SUFFIXES)
     )
+
+
+def _mmseqs_index_exists(index_prefix: Path) -> bool:
+    return all(Path(str(index_prefix) + suffix).is_file()
+               and Path(str(index_prefix) + suffix).stat().st_size > 0
+               for suffix in _MMSEQS_SUFFIXES)
+
+
+_GENOME_INDEX_EXISTS = {
+    "bowtie2": _bowtie2_index_exists,
+    "blast": _blast_index_exists,
+    "mmseqs": _mmseqs_index_exists,
+}
 
 def build_transcripts_index(gtf: Path,
                              fasta: Path,
@@ -64,56 +79,29 @@ def build_transcripts_index(gtf: Path,
 def build_genome(genome: dict,
                  threads: int = 10
                  ) -> dict:
-    """Build the genome index using the provided fasta file."""
+    """Build the genome index using the provided fasta file.
+
+    An index is skipped only when all of its files exist, so a build that was
+    interrupted (leaving the <aligner>_genome folder behind) is redone.
+    """
     fasta_path = Path(genome['fasta'])
     prefix = fasta_path.stem
-
-    bowtie2_index_files = [
-                    f"{prefix}.1.bt2",
-                    f"{prefix}.2.bt2",
-                    f"{prefix}.3.bt2",
-                    f"{prefix}.4.bt2",
-                    f"{prefix}.rev.1.bt2",
-                    f"{prefix}.rev.2.bt2"
-                    ]
-    blast_index_files = [
-                    f"{prefix}.ndb",
-                    f"{prefix}.nin",
-                    f"{prefix}.nhr",
-                    f"{prefix}.nsq"
-                    ]
-    mmseqs_index_files = [
-                    f"{prefix}.db",
-                    f"{prefix}.dbtype",
-                    f"{prefix}.dbstat",
-                    f"{prefix}.dbmeta"
-                    ]
     aligner_index: list = genome['align_index']
     for aligner in aligner_index:
-        log.info(f"building {aligner} index for {prefix}")
+        if aligner not in _GENOME_INDEX_EXISTS:
+            raise NotImplementedError(f"aligner {aligner} is not implemented")
         index_dir = fasta_path.parent / f"{aligner}_genome"/ prefix
-        if index_dir.parent.exists():
-            log.info(f"index already exists: {index_dir.parent}")
+        if _GENOME_INDEX_EXISTS[aligner](index_dir):
+            log.info(f"index already exists: {index_dir}")
+            continue
+        log.info(f"index does not exist or is incomplete, building {aligner} index for {prefix}: {index_dir}")
+        index_dir.parent.mkdir(parents=True, exist_ok=True)
+        if aligner == "bowtie2":
+            build_bowtie2_index(fasta_path, index_dir, threads)
+        elif aligner == "blast":
+            build_blast_db(fasta_path, index_dir, title=prefix)
         else:
-            log.info(f"index does not exist, building it now: {index_dir.parent}")
-            index_dir.parent.mkdir(parents=True, exist_ok=True)
-            if aligner == "bowtie2":
-                if all((index_dir.parent / file_name).exists() for file_name in bowtie2_index_files):
-                    log.info(f"index already exists: {index_dir.parent}")
-                else:
-                    build_bowtie2_index(fasta_path, index_dir)
-            elif aligner == "blast":
-                if all((index_dir.parent / file_name).exists() for file_name in blast_index_files):
-                    log.info(f"index already exists: {index_dir.parent}")
-                else:
-                    build_blast_db(fasta_path, index_dir, title=prefix)
-            elif aligner == "mmseqs":
-                if all((index_dir.parent / file_name).exists() for file_name in mmseqs_index_files):
-                    log.info(f"index already exists: {index_dir.parent}")
-                else:
-                    build_mmseqs_index(fasta_path, str(index_dir))
-            else:
-                raise NotImplementedError(f"aligner {aligner} is not implemented")
+            build_mmseqs_index(fasta_path, str(index_dir))
     for aligner in aligner_index:
         if aligner not in {"bowtie2", "blast"}:
             continue
