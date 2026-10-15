@@ -297,7 +297,7 @@ summary:
 - **`encoding`**: Mapping of specific genes to custom barcodes or identifiers (e.g., assigning `BC1` and `BC2` to `CD4`).
 - **`probes`**: The core of the design, powered by a **Directed Acyclic Graph (DAG)** architecture. This allows for complex, modular probe construction where parts and probes can reference each other.
   - **`template`**: Construct sequences using placeholders (e.g., `{part1}{part2}`).
-  - **`expr`**: Apply Python-like expressions. You can use built-in functions like `rc()` (reverse complement), slice sequences (`[0:20]`), or fetch from the `encoding` map (`encoding[target]['BC1']`).
+  - **`expr`**: Apply Python-like expressions. You can use built-in functions like `rc()` (reverse complement), slice sequences (`[0:20]`), or fetch from the `encoding` map (`encoding[target]['BC1']`). Expressions are evaluated safely (never with Python `eval`): only string/integer literals, the names `target_region`, `target`, `encoding`, `target_parts` and probe/part names (e.g. `probe_1.part1`), subscripts and slices, `+` concatenation and `rc()` are allowed; anything else (other function calls, attribute or method access, comprehensions, lambdas, ...) is rejected with an error naming the probe part.
   - **DAG References**: Because of the DAG structure, subsequent probes or parts can dynamically reference the sequences of previously defined probes/parts in their expressions.
 - **`attributes`**: Define the biochemical or physical properties you want to calculate for specific targets or probe parts. Available attribute types include:
   - `gc_content`: Calculates the GC ratio of the sequence.
