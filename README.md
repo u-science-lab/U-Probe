@@ -54,7 +54,7 @@ conda activate uprobe
 pip install -e .
 ```
 
-The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`; Bowtie 1 (`bowtie`) is only needed for the [exhaustive off-target search](#off-target-search).
+The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use from bioconda, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`. Bowtie 1 (bioconda package `bowtie`) runs the [exhaustive off-target search](#off-target-search), which short probes need: the smFISH, seqFISH+, MERFISH and HybISS templates use it, and so does the generated off-target attribute of a protocol without `attributes` when the genome enables it. `uprobe genome fetch` adds `bowtie` to a new genome's `align_index` when Bowtie 1 is installed.
 
 ## Usage Guide
 
@@ -156,7 +156,7 @@ uprobe validate -p protocol.yaml
 uprobe validate -p protocol.yaml -g genomes.yaml --check-targets --json
 ```
 
-Probe expressions are checked with the grammar of the safe evaluator that `uprobe run` uses, hybridization blocks with the same rules as the run, and the probes are then built on synthetic target regions, so expressions that would fail at run time are reported too. `-g` adds genome checks (files, aligner indexes required by the attributes), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
+Probe expressions are checked with the grammar of the safe evaluator that `uprobe run` uses, hybridization blocks with the same rules as the run, and the probes are then built on synthetic target regions, so expressions that would fail at run time are reported too. `-g` adds genome checks (files, aligner indexes required by the attributes, installed aligners), `--check-targets` looks the targets up in the GTF or FASTA, and `--json` prints the findings with a summary for scripts and agents.
 
 #### 🌟 Complete Workflow (Recommended)
 To run the entire pipeline from genome index construction to final probe generation in one go:
@@ -269,7 +269,7 @@ GRCh38:
   gtf: "/path/to/GRCh38.gtf"
   align_index:
     - bowtie2
-    - bowtie     # optional: Bowtie 1 transcriptome index for mapped_genes with aligner: bowtie
+    - bowtie     # Bowtie 1 transcriptome index for mapped_genes with aligner: bowtie (exhaustive off-target search)
     - blast
   jellyfish: false  
 ```
@@ -448,9 +448,9 @@ attributes:
 ```
 
 - `strand` (both aligners): `both` (default) counts sites on either transcript strand; `sense` only sites where the sequence itself occurs in a transcript, right for `target_region`, whose probes bind exactly there; `antisense` only sites of its reverse complement, right for a probe's binding sequence. A probe does not bind an RNA that contains its own sequence, so `both` also counts antisense transcripts the probe cannot bind.
-- Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos.
+- Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos. `uprobe validate` also warns when Bowtie2 aligns sequences of 22-30 nt, whose off-target sites it finds only in part (see below).
 - On the Ensembl 113 human transcriptome (386,885 primary-assembly transcripts), for all 15,295 18-22-mers of the ACTB and GAPDH MANE Select transcripts: `aligner: bowtie` (`max_mismatches: 2`) reported exactly the sites a brute-force scan of every transcript window found, for a random sample of 1,000 of them (147,426 sites); `bowtie2` found 1.5% of the off-target genes with a site within 2 substitutions (none for 18-21-mers; for 30- and 40-mers it found 56% and 82%). The Bowtie 1 search took 4.6 s for the 15,295 sequences with 8 threads (2.5 s with `strand: sense`; Bowtie2 1.6 s); its index took about 5 minutes to build and 650 MB of disk.
-- Per window, which is what a filter such as `target_mapped_genes <= 1` sees: for 1,500 random windows of each length from 400 random MANE Select mRNAs (Ensembl 113 human transcriptome, `strand: sense`), Bowtie2 flagged none of the 20-mers, 69% of the 25-mers, 88% of the 28-mers, 87% of the 30-mers and 97-99% of the 40-, 46- and 52-mers that have a site within 2 substitutions in another gene, listing on average 0%, 49%, 71%, 70% and 87-94% of those genes. It reports at most 100 alignments, so it misses most genes of windows in repeats; from 40 nt on it also reports partial matches (about 25 nt or more), indels and sites with 3 or more mismatches, which a search within 2 substitutions cannot see (3-5% of the windows had only such hits). The templates therefore use `aligner: bowtie` for windows of 30 nt or less (smFISH, seqFISH+, MERFISH, HybISS) and Bowtie2 for the 40-52-nt windows of MiP-seq, STARmap, the double-hybridization RCA design and HCR v3, all with `strand: sense`.
+- Per window, which is what a filter such as `target_mapped_genes <= 1` sees: for 1,500 random windows of each length from 400 random MANE Select mRNAs, searched in the 410,909 Ensembl 113 human cDNA and ncRNA transcripts (patches included, genes counted by name) with `strand: sense`, Bowtie2 flagged none of the 20-mers, 69% of the 25-mers, 88% of the 28-mers, 87% of the 30-mers and 97-99% of the 40-, 46- and 52-mers that have a site within 2 substitutions in another gene, listing on average 0%, 49%, 71%, 70% and 87-94% of those genes. It reports at most 100 alignments, so it misses most genes of windows in repeats; from 40 nt on it also reports partial matches (about 25 nt or more), indels and sites with 3 or more mismatches, which a search within 2 substitutions cannot see (3-5% of the windows had only such hits). The templates therefore use `aligner: bowtie` for windows of 30 nt or less (smFISH, seqFISH+, MERFISH, HybISS) and Bowtie2 for the 40-52-nt windows of MiP-seq, STARmap, the double-hybridization RCA design and HCR v3, all with `strand: sense`.
 - Protocols without `attributes`: in RNA mode the generated `target_mapped_genes` uses `aligner: bowtie` (`max_mismatches: 2`, `strand: sense`) when the genome's `align_index` includes `bowtie` and Bowtie 1 is installed (the run builds the index if it is missing), and `bowtie2` otherwise; the log says which and why, with a warning when the windows are shorter than 22 nt. `uprobe validate -g` makes the same choice.
 - Each `mapped_genes` attribute also writes `<attribute>_off_targets` to the result tables (`.xlsx` and `_probes.tsv`, next to the attribute): the genes other than the row's target that the sequence hits, each with its fewest mismatches, e.g. `ACTG1:0, POTEF:2` (names only with `bowtie2`). Genes are named after the GTF's `gene_name`; a name that several gene ids share is written `name(gene_id)`.
 

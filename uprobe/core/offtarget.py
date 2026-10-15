@@ -53,6 +53,10 @@ DEFAULT_MAX_MISMATCHES = 2
 MAX_MISMATCHES_LIMIT = 3  # bowtie -v accepts 0-3
 # Shortest sequence Bowtie2's local mode (default --score-min G,20,8) can align.
 BOWTIE2_LOCAL_MIN_LENGTH = 22
+# Up to this length Bowtie2 misses many sites within 2 substitutions: on the
+# Ensembl 113 human transcriptome it flagged 69-88% of 25-30-nt mRNA windows
+# with such a site in another gene, and 97-99% of 40-52-nt windows.
+BOWTIE2_INCOMPLETE_MAX_LENGTH = 30
 # Columns a mapped_genes attribute adds next to its count.
 OFF_TARGETS_SUFFIX = '_off_targets'
 UNEXPRESSED_SUFFIX = '_unexpressed'

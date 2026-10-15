@@ -31,8 +31,8 @@ import yaml
 from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
 from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
-from .offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS, MAX_MISMATCHES_LIMIT,
-                        mapped_genes_settings)
+from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
+                        MAX_MISMATCHES_LIMIT, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
 
@@ -69,6 +69,9 @@ SUMMARY_KEYS = ('report_name', 'attributes', 'report')
 SUMMARY_STATS = ('count', 'mean', 'std', 'min', 'max', 'median', 'q25', 'q75', 'range')
 ALIGN_INDEXES = {'bowtie2': ('bowtie2-build', 'bowtie2'), 'bowtie': ('bowtie-build', 'bowtie'),
                  'blast': ('makeblastdb',), 'mmseqs': ('mmseqs',)}
+# Bioconda package of each aligner.
+ALIGN_PACKAGES = {'bowtie2': 'bowtie2', 'bowtie': 'bowtie   # Bowtie 1', 'blast': 'blast', 'mmseqs': 'mmseqs2'}
+BOWTIE_INSTALL = 'conda install -c bioconda bowtie'
 # Columns written by UProbeAPI.generate_target_seqs, and by avoid_otp.
 TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_start', 'target_end',
                   'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
@@ -1235,7 +1238,7 @@ class _Validator:
                 if missing:
                     self.warning((name, 'align_index', i), f'{" and ".join(missing)} not found on PATH; indexing and '
                                  f'aligning with {aligner} will fail',
-                                 f'install it, e.g. conda install -c bioconda {aligner}', doc)
+                                 f'install it, e.g. conda install -c bioconda {ALIGN_PACKAGES[aligner]}', doc)
         attributes = protocol.get('attributes')
         needs = {'bowtie2': [], 'bowtie': [], 'jellyfish': []}
         for attr_name, attr in (attributes.items() if isinstance(attributes, dict) else []):
@@ -1246,7 +1249,7 @@ class _Validator:
                    'jellyfish': entry.get('jellyfish', False) is True}
         fixes = {'bowtie2': f'add bowtie2 to align_index of {name!r} in the genome config',
                  'bowtie': f'add bowtie to align_index of {name!r} in the genome config '
-                           '(`uprobe build-index` then builds its transcriptome index)',
+                           f'(`uprobe build-index` then builds its transcriptome index; Bowtie 1: {BOWTIE_INSTALL})',
                  'jellyfish': f'set jellyfish: true for {name!r} in the genome config'}
         for required, names in needs.items():
             if not names:
@@ -1373,7 +1376,7 @@ class _Validator:
                          f'{actual} nt (with a {size} nt target_region)', 'fix the expression or the declared length')
 
     def check_alignment_lengths(self, protocol, auto):
-        """Warn when a bowtie2 mapped_genes attribute aligns sequences too short for Bowtie2's local mode."""
+        """Warn when a bowtie2 mapped_genes attribute aligns sequences too short for its off-target search."""
         attributes = protocol.get('attributes')
         for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
             if not isinstance(attr, dict) or str(attr.get('type', '')).lower() != 'mapped_genes' \
@@ -1381,15 +1384,27 @@ class _Validator:
                 continue
             target = attr['target'].replace(':', '.')
             shortest = self.lengths[0] if target == 'target_region' and self.lengths else self.built_lengths.get(target)
-            if not shortest or shortest >= BOWTIE2_LOCAL_MIN_LENGTH:
+            if not shortest or shortest > BOWTIE2_INCOMPLETE_MAX_LENGTH:
                 continue
             path = ('attributes',) if auto else ('attributes', name, 'aligner')
             generated = ' (generated because `attributes` is empty)' if auto else ''
-            self.warning(path, f'{name}{generated} aligns {target} ({shortest} nt) with bowtie2, whose local mode '
-                         f'cannot align sequences shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt: they count 0 genes, '
-                         f'so filters on {name} keep them',
-                         'aligner: bowtie   # every site within max_mismatches substitutions; add bowtie to the '
-                         "genome's align_index")
+            if shortest < BOWTIE2_LOCAL_MIN_LENGTH:
+                problem = (f'whose local mode cannot align sequences shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt: they '
+                           f'count 0 genes, so filters on {name} keep them')
+            else:
+                problem = ('a seed heuristic that misses many off-target sites of sequences this short: it flagged '
+                           'only 69-88% of 25-30-nt windows of human mRNAs that have a site within 2 substitutions '
+                           'in another gene')
+            if auto:
+                fix = (f"install Bowtie 1 ({BOWTIE_INSTALL}) and add bowtie to the genome's align_index: the "
+                       f'generated {name} then uses aligner: bowtie (every site within 2 substitutions); or define '
+                       'attributes yourself')
+            else:
+                fix = ('aligner: bowtie   # every site within max_mismatches substitutions\n'
+                       'max_mismatches: 2\n'
+                       'strand: sense     # sense for target_region, antisense for a probe binding part\n'
+                       f"and add bowtie to the genome's align_index (Bowtie 1: {BOWTIE_INSTALL})")
+            self.warning(path, f'{name}{generated} aligns {target} ({shortest} nt) with bowtie2, {problem}', fix)
 
 
 def validate_protocol(protocol, genomes=None, check_targets: bool = False, *,

@@ -223,7 +223,13 @@ def test_validate_warns_about_short_sequences_with_bowtie2(rna):
     warnings = paths(validate_protocol(rna), 'warning')
     assert 'cannot align sequences shorter than 22 nt' in warnings['attributes.hits.aligner'].message
     assert 'probe_1.b (20 nt)' in warnings['attributes.probe_hits.aligner'].message
+    assert 'strand: sense' in warnings['attributes.hits.aligner'].suggestion
+    assert 'conda install -c bioconda bowtie' in warnings['attributes.hits.aligner'].suggestion
+    # 22-30 nt align, but Bowtie2 misses many of their off-target sites.
     rna['extracts']['target_region']['length'] = 22
+    warning = paths(validate_protocol(rna), 'warning')['attributes.hits.aligner']
+    assert 'misses many off-target sites' in warning.message
+    rna['extracts']['target_region']['length'] = 31
     assert 'attributes.hits.aligner' not in paths(validate_protocol(rna), 'warning')
     rna['attributes']['hits']['aligner'] = 'bowtie'
     rna['extracts']['target_region']['length'] = 20
@@ -305,7 +311,7 @@ def test_validate_reports_the_generated_aligner(rna_defaults, genomes, monkeypat
     installed_tools(monkeypatch, {'bowtie', 'bowtie-build'})
     short = 'cannot align sequences shorter than 22 nt'
     finding = paths(validate_protocol(rna_defaults, genomes), 'warning')['attributes']
-    assert short in finding.message
+    assert short in finding.message and 'generated target_mapped_genes then uses aligner: bowtie' in finding.suggestion
     genomes['test']['align_index'] = ['bowtie2', 'bowtie']
     findings = validate_protocol(rna_defaults, genomes)
     assert not any(short in f.message for f in findings)
