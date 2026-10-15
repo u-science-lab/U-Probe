@@ -58,7 +58,7 @@ meta:
       [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate).
       Ligation: SplintR ligase 1 U/uL, 37 C for 2 h; RCA: Phi29, 30 C for 2 h.
   limitations:
-    - MiP-seq selects 2 target sites per gene in an exon close to the 5' end; U-Probe keeps every passing non-overlapping window (RNA mode has no per-gene count).
+    - MiP-seq selects 2 target sites per gene in an exon close to the 5' end; U-Probe keeps every passing non-overlapping window. equal_space (number_desired: 2) would spread the 2 sites along the whole RNA instead; a filter on target_start (position along the RNA) keeps sites near the 5' end.
     - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) is applied."
   replace:
     - "genome: a genome name from your genomes.yaml (mm10 here)"

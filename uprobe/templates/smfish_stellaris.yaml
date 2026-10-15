@@ -38,6 +38,10 @@ meta:
       value: 2
       source: Stellaris Probe Designer default spacing (Biosearch); Raj 2008 used at least 3
       quote: The default setting is 2, but can be reduced to 1
+    - parameter: post_process.equal_space.number_desired
+      value: 48
+      source: Raj 2008, abstract and Supp. Fig. 4; Stellaris probe sets hold at most 48 oligos
+      quote: probing each mRNA species with 48 or more short, singly labeled oligonucleotide probes
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: >-
@@ -56,7 +60,7 @@ meta:
       buffer contains proprietary additives; its older recipe was 10%
       formamide in 2x SSC with 100 mg/mL dextran sulfate.
   limitations:
-    - Stellaris orders hold at most 48 probes (at least 25 recommended); U-Probe keeps every passing non-overlapping site (RNA mode has no per-gene count).
+    - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
     - With aligner bowtie2, 20-mers do not align (Bowtie2's local mode needs at least 22 nt), so target_mapped_genes is 0 and does not filter; aligner bowtie (see the attribute) searches every site within max_mismatches substitutions.
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
@@ -123,6 +127,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 2
+  equal_space:
+    number_desired: 48
 
 summary:
   report_name: rna_report

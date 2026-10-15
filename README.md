@@ -170,7 +170,16 @@ Useful flags:
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
 
-Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr; the exit status is 1 when the run fails.
+Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr.
+
+Exit status of `uprobe run` (`summary.json` and the `--json` output are written before it exits):
+
+| Code | Meaning | `status` |
+| --- | --- | --- |
+| 0 | Probes were designed | `ok`, `partial` |
+| 1 | The run failed | `error` |
+| 2 | Invalid command-line usage (missing or bad options) | none; no summary is written |
+| 3 | The run finished without any probe | `no_probes`, `no_probes_constructed`, `no_target_sequences`, `no_valid_targets` |
 
 #### 🔧 Step-by-Step Execution
 For advanced users who need intermediate results or custom workflows, you can execute each step individually:
@@ -361,8 +370,16 @@ summary:
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
+- **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
 - **`meta`** (optional): Free-form documentation that the workflow ignores; the built-in templates use it for citations and parameter sources.
+
+#### Probes per target
+
+`equal_space` works in DNA (`source: genome`) and RNA mode (`exon`, `CDS`, `UTR`). It runs after the filters and `remove_overlap`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
+
+- **Along the target**: in DNA mode, along the genomic region. In RNA mode, exon, CDS and UTR windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of all its transcripts with the introns removed, read 5' to 3'. For a gene with one transcript this is the position on the spliced RNA; exons of different transcripts that overlap share positions. Segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
+- **Fewer candidates than requested**: the target keeps all of them. `summary.json` lists `requested_probes` and `final` for every target and a `fewer_probes_than_requested` warning with the counts, the run status is `partial`, and `uprobe run` logs the per-target counts as `final/requested`.
 
 #### Hybridization conditions
 
@@ -370,7 +387,7 @@ By default, Tm is computed under PCR-like conditions (50 mM Na+, 0.6 mM dNTP, 50
 
 ```yaml
 hybridization:
-  temperature_c: 37     # hybridization temperature (°C); used by fold_score
+  temperature_c: 37     # hybridization temperature (°C); used by fold_score and auto-generated Tm filters
   na_mM: 390            # monovalent cations; 2x SSC (0.3 M NaCl + 0.03 M Na3-citrate) = 390 mM Na+
   mg_mM: 0              # divalent cations
   dntp_mM: 0            # dNTPs (chelate Mg2+; no effect when mg_mM is 0)
@@ -390,7 +407,7 @@ attributes:
 
 | Field | Unit | Default when unset | Used by |
 | --- | --- | --- | --- |
-| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score` |
+| `temperature_c` | °C | 37 (ViennaRNA default) | `fold_score`, auto-generated Tm filters |
 | `na_mM` | mM | 50 | `annealing_temperature` |
 | `mg_mM` | mM | 0 | `annealing_temperature` |
 | `dntp_mM` | mM | 0.6 | `annealing_temperature` |
@@ -404,7 +421,7 @@ attributes:
 - **Folding**: `fold_score` folds at `temperature_c`; ViennaRNA does not model formamide, and salt is left at its default.
 - A per-attribute override suits a published Tm window that was computed under other conditions than the experiment's. The MERFISH template, for example, hybridizes in 2x SSC with 30% formamide (top-level block) but computes `binding_tm` at 300 mM Na+, 5 nM probe and no formamide, the conditions of its 66-76 °C window.
 - `uprobe validate` reports an invalid block or override with its path. The conditions in effect are logged for every Tm/fold attribute and recorded in `summary.json` (`inputs.hybridization_conditions`). When a protocol declares them, they are also shown in the HTML report header and stored in the result `.xlsx` as custom document properties (`hybridization:<attribute>`).
-- Auto-generated Tm filters (50-90 °C) are not adjusted. Review them when you declare FISH conditions; U-Probe logs a warning when it generates them.
+- **Auto-generated Tm filters** (when `post_process` is left out) follow the hybridization temperature: each Tm attribute keeps [`temperature_c`, `temperature_c` + 40] °C, the 40 °C width of the legacy window, since Tm under declared FISH conditions (e.g. 50% formamide) can fall tens of degrees below the legacy 50-90 °C. An attribute's own `temperature_c` wins; an override that changes salt, probe or formamide without its own `temperature_c` (such as the MERFISH design conditions above) keeps 50-90 °C. Conditions declared without `temperature_c` use the default 37 °C (37-77 °C), with a warning from `uprobe run` and `uprobe validate`. Without the block (or with an empty one) the filters stay at 50-90 °C. The chosen windows are logged.
 
 #### Off-target search
 

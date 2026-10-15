@@ -48,6 +48,10 @@ meta:
       value: 15
       source: Gyllborg 2020, Methods; gap in nt per multi_padlock_design lib/distributeprobes.py ("current -= armlength * 2 + interval")
       quote: space between targets, 15
+    - parameter: post_process.equal_space.number_desired
+      value: 5
+      source: Gyllborg 2020, Methods
+      quote: five targets were selected randomly per gene
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: >-
@@ -75,7 +79,7 @@ meta:
       and post_process.filters.target_tm keeps 65-75 C. The published Pvalb
       target (Supplementary Table 1) computes to about 67 C under them.
   limitations:
-    - Gyllborg 2020 picked 5 targets per gene at random; U-Probe keeps every passing site 15 nt apart (RNA mode has no per-gene count).
+    - Gyllborg 2020 picked 5 targets per gene at random; equal_space keeps 5 sites at least 15 nt apart, spread evenly along the RNA instead.
     - The padlock binds cDNA, so in situ reverse transcription is required; for direct RNA padlocks (e.g. SplintR ligase) the arms would be the reverse complements instead.
     - "TODO: verify GC criteria for HybISS padlock arms (none stated)."
   replace:
@@ -158,6 +162,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 15
+  equal_space:
+    number_desired: 5
 
 summary:
   report_name: rna_report

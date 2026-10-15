@@ -322,9 +322,27 @@ def test_avoid_otp_and_sequence_filters(dna):
 
 
 def test_rna_mode_drops_dna_only_steps(rna):
-    rna['post_process']['equal_space'] = {'number_desired': 5}
+    rna['post_process']['avoid_otp'] = {'xxx': {'target_regions': ['1:1-100']}}
     findings = validate_protocol(rna)
-    assert errors(findings) == [] and find(findings, 'post_process.equal_space', 'warning')
+    assert errors(findings) == [] and find(findings, 'post_process.avoid_otp', 'warning')
+
+
+def test_equal_space_in_rna_mode(rna):
+    # RNA_format.yaml removes overlaps; equal_space is kept for source exon.
+    rna['post_process']['equal_space'] = {'number_desired': 48}
+    assert validate_protocol(rna) == []
+    assert _validate_and_normalize_protocol(copy.deepcopy(rna))['post_process']['equal_space'] == {'number_desired': 48}
+    rna['post_process']['equal_space'] = {'xxx': {'number_desired': 48, 'spacing': 2}, 'number_desired': 0}
+    findings = validate_protocol(rna)
+    assert 'positive integer' in find(findings, 'post_process.equal_space.number_desired').message
+    assert find(findings, 'post_process.equal_space.xxx.spacing', 'warning')
+    # Without a global number, targets lacking an entry keep every probe.
+    rna['post_process']['equal_space'] = {'xxx': {'number_desired': 48}}
+    assert "'ccc'" in find(validate_protocol(rna), 'post_process.equal_space', 'warning').message
+    # Overlapping windows (step < length) can be selected unless overlaps are removed.
+    rna['post_process']['equal_space'] = {'number_desired': 48}
+    del rna['post_process']['remove_overlap']
+    assert 'remove_overlap' in find(validate_protocol(rna), 'post_process.equal_space', 'warning').suggestion
 
 
 def test_summary_attributes_exist(dna):

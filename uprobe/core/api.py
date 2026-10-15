@@ -205,6 +205,10 @@ class UProbeAPI:
                     lambda row: f"{int(row['start'])}-{int(row['end'])}" if pd.notnull(row['start']) else None, 
                     axis=1
                 )
+        if 'target_start' in df_final.columns:
+            # Direct sequences mixed with gene targets: positions along the sequence itself.
+            for column in ('start', 'end'):
+                df_final[f'target_{column}'] = df_final[f'target_{column}'].fillna(df_final[column]).astype(int)
         if compiled:
             df_final = expand_layout_candidates(df_final, compiled)
         log.info(f"Total generated target sequences: {len(df_final)}")

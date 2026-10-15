@@ -63,6 +63,9 @@ meta:
       value: 0
       source: Moffitt 2016, SI Methods; threePrimeSpace default 0 in TRDesigner.m
       quote: we identified nonoverlapping regions starting with the first valid target region at the 5' end of each isoform
+    - parameter: post_process.equal_space.number_desired
+      value: 92
+      source: Moffitt 2016 (92 encoding probes per gene; see meta.limitations)
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: >-
@@ -94,7 +97,7 @@ meta:
       encoding probe and randomly uses 1 or 2 readouts on the 5' side. U-Probe
       expressions are deterministic, so every probe here carries R1, R2 and R3 in
       configuration A. Permute readouts across probes after design if needed.
-    - Moffitt 2016 used 92 encoding probes per gene; U-Probe keeps all passing non-overlapping regions (RNA mode has no per-gene count).
+    - Moffitt 2016 used 92 encoding probes per gene; equal_space keeps 92, spread evenly along the RNA rather than taken from the 5' end, and all passing regions of a gene with fewer.
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here)"
     - "targets: your gene names (GAPDH here)"
@@ -174,6 +177,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 0
+  equal_space:
+    number_desired: 92
 
 summary:
   report_name: rna_report

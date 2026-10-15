@@ -33,6 +33,10 @@ PRIMER3_ARGUMENTS = {'na_mM': 'mv_conc', 'mg_mM': 'dv_conc', 'dntp_mM': 'dntp_co
 # in line with the linear 0.60 °C/% of Hutton 1977 (Nucleic Acids Res
 # 4:3537-3555, doi:10.1093/nar/4.10.3537).
 FORMAMIDE_MOLAR_PER_PCT = 10 * 1.1334 / 45.041
+# Auto-generated Tm filters: 50-90 °C under the legacy conditions; under
+# declared conditions [T, T + 40] °C at the hybridization temperature T.
+LEGACY_TM_WINDOW = (50.0, 90.0)
+TM_WINDOW_WIDTH = LEGACY_TM_WINDOW[1] - LEGACY_TM_WINDOW[0]
 
 
 def validate_hybridization(block, where='hybridization'):
@@ -107,6 +111,37 @@ def effective_conditions(protocol):
             declared = resolve_conditions(protocol, name)
             result[name] = {key: declared.get(key, value) for key, value in defaults.items()}
     return result
+
+
+def default_tm_window(protocol, attr_name):
+    """(low, high, temperature source) of the auto-generated Tm filter of one attribute.
+
+    The window is [T, T + 40] °C at the hybridization temperature T of the
+    conditions the attribute's Tm is computed under: its own temperature_c
+    ('attribute'), else the protocol's ('protocol'). An override that changes
+    the salt, probe or formamide conditions without its own temperature_c
+    (e.g. the design conditions of a published Tm window) is not under the
+    protocol's conditions and keeps the legacy 50-90 °C (source None), as
+    does a protocol without declared Tm conditions. Tm conditions declared
+    without any temperature use the default 37 °C ('default').
+    """
+    block = validate_hybridization(protocol.get('hybridization'))
+    attr = (protocol.get('attributes') or {}).get(attr_name)
+    override = validate_hybridization(attr.get('hybridization'), f'attributes.{attr_name}.hybridization') \
+        if isinstance(attr, dict) else {}
+    own_conditions = any(override[key] != block.get(key, default)
+                         for key, default in TM_DEFAULTS.items() if key in override)
+    if 'temperature_c' in override:
+        temperature, source = override['temperature_c'], 'attribute'
+    elif own_conditions:
+        return LEGACY_TM_WINDOW + (None,)
+    elif 'temperature_c' in block:
+        temperature, source = block['temperature_c'], 'protocol'
+    elif any(key in block for key in TM_DEFAULTS):
+        temperature, source = FOLD_DEFAULTS['temperature_c'], 'default'
+    else:
+        return LEGACY_TM_WINDOW + (None,)
+    return temperature, temperature + TM_WINDOW_WIDTH, source
 
 
 def describe_conditions(protocol):

@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 
+from uprobe.core.gen.fun import segment_offsets
 from uprobe.core.process import post_process
-from uprobe.core.process.equal_space import equal_space
+from uprobe.core.process.equal_space import equal_space, number_desired
 from uprobe.core.process.regions import region_bounds
 
 
@@ -32,6 +33,52 @@ def test_equal_space_orders_exon_sub_regions_by_start():
     })
     result = equal_space(df, {'number_desired': 2})
     assert result['probe_id'].tolist() == ['a', 'c']
+
+
+def test_equal_space_on_genome_windows_is_unchanged():
+    # Evenly spaced ranks over the windows sorted by start, ends included.
+    df = pd.DataFrame({'probe_id': [f'w{i}' for i in range(10)], 'target': ['chr1:0-1000'] * 10,
+                       'sub_region': [f'{s}-{s + 39}' for s in (901, 1, 101, 201, 301, 401, 501, 601, 701, 801)]})
+    result = equal_space(df, {'chr1:0-1000': {'number_desired': 4}})
+    assert result['sub_region'].tolist() == ['1-40', '301-340', '601-640', '901-940']
+
+
+def test_segment_offsets_follow_the_merged_exon_model():
+    # Plus strand: two transcripts share 100-250; the union is 100-300 and 500-600.
+    plus = segment_offsets([('1', 100, 300, '+'), ('1', 100, 250, '+'), ('1', 500, 600, '+')])
+    assert plus == {('1', 100, 300, '+'): 0, ('1', 100, 250, '+'): 0, ('1', 500, 600, '+'): 201}
+    # Minus strand: the 5' end is the highest coordinate.
+    minus = segment_offsets([('1', 100, 300, '-'), ('1', 100, 250, '-'), ('1', 500, 600, '-')])
+    assert minus == {('1', 500, 600, '-'): 0, ('1', 100, 300, '-'): 101, ('1', 100, 250, '-'): 151}
+
+
+def exon_windows(starts_per_exon, length=20):
+    """Windows numbered within each of three exons, with their merged-model positions."""
+    rows = []
+    for exon, (offset, starts) in enumerate(starts_per_exon):
+        rows += [{'probe_id': f'e{exon}_{s}', 'target': 'G', 'exon_name': f'1_{exon}_x_+', 'start': s,
+                  'end': s + length - 1, 'sub_region': f'{s}_{s + length - 1}',
+                  'target_start': offset + s, 'target_end': offset + s + length - 1} for s in starts]
+    return pd.DataFrame(rows)
+
+
+def test_equal_space_spreads_exon_windows_along_the_target():
+    # Every exon numbers its windows from 1; ordering by start would interleave the exons.
+    df = exon_windows([(0, [1, 41, 81]), (100, [1, 41, 81]), (200, [1, 41, 81])]).sample(frac=1, random_state=0)
+    result = equal_space(df, {'number_desired': 3})
+    assert result['probe_id'].tolist() == ['e0_1', 'e1_41', 'e2_81']
+    assert result['target_start'].tolist() == [1, 141, 281]
+    # Without the target positions (an older table), the windows are ordered within exons only.
+    legacy = equal_space(df.drop(columns=['target_start', 'target_end']), {'number_desired': 3})
+    assert legacy['start'].tolist() == [1, 41, 81]
+
+
+def test_equal_space_keeps_every_probe_of_a_short_target():
+    df = exon_windows([(0, [1, 41]), (100, [1])])
+    result = equal_space(df, {'G': {'number_desired': 48}})
+    assert sorted(result['probe_id']) == sorted(df['probe_id'])
+    assert number_desired({'G': {'number_desired': 48}, 'number_desired': 5}, 'G') == 48
+    assert number_desired({'number_desired': 5}, 'H') == 5 and number_desired({}, 'G') is None
 
 
 def test_remove_overlap_orders_genome_windows_numerically():
