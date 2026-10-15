@@ -134,6 +134,13 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 2
+  # Optional, with aligner: bowtie (and gene_expression) above: a false spot
+  # needs many probes on the same RNA, so instead of the target_mapped_genes
+  # filter, let at most 2 probes of a gene's set hit the same off-target gene.
+  # It runs after remove_overlap and before equal_space picks the 48.
+  # off_target_pool:
+  #   attribute: target_mapped_genes
+  #   max_probes_per_gene: 2
   equal_space:
     number_desired: 48
 

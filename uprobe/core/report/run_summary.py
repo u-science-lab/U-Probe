@@ -125,10 +125,11 @@ def _requested_probes(protocol, target):
 
 
 def _off_target_summary(report, final):
-    """The expression table in use and, per mapped_genes attribute, the off-target genes found.
+    """The expression table in use, per mapped_genes attribute the off-target genes found, and the pool limit.
 
     ``report`` is what add_attributes recorded; final_* counts come from the
-    <attribute>_off_targets column of the final table.
+    <attribute>_off_targets column of the final table, and ``pool`` from
+    post_process.off_target_pool.
     """
     if not isinstance(report, dict) or not report.get("attributes"):
         return None
@@ -142,7 +143,8 @@ def _off_target_summary(report, final):
             if "missing_labels" in stats:
                 entry["final_missing_from_table"] = sorted(genes & set(stats["missing_labels"]))
         attributes[name] = entry
-    return {"gene_expression": report.get("gene_expression"), "attributes": attributes}
+    pool = final.attrs.get("off_target_pool") if final is not None else None
+    return {"gene_expression": report.get("gene_expression"), "attributes": attributes, "pool": pool}
 
 
 def _relative(path, output_dir):

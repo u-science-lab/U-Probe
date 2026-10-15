@@ -371,13 +371,16 @@ summary:
 - **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`.
+- **`off_target_pool`**: Optional post-processing step that lets at most `max_probes_per_gene` probes of a target's set hit the same off-target gene, e.g. `post_process: { off_target_pool: { attribute: target_mapped_genes, max_probes_per_gene: 2 } }`. See [Off-target pool limit](#off-target-pool-limit).
 - **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
 - **`meta`** (optional): Free-form documentation that the workflow ignores; the built-in templates use it for citations and parameter sources.
 
+The `post_process` steps always run in this order, whatever their order in the protocol: `filters`, `avoid_otp` (DNA mode), `remove_overlap`, `off_target_pool`, `equal_space`, `sorts`.
+
 #### Probes per target
 
-`equal_space` works in DNA (`source: genome`) and RNA mode (`exon`, `CDS`, `UTR`). It runs after the filters and `remove_overlap`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
+`equal_space` works in DNA (`source: genome`) and RNA mode (`exon`, `CDS`, `UTR`). It runs after the filters, `remove_overlap` and `off_target_pool`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
 
 - **Along the target**: in DNA mode, along the genomic region. In RNA mode, exon, CDS and UTR windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of all its transcripts with the introns removed, read 5' to 3'. For a gene with one transcript this is the position on the spliced RNA; exons of different transcripts that overlap share positions. Segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
 - **Fewer candidates than requested**: the target keeps all of them. `summary.json` lists `requested_probes` and `final` for every target and a `fewer_probes_than_requested` warning with the counts, the run status is `partial`, and `uprobe run` logs the per-target counts as `final/requested`.
@@ -464,6 +467,28 @@ gene_expression:
 - An off-target gene below `min_value` is not counted in `<attribute>` and is listed in `<attribute>_unexpressed` instead of `<attribute>_off_targets`. The target gene always counts, so `<attribute> <= 1` still means "no (expressed) off-target gene".
 - Off-target genes that the table does not list count as expressed. The log and `summary.json` (`off_targets`, with a warning `off_target_genes_not_in_expression_table`) report how many there were, with examples, and which of them the final probes hit. A table that matches no gene of the annotation stops the run: its identifiers or species do not fit the genome.
 - The table applies to every `mapped_genes` attribute. Relative paths are resolved from the directory where uprobe runs. `uprobe validate` checks the block, the file and its columns.
+
+#### Off-target pool limit
+
+In smFISH a false spot needs many probes of the set on the same off-target RNA, so a few probes that hit one off-target gene do no harm, while many do. `off_target_pool` limits how many probes of one target's set may hit the same off-target gene:
+
+```yaml
+post_process:
+  remove_overlap:
+    location_interval: 2
+  off_target_pool:
+    attribute: target_mapped_genes   # a mapped_genes attribute, or a list of them
+    max_probes_per_gene: 2
+  equal_space:
+    number_desired: 48
+  sorts:
+    is_ascending: [target_mapped_genes]
+```
+
+- For each target, probes are visited from best to worst rank, the order `sorts` defines (the current order when there are no `sorts`), and a probe is dropped when one of its off-target genes (`<attribute>_off_targets`, all listed attributes together) is already hit by `max_probes_per_gene` kept probes. With a `gene_expression` table only expressed off-target genes are listed, so only they are limited. `max_probes_per_gene: 0` keeps only probes without off-target genes.
+- It runs after `remove_overlap`, so the limit applies to probes that can end up in the same set, and before `equal_space`, which then chooses the final N among the probes that respect it (any subset still does). Per-probe filters such as `target_mapped_genes <= 3` still apply first.
+- `summary.json` reports the stage in `stages` and, in `off_targets.pool`, how many probes it removed and the genes that reached the limit most often.
+- For padlock/RCA probes a single probe makes signal, so allow no expressed off-target per probe with a filter instead: `target_mapped_genes <= 1` (with `gene_expression`).
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 

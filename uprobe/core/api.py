@@ -257,7 +257,7 @@ class UProbeAPI:
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
-                                ['filters', 'sorts', 'remove_overlap', 'equal_space', 'avoid_otp'])
+                                ['filters', 'sorts', 'remove_overlap', 'off_target_pool', 'equal_space', 'avoid_otp'])
         
         if has_post_processing:
             log.info("Post-processing probes...")
@@ -272,11 +272,9 @@ class UProbeAPI:
                 self.output_files['raw_xlsx'] = raw_path.name
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
-                stages = df_processed.attrs.get('post_process_stages', [])
-                target_counts = df_processed.attrs.get('post_process_target_counts', [])
+                attrs = dict(df_processed.attrs)  # stages and off-target pool report
                 df_processed = df_final.iloc[:0].copy()
-                df_processed.attrs['post_process_stages'] = stages
-                df_processed.attrs['post_process_target_counts'] = target_counts
+                df_processed.attrs.update(attrs)
                 # Do not leave a header-only result table (including on reruns).
                 (self.output_dir / self._csv_filename).unlink(missing_ok=True)
                 tsv_path.unlink(missing_ok=True)

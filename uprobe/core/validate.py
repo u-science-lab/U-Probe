@@ -60,7 +60,7 @@ ATTRIBUTE_TYPES = {
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
                   'max_mismatches', 'strand')
-POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'equal_space', 'summary')
+POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
 OPERATORS = ('<=', '>=', '<', '>', '==')
@@ -897,6 +897,7 @@ class _Validator:
         self._check_remove_overlap(post_process.get('remove_overlap'))
         self._check_equal_space(post_process.get('equal_space'), post_process.get('remove_overlap'))
         self._check_avoid_otp(post_process.get('avoid_otp'))
+        self._check_off_target_pool(post_process.get('off_target_pool'), post_process.get('filters'))
 
     def _check_filters(self, filters, columns):
         path = ('post_process', 'filters')
@@ -1055,6 +1056,57 @@ class _Validator:
         if remove_overlap is None and step is not None and self.lengths and step < self.lengths[0]:
             self.warning(path, 'without remove_overlap, overlapping candidate windows can be selected',
                          'add remove_overlap:\n  location_interval: 2   # minimum gap in bases between probes')
+
+    def _check_off_target_pool(self, config, filters):
+        from .process.off_target_pool import OPTIONS, pool_settings
+        path = ('post_process', 'off_target_pool')
+        if config is None:
+            return
+        snippet = ('off_target_pool:\n  attribute: target_mapped_genes   # a mapped_genes attribute\n'
+                   '  max_probes_per_gene: 2   # probes of one target that may hit the same off-target gene')
+        if not isinstance(config, dict):
+            self.error(path, 'off_target_pool must be a mapping', snippet)
+            return
+        for key in config:
+            if key not in OPTIONS:
+                self.error(path + (key,), f'unknown option {key!r} of off_target_pool',
+                           _did_you_mean(key, OPTIONS, 'options'))
+        limit = config.get('max_probes_per_gene')
+        if type(limit) is not int or limit < 0:
+            self.error(path + ('max_probes_per_gene',), f'max_probes_per_gene must be an integer >= 0, got {limit!r}',
+                       'max_probes_per_gene: 2   # 0 keeps only probes without off-target genes')
+        try:
+            names = pool_settings({'attribute': config.get('attribute'), 'max_probes_per_gene': 0})[0]
+        except ValueError as exc:
+            self.error(path + ('attribute',), str(exc), snippet)
+            return
+        mapped = [name for name, attr in self.attributes.items()
+                  if isinstance(attr, dict) and str(attr.get('type', '')).lower() == 'mapped_genes']
+        for name in names:
+            if name not in mapped:
+                self.error(path + ('attribute',), f'{name!r} is not a mapped_genes attribute, whose off-target '
+                           'genes the limit counts', _did_you_mean(name, mapped, 'mapped_genes attributes')
+                           or 'add one, e.g.\ntarget_mapped_genes:\n  target: target_region\n  type: mapped_genes\n'
+                              '  aligner: bowtie')
+            elif self._filters_out_off_targets(name, filters):
+                self.warning(path, f'the filter {name} <= 1 already removes every probe with an off-target gene '
+                             '(filters run first), so off_target_pool removes nothing',
+                             f'relax the filter on {name} (e.g. {name} <= 4) or remove it')
+
+    @staticmethod
+    def _filters_out_off_targets(name, filters):
+        """True if a filter keeps only rows where mapped_genes attribute `name` is at most 1."""
+        for config in (filters.values() if isinstance(filters, dict) else []):
+            conditions = config.get('condition') if isinstance(config, dict) else None
+            for condition in conditions if isinstance(conditions, list) else [conditions]:
+                try:
+                    parsed = parse_condition(condition) if isinstance(condition, str) else []
+                except ValueError:
+                    continue
+                if any(column == name and ((op in ('<=', '==') and value <= 1) or (op == '<' and value <= 2))
+                       for column, op, value in parsed):
+                    return True
+        return False
 
     def _check_avoid_otp(self, config):
         from .process.otp import parse_region

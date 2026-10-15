@@ -368,6 +368,12 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         )
         _log_tm_windows(protocol_config)
     
+    # 4.1 Check off_target_pool before the slow steps: it reads mapped_genes attributes.
+    pool = (protocol_config.get('post_process') or {}).get('off_target_pool')
+    if pool:
+        from .process.off_target_pool import check_pool_attributes, pool_settings
+        check_pool_attributes(pool_settings(pool)[0], protocol_config['attributes'])
+
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:
         log.info(f"Summary configuration missing or empty. Auto-generating with report_name: {'dna_report' if is_dna_mode else 'rna_report'}")
