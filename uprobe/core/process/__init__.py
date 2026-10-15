@@ -89,12 +89,15 @@ def remove_overlap(df: pd.DataFrame,
     if transcript_col:
         df[transcript_col] = df[transcript_col].apply(lambda x: 
                                                      ', '.join(x) if isinstance(x, list) else x)
-        # Positions are per target: direct-sequence targets all share the
-        # transcript name 'custom', so group by target as well.
-        group_cols = (['target'] if 'target' in df.columns else []) + [transcript_col]
+        # Positions are per target and per extracted exon or UTR: exon/UTR
+        # windows are numbered within their exon or UTR, and direct-sequence
+        # targets all share the transcript name 'custom'. Keep rows whose
+        # exon_name or utr_name is missing (genome and direct targets mixed).
+        region_cols = [col for col in ('exon_name', 'utr_name') if col in df.columns]
+        group_cols = (['target'] if 'target' in df.columns else []) + region_cols + [transcript_col]
         df = df.sort_values(by=group_cols + ['start'])
         non_overlapping = []
-        for _, group in df.groupby(group_cols):
+        for _, group in df.groupby(group_cols, dropna=False):
             current_end = None
             for _, row in group.iterrows():
                 if current_end is None or row['start'] > current_end + location_interval:
