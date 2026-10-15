@@ -50,3 +50,20 @@ def test_remove_overlap_genome_windows_with_empty_input():
     df = pd.DataFrame(columns=['probe_id', 'target', 'sub_region'])
     result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
     assert result.empty and list(result.columns) == ['probe_id', 'target', 'sub_region']
+
+
+def test_remove_overlap_keeps_windows_of_each_direct_target():
+    # Direct-sequence targets all have transcript_names 'custom'; windows of
+    # different targets at the same positions must not remove each other.
+    df = pd.DataFrame({
+        'probe_id': ['a1', 'a2', 'b1', 'b2'],
+        'target': ['A', 'A', 'B', 'B'],
+        'transcript_names': ['custom'] * 4,
+        'start': [0, 20, 0, 20],
+        'end': [39, 59, 39, 59],
+    })
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert result['probe_id'].tolist() == ['a1', 'b1']
+    df['start'], df['end'] = [0, 40, 0, 40], [39, 79, 39, 79]
+    result = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert result['probe_id'].tolist() == ['a1', 'a2', 'b1', 'b2']

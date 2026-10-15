@@ -89,9 +89,12 @@ def remove_overlap(df: pd.DataFrame,
     if transcript_col:
         df[transcript_col] = df[transcript_col].apply(lambda x: 
                                                      ', '.join(x) if isinstance(x, list) else x)
-        df = df.sort_values(by=[transcript_col, 'start'])
+        # Positions are per target: direct-sequence targets all share the
+        # transcript name 'custom', so group by target as well.
+        group_cols = (['target'] if 'target' in df.columns else []) + [transcript_col]
+        df = df.sort_values(by=group_cols + ['start'])
         non_overlapping = []
-        for _, group in df.groupby(transcript_col):
+        for _, group in df.groupby(group_cols):
             current_end = None
             for _, row in group.iterrows():
                 if current_end is None or row['start'] > current_end + location_interval:
