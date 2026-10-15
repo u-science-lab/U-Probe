@@ -133,6 +133,35 @@ def test_remove_overlap_keeps_windows_of_each_exon():
     assert sorted(result['probe_id']) == ['c1', 'e1a', 'e1c', 'e2a', 'e2b', 'u1']
 
 
+def dna_windows(tmp_path, targets):
+    """Candidate windows of a DNA-mode (source: genome) run, as UProbeAPI extracts them."""
+    import random
+    from uprobe.core.api import UProbeAPI
+    rng = random.Random(5)
+    (tmp_path / 'g.fa').write_text('>1\n' + ''.join(rng.choice('ACGT') for _ in range(400)) + '\n')
+    api = object.__new__(UProbeAPI)
+    api.genome = {'fasta': str(tmp_path / 'g.fa'), 'gtf': None}
+    api.protocol = {'targets': targets, 'extracts': {'target_region': {'source': 'genome', 'length': 40, 'step': 20}}}
+    return api.generate_target_seqs()
+
+
+def test_remove_overlap_in_dna_mode_with_regions_and_direct_sequences(tmp_path):
+    # Direct sequences add transcript_names and start/end columns that genome
+    # windows lack (NaN), so all but the first window of each region were dropped.
+    sequence = 'ACGTTGCAAGCTTCGATGCA' * 10
+    mixed = dna_windows(tmp_path, ['1:0-200', '1:200-400', {'S': sequence}])
+    assert mixed['transcript_names'].isna().any() and mixed['start'].isna().any()
+    config = {'post_process': {'remove_overlap': {'location_interval': 0}}}
+    result = post_process(mixed, config)
+    assert result.groupby('target').size().to_dict() == {'1:0-200': 5, '1:200-400': 5, 'S': 5}
+    assert result.loc[result['target'] == '1:0-200', 'sub_region'].tolist() == \
+        ['1-40', '41-80', '81-120', '121-160', '161-200']
+    # The same windows as runs with only the regions or only the sequence.
+    alone = pd.concat([post_process(dna_windows(tmp_path, ['1:0-200', '1:200-400']), config),
+                       post_process(dna_windows(tmp_path, [{'S': sequence}]), config)])
+    assert sorted(result['probe_id']) == sorted(alone['probe_id'])
+
+
 def alternative_exon_genome(tmp_path):
     """Gene G (+ strand) and gene H (- strand), each with two transcripts whose exons share sites."""
     import random

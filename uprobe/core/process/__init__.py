@@ -156,31 +156,14 @@ def remove_overlap(df: pd.DataFrame,
         # exon_name or utr_name is missing (genome and direct targets mixed).
         region_cols = [col for col in ('exon_name', 'utr_name') if col in df.columns]
         group_cols = (['target'] if 'target' in df.columns else []) + region_cols + [transcript_col]
-        df = df.sort_values(by=group_cols + ['start'])
-        non_overlapping = []
-        for _, group in df.groupby(group_cols, dropna=False):
-            current_end = None
-            for _, row in group.iterrows():
-                if current_end is None or row['start'] > current_end + location_interval:
-                    non_overlapping.append(row)
-                    current_end = row['end']
-        return pd.DataFrame(non_overlapping).reset_index(drop=True)
     elif 'target' in df.columns:
-        # Sort numerically: as strings, "101-140" would precede "21-60".
-        bounds = region_bounds(df)
-        df = df.assign(_start=bounds['start'], _end=bounds['end'])
-        df = df.sort_values(by=['target', '_start'], kind='stable')
-        non_overlapping = []
-        for target_name, group in df.groupby('target', sort=False):
-            current_end = None
-            for _, row in group.iterrows():
-                if current_end is None or row['_start'] > current_end + location_interval:
-                    non_overlapping.append(row)
-                    current_end = row['_end']
-        result = pd.DataFrame(non_overlapping, columns=df.columns)
-        return result.drop(columns=['_start', '_end']).reset_index(drop=True)
+        group_cols = ['target']
     else:
         return df
+    # Numeric bounds: genome windows carry only sub_region ("101-140"), also
+    # next to direct sequences, whose start/end columns they leave empty.
+    keep = _non_overlapping(df, group_cols, region_bounds(df), location_interval)
+    return df.loc[keep].reset_index(drop=True)
 
 # post_process runs its steps in this order, whatever their order in the protocol.
 STEP_ORDER = ('filters', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'sorts')
