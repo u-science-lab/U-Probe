@@ -13,6 +13,7 @@ from uprobe.core.cli import cli, _extract_probe_targets, _validate_and_normalize
 from uprobe.core.hybridization import FIELDS as HYBRIDIZATION_FIELDS, TM_DEFAULTS, effective_conditions
 from uprobe.core.layout import validate_layout_references
 from uprobe.core.process import post_process
+from uprobe.core.sampling import normalize_sampling
 from uprobe.core.utils import reverse_complement
 from uprobe.core.validate import render_text, validate_files
 from uprobe.templates import list_templates, load_template, read_template, template_names
@@ -136,10 +137,35 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     result = add_attributes(combined, {**protocol, 'attributes': offline}, {})
     assert result[list(offline)].notna().all().all()
     # Post-processing runs on the offline attributes (genome-only filters skip missing columns).
-    offline_pp = {k: v for k, v in pp.items() if k != 'avoid_otp'}
+    offline_pp = {k: v for k, v in pp.items() if k not in ('avoid_otp', 'off_target_pool')}
     processed = post_process(result, {**protocol, 'post_process': offline_pp})
     if 'equal_space' in pp:
         assert len(processed) <= pp['equal_space']['number_desired']
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_off_target_search_sees_the_template_sequences(name):
+    # Bowtie2's local mode aligns nothing shorter than 22 nt and misses many
+    # sites of 25-30-mers, so windows up to 30 nt are searched with Bowtie 1.
+    protocol = load_template(name)
+    shortest = normalize_sampling(protocol['extracts']['target_region']['length'])[0]
+    for attr in protocol['attributes'].values():
+        if attr['type'] != 'mapped_genes':
+            continue
+        # target_region is the RNA sequence; the probes bind where it occurs.
+        assert attr['target'] == 'target_region' and attr['strand'] == 'sense'
+        if shortest <= 30:
+            assert attr['aligner'] == 'bowtie' and attr['max_mismatches'] == 2
+        else:
+            assert attr['aligner'] == 'bowtie2'
+
+
+def test_smfish_limits_probes_per_off_target_gene():
+    # A false spot needs many probes on one RNA: a pool limit instead of no off-target per probe.
+    pp = load_template('smfish_stellaris')['post_process']
+    assert pp['off_target_pool'] == {'attribute': 'target_mapped_genes', 'max_probes_per_gene': 2}
+    assert pp['filters']['target_mapped_genes']['condition'] == 'target_mapped_genes <= 11'
+    assert 'gene_expression:' in read_template('smfish_stellaris')
 
 
 @pytest.mark.parametrize('name, count', [('smfish_stellaris', 48), ('merfish', 92), ('seqfish_plus', 24),

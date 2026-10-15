@@ -42,12 +42,20 @@ meta:
       value: 48
       source: Raj 2008, abstract and Supp. Fig. 4; Stellaris probe sets hold at most 48 oligos
       quote: probing each mRNA species with 48 or more short, singly labeled oligonucleotide probes
-    - parameter: post_process.filters.target_mapped_genes
-      value: "<= 1"
+    - parameter: post_process.off_target_pool (attribute target_mapped_genes)
+      value: "max_probes_per_gene: 2, off-target sites within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
-        U-Probe approximation. The Stellaris designer excludes 20-mers with
-        more than 16 nt matching other RNAs, which U-Probe does not model.
+        U-Probe approximation. A spot needs many probes of the set on one RNA,
+        so at most 2 probes of a gene's set may hit the same off-target gene.
+        The Stellaris designer excludes 20-mers with more than 16 nt matching
+        other RNAs, which U-Probe does not model.
       quote: exclude 20-mer oligonucleotides with >16 nucleotide matches to other RNA(s) (Stellaris Getting Started Guide)
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 11 (at most 10 off-target genes)"
+      source: >-
+        U-Probe approximation: drops probes in repeats and large gene families,
+        which hit far more genes within 2 substitutions than a unique 20-mer
+        does; U-Probe does not mask repeats.
   hybridization:
     ssc: 2x
     source: >-
@@ -61,10 +69,12 @@ meta:
       formamide in 2x SSC with 100 mg/mL dextran sulfate.
   limitations:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
-    - With aligner bowtie2, 20-mers do not align (Bowtie2's local mode needs at least 22 nt), so target_mapped_genes is 0 and does not filter; aligner bowtie (see the attribute) searches every site within max_mismatches substitutions.
+    - target_mapped_genes uses Bowtie 1 (aligner bowtie), so the genome's align_index must include bowtie; Bowtie2 cannot align 20-mers (its local mode needs at least 22 nt) and would count no off-target gene.
+    - Without gene_expression every annotated gene counts as an off-target, including genes and pseudogenes the sample does not express; add your expression table (see gene_expression below).
+    - equal_space spreads the 48 along the RNA among the probes off_target_pool keeps, without preferring probes free of off-targets; in a test on 30 random human genes (Ensembl 113, no expression table) about half of the final probes hit some off-target gene, each such gene by at most 2 probes of a set.
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
     - "smfish_probe: order with a 3' amine (or a 3' dye) for single-fluorophore labelling"
 
@@ -99,8 +109,9 @@ hybridization:
   na_mM: 390
   formamide_pct: 10
 
-# Optional: genes not expressed in your sample are not counted as off-targets
-# (they stay listed in target_mapped_genes_unexpressed). Supply your own table:
+# Recommended with off_target_pool: genes not expressed in your sample are not
+# counted as off-targets (they stay listed in target_mapped_genes_unexpressed),
+# so only RNAs that are present limit the probe set. Supply your own table:
 # gene_expression:
 #   table: expression.tsv   # a gene id or name column and a numeric column
 #   value_column: TPM
@@ -116,31 +127,33 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    aligner: bowtie2
-    # Bowtie2's local mode cannot align sequences shorter than 22 nt, so for
-    # these 20-mers this attribute is 0 and its filter keeps every probe. For
-    # every transcript site within 2 substitutions on the strand the probe
-    # binds, add bowtie to the genome's align_index and use instead:
-    #   aligner: bowtie
-    #   max_mismatches: 2
-    #   strand: sense
+    # Bowtie 1 finds every transcript site within 2 substitutions; it needs
+    # bowtie in the genome's align_index. Bowtie2's local mode cannot align
+    # sequences shorter than 22 nt, so with aligner: bowtie2 these 20-mers
+    # would count no off-target gene at all.
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense   # sites where target_region occurs, which rc(target_region) binds
 
 post_process:
   filters:
+    # Drops probes in repeats and large gene families (more than 10 other
+    # genes with a site within 2 substitutions).
     target_mapped_genes:
-      condition: target_mapped_genes <= 1
+      condition: target_mapped_genes <= 11
   sorts:
     is_ascending:
       - target_mapped_genes
   remove_overlap:
     location_interval: 2
-  # Optional, with aligner: bowtie (and gene_expression) above: a false spot
-  # needs many probes on the same RNA, so instead of the target_mapped_genes
-  # filter, let at most 2 probes of a gene's set hit the same off-target gene.
-  # It runs after remove_overlap and before equal_space picks the 48.
-  # off_target_pool:
-  #   attribute: target_mapped_genes
-  #   max_probes_per_gene: 2
+  # A false spot needs many probes of the set on the same RNA, so a few probes
+  # may hit one off-target gene: at most 2 probes of a gene's set per
+  # off-target gene, admitted in the order of sorts (fewest off-target genes
+  # first). It runs after remove_overlap and before equal_space picks the 48.
+  # max_probes_per_gene: 0 keeps only probes without off-target genes.
+  off_target_pool:
+    attribute: target_mapped_genes
+    max_probes_per_gene: 2
   equal_space:
     number_desired: 48
 

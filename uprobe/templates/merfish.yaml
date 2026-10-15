@@ -67,7 +67,7 @@ meta:
       value: 92
       source: Moffitt 2016 (92 encoding probes per gene; see meta.limitations)
     - parameter: post_process.filters.target_mapped_genes
-      value: "<= 1"
+      value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
         U-Probe approximation. Chen 2015 rejected probes mapping to more than one
         RNA species; Moffitt 2016 used 17-mer isoform/gene specificity indices of
@@ -99,7 +99,7 @@ meta:
       configuration A. Permute readouts across probes after design if needed.
     - Moffitt 2016 used 92 encoding probes per gene; equal_space keeps 92, spread evenly along the RNA rather than taken from the 5' end, and all passing regions of a gene with fewer.
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
     - "encoding: per gene, the readout PROBE sequences (R1-R3) of its code word; the template inserts their reverse complements. The values here are three published readout probes from Moffitt 2016 Table S1 (RS0015, RS0083, RS0095) used as an example assignment only."
     - "encoding_probe.primer_1 / primer_2_rc: 20-nt PCR primer placeholders (N)"
@@ -162,7 +162,14 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    aligner: bowtie2
+    # Bowtie 1 finds every transcript site within 2 substitutions; it needs
+    # bowtie in the genome's align_index. Bowtie2 (aligner: bowtie2, a local
+    # seed heuristic) flagged only 87% of random 30-nt windows of human mRNAs
+    # that have such a site in another gene (Ensembl 113 transcriptome), and
+    # found almost nothing beyond 2 substitutions at this length.
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense   # sites where target_region occurs, which rc(target_region) binds
 
 post_process:
   filters:

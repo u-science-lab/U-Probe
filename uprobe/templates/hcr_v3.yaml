@@ -168,7 +168,17 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
+    # The 52-nt window of a probe pair: a single 25-nt probe cannot trigger
+    # amplification. Bowtie2 also reports partial matches (about 25 nt or
+    # more), indels and sites with 3 or more mismatches, which a search within
+    # 2 substitutions cannot see, but it is a heuristic that reports at most
+    # 100 alignments: on the Ensembl 113 human transcriptome it flagged 99% of
+    # random 52-nt windows of mRNAs that have a site within 2 substitutions in
+    # another gene, and listed 94% of those genes per window. For an exhaustive
+    # search of those sites, add bowtie to the genome's align_index and set
+    # aligner: bowtie, max_mismatches: 2.
     aligner: bowtie2
+    strand: sense   # sites where target_region occurs, which the probes bind
 
 post_process:
   filters:
