@@ -141,7 +141,7 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 
 #### Protocol Templates
 
-U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter. A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`. Templates whose target windows are 30 nt or shorter (smFISH, seqFISH+, MERFISH, HybISS) count off-target genes with the exhaustive Bowtie 1 search, so their genome needs `bowtie` in `align_index`, and the smFISH template allows a probe one off-target gene and limits how many probes of a set may hit the same one (`off_target_pool`) instead of allowing none; see [Off-target search](#off-target-search).
+U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter. A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`. Templates whose target windows are 30 nt or shorter (smFISH, seqFISH+, MERFISH, HybISS) count off-target genes with the exhaustive Bowtie 1 search, so their genome needs `bowtie` in `align_index`; the smFISH template keeps only probes without an off-target gene and offers `off_target_pool` as a commented-out option for genes with many paralogs; see [Off-target search](#off-target-search).
 
 ```bash
 uprobe templates list
@@ -477,6 +477,9 @@ In smFISH a false spot needs many probes of the set on the same off-target RNA, 
 
 ```yaml
 post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 2   # at most one off-target gene per probe
   remove_overlap:
     location_interval: 2
   off_target_pool:
@@ -491,8 +494,20 @@ post_process:
 - For each target, probes are visited from best to worst rank, the order `sorts` defines (the current order when there are no `sorts`), and a probe is dropped when one of its off-target genes (`<attribute>_off_targets`, all listed attributes together) is already hit by `max_probes_per_gene` kept probes. With a `gene_expression` table only expressed off-target genes are listed, so only they are limited. `max_probes_per_gene: 0` keeps only probes without off-target genes.
 - It runs after `remove_overlap`, so the limit applies to probes that can end up in the same set, and before `equal_space`, which then chooses the final N among the probes that respect it (any subset still does). Per-probe filters such as `target_mapped_genes <= 3` still apply first.
 - `summary.json` reports the stage in `stages` and, in `off_targets.pool`, how many probes it removed and the genes that reached the limit most often.
-- A probe in a repeat can hit hundreds of genes, each of them by no other probe of the set, so the limit alone keeps it; a per-probe filter drops such probes. The smFISH template combines `target_mapped_genes <= 2` (at most one off-target gene per probe) with `max_probes_per_gene: 2`. `equal_space` then picks the final probes by position, not by their off-target genes. With that template on 30 random human genes (Ensembl 113, no expression table), 26 genes received 48 probes (1,302 in total) and 46% of the final probes had one off-target gene, against 26 genes and 1,294 probes, none with an off-target gene, with `target_mapped_genes <= 1` alone. On six genes with many paralogs and pseudogenes (ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB) the template gave 132 probes (4-48 per gene, median 18; 46% with an off-target gene) against 119 (1-48, median 16) with `<= 1`; with a HeLa expression table (TPM >= 1), 194 against 184 probes, 34% of them with an expressed off-target gene (33% for the 30 genes).
+- A probe in a repeat can hit hundreds of genes, each of them by no other probe of the set, so the limit alone keeps it; combine the limit with a per-probe filter such as `target_mapped_genes <= 2` (at most one off-target gene per probe).
+- `equal_space` picks the final probes by position, not by their off-target genes, so when a target has more candidates than it needs, the limit mostly swaps clean probes for probes with an off-target gene instead of adding probes (measured below). It would pay off with an `equal_space` that prefers probes without off-target genes, which U-Probe does not have yet.
 - For padlock/RCA probes a single probe makes signal, so allow no expressed off-target per probe with a filter instead: `target_mapped_genes <= 1` (with `gene_expression`).
+
+Measured on Ensembl 113 human genes with the smFISH template (all 20-mers of the MANE Select mRNAs, off-targets within 2 substitutions by Bowtie 1, `remove_overlap` 2, 48 probes per gene): `target_mapped_genes <= 1` alone, against `target_mapped_genes <= 2` with `max_probes_per_gene: 2`.
+
+| Genes | Expression table | `<= 1`: probes (genes with 48) | `<= 2` + pool: probes (genes with 48) | Final probes with an off-target gene, `<= 2` + pool |
+| --- | --- | --- | --- | --- |
+| 30 random protein-coding genes | none | 1,294 (26) | 1,302 (26) | 46% |
+| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,356 (27) | 1,361 (27) | 33% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 119 (1) | 132 (1) | 46% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 184 (2) | 194 (2) | 34% |
+
+The limit added 5-13 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 62 and 65 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 

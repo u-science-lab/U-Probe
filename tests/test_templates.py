@@ -160,13 +160,23 @@ def test_off_target_search_sees_the_template_sequences(name):
             assert attr['aligner'] == 'bowtie2'
 
 
-def test_smfish_limits_probes_per_off_target_gene():
-    # A false spot needs many probes on one RNA: a pool limit instead of no off-target per probe.
+def test_smfish_allows_no_off_target_gene_and_documents_the_pool_option(tmp_path):
+    # No off-target gene per probe by default; the pool (one off-target gene
+    # per probe, 2 probes per gene) is a commented-out option.
+    text = read_template('smfish_stellaris')
     pp = load_template('smfish_stellaris')['post_process']
-    assert pp['off_target_pool'] == {'attribute': 'target_mapped_genes', 'max_probes_per_gene': 2}
-    # At most one off-target gene per probe, and each hit by at most 2 probes of a set.
-    assert pp['filters']['target_mapped_genes']['condition'] == 'target_mapped_genes <= 2'
-    assert 'gene_expression:' in read_template('smfish_stellaris')
+    assert pp['filters']['target_mapped_genes']['condition'] == 'target_mapped_genes <= 1'
+    assert 'off_target_pool' not in pp and '# gene_expression:' in text
+    option = '  # off_target_pool:\n  #   attribute: target_mapped_genes\n  #   max_probes_per_gene: 2\n'
+    assert text.count(option) == 1
+    enabled = text.replace(option, option.replace('# ', '')).replace(
+        'condition: target_mapped_genes <= 1', 'condition: target_mapped_genes <= 2')
+    path = tmp_path / 'smfish_pool.yaml'
+    path.write_text(enabled, encoding='utf-8')
+    assert yaml.safe_load(enabled)['post_process']['off_target_pool'] == {
+        'attribute': 'target_mapped_genes', 'max_probes_per_gene': 2}
+    findings = validate_files(path)
+    assert not findings, render_text(findings)
 
 
 @pytest.mark.parametrize('name, count', [('smfish_stellaris', 48), ('merfish', 92), ('seqfish_plus', 24),
