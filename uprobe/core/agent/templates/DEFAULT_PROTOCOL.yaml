@@ -35,7 +35,7 @@ post_process:
   # only dna mode
   avoid_otp:
 
-  # only dna mode
+  # probes kept per target, spread evenly along it: number_desired: <int>
   equal_space:
 
   # remove overlap

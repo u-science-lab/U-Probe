@@ -298,12 +298,11 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     #     avoid_otp: {}
     #     equal_space: {}
     # These should be treated as "missing" so defaults can be generated, and RNA mode
-    # must not carry DNA-only steps.
+    # must not carry the DNA-only avoid_otp step (equal_space works in both modes).
     pp = protocol_config.get('post_process')
     if isinstance(pp, dict):
         if not is_dna_mode:
             pp.pop('avoid_otp', None)
-            pp.pop('equal_space', None)
         # Drop empty/None/list stubs at top-level, and steps whose options are
         # all blank, e.g. `remove_overlap: {location_interval: }`
         pp = {k: v for k, v in pp.items() if not _is_blank_step(v)}
@@ -430,6 +429,7 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     summary = getattr(uprobe, 'summary', None)
     if summary is None:
         summary = _write_failure_summary(protocol_config, error, Path(output))
+    _log_target_counts(summary)
     if json_output:
         from .report.run_summary import summary_json
         click.echo(summary_json(summary))
@@ -457,6 +457,21 @@ def _stdout_to_stderr():
         sys.stdout.flush()
         os.dup2(saved_fd, stdout_fd)
         os.close(saved_fd)
+
+
+def _log_target_counts(summary: dict) -> None:
+    """Final probes per target, with the number requested by equal_space and any shortfall."""
+    targets = summary.get('targets') or {}
+    if summary.get('status') == 'error' or not targets:
+        return
+    counts = ', '.join(f"{name} {entry['final']}" + (f"/{entry['requested_probes']}" if entry.get('requested_probes') else '')
+                       for name, entry in targets.items())
+    requested = any(entry.get('requested_probes') for entry in targets.values())
+    log.info(f"Final probes per target{' (final/requested)' if requested else ''}: {counts}")
+    for warning in summary.get('warnings') or []:
+        if warning.get('code') == 'fewer_probes_than_requested':
+            short = ', '.join(f"{name} {c['final']} of {c['requested']}" for name, c in warning['counts'].items())
+            log.warning(f"{warning['message']} {short}")
 
 
 def _write_failure_summary(protocol_config, error, output_dir: Path) -> dict:

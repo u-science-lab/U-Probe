@@ -12,9 +12,11 @@ import pandas as pd
 import pytest
 import yaml
 from click.testing import CliRunner
+from pyfaidx import Fasta
 
 from uprobe.core.api import UProbeAPI
 from uprobe.core.cli import cli
+from uprobe.core.gen.fun import extract_trans_seqs, generate_target_seqs
 from uprobe.core.hybridization import TM_DEFAULTS
 from uprobe.core.process import filter_table
 from uprobe.core.sampling import iter_target_windows
@@ -212,15 +214,15 @@ def toy_genome(tmp_path, align_index):
     return genomes
 
 
-def toy_protocol(tmp_path, attributes):
+def toy_protocol(tmp_path, attributes, targets=('ToyGeneA', 'ToyGeneB', 'ToyGeneC', 'NotAGene'), post_process=None):
     protocol = tmp_path / 'protocol.yaml'
     protocol.write_text(yaml.safe_dump({
         'name': 'toy', 'genome': 'toy', 'encoding': {},
-        'targets': ['ToyGeneA', 'ToyGeneB', 'ToyGeneC', 'NotAGene'],
+        'targets': list(targets),
         'extracts': {'target_region': {'source': 'exon', 'length': 40, 'step': 60}},
         'probes': {'pad': {'template': '{part1}', 'parts': {'part1': {'expr': 'rc(target_region)'}}}},
         'attributes': attributes,
-        'post_process': {'filters': {'target_gc': {'condition': 'target_gc >= 0.4 & target_gc <= 0.6'}}},
+        'post_process': post_process or {'filters': {'target_gc': {'condition': 'target_gc >= 0.4 & target_gc <= 0.6'}}},
         'summary': {'report_name': 'rna_report', 'attributes': list(attributes)},
     }))
     return protocol
@@ -278,3 +280,65 @@ def test_cli_json_stdout_stays_clean_with_tool_output(tmp_path):
     summary = json.loads(process.stdout)
     check_toy_summary(summary, output)
     assert summary['attributes']['target_mapped_genes']['count'] == summary['counts']['final_probes']
+
+
+def run_toy_cli(tmp_path, post_process):
+    genomes = toy_genome(tmp_path, align_index=[])
+    protocol = toy_protocol(tmp_path, {'target_gc': {'target': 'target_region', 'type': 'gc_content'}},
+                            targets=('ToyGeneA', 'ToyGeneB', 'ToyGeneC'), post_process=post_process)
+    output = tmp_path / 'out'
+    result = CliRunner().invoke(cli, ['run', '-p', str(protocol), '-g', str(genomes), '-o', str(output), '--json'])
+    return result, output
+
+
+def test_rna_windows_are_numbered_along_the_spliced_rna(tmp_path):
+    # Exon windows restart at 1 in every exon; target_start/target_end count along the
+    # spliced RNA, 5' to 3', for ToyGeneA (+ strand) and ToyGeneB (- strand, 3 exons each).
+    genomes = yaml.safe_load(toy_genome(tmp_path, align_index=[]).read_text())['toy']
+    windows = generate_target_seqs('exon', ['ToyGeneA', 'ToyGeneB'], genomes['fasta'], genomes['gtf'], 40, step=97)
+    extract_trans_seqs(genomes['gtf'], genomes['fasta'], str(tmp_path / 'transcripts.fa'))
+    with Fasta(str(tmp_path / 'transcripts.fa')) as transcripts:
+        rna = {gene: str(transcripts[f'{gene}_{gene}.t1']).upper() for gene in ('ToyGeneA', 'ToyGeneB')}
+    for row in windows.itertuples():
+        assert rna[row.target][row.target_start - 1:row.target_end] == row.target_region
+    assert windows.groupby('target')['exon_name'].nunique().tolist() == [3, 3]
+    assert (windows['start'] == 1).sum() == 6 and windows['target_start'].max() > 1800
+
+
+def test_cli_keeps_probes_per_target_spread_along_the_rna(tmp_path):
+    # 45 windows per 3-exon gene (15 per exon), 40 for ToyGeneC; 6 are kept, evenly spaced ranks.
+    result, output = run_toy_cli(tmp_path, {'remove_overlap': {'location_interval': 0},
+                                            'equal_space': {'number_desired': 6}})
+    assert result.exit_code == 0, result.output
+    summary = json.loads(result.stdout)
+    assert summary['status'] == 'ok' and summary['message'] == '18 probes designed for all 3 target(s).'
+    assert {name: (t['final'], t['requested_probes']) for name, t in summary['targets'].items()} == {
+        'ToyGeneA': (6, 6), 'ToyGeneB': (6, 6), 'ToyGeneC': (6, 6)}
+    assert [s['stage'] for s in summary['stages']] == ['Remove overlap', 'Equal spacing']
+    table = pd.read_csv(output / summary['output_files']['tsv'], sep='\t')
+    for gene in ('ToyGeneA', 'ToyGeneB'):
+        probes = table[table['target'] == gene]
+        # Ranks 0, 8, 17, 26, 35, 44 along the target: two probes in each exon.
+        assert probes['target_start'].tolist() == [1, 481, 1021, 1561, 2101, 2641]
+        assert probes['exon_name'].value_counts().tolist() == [2, 2, 2]
+
+
+def test_cli_reports_targets_with_fewer_probes_than_requested(tmp_path, monkeypatch):
+    from unittest import mock
+    from uprobe.core import cli as cli_module
+    log = mock.Mock()
+    monkeypatch.setattr(cli_module, 'log', log)
+    result, output = run_toy_cli(tmp_path, {'remove_overlap': {'location_interval': 0},
+                                            'equal_space': {'number_desired': 6, 'ToyGeneC': {'number_desired': 100}}})
+    assert result.exit_code == 0, result.output
+    summary = json.loads(result.stdout)
+    assert summary == read_summary(output)
+    assert summary['status'] == 'partial'
+    assert summary['message'] == '52 probes designed; 1 target(s) have fewer probes than requested.'
+    assert summary['targets']['ToyGeneC']['final'] == 40 and summary['targets']['ToyGeneC']['requested_probes'] == 100
+    warning = summary['warnings'][-1]
+    assert warning['code'] == 'fewer_probes_than_requested' and warning['targets'] == ['ToyGeneC']
+    assert warning['counts'] == {'ToyGeneC': {'requested': 100, 'final': 40}}
+    logged = [str(call) for call in log.method_calls]
+    assert any('ToyGeneA 6/6, ToyGeneB 6/6, ToyGeneC 40/100' in line for line in logged)
+    assert any('warning' in line and 'ToyGeneC 40 of 100' in line for line in logged)

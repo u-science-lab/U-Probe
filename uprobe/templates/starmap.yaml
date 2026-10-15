@@ -75,7 +75,7 @@ meta:
       not used as a filter. Both half Tms are reported under the
       hybridization block's conditions.
   limitations:
-    - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); U-Probe keeps every passing non-overlapping region (RNA mode has no per-gene count).
+    - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); equal_space keeps 4 pairs, spread evenly along the RNA.
     - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference.
     - "TODO: verify the minimum spacing between probe pairs; regions are only required not to overlap here."
     - "TODO: verify the 2018 backbone (Table S1 was not accessible); Wang 2018 used a 5-nt barcode within a 35-nt coding space, whereas the 64-gene STARmap PLUS set used here repeats a 3-nt code. The 2,766-gene STARmap PLUS set uses a different backbone with an 8 + 6 split."
@@ -164,6 +164,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 0
+  equal_space:
+    number_desired: 4
 
 summary:
   report_name: rna_report

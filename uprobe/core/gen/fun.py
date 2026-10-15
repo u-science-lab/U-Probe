@@ -132,7 +132,7 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
                 raise
             if strand == '-':
                 seq = reverse_complement(seq)
-            exon = (exon_name, trans_name, seq, n_trans)
+            exon = (exon_name, trans_name, seq, n_trans, (str(row['chr']), start, end, strand))
             gene2exons[gene].append(exon)
     return gene2exons
 
@@ -149,8 +149,40 @@ def change_chrom_name(chrom):
     else:
         return 'chr'+chrom
     
-Exon = t.Tuple[str, str, str, int]  # (type, name, seq, n_trans)
-Utr = t.Tuple[str, str, str, int]  # (type, name, seq, n_trans)
+Interval = t.Tuple[str, int, int, str]  # (chrom, start, end, strand), 1-based inclusive
+Exon = t.Tuple[str, str, str, int, Interval]  # (type, name, seq, n_trans, interval)
+Utr = t.Tuple[str, str, str, int, Interval]  # (type, name, seq, n_trans, interval)
+
+
+def segment_offsets(intervals: t.Iterable[Interval]) -> t.Dict[Interval, int]:
+    """Offset of each segment of one gene on its merged exon model.
+
+    The model is the union of the gene's extracted segments (exons, CDS or
+    UTRs) with the introns removed, read 5' to 3'; for a gene with one
+    transcript it is the spliced RNA. Windows are numbered 5' to 3' within
+    their segment, so window s..e of a segment lies at offset+s..offset+e.
+    Overlapping segments of different transcripts share model positions.
+    """
+    groups = {}
+    for interval in intervals:
+        groups.setdefault((interval[0], interval[3]), set()).add(interval)
+    offsets, position = {}, 0
+    for (_, strand), group in sorted(groups.items()):
+        blocks = []  # [start, end, segments] of the merged intervals
+        for interval in sorted(group, key=lambda iv: (iv[1], iv[2])):
+            if blocks and interval[1] <= blocks[-1][1]:
+                blocks[-1][1] = max(blocks[-1][1], interval[2])
+                blocks[-1][2].append(interval)
+            else:
+                blocks.append([interval[1], interval[2], [interval]])
+        if strand == '-':
+            blocks.reverse()
+        for start, end, segments in blocks:
+            for interval in segments:
+                # Bases between the 5' end of the block and that of the segment.
+                offsets[interval] = position + (end - interval[2] if strand == '-' else interval[1] - start)
+            position += end - start + 1
+    return offsets
 
 def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                           genelist: pd.DataFrame, min_length: int=40
@@ -191,7 +223,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             seq = fa[chr_][start - 1:end].seq.upper()
             if strand == '-':
                 seq = reverse_complement(seq)
-            gene_features[gene].append(("exon", name, seq, n_trans))
+            gene_features[gene].append(("exon", name, seq, n_trans, (str(row['chr']), start, end, strand)))
         # extract utr
         df_utrs = df_gene[df_gene.type == 'UTR'].copy()
         df_utrs = df_utrs[df_utrs.length >= min_length]
@@ -217,7 +249,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                     utr_type = "3'UTR" if strand == '+' else "5'UTR"
                 else:
                     utr_type = "unknown_UTR"
-                gene_features[gene].append((utr_type, name, seq, n_trans))
+                gene_features[gene].append((utr_type, name, seq, n_trans, (str(row['chr']), start, end, strand)))
     return gene_features
 
 def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
@@ -318,22 +350,26 @@ def generate_target_seqs(
                         step: t.Optional[int] = None
                          ):
     lower, _, step = normalize_sampling(min_length, step, overlap)
+    # start/end count within the exon or UTR; target_start/target_end count
+    # along the target (its merged exon model, see segment_offsets).
     if source == 'exon' or source == 'CDS':
         exon_info = get_exon_seq(targets, fasta_path, gtf_path, lower)
         data_list = [] 
         for gene_name, exon_list in exon_info.items():
+            offsets = segment_offsets(exon[4] for exon in exon_list)
             n = 1
             for j, exon_data in enumerate(exon_list, start=1):
-                exon_name, trans_name, seq, n_trans = exon_data
+                exon_name, trans_name, seq, n_trans, interval = exon_data
                 for i, window_end, tem in iter_target_windows(seq, min_length, step):
                     start = i + 1
                     end = window_end
                     gene_id = f"{gene_name}_{n}"
                     sub_region = f"{start}_{end}"
                     n += 1
-                    data_list.append([gene_id, gene_name, sub_region, exon_name, trans_name, start, end, tem, n_trans])
+                    data_list.append([gene_id, gene_name, sub_region, exon_name, trans_name, start, end,
+                                      offsets[interval] + start, offsets[interval] + end, tem, n_trans])
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region','exon_name', 'transcript_names','start', 
-                                                'end', 'target_region', 'n_trans'])
+                                                'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
         return data
     elif source == 'UTR':
         with Fasta(fasta_path) as fa:
@@ -341,11 +377,11 @@ def generate_target_seqs(
             utr_info = extract_gene_features(df_gtf, fa, pd.DataFrame(targets, columns=['geneID']), lower)
         data_list = []
         for gene_name, utr_list in utr_info.items():
+            utr_list = [utr for utr in utr_list if utr[0] != 'exon']
+            offsets = segment_offsets(utr[4] for utr in utr_list)
             n = 1
             for j, utr_data in enumerate(utr_list, start=1):
-                utr_type, utr_name, seq, n_trans = utr_data
-                if utr_type == 'exon':
-                    continue
+                utr_type, utr_name, seq, n_trans, interval = utr_data
                 trans_name = []
                 # extract target region seqs
                 for i, window_end, tem in iter_target_windows(seq, min_length, step):
@@ -354,9 +390,10 @@ def generate_target_seqs(
                     gene_id = f"{gene_name}_{n}"
                     sub_region = f"{start}_{end}"
                     n += 1
-                    data_list.append([gene_id, gene_name, sub_region, utr_name, trans_name, start, end, tem, n_trans])
+                    data_list.append([gene_id, gene_name, sub_region, utr_name, trans_name, start, end,
+                                      offsets[interval] + start, offsets[interval] + end, tem, n_trans])
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'utr_name', 'transcript_names','start', 
-                                                'end', 'target_region', 'n_trans'])
+                                                'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
         return data
     elif source == 'genome':
         data_list = []
