@@ -846,6 +846,144 @@ def generate_report(protocol, genomes, probes, output, no_plots, pdf, no_pdf):
         sys.exit(1)
 
 
+_DIVISION_CHOICE = click.Choice(['vertebrates', 'plants', 'fungi', 'metazoa', 'protists'])
+
+
+def _dump_yaml(data) -> str:
+    return yaml.safe_dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True)
+
+
+@cli.group(name='genome')
+def genome():
+    """
+    Download reference genomes and inspect genomes.yaml.
+
+    Sources: Ensembl (vertebrates, plus yeast, worm and fly) and Ensembl Genomes
+    plants, fungi, metazoa and protists. Ensembl Bacteria is not supported.
+    """
+
+
+@genome.command(name='fetch')
+@click.option('--species', '-s', required=True,
+              help='Ensembl species name (homo_sapiens), display name (human) or taxonomy id (9606).')
+@click.option('--release', '-r', default='latest',
+              help='Ensembl release number, or "latest" (resolved and recorded). [default: latest]')
+@click.option('--division', '-d', type=_DIVISION_CHOICE, default='vertebrates',
+              help='Ensembl division; Ensembl Genomes divisions have their own release numbers. [default: vertebrates]')
+@click.option('--out', '-o', default='./genomes', type=click.Path(file_okay=False),
+              help='Directory for genome files; each genome gets a sub-directory. [default: ./genomes]')
+@click.option('--genomes', '-g', default='genomes.yaml', type=click.Path(dir_okay=False),
+              help='genomes.yaml to create or update. [default: genomes.yaml]')
+@click.option('--name', help='Entry name in genomes.yaml. [default: <species>_<assembly>_e<release>]')
+@click.option('--align-index', help='Comma-separated aligners for the entry, e.g. "bowtie2,blast". '
+                                    '[default: keep the existing value, else bowtie2]')
+@click.option('--jellyfish/--no-jellyfish', default=None,
+              help='Enable kmer_count for the entry. [default: keep the existing value, else on if jellyfish is installed]')
+@click.option('--build-index', is_flag=True, help='Build aligner indices afterwards (same as `uprobe build-index`).')
+@click.option('--threads', '-t', default=10, type=int, help='Threads for --build-index. [default: 10]')
+@click.option('--keep-compressed', is_flag=True, help='Keep the downloaded .gz files.')
+@click.option('--force', is_flag=True,
+              help='Re-download verified files, and replace a different genome already in the target directory.')
+@click.option('--dry-run', is_flag=True, help='Resolve release, species and URLs, print the plan, download nothing.')
+@click.option('--mirror', help='Base URL replacing https://ftp.ensembl.org/pub '
+                               '(or https://ftp.ensemblgenomes.ebi.ac.uk/pub for other divisions).')
+def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, build_index,
+                 threads, keep_compressed, force, dry_run, mirror):
+    """
+    Download an Ensembl genome FASTA and GTF and register them in genomes.yaml.
+
+    Prefers the primary assembly FASTA and falls back to toplevel. Files are
+    verified against Ensembl's CHECKSUMS, decompressed, and recorded with their
+    release and URLs. Re-running skips verified files and resumes partial
+    downloads. The resulting entry is printed to stdout as YAML.
+
+    Example: uprobe genome fetch --species homo_sapiens --release latest --build-index
+    """
+    from .genome_fetch import GenomeFetchError, fetch_genome
+    aligners = [a.strip() for a in align_index.split(',') if a.strip()] if align_index else None
+    try:
+        result = fetch_genome(
+            species, release=release, division=division, out_dir=out, genomes_yaml=genomes, name=name,
+            align_index=aligners, jellyfish=jellyfish, build_index=build_index, threads=threads,
+            keep_compressed=keep_compressed, force=force, dry_run=dry_run, mirror=mirror,
+        )
+    except GenomeFetchError as e:
+        log.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        log.error(f"Genome fetch failed: {e}")
+        sys.exit(1)
+    if dry_run:
+        click.echo("# Dry run: nothing was downloaded.")
+        click.echo(_dump_yaml({'plan': result['plan'].to_dict(), 'directory': str(result['directory']),
+                               'genomes_yaml': str(result['genomes_yaml']),
+                               'entry': {result['name']: result['entry']}}), nl=False)
+        return
+    click.echo(f"# Registered in {result['genomes_yaml']}; use `genome: {result['name']}` in your protocol.")
+    if not build_index:
+        click.echo(f"# Build indices with: uprobe build-index -p <protocol.yaml> -g {genomes} "
+                   "(or re-run with --build-index).")
+    click.echo(_dump_yaml({result['name']: result['entry']}), nl=False)
+
+
+@genome.command(name='list')
+@click.option('--genomes', '-g', default='genomes.yaml', type=click.Path(exists=True, dir_okay=False),
+              help='Path to genome configuration file (YAML). [default: genomes.yaml]')
+@click.option('--json', 'as_json', is_flag=True, help='Print machine-readable JSON.')
+def genome_list(genomes, as_json):
+    """Show genomes.yaml entries and whether their files and indices exist."""
+    import json
+    from .genome_fetch import GenomeFetchError, describe_genomes
+    try:
+        rows = describe_genomes(genomes)
+    except (GenomeFetchError, yaml.YAMLError) as e:
+        log.error(f"Cannot read {genomes}: {e}")
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(rows, indent=2))
+        return
+    if not rows:
+        click.echo(f"No genomes in {genomes}.")
+    state = {True: 'ready', False: 'missing', None: 'unknown'}
+    for row in rows:
+        click.echo(row['name'])
+        if row['description']:
+            click.echo(f"  description: {row['description']}")
+        click.echo(f"  fasta: {row['fasta']} ({'ok' if row['fasta_exists'] else 'MISSING'})")
+        click.echo(f"  gtf:   {row['gtf']} ({'ok' if row['gtf_exists'] else 'MISSING'})")
+        for aligner, status in row['indexes'].items():
+            click.echo(f"  {aligner} index: genome {state[status['genome']]}, "
+                       f"transcript {state[status['transcript']]}")
+        click.echo(f"  jellyfish: {'on' if row['jellyfish'] else 'off'}")
+        source = row['source'] or {}
+        if source.get('release'):
+            click.echo(f"  source: {source.get('provider', 'Ensembl')} {source.get('division', '')} "
+                       f"release {source['release']} ({source.get('fasta_url')})")
+
+
+@genome.command(name='search')
+@click.argument('query')
+@click.option('--division', '-d', type=_DIVISION_CHOICE, default='vertebrates',
+              help='Ensembl division to search. [default: vertebrates]')
+@click.option('--release', '-r', default='latest', help='Ensembl release number or "latest". [default: latest]')
+@click.option('--limit', default=20, type=int, help='Maximum number of matches. [default: 20]')
+@click.option('--mirror', help='Base URL replacing the Ensembl FTP "pub" URL.')
+def genome_search(query, division, release, limit, mirror):
+    """Find Ensembl species names by name, common name or taxonomy id."""
+    from .genome_fetch import GenomeFetchError, search
+    try:
+        release, rows = search(query, division=division, release=release, mirror=mirror, limit=limit)
+    except GenomeFetchError as e:
+        log.error(str(e))
+        sys.exit(1)
+    if not rows:
+        click.echo(f"No species matching '{query}' in Ensembl {division} release {release}.")
+        sys.exit(1)
+    for row in rows:
+        click.echo(f"{row.get('species')}\t{row.get('name', '')}\t{row.get('assembly', '')}\t"
+                   f"taxid {row.get('taxonomy_id', '')}")
+
+
 @cli.command()
 @click.option('--workspace', default='.', help='Workspace directory to install templates into.')
 @click.option('--force', is_flag=True, help='Overwrite existing team template.')

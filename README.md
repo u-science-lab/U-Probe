@@ -113,6 +113,22 @@ pnpm dev --host 127.0.0.1 --port 5173
 
 The frontend proxies `/api` to backend port `8005`. No separate database service is needed; users and tasks are stored locally. Create a test account through `POST /auth/register` in the API docs; this endpoint needs no email verification. Full probe workflows also require FASTA/GTF data and the relevant bioinformatics tools.
 
+#### 📥 Fetch a Reference Genome
+Download an Ensembl genome FASTA and GTF, verify them against Ensembl's `CHECKSUMS`, and register them in `genomes.yaml`:
+
+```bash
+uprobe genome fetch --species homo_sapiens --release latest --out ./genomes --genomes genomes.yaml
+uprobe genome fetch --species arabidopsis_thaliana --division plants --build-index -t 10
+uprobe genome search mouse            # find Ensembl species names
+uprobe genome list -g genomes.yaml    # entries, file and index status (--json for scripts)
+```
+
+- `--species` takes an Ensembl name (`homo_sapiens`), display name (`human`) or taxonomy id (`9606`). `--release latest` is resolved to a number, which is recorded in the entry.
+- Sources: Ensembl (vertebrates plus yeast, worm and fly) and the Ensembl Genomes divisions `plants`, `fungi`, `metazoa` and `protists` (`--division`; they have their own release numbers). Ensembl Bacteria is not supported.
+- The unmasked primary assembly FASTA is used when Ensembl provides one, otherwise the toplevel FASTA. Files are decompressed (U-Probe's tools need plain FASTA) into `<out>/<name>/`; the entry name defaults to `<species>_<assembly>_e<release>` (`_eg<release>` for Ensembl Genomes).
+- Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
+- `--build-index` runs the same index build as `uprobe build-index`.
+
 #### 🌟 Complete Workflow (Recommended)
 To run the entire pipeline from genome index construction to final probe generation in one go:
 
@@ -216,6 +232,8 @@ GRCh38:
     - blast
   jellyfish: false  
 ```
+
+Entries written by `uprobe genome fetch` also record their origin under `source` (Ensembl division, release, assembly and URLs); the verified checksums are kept in `genome_source.json` next to the files. The workflow ignores keys it does not use.
 
 ### 2. `protocol.yaml`
 This is the core configuration file that defines all parameters for a specific probe design run. It is highly customizable.
