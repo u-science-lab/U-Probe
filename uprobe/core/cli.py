@@ -16,6 +16,10 @@ from uprobe import __version__
 
 log = get_logger(__name__)
 
+# Exit status of `uprobe run`; click exits with 2 on usage errors.
+EXIT_ERROR = 1
+EXIT_NO_PROBES = 3
+
 
 def _extract_probe_targets(probes_config: dict) -> list:
     """
@@ -182,12 +186,45 @@ def _generate_default_summary(protocol_config: dict, attributes: dict) -> dict:
     return summary
 
 
+def _number(value: float) -> str:
+    """A number as filter conditions read it: plain decimal notation."""
+    return f'{value:f}'.rstrip('0').rstrip('.')
+
+
+def _tm_condition(protocol_config: dict, attr_name: str) -> str:
+    """Tm filter: 50-90 °C, or [T, T + 40] °C at the declared hybridization temperature T."""
+    from .hybridization import default_tm_window
+    low, high, _ = default_tm_window(protocol_config, attr_name)
+    return f'{attr_name} >= {_number(low)} & {attr_name} <= {_number(high)}'
+
+
+def _log_tm_windows(protocol_config: dict) -> None:
+    """Log the window of each auto-generated Tm filter and why it was chosen."""
+    from .hybridization import default_tm_window
+    reasons = {'protocol': 'hybridization.temperature_c to +40 °C',
+               'attribute': "the attribute's hybridization.temperature_c to +40 °C",
+               'default': 'default 37 °C to +40 °C; hybridization.temperature_c is not set',
+               None: 'legacy window for the legacy Tm conditions'}
+    windows = {}
+    for name in protocol_config['post_process'].get('filters', {}):
+        if name.endswith('_tm'):
+            windows.setdefault(default_tm_window(protocol_config, name), []).append(name)
+    for (low, high, source), names in windows.items():
+        log.info(f"Auto-generated Tm filter {_number(low)}-{_number(high)} °C ({reasons[source]}): {', '.join(names)}")
+        if source == 'default':
+            log.warning("hybridization sets Tm conditions but no temperature_c, so the auto-generated Tm "
+                        f"filters assume 37 °C ({_number(low)}-{_number(high)} °C); declare your "
+                        "hybridization temperature as hybridization.temperature_c.")
+
+
 def _generate_default_post_process(protocol_config: dict, attributes: dict) -> dict:
     """
     Generate default post_process configuration based on attributes.
+    Tm filters are 50-90 °C, or [T, T + 40] °C at the declared hybridization temperature T.
     """
     source = protocol_config['extracts']['target_region'].get('source', 'genome')
     is_dna_mode = (source == 'genome')
+    tm_protocol = {**protocol_config, 'attributes': attributes}
     
     post_process = {
         'filters': {},
@@ -205,7 +242,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
     
     if 'target_tm' in attributes:
         post_process['filters']['target_tm'] = {
-            'condition': 'target_tm >= 50 & target_tm <= 90'  # Tm in Celsius
+            'condition': _tm_condition(tm_protocol, 'target_tm')  # Tm in Celsius
         }
     
     # Mode-specific filters
@@ -228,7 +265,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
         # Add Tm filters for all probes/parts
         if attr_name.endswith('_tm'):
             post_process['filters'][attr_name] = {
-                'condition': f'{attr_name} >= 50 & {attr_name} <= 90'
+                'condition': _tm_condition(tm_protocol, attr_name)
             }
         
         # Add GC filters for probe-level only (not parts)
@@ -298,12 +335,11 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
     #     avoid_otp: {}
     #     equal_space: {}
     # These should be treated as "missing" so defaults can be generated, and RNA mode
-    # must not carry DNA-only steps.
+    # must not carry the DNA-only avoid_otp step (equal_space works in both modes).
     pp = protocol_config.get('post_process')
     if isinstance(pp, dict):
         if not is_dna_mode:
             pp.pop('avoid_otp', None)
-            pp.pop('equal_space', None)
         # Drop empty/None/list stubs at top-level, and steps whose options are
         # all blank, e.g. `remove_overlap: {location_interval: }`
         pp = {k: v for k, v in pp.items() if not _is_blank_step(v)}
@@ -315,7 +351,7 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
         protocol_config['attributes'] = _generate_default_attributes(protocol_config)
     
     # 3.1 Validate hybridization conditions (protocol block and per-attribute overrides)
-    from .hybridization import validate_protocol_hybridization, TM_DEFAULTS
+    from .hybridization import validate_protocol_hybridization
     validate_protocol_hybridization(protocol_config)
     
     # 4. Auto-complete post_process if missing (dynamic generation based on attributes)
@@ -325,9 +361,7 @@ def _validate_and_normalize_protocol(protocol_config: dict) -> dict:
             protocol_config, 
             protocol_config['attributes']
         )
-        if any(key in (protocol_config.get('hybridization') or {}) for key in TM_DEFAULTS):
-            log.warning("Auto-generated Tm filters (50-90 °C) were chosen for the legacy primer3 "
-                        "conditions; review them for the declared hybridization conditions.")
+        _log_tm_windows(protocol_config)
     
     # 5. Auto-complete summary if missing (dynamic generation based on mode and attributes)
     if 'summary' not in protocol_config or not protocol_config['summary']:
@@ -388,6 +422,14 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     
     This command runs the entire pipeline from genome index building to final probe generation.
     Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
+
+    \b
+    Exit status (with 0, 1 and 3, summary.json and the --json output are written first):
+      0  probes were designed (status ok or partial)
+      1  the run failed (status error)
+      2  invalid command-line usage (missing or bad options)
+      3  the run finished without any probe (status no_probes,
+         no_probes_constructed, no_target_sequences or no_valid_targets)
     """
     uprobe = None
     protocol_config = None
@@ -430,11 +472,17 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     summary = getattr(uprobe, 'summary', None)
     if summary is None:
         summary = _write_failure_summary(protocol_config, error, Path(output))
+    _log_target_counts(summary)
     if json_output:
         from .report.run_summary import summary_json
         click.echo(summary_json(summary))
     if error is not None:
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
+    from .report.run_summary import NO_PROBE_STATUSES
+    if summary.get('status') in NO_PROBE_STATUSES:
+        log.error(f"No probes designed (status {summary['status']}): {summary.get('message')} "
+                  f"See {Path(output) / 'summary.json'}.")
+        sys.exit(EXIT_NO_PROBES)
 
 
 @contextlib.contextmanager
@@ -457,6 +505,21 @@ def _stdout_to_stderr():
         sys.stdout.flush()
         os.dup2(saved_fd, stdout_fd)
         os.close(saved_fd)
+
+
+def _log_target_counts(summary: dict) -> None:
+    """Final probes per target, with the number requested by equal_space and any shortfall."""
+    targets = summary.get('targets') or {}
+    if summary.get('status') == 'error' or not targets:
+        return
+    counts = ', '.join(f"{name} {entry['final']}" + (f"/{entry['requested_probes']}" if entry.get('requested_probes') else '')
+                       for name, entry in targets.items())
+    requested = any(entry.get('requested_probes') for entry in targets.values())
+    log.info(f"Final probes per target{' (final/requested)' if requested else ''}: {counts}")
+    for warning in summary.get('warnings') or []:
+        if warning.get('code') == 'fewer_probes_than_requested':
+            short = ', '.join(f"{name} {c['final']} of {c['requested']}" for name, c in warning['counts'].items())
+            log.warning(f"{warning['message']} {short}")
 
 
 def _write_failure_summary(protocol_config, error, output_dir: Path) -> dict:

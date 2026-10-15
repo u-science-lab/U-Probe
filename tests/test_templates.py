@@ -136,8 +136,19 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     result = add_attributes(combined, {**protocol, 'attributes': offline}, {})
     assert result[list(offline)].notna().all().all()
     # Post-processing runs on the offline attributes (genome-only filters skip missing columns).
-    offline_pp = {k: v for k, v in pp.items() if k not in ('avoid_otp', 'equal_space')}
-    post_process(result, {**protocol, 'post_process': offline_pp})
+    offline_pp = {k: v for k, v in pp.items() if k != 'avoid_otp'}
+    processed = post_process(result, {**protocol, 'post_process': offline_pp})
+    if 'equal_space' in pp:
+        assert len(processed) <= pp['equal_space']['number_desired']
+
+
+@pytest.mark.parametrize('name, count', [('smfish_stellaris', 48), ('merfish', 92), ('seqfish_plus', 24),
+                                         ('hcr_v3', 20), ('starmap', 4), ('padlock_iss', 5)])
+def test_published_probe_counts_per_gene(name, count):
+    protocol = _validate_and_normalize_protocol(load_template(name))
+    assert protocol['post_process']['equal_space'] == {'number_desired': count}
+    sources = {row['parameter']: row for row in protocol['meta']['parameter_sources']}
+    assert sources.get('post_process.equal_space.number_desired', {'value': count})['value'] == count
 
 
 # Published target windows and oligos: the templates must rebuild them exactly.

@@ -29,7 +29,7 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
-from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, validate_protocol_hybridization
+from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .process import parse_condition
 from .sampling import normalize_sampling
@@ -57,7 +57,7 @@ ATTRIBUTE_TYPES = {
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'equal_space', 'summary')
-DNA_ONLY_STEPS = ('avoid_otp', 'equal_space')
+DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
 OPERATORS = ('<=', '>=', '<', '>', '==')
 OPERATOR_FIXES = {'=>': '>=', '=<': '<=', '=': '=='}
@@ -65,8 +65,8 @@ SUMMARY_KEYS = ('report_name', 'attributes', 'report')
 SUMMARY_STATS = ('count', 'mean', 'std', 'min', 'max', 'median', 'q25', 'q75', 'range')
 ALIGN_INDEXES = {'bowtie2': ('bowtie2-build', 'bowtie2'), 'blast': ('makeblastdb',), 'mmseqs': ('mmseqs',)}
 # Columns written by UProbeAPI.generate_target_seqs, and by avoid_otp.
-TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'exon_name', 'utr_name',
-                  'transcript_names', 'n_trans', 'layout_id', 'target_region')
+TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_start', 'target_end',
+                  'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
 OTP_COLUMNS = ('on_target', 'off_target', 'target_ratio')
 IUPAC = set('ACGTURYSWKMBDHVN')
 REGION_RE = re.compile(r'^([^:\s]+):(\d+)-(\d+)$')
@@ -319,6 +319,8 @@ class _Validator:
         self.check_hybridization()
         protocol, generated = self.normalize()
         self.check_attributes(protocol, 'attributes' in generated)
+        if 'post_process' in generated:
+            self.check_default_tm_filters(protocol)
         self.check_post_process(protocol)
         self.check_summary(protocol)
         if self.genomes is not None:
@@ -710,6 +712,25 @@ class _Validator:
                         '(top-level hybridization)') if 'only supported' in str(exc) else HYBRIDIZATION_HINT
                 self.error(path, str(exc), hint)
 
+    def check_default_tm_filters(self, protocol):
+        """Generated Tm filters start at the hybridization temperature, or at 37 °C when none is declared."""
+        filters = (protocol.get('post_process') or {}).get('filters')
+        assumed = {}
+        for name in (filters if isinstance(filters, dict) else {}):
+            if not name.endswith('_tm'):
+                continue
+            try:
+                low, high, source = default_tm_window(protocol, name)
+            except ValueError:
+                return  # invalid conditions are reported by check_hybridization
+            if source == 'default':
+                assumed[name] = f'{low:g}-{high:g} °C'
+        if assumed:
+            self.warning(('hybridization',), 'salt, probe or formamide conditions are set but temperature_c is not, '
+                         f'so the generated Tm filters ({", ".join(assumed)}) assume the default 37 °C and keep '
+                         f'{next(iter(assumed.values()))}',
+                         'add temperature_c: <your hybridization temperature>, or write post_process.filters')
+
     # -- runtime normalization -------------------------------------------
     def normalize(self):
         """Run the normalization of `uprobe run`; return (protocol, auto-generated sections)."""
@@ -811,7 +832,7 @@ class _Validator:
         self._check_filters(post_process.get('filters'), columns)
         self._check_sorts(post_process.get('sorts'), columns)
         self._check_remove_overlap(post_process.get('remove_overlap'))
-        self._check_equal_space(post_process.get('equal_space'))
+        self._check_equal_space(post_process.get('equal_space'), post_process.get('remove_overlap'))
         self._check_avoid_otp(post_process.get('avoid_otp'))
 
     def _check_filters(self, filters, columns):
@@ -934,7 +955,7 @@ class _Validator:
         if type(value) is not int or value <= 0:
             self.error(path, f'number_desired must be a positive integer, got {value!r}', 'number_desired: 50')
 
-    def _check_equal_space(self, config):
+    def _check_equal_space(self, config, remove_overlap):
         path = ('post_process', 'equal_space')
         if config is None:
             return
@@ -954,6 +975,23 @@ class _Validator:
                            f'{key}:\n  number_desired: 50')
             else:
                 self._check_positive_int(path + (key, 'number_desired'), value['number_desired'])
+                for option in value:
+                    if option != 'number_desired':
+                        self.warning(path + (key, option), f'unknown option {option!r} is ignored',
+                                     'the only option is number_desired')
+        if 'number_desired' not in config:
+            unset = [name for name in self.target_names if name not in config]
+            if unset:
+                self.warning(path, f'target(s) {", ".join(map(repr, unset))} have no number_desired and keep '
+                             'all their probes', 'add a global number_desired, or an entry per target')
+        region = self.region()
+        try:
+            _, _, step = normalize_sampling(region.get('length'), region.get('step'), region.get('overlap'))
+        except ValueError:
+            step = None  # reported under extracts
+        if remove_overlap is None and step is not None and self.lengths and step < self.lengths[0]:
+            self.warning(path, 'without remove_overlap, overlapping candidate windows can be selected',
+                         'add remove_overlap:\n  location_interval: 2   # minimum gap in bases between probes')
 
     def _check_avoid_otp(self, config):
         from .process.otp import parse_region

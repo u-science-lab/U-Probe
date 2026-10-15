@@ -16,6 +16,7 @@ import pandas as pd
 
 from uprobe import __version__
 from ..hybridization import effective_conditions
+from ..process.equal_space import number_desired
 
 SUMMARY_FILENAME = "summary.json"
 SUMMARY_SCHEMA_VERSION = 1
@@ -26,6 +27,8 @@ STATUS_MESSAGES = {
     "no_target_sequences": "No target region sequences were extracted.",
     "no_probes_constructed": "No probes were constructed from the target regions.",
 }
+# A run with one of these statuses finished without any probe (`uprobe run` exits with 3).
+NO_PROBE_STATUSES = ("no_probes", *STATUS_MESSAGES)
 
 
 def _tsv_cell(value):
@@ -113,6 +116,13 @@ def _hybridization_conditions(protocol):
         return None
 
 
+def _requested_probes(protocol, target):
+    """post_process.equal_space.number_desired for one target, or None."""
+    post_process = protocol.get("post_process")
+    value = number_desired(post_process.get("equal_space"), target) if isinstance(post_process, dict) else None
+    return value if type(value) is int and value > 0 else None
+
+
 def _relative(path, output_dir):
     if not path:
         return None
@@ -172,6 +182,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
             "probes_constructed": constructed.get(name, 0) if constructed is not None else None,
             "after_stage": {},
             "final": final_counts.get(name, 0) if final_counts is not None else 0,
+            "requested_probes": _requested_probes(protocol, name),
             "top_removal_stage": None,
         }
         if before_post is not None and stage_counts:
@@ -189,13 +200,17 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     error = run.get("error")
     final_total = len(final) if final is not None else 0
     without_probes = [name for name, entry in targets.items() if entry["final"] == 0]
+    # Targets that kept fewer probes than equal_space requested (all passing ones are kept).
+    shortfall = {name: {"requested": entry["requested_probes"], "final": entry["final"]}
+                 for name, entry in targets.items()
+                 if final is not None and entry["requested_probes"] and entry["final"] < entry["requested_probes"]}
     if error is not None:
         status = "error"
     elif run.get("status"):
         status = run["status"]
     elif final_total == 0:
         status = "no_probes"
-    elif invalid or without_probes:
+    elif invalid or without_probes or shortfall:
         status = "partial"
     else:
         status = "ok"
@@ -227,6 +242,10 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         warnings.append({"code": "targets_without_probes", "targets": without_probes,
                          "eliminated_by": {name: eliminated.get(name) for name in without_probes},
                          "message": f"{len(without_probes)} target(s) have no final probes."})
+    if shortfall:
+        warnings.append({"code": "fewer_probes_than_requested", "targets": list(shortfall), "counts": shortfall,
+                         "message": f"{len(shortfall)} target(s) have fewer probes than requested "
+                                    "(post_process.equal_space.number_desired); all their passing probes were kept."})
 
     if status == "error":
         message = f"Run failed during {run.get('step')}: {error}"
@@ -235,8 +254,14 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     elif status == "no_probes":
         message = "No candidate passed post-processing." + (f" Raw candidates: {raw_file}." if raw_file else "")
     elif status == "partial":
-        message = (f"{final_total} probes designed; {len(without_probes) + len(invalid)} of "
-                   f"{len(requested) or len(names)} requested target(s) have no probes.")
+        gaps = []
+        if without_probes or invalid:
+            gaps.append(f"{len(without_probes) + len(invalid)} of {len(requested) or len(names)} "
+                        "requested target(s) have no probes")
+        fewer = [name for name, counts in shortfall.items() if counts["final"] > 0]
+        if fewer:
+            gaps.append(f"{len(fewer)} target(s) have fewer probes than requested")
+        message = f"{final_total} probes designed; " + "; ".join(gaps) + "."
     else:
         message = f"{final_total} probes designed for all {len(names)} target(s)."
 

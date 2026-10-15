@@ -42,6 +42,9 @@ meta:
         genes as off-targets and dropped probes whose expected off-target
         expression exceeded 10,000 FPKM, which U-Probe does not model.
       quote: BLAST hits on any sequences other than the target gene with a 15-nt match were considered off targets
+    - parameter: post_process.equal_space.number_desired
+      value: 24
+      source: Eng 2019, Methods (24 primary probes per gene; see meta.limitations)
   hybridization:
     ssc: 2x
     source: >-
@@ -52,7 +55,7 @@ meta:
       Readout probes are hybridized at room temperature in 10% ethylene
       carbonate, 10% dextran sulfate, 4x SSC.
   limitations:
-    - Eng 2019 dropped genes with fewer than 24 probes and used 24 per gene; U-Probe keeps every passing non-overlapping region (RNA mode has no per-gene count).
+    - Eng 2019 dropped genes with fewer than 24 probes and used 24 per gene; equal_space keeps 24, spread evenly along the CDS, and all passing regions of a gene with fewer (summary.json reports the shortfall; drop such genes as Eng 2019 did).
     - "TODO: verify the 5'/3' order of the overhangs (Fig. 1a is unlabelled), any spacers, and the primer handles; the final probe was ~93 nt, more than 28 + 4 x 15."
     - "TODO: verify the minimum spacing between primary probes; regions are only required not to overlap here."
   replace:
@@ -131,6 +134,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 0
+  equal_space:
+    number_desired: 24
 
 summary:
   report_name: rna_report

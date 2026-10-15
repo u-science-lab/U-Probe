@@ -60,6 +60,9 @@ meta:
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: U-Probe approximation of target specificity; not specified by Choi 2018.
+    - parameter: post_process.equal_space.number_desired
+      value: 20
+      source: Choi 2018 (20 probe pairs per target for quantitative imaging; see meta.limitations)
   hybridization:
     ssc: 5x
     source: >-
@@ -74,8 +77,9 @@ meta:
   limitations:
     - >-
       Choi 2018 recommends 20 probe pairs per target for quantitative imaging
-      and at least 25 for single-molecule imaging; U-Probe keeps every passing
-      non-overlapping window (RNA mode has no per-gene count).
+      and at least 25 for single-molecule imaging; equal_space keeps 20 pairs,
+      spread evenly along the RNA (raise number_desired for single-molecule
+      imaging).
     - "TODO: verify GC, Tm and homopolymer criteria for HCR v3 probes; none are given in Choi 2018, so no GC or Tm filter is applied."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here)"
@@ -175,6 +179,8 @@ post_process:
       - target_mapped_genes
   remove_overlap:
     location_interval: 3
+  equal_space:
+    number_desired: 20
 
 summary:
   report_name: rna_report

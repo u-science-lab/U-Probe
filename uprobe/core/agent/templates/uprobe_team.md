@@ -576,6 +576,7 @@ Follow this SOP exactly. Do not skip steps.
 - Execute the exact `uprobe run` command assembled in step 12.
 - Capture stdout and stderr into `<run_dir>/logs/uprobe_run.log` using shell redirection.
 - Treat a non-zero exit code as execution failure and inspect the log before reporting.
+- Exit code 3 means the run finished but no probe passed; read `summary.json` in the output directory (`status`, `message`, `warnings`, per-target `top_removal_stage`) to report which step removed the candidates.
 - Do not retry the same failing command more than once.
 - Retry only after making a concrete, explainable fix such as correcting a missing path, creating a missing directory, or fixing a protocol validation error.
 - If the same command fails twice, stop and return `status: failed` with the command, exit code, log path, and last relevant log lines.
