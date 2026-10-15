@@ -27,6 +27,8 @@ STATUS_MESSAGES = {
     "no_target_sequences": "No target region sequences were extracted.",
     "no_probes_constructed": "No probes were constructed from the target regions.",
 }
+# A run with one of these statuses finished without any probe (`uprobe run` exits with 3).
+NO_PROBE_STATUSES = ("no_probes", *STATUS_MESSAGES)
 
 
 def _tsv_cell(value):

@@ -342,3 +342,64 @@ def test_cli_reports_targets_with_fewer_probes_than_requested(tmp_path, monkeypa
     logged = [str(call) for call in log.method_calls]
     assert any('ToyGeneA 6/6, ToyGeneB 6/6, ToyGeneC 40/100' in line for line in logged)
     assert any('warning' in line and 'ToyGeneC 40 of 100' in line for line in logged)
+
+
+NOTHING_PASSES = {'filters': {'target_gc': {'condition': 'target_gc >= 2'}}}
+
+
+@pytest.mark.parametrize('json_flag', [['--json'], []])
+def test_cli_exits_with_3_when_no_probe_passes(tmp_path, json_flag):
+    genomes = toy_genome(tmp_path, align_index=[])
+    protocol = toy_protocol(tmp_path, {'target_gc': {'target': 'target_region', 'type': 'gc_content'}},
+                            targets=('ToyGeneA',), post_process=NOTHING_PASSES)
+    output = tmp_path / 'out'
+    result = CliRunner().invoke(cli, ['run', '-p', str(protocol), '-g', str(genomes), '-o', str(output), *json_flag])
+    assert result.exit_code == 3, result.output
+    summary = read_summary(output)
+    assert summary['status'] == 'no_probes' and summary['counts']['candidate_windows'] > 0
+    assert json.loads(result.stdout) == summary if json_flag else result.stdout == ''
+
+
+def test_cli_exit_codes_for_construction_failure_usage_and_success(tmp_path):
+    genomes = toy_genome(tmp_path, align_index=[])
+    protocol = toy_protocol(tmp_path, {'target_gc': {'target': 'target_region', 'type': 'gc_content'}},
+                            targets=('ToyGeneA',))
+    output = tmp_path / 'out'
+    args = ['run', '-p', str(protocol), '-g', str(genomes), '-o', str(output), '--json']
+    assert CliRunner().invoke(cli, args).exit_code == 0
+    # A blank encoding: no probe can be built.
+    config = yaml.safe_load(protocol.read_text())
+    config['probes']['pad']['parts']['part1']['expr'] = "encoding[target]['BC1']"
+    config['encoding'] = None
+    protocol.write_text(yaml.safe_dump(config))
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 3 and json.loads(result.stdout)['status'] == 'no_probes_constructed'
+    # All targets invalid, continued with --continue-invalid.
+    config = yaml.safe_load(protocol.read_text().replace('ToyGeneA', 'NotAGene'))
+    protocol.write_text(yaml.safe_dump(config))
+    result = CliRunner().invoke(cli, args + ['--continue-invalid'])
+    assert result.exit_code == 3 and json.loads(result.stdout)['status'] == 'no_valid_targets'
+    # Without --continue-invalid this is an error (1); a missing option is a usage error (2).
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 1 and json.loads(result.stdout)['status'] == 'error'
+    assert CliRunner().invoke(cli, ['run', '-g', str(genomes)]).exit_code == 2
+
+
+def test_http_runner_is_unaffected_by_the_exit_code(tmp_path, monkeypatch):
+    # The web server runs the workflow through UProbeAPI, not the CLI: no SystemExit.
+    from uprobe.http.utils import task_control
+    from uprobe.http.utils.paths import get_genomes_yaml
+    from uprobe.http.utils.uprobe_runner import run_uprobe_workflow
+    monkeypatch.setenv('UPROBE_SERVER_ROOT', str(tmp_path / 'server'))
+    monkeypatch.setenv('PATH', os.environ['PATH'])  # restored after the runner prepends to it
+    # It detaches the worker process (setsid) and reads /proc.
+    monkeypatch.setattr(task_control, 'register_task_process', lambda *args, **kwargs: None)
+    genomes = toy_genome(tmp_path, align_index=[])
+    get_genomes_yaml().write_text(genomes.read_text())
+    protocol = toy_protocol(tmp_path, {'target_gc': {'target': 'target_region', 'type': 'gc_content'}},
+                            targets=('ToyGeneA',), post_process=NOTHING_PASSES)
+    result = run_uprobe_workflow(protocol_yaml=protocol.read_text(), username='tester', task_id='t1',
+                                 output_dir=str(tmp_path / 'task'), threads=1, raw_csv=False,
+                                 continue_invalid_targets=False, log_path=str(tmp_path / 'task.log'))
+    assert result['ok'] and result['no_filtered_probes'], result.get('error')
+    assert read_summary(tmp_path / 'task')['status'] == 'no_probes'

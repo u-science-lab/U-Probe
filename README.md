@@ -168,7 +168,16 @@ Useful flags:
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
 
-Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr; the exit status is 1 when the run fails.
+Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr.
+
+Exit status of `uprobe run` (`summary.json` and the `--json` output are written before it exits):
+
+| Code | Meaning | `status` |
+| --- | --- | --- |
+| 0 | Probes were designed | `ok`, `partial` |
+| 1 | The run failed | `error` |
+| 2 | Invalid command-line usage (missing or bad options) | none; no summary is written |
+| 3 | The run finished without any probe | `no_probes`, `no_probes_constructed`, `no_target_sequences`, `no_valid_targets` |
 
 #### 🔧 Step-by-Step Execution
 For advanced users who need intermediate results or custom workflows, you can execute each step individually:

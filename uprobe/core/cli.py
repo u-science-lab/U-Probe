@@ -16,6 +16,10 @@ from uprobe import __version__
 
 log = get_logger(__name__)
 
+# Exit status of `uprobe run`; click exits with 2 on usage errors.
+EXIT_ERROR = 1
+EXIT_NO_PROBES = 3
+
 
 def _extract_probe_targets(probes_config: dict) -> list:
     """
@@ -418,6 +422,14 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     
     This command runs the entire pipeline from genome index building to final probe generation.
     Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
+
+    \b
+    Exit status (with 0, 1 and 3, summary.json and the --json output are written first):
+      0  probes were designed (status ok or partial)
+      1  the run failed (status error)
+      2  invalid command-line usage (missing or bad options)
+      3  the run finished without any probe (status no_probes,
+         no_probes_constructed, no_target_sequences or no_valid_targets)
     """
     uprobe = None
     protocol_config = None
@@ -465,7 +477,12 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
         from .report.run_summary import summary_json
         click.echo(summary_json(summary))
     if error is not None:
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
+    from .report.run_summary import NO_PROBE_STATUSES
+    if summary.get('status') in NO_PROBE_STATUSES:
+        log.error(f"No probes designed (status {summary['status']}): {summary.get('message')} "
+                  f"See {Path(output) / 'summary.json'}.")
+        sys.exit(EXIT_NO_PROBES)
 
 
 @contextlib.contextmanager
