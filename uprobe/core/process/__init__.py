@@ -78,10 +78,67 @@ def sort_table(df: pd.DataFrame,
         return df  
     return df.sort_values(by=valid_keys, ascending=valid_ascending)
 
+def _split_names(value) -> list:
+    """Transcript names of a 'T1, T2' cell."""
+    if not isinstance(value, str):
+        return []
+    return [name.strip() for name in value.split(',') if name.strip()]
+
+
+def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
+                     location_interval: int) -> list:
+    """Index labels of the rows to keep, group by group.
+
+    Rows are visited by start (ties in table order, where the shorter
+    windows of a start come first), and a row is kept when it starts more
+    than location_interval bases after the end of the last kept row.
+    """
+    work = df[group_cols].assign(_start=bounds['start'], _end=bounds['end'])
+    work = work.sort_values(by=group_cols + ['_start'], kind='stable')
+    keep = []
+    for _, group in work.groupby(group_cols, dropna=False, sort=False):
+        current_end = None
+        for label, start, end in zip(group.index, group['_start'], group['_end']):
+            if current_end is None or start > current_end + location_interval:
+                keep.append(label)
+                current_end = end
+    return keep
+
+
+def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_interval: int) -> pd.DataFrame:
+    """remove_overlap for exon, CDS and UTR windows, on each target's merged exon model.
+
+    target_start/target_end place every window on the gene's merged exon
+    model (gen.fun.segment_offsets), so windows of alternative exon entries
+    of different transcripts are compared, and a site that several entries
+    contain is kept once; the kept row lists the transcripts of all of them.
+    """
+    bounds = pd.DataFrame({'start': pd.to_numeric(df['target_start'], errors='coerce'),
+                           'end': pd.to_numeric(df['target_end'], errors='coerce')}, index=df.index)
+    if bounds.isna().any().any():  # direct sequences: positions along the sequence itself
+        bounds = bounds.fillna(region_bounds(df))
+    keep = _non_overlapping(df, ['target'], bounds, location_interval)
+    result = df.loc[keep].copy()
+    if transcript_col:
+        sites = list(zip(df['target'], bounds['start'], bounds['end']))
+        names = {}
+        for site, cell in zip(sites, df[transcript_col]):
+            names.setdefault(site, set()).update(_split_names(cell))
+        site_of = dict(zip(df.index, sites))
+        for label in keep:
+            merged = sorted(names[site_of[label]])
+            if len(merged) > len(_split_names(result.at[label, transcript_col])):
+                result.at[label, transcript_col] = ', '.join(merged)
+                if 'n_trans' in result.columns:
+                    result.at[label, 'n_trans'] = len(merged)
+    return result.reset_index(drop=True)
+
+
 def remove_overlap(df: pd.DataFrame, 
                    config: dict,
                    location_interval: int
                    ) -> pd.DataFrame:
+    df = df.reset_index(drop=True)
     transcript_col = None
     if 'transcript_name' in df.columns:
         transcript_col = 'transcript_name'
@@ -90,6 +147,9 @@ def remove_overlap(df: pd.DataFrame,
     if transcript_col:
         df[transcript_col] = df[transcript_col].apply(lambda x: 
                                                      ', '.join(x) if isinstance(x, list) else x)
+    if 'target_start' in df.columns and 'target' in df.columns:
+        return _remove_overlap_along_targets(df, transcript_col, location_interval)
+    if transcript_col:
         # Positions are per target and per extracted exon or UTR: exon/UTR
         # windows are numbered within their exon or UTR, and direct-sequence
         # targets all share the transcript name 'custom'. Keep rows whose
