@@ -242,6 +242,23 @@ def test_aligner_requirements(dna, genomes):
     assert 'jellyfish: true' in finding.suggestion
 
 
+def test_hybridization_checks(dna):
+    attributes = dna['attributes']
+    dna['hybridization'] = {'temperature_c': 37, 'na_mM': 390, 'formamid_pct': 30}
+    attributes['probe1_part2_tm']['hybridization'] = {'na_mM': 300, 'probe_nM': 5}
+    attributes['probe1_part2_foldScore']['hybridization'] = {'temperature_c': 'warm'}
+    attributes['probe1_part2_gcContent']['hybridization'] = {'na_mM': 300}
+    findings = validate_protocol(dna)
+    assert 'formamid_pct' in find(findings, 'hybridization').message
+    assert 'must be a number' in find(findings, 'attributes.probe1_part2_foldScore.hybridization').message
+    assert 'only supported' in find(findings, 'attributes.probe1_part2_gcContent.hybridization').message
+    assert not [f for f in findings if f.path.startswith('attributes.probe1_part2_tm')]
+    dna['hybridization']['formamide_pct'] = dna['hybridization'].pop('formamid_pct')
+    attributes['probe1_part2_foldScore']['hybridization'] = {'temperature_c': 30}
+    del attributes['probe1_part2_gcContent']['hybridization']
+    assert validate_protocol(dna) == []
+
+
 def test_attribute_types_match_add_attributes():
     from uprobe.core.attributes import _add_attributes
     source = inspect.getsource(_add_attributes)
@@ -310,6 +327,18 @@ def test_genome_config_checks(dna, genomes):
     findings = validate_protocol(dna, genomes)
     assert find(findings, 'hg38.fasta').file == 'genomes'
     assert 'align_index' in find(findings, 'hg38').message
+
+
+def test_genome_fetch_entry_keys_are_accepted(dna, genomes):
+    # Entries written by `uprobe genome fetch` also carry description, species, out and source.
+    expected = validate_protocol(dna, genomes)
+    genomes['hg38'].update(
+        description='Human GRCh38 (Ensembl release 115, primary_assembly)', species='homo_sapiens',
+        out=str(Path(genomes['hg38']['fasta']).parent),
+        source={'provider': 'Ensembl', 'division': 'vertebrates', 'release': 115, 'assembly': 'GRCh38',
+                'sequence': 'primary_assembly', 'fasta_url': 'https://ftp.ensembl.org/pub/x.fa.gz',
+                'gtf_url': 'https://ftp.ensembl.org/pub/x.gtf.gz', 'manifest': 'genome_source.json'})
+    assert validate_protocol(dna, genomes) == expected
 
 
 def test_check_targets_against_gtf_and_fasta(genomes):

@@ -29,6 +29,7 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
+from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .process import parse_condition
 from .sampling import normalize_sampling
@@ -54,7 +55,7 @@ ATTRIBUTE_TYPES = {
     'mapped_sites': 'bowtie2', 'mapped_genes': 'bowtie2', 'kmer_count': 'jellyfish',
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
-ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size')
+ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp', 'equal_space')
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -112,6 +113,11 @@ GENOME_SNIPPET = ('hg38:\n'
                   '  gtf: /path/to/hg38.gtf\n'
                   '  align_index: [bowtie2]\n'
                   '  jellyfish: false')
+HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELDS) + ', e.g.\n'
+                      'hybridization:\n'
+                      '  temperature_c: 37\n'
+                      '  na_mM: 390          # 2x SSC\n'
+                      '  formamide_pct: 30')
 OTP_SNIPPET = ('avoid_otp:\n'
                '  chr1:1000-2000:          # a target\n'
                '    target_regions: [chr1:1000-2000]\n'
@@ -310,6 +316,7 @@ class _Validator:
         self.check_targets()
         self.check_probes()
         self.check_encoding()
+        self.check_hybridization()
         protocol, generated = self.normalize()
         self.check_attributes(protocol, 'attributes' in generated)
         self.check_post_process(protocol)
@@ -688,6 +695,24 @@ class _Validator:
                 if key not in self.target_names:
                     self.warning(('encoding', key), f'encoding entry {key!r} is not a target and is never used',
                                  _did_you_mean(key, self.target_names, 'targets'))
+
+    # -- hybridization conditions ----------------------------------------
+    def check_hybridization(self):
+        """Check the protocol block and each attribute override on its own, so every one is reported."""
+        blocks = []
+        if 'hybridization' in self.protocol:
+            blocks.append((('hybridization',), {'hybridization': self.protocol['hybridization']}))
+        attributes = self.protocol.get('attributes')
+        for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
+            if isinstance(attr, dict) and 'hybridization' in attr:
+                blocks.append((('attributes', name, 'hybridization'), {'attributes': {name: attr}}))
+        for path, protocol in blocks:
+            try:
+                validate_protocol_hybridization(protocol)
+            except ValueError as exc:
+                hint = ('remove it; conditions apply to Tm and fold_score attributes or to the whole protocol '
+                        '(top-level hybridization)') if 'only supported' in str(exc) else HYBRIDIZATION_HINT
+                self.error(path, str(exc), hint)
 
     # -- runtime normalization -------------------------------------------
     def normalize(self):
