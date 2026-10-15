@@ -15,6 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 from uprobe import __version__
+from ..hybridization import effective_conditions
 
 SUMMARY_FILENAME = "summary.json"
 SUMMARY_SCHEMA_VERSION = 1
@@ -104,6 +105,14 @@ def _attribute_stats(df, protocol):
     return stats
 
 
+def _hybridization_conditions(protocol):
+    """Tm/fold_score conditions in effect per attribute, or None if there are none or they are invalid."""
+    try:
+        return effective_conditions(protocol) or None
+    except Exception:
+        return None
+
+
 def _relative(path, output_dir):
     if not path:
         return None
@@ -127,7 +136,8 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     error, requested_targets, target_validation ({'valid', 'invalid'}),
     targets (extracted windows), combined (targets + constructed probes),
     raw (after attributes), final (after post-processing), files
-    ({'xlsx', 'raw_xlsx', 'tsv', 'html'}), no_filtered_probes, raw_file.
+    ({'xlsx', 'raw_xlsx', 'tsv', 'html'}), no_filtered_probes, raw_file,
+    genome_source (the genome entry's ``source``, as written by ``uprobe genome fetch``).
     """
     protocol = protocol if isinstance(protocol, dict) else {}
     region = (protocol.get("extracts") or {}).get("target_region") or {}
@@ -231,6 +241,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         message = f"{final_total} probes designed for all {len(names)} target(s)."
 
     started, finished = run.get("started"), run.get("finished")
+    genome_source = run.get("genome_source")
     return {
         "schema_version": SUMMARY_SCHEMA_VERSION,
         "uprobe_version": __version__,
@@ -251,6 +262,8 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
             "valid_targets": valid,
             "invalid_targets": invalid,
             "hybridization": protocol.get("hybridization"),
+            "hybridization_conditions": _hybridization_conditions(protocol),
+            "genome_source": genome_source if isinstance(genome_source, dict) else None,
         },
         "counts": {
             "requested_targets": len(requested),

@@ -15,6 +15,7 @@ from click.testing import CliRunner
 
 from uprobe.core.api import UProbeAPI
 from uprobe.core.cli import cli
+from uprobe.core.hybridization import TM_DEFAULTS
 from uprobe.core.process import filter_table
 from uprobe.core.sampling import iter_target_windows
 
@@ -55,6 +56,10 @@ def test_summary_matches_result_tables(tmp_path):
     assert summary['protocol_name'] == 'summary_test'
     assert summary['inputs']['requested_targets'] == ['G1', 'G2']
     assert summary['inputs']['valid_targets'] == ['G1', 'G2'] and summary['inputs']['invalid_targets'] == []
+    # No hybridization block: the legacy (fisheye-compatible) Tm conditions are in effect.
+    assert summary['inputs']['hybridization'] is None
+    assert summary['inputs']['hybridization_conditions'] == {'target_tm': TM_DEFAULTS}
+    assert summary['inputs']['genome_source'] is None
 
     raw = api._report_raw_data
     after_filters = filter_table(raw.copy(), FILTERS).groupby('target').size()
@@ -95,6 +100,20 @@ def test_summary_matches_result_tables(tmp_path):
     assert summary['warnings'] == [{'code': 'targets_without_probes', 'targets': ['G2'],
                                     'eliminated_by': {'G2': 'Filters'},
                                     'message': '1 target(s) have no final probes.'}]
+
+
+def test_summary_records_conditions_and_genome_source(tmp_path):
+    api = make_api(tmp_path)
+    api.protocol['hybridization'] = {'temperature_c': 37, 'na_mM': 390, 'formamide_pct': 10}
+    api.protocol['attributes']['target_tm']['hybridization'] = {'probe_nM': 5}
+    source = {'provider': 'Ensembl', 'division': 'vertebrates', 'release': 115, 'assembly': 'GRCh38'}
+    api.genome = {'source': source}
+    api.run_workflow()
+    inputs = read_summary(tmp_path)['inputs']
+    assert inputs['hybridization'] == {'temperature_c': 37, 'na_mM': 390, 'formamide_pct': 10}
+    assert inputs['hybridization_conditions'] == {
+        'target_tm': {**TM_DEFAULTS, 'na_mM': 390, 'probe_nM': 5, 'formamide_pct': 10}}
+    assert inputs['genome_source'] == source
 
 
 def test_summary_when_nothing_passes_post_processing(tmp_path):

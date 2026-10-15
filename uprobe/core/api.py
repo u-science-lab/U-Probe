@@ -363,6 +363,8 @@ class UProbeAPI:
         """Write summary.json; failing to summarize never fails the run itself."""
         run['finished'] = datetime.now().astimezone()
         run['target_validation'] = getattr(self, 'target_validation', None)
+        genome = getattr(self, 'genome', None)
+        run['genome_source'] = genome.get('source') if isinstance(genome, dict) else None
         try:
             self.summary = build_run_summary(self.protocol, run, self.output_dir)
             path = write_run_summary(self.summary, self.output_dir / SUMMARY_FILENAME)
