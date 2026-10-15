@@ -1,0 +1,151 @@
+# U-Probe protocol template: padlock-probe in situ sequencing with RCA (HybISS).
+# Copy: `uprobe templates show padlock_iss -o protocol.yaml`, then replace
+# everything under meta.replace. The workflow ignores the `meta` block.
+meta:
+  name: padlock_iss
+  technology: Padlock-probe in situ sequencing with RCA (HybISS)
+  description: >-
+    mRNA is reverse transcribed in situ and the padlock probe (PLP) binds a
+    30-nt cDNA site with two 15-nt arms; ligation circularizes it and RCA
+    copies the backbone. Because the padlock binds cDNA, its arms carry the
+    mRNA (sense) sequence: the 70-nt PLP is
+    5'-[mRNA nt 16-30][ID, 20 nt][anchor, 20 nt][mRNA nt 1-15]-3', and its 5'
+    phosphate is added with T4 PNK. The gene-specific ID is read by bridge
+    probes and fluorescent detection oligos (hybridization-based readout);
+    the anchor is shared. Targets are 15 nt apart, 5 per gene. This is the
+    HybISS design of Gyllborg et al. 2020, an evolution of the padlock ISS of
+    Ke et al. 2013 (4-nt barcode read by sequencing by ligation).
+  citations:
+    - short: Gyllborg et al. 2020, Nucleic Acids Research (HybISS)
+      title: >-
+        Hybridization-based in situ sequencing (HybISS) for spatially resolved
+        transcriptomics in human and mouse brain tissue
+      doi: 10.1093/nar/gkaa792
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7641728/
+    - short: Ke et al. 2013, Nature Methods
+      title: In situ sequencing for RNA analysis in preserved tissue and cells
+      doi: 10.1038/nmeth.2563
+    - short: Moldia multi_padlock_design (padlock design code used by HybISS)
+      title: Moldia/multi_padlock_design
+      url: https://github.com/Moldia/multi_padlock_design
+  parameter_sources:
+    - parameter: extracts.target_region.length (2 x 15-nt arms)
+      value: 30
+      source: Gyllborg 2020, Methods
+      quote: arm length, 15; Tm, low 65, high 75; space between targets, 15 ... five targets were selected randomly per gene
+    - parameter: padlock template (arm order, ID and anchor)
+      value: "target_region[15:30] + ID (20) + anchor (20) + target_region[0:15]"
+      source: >-
+        Gyllborg 2020, Methods and Supplementary Table 1 (e.g. Pvalb target
+        CCCATCTCAGTCCTTCTCGCGGCCCTCCTG, PLP
+        CTCGCGGCCCTCCTG|TAGACGTAGTGAGCATGACT|TCTACGAGTTTGCAGTCACG|CCCATCTCAGTCCTT);
+        multi_padlock_design assembles probe[armlength:] + linker1 + barcode + linker2 + probe[0:armlength]
+      quote: two 15 nt arms, and a backbone with a 20 nt ID sequence and a 20 nt anchor sequence, resulting in a final 70 nt long PLP
+    - parameter: post_process.remove_overlap.location_interval
+      value: 15
+      source: Gyllborg 2020, Methods; gap in nt per multi_padlock_design lib/distributeprobes.py ("current -= armlength * 2 + interval")
+      quote: space between targets, 15
+    - parameter: post_process.filters.target_mapped_genes
+      value: "<= 1"
+      source: >-
+        U-Probe approximation. multi_padlock_design rejects targets with any
+        database hit above 50% coverage and 80% homology around the ligation
+        site, which U-Probe does not model.
+  hybridization:
+    temperature_c: 45
+    na_mM: 75
+    formamide_pct: 20
+    mg_mM: 10
+    probe_nM: 10
+    source: >-
+      Gyllborg 2020, Methods (10 nM per PLP, hybridized and ligated with Tth
+      ligase and RNase H, 37 C for 30 min then 45 C for 1.5 h; HybISS
+      protocols.io mix: Tth ligase buffer, 50 mM KCl, 20% formamide)
+    notes: >-
+      na_mM and mg_mM are the monovalent (K+/Na+) and divalent salt that
+      multi_padlock_design assumes for its Tm window (0.1 uM probe, 75 mM
+      monovalent, 10 mM divalent, 20% formamide); the buffer itself is not SSC.
+  tm_window:
+    applied: false
+    value: [65, 75]
+    target: target_region (the whole 30-nt arm pair)
+    conditions: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
+    source: Gyllborg 2020, Methods; multi_padlock_design readme.txt and lib/screenseq.py
+    note: >-
+      U-Probe's annealing_temperature currently assumes 50 mM Na+, 50 nM oligo,
+      no Mg2+ and no formamide, so this window is recorded and not used as a
+      filter.
+  limitations:
+    - Gyllborg 2020 picked 5 targets per gene at random; U-Probe keeps every passing site 15 nt apart (RNA mode has no per-gene count).
+    - The padlock binds cDNA, so in situ reverse transcription is required; for direct RNA padlocks (e.g. SplintR ligase) the arms would be the reverse complements instead.
+    - "TODO: verify GC criteria for HybISS padlock arms (none stated)."
+  replace:
+    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "targets: your gene names (Pvalb here)"
+    - "encoding: per gene, the 20-nt ID (bridge-probe site); TAGACGTAGTGAGCATGACT is the published mouse Pvalb ID from Gyllborg 2020 Supplementary Table 1, an example only"
+
+name: padlock_iss
+description: HybISS padlock probes, 2 x 15-nt arms on cDNA with 20-nt ID and anchor (Gyllborg et al. 2020)
+
+genome: mm10
+
+targets:
+  - Pvalb
+
+encoding:
+  Pvalb:
+    ID: TAGACGTAGTGAGCATGACT
+
+extracts:
+  target_region:
+    source: exon
+    length: 30
+    step: 1
+
+probes:
+  padlock:
+    template: "{arm_5}{id}TCTACGAGTTTGCAGTCACG{arm_3}"
+    parts:
+      arm_5:
+        expr: "target_region[15:30]"
+      id:
+        expr: "encoding[target]['ID']"
+      arm_3:
+        expr: "target_region[0:15]"
+
+attributes:
+  target_gc:
+    target: target_region
+    type: gc_content
+  target_tm:
+    target: target_region
+    type: annealing_temperature
+  arm_5_tm:
+    target: padlock.arm_5
+    type: annealing_temperature
+  arm_3_tm:
+    target: padlock.arm_3
+    type: annealing_temperature
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+
+post_process:
+  filters:
+    target_mapped_genes:
+      condition: target_mapped_genes <= 1
+  sorts:
+    is_ascending:
+      - target_mapped_genes
+  remove_overlap:
+    location_interval: 15
+
+summary:
+  report_name: rna_report
+  attributes:
+    - target_gc
+    - target_tm
+    - arm_5_tm
+    - arm_3_tm
+    - target_mapped_genes
