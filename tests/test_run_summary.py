@@ -102,6 +102,13 @@ def test_summary_matches_result_tables(tmp_path):
                                     'message': '1 target(s) have no final probes.'}]
 
 
+def test_summary_lists_files_for_a_relative_output_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    make_api(Path('out')).run_workflow()
+    files = read_summary(tmp_path / 'out')['output_files']
+    assert all(files[key] and (tmp_path / 'out' / files[key]).is_file() for key in ('xlsx', 'tsv', 'html'))
+
+
 def test_summary_records_conditions_and_genome_source(tmp_path):
     api = make_api(tmp_path)
     api.protocol['hybridization'] = {'temperature_c': 37, 'na_mM': 390, 'formamide_pct': 10}

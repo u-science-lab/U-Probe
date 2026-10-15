@@ -362,7 +362,9 @@ class UProbeAPI:
                                include_plots=self._include_plots,
                                generate_html=self._generate_html,
                                embed_plots=self._embed_plots)
-            run['files']['html'] = next(iter(reports.get('html_reports', [])), None)
+            # A name in output_dir like the tables; output_dir / name is relative for a relative -o.
+            html = next(iter(reports.get('html_reports', [])), None)
+            run['files']['html'] = Path(html).name if html else None
         log.info("--- U-Probe Workflow Completed ---")
         return df_processed
 
