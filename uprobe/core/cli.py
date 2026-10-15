@@ -1,4 +1,6 @@
 import sys
+import os
+import contextlib
 from pathlib import Path
 import logging
 import click
@@ -370,12 +372,22 @@ def cli(ctx, verbose, quiet):
               help='Continue execution even if some targets are invalid.')
 @click.option('--threads', '-t', default=10, type=int,
               help='Number of threads for computation. [default: 10]')
-def run(protocol, genomes, output, raw, continue_invalid, threads):
+@click.option('--json', 'json_output', is_flag=True,
+              help='Print the run summary (summary.json) to stdout; logs and tool output go to stderr.')
+def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     """
     Execute the complete probe design workflow.
     
     This command runs the entire pipeline from genome index building to final probe generation.
+    Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
     """
+    uprobe = None
+    protocol_config = None
+    error = None
+    # --json: keep stdout clean for the summary; logs and tool output go to stderr.
+    stdout_guard = contextlib.ExitStack()
+    if json_output:
+        stdout_guard.enter_context(_stdout_to_stderr())
     try:
         log.info("Starting U-Probe complete workflow...")
         
@@ -404,7 +416,52 @@ def run(protocol, genomes, output, raw, continue_invalid, threads):
             log.info(f"Workflow completed successfully with {len(result_df)} final probes!")
     except Exception as e:
         log.error(f"Workflow failed: {e}")
+        error = e
+    finally:
+        stdout_guard.close()
+    summary = getattr(uprobe, 'summary', None)
+    if summary is None:
+        summary = _write_failure_summary(protocol_config, error, Path(output))
+    if json_output:
+        from .report.run_summary import summary_json
+        click.echo(summary_json(summary))
+    if error is not None:
         sys.exit(1)
+
+
+@contextlib.contextmanager
+def _stdout_to_stderr():
+    """Send everything written to stdout, including tool subprocesses, to stderr."""
+    try:
+        stdout_fd, stderr_fd = sys.stdout.fileno(), sys.stderr.fileno()
+    except (AttributeError, OSError, ValueError):
+        # No real descriptors (e.g. click's CliRunner): redirect Python writes only.
+        with contextlib.redirect_stdout(sys.stderr):
+            yield
+        return
+    sys.stdout.flush()
+    saved_fd = os.dup(stdout_fd)
+    os.dup2(stderr_fd, stdout_fd)
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            yield
+    finally:
+        sys.stdout.flush()
+        os.dup2(saved_fd, stdout_fd)
+        os.close(saved_fd)
+
+
+def _write_failure_summary(protocol_config, error, output_dir: Path) -> dict:
+    """Summarize a run that failed before the workflow could write summary.json."""
+    from .report.run_summary import SUMMARY_FILENAME, build_run_summary, write_run_summary
+    summary = build_run_summary(protocol_config or {}, {'step': 'load_inputs',
+                                                        'error': error or RuntimeError('Run summary unavailable')})
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        write_run_summary(summary, output_dir / SUMMARY_FILENAME)
+    except OSError as e:
+        log.error(f"Could not write run summary: {e}")
+    return summary
 
 
 @cli.command(name='build-index')
