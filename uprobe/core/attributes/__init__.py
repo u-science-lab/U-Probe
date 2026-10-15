@@ -5,6 +5,10 @@ from pathlib import Path
 import pandas as pd
 from ._attributes import *
 from ..hybridization import resolve_conditions, tm_arguments
+from ..offtarget import BOWTIE2_LOCAL_MIN_LENGTH, mapped_genes_settings, short_for_bowtie2
+from ..utils import get_logger
+
+log = get_logger(__name__)
 
 def add_attributes(
         df_probes: pd.DataFrame,
@@ -95,23 +99,34 @@ def _add_attributes(
             else:
                 raise NotImplementedError(f"Aligner {attr['aligner']} is not implemented.")
         elif attr_type in {"mapped_genes"}:
-            if attr.get('aligner') == "bowtie2":
-                assert 'bowtie2' in genome.get('align_index', []), "bowtie2 must be enabled in genome align_index" 
+            if attr.get('aligner') in {"bowtie2", "bowtie"}:
+                settings = mapped_genes_settings(attr, f"attributes.{attr_name}")
+                aligner = settings['aligner']
+                assert aligner in genome.get('align_index', []), f"{aligner} must be enabled in genome align_index"
                 fasta_path = Path(genome['fasta'])
                 # fisheye calculates mapped genes against a transcriptome index,
                 # not against the genomic chromosome index.
-                index_prefix = fasta_path.parent / 'bowtie2_transcript' / fasta_path.stem
+                index_prefix = fasta_path.parent / f'{aligner}_transcript' / fasta_path.stem
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 # Row keys distinguish lengths at the same exon/start position.
                 unique_sequences = list(dict.fromkeys(df_probes[actual_target]))
                 recname2seq = {str(i): seq for i, seq in enumerate(unique_sequences)}
-                n_mapped_genes = count_n_bowtie2_aligned_genes(
-                    str(tmp_dir), recname2seq, task_id, str(index_prefix),
-                    attr.get("threads", 10)
-                )
-                sequence_hits = {seq: n_mapped_genes.get(str(i), 0) for i, seq in enumerate(unique_sequences)}
-                mapped_genes_values = [sequence_hits[seq] for seq in df_probes[actual_target]]
+                if aligner == "bowtie":
+                    gene_hits = bowtie_gene_hits(
+                        str(tmp_dir), recname2seq, task_id, str(index_prefix),
+                        settings['max_mismatches'], attr.get("threads", 10), settings['strand']
+                    )
+                else:
+                    short = sum(len(seq) < BOWTIE2_LOCAL_MIN_LENGTH for seq in unique_sequences)
+                    if short:
+                        log.warning(short_for_bowtie2(attr_name, short, len(unique_sequences)))
+                    gene_hits = bowtie2_gene_hits(
+                        str(tmp_dir), recname2seq, task_id, str(index_prefix),
+                        attr.get("threads", 10), settings['strand']
+                    )
+                sequence_hits = {seq: gene_hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
+                mapped_genes_values = [len(sequence_hits[seq]) for seq in df_probes[actual_target]]
                 df_probes[attr_name] = mapped_genes_values
             else:
                 raise NotImplementedError(

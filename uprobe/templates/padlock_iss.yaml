@@ -140,6 +140,12 @@ attributes:
     target: target_region
     type: mapped_genes
     aligner: bowtie2
+    # Bowtie2 local alignments find exact and 1-mismatch sites of 30-mers but
+    # only some 2-mismatch sites. For every transcript site within 2
+    # substitutions, add bowtie to the genome's align_index and use instead:
+    #   aligner: bowtie
+    #   max_mismatches: 2
+    #   strand: sense    # mRNA sites like target_region; the padlock binds their cDNA
 
 post_process:
   filters:

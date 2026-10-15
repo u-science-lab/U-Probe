@@ -1041,8 +1041,7 @@ def genome_list(genomes, as_json):
         click.echo(f"  fasta: {row['fasta']} ({'ok' if row['fasta_exists'] else 'MISSING'})")
         click.echo(f"  gtf:   {row['gtf']} ({'ok' if row['gtf_exists'] else 'MISSING'})")
         for aligner, status in row['indexes'].items():
-            click.echo(f"  {aligner} index: genome {state[status['genome']]}, "
-                       f"transcript {state[status['transcript']]}")
+            click.echo(f"  {aligner} index: " + ", ".join(f"{kind} {state[value]}" for kind, value in status.items()))
         click.echo(f"  jellyfish: {'on' if row['jellyfish'] else 'off'}")
         source = row['source'] or {}
         if source.get('release'):

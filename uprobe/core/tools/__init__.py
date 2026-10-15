@@ -1,6 +1,6 @@
 from pathlib import Path
 from .aligner import (
-    build_bowtie2_index, build_blast_db, build_mmseqs_index
+    build_bowtie2_index, build_bowtie_index, build_blast_db, build_mmseqs_index
 )
 from uprobe.core.gen.fun import extract_trans_seqs
 from uprobe.core.utils import get_logger
@@ -11,6 +11,10 @@ _BOWTIE2_SMALL_SUFFIXES = (
     ".1.bt2", ".2.bt2", ".3.bt2", ".4.bt2", ".rev.1.bt2", ".rev.2.bt2"
 )
 _BOWTIE2_LARGE_SUFFIXES = tuple(suffix + "l" for suffix in _BOWTIE2_SMALL_SUFFIXES)
+_BOWTIE_SMALL_SUFFIXES = (
+    ".1.ebwt", ".2.ebwt", ".3.ebwt", ".4.ebwt", ".rev.1.ebwt", ".rev.2.ebwt"
+)
+_BOWTIE_LARGE_SUFFIXES = tuple(suffix + "l" for suffix in _BOWTIE_SMALL_SUFFIXES)
 _BLAST_SUFFIXES = (".nin", ".nhr", ".nsq")
 # mmseqs createdb writes <prefix>, <prefix>_h and their .dbtype/.index; createindex adds <prefix>.idx*.
 _MMSEQS_SUFFIXES = ("", ".dbtype", ".index", "_h", "_h.dbtype", "_h.index", ".idx", ".idx.dbtype", ".idx.index")
@@ -33,6 +37,16 @@ def _bowtie2_index_exists(index_prefix: Path) -> bool:
     )
 
 
+def _bowtie_index_exists(index_prefix: Path) -> bool:
+    """Return True for either a complete .ebwt or .ebwtl (Bowtie 1) index."""
+    prefix = str(index_prefix)
+    return any(
+        all(Path(prefix + suffix).is_file() and Path(prefix + suffix).stat().st_size > 0
+            for suffix in suffixes)
+        for suffixes in (_BOWTIE_SMALL_SUFFIXES, _BOWTIE_LARGE_SUFFIXES)
+    )
+
+
 def _mmseqs_index_exists(index_prefix: Path) -> bool:
     return all(Path(str(index_prefix) + suffix).is_file()
                and Path(str(index_prefix) + suffix).stat().st_size > 0
@@ -44,6 +58,14 @@ _GENOME_INDEX_EXISTS = {
     "blast": _blast_index_exists,
     "mmseqs": _mmseqs_index_exists,
 }
+_TRANSCRIPT_INDEX_EXISTS = {
+    "bowtie2": _bowtie2_index_exists,
+    "bowtie": _bowtie_index_exists,
+    "blast": _blast_index_exists,
+}
+# Bowtie 1 only serves mapped_genes (aligner: bowtie), which searches the
+# transcriptome, so it gets no genome index.
+_TRANSCRIPT_ONLY = ("bowtie",)
 
 def build_transcripts_index(gtf: Path,
                              fasta: Path,
@@ -51,14 +73,14 @@ def build_transcripts_index(gtf: Path,
                              threads: int = 10,
                              aligner: str = "bowtie2"
                             ) -> str:
-    if aligner not in {"bowtie2", "blast"}:
+    if aligner not in _TRANSCRIPT_INDEX_EXISTS:
         raise ValueError(f"Unsupported transcript aligner: {aligner}")
     expected_dir = f"{aligner}_transcript"
-    if outdir.name in {"blast_transcript", "bowtie2_transcript"} and outdir.name != expected_dir:
+    if outdir.name in {f"{name}_transcript" for name in _TRANSCRIPT_INDEX_EXISTS} and outdir.name != expected_dir:
         raise ValueError(f"{aligner} transcript index must use {expected_dir}, got {outdir}")
     outdir.mkdir(parents=True, exist_ok=True)
     index_prefix = outdir / fasta.stem
-    index_exists = _bowtie2_index_exists if aligner == "bowtie2" else _blast_index_exists
+    index_exists = _TRANSCRIPT_INDEX_EXISTS[aligner]
     if index_exists(index_prefix):
         return str(index_prefix)
     candidates = (fasta.parent / "transcript.fa", outdir / "transcript.fa")
@@ -70,6 +92,8 @@ def build_transcripts_index(gtf: Path,
         raise ValueError(f"Transcript FASTA is empty or missing: {trans_fasta_path}")
     if aligner == "bowtie2":
         build_bowtie2_index(trans_fasta_path, index_prefix, threads)
+    elif aligner == "bowtie":
+        build_bowtie_index(trans_fasta_path, index_prefix, threads)
     else:
         build_blast_db(trans_fasta_path, index_prefix, title=f"{fasta.stem}_transcript")
     if not index_exists(index_prefix):
@@ -88,6 +112,8 @@ def build_genome(genome: dict,
     prefix = fasta_path.stem
     aligner_index: list = genome['align_index']
     for aligner in aligner_index:
+        if aligner in _TRANSCRIPT_ONLY:
+            continue
         if aligner not in _GENOME_INDEX_EXISTS:
             raise NotImplementedError(f"aligner {aligner} is not implemented")
         index_dir = fasta_path.parent / f"{aligner}_genome"/ prefix
@@ -103,7 +129,7 @@ def build_genome(genome: dict,
         else:
             build_mmseqs_index(fasta_path, str(index_dir))
     for aligner in aligner_index:
-        if aligner not in {"bowtie2", "blast"}:
+        if aligner not in _TRANSCRIPT_INDEX_EXISTS:
             continue
         tran_index_dir = fasta_path.parent / f"{aligner}_transcript"
         build_transcripts_index(gtf=Path(genome['gtf']),

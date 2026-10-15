@@ -57,6 +57,7 @@ meta:
       formamide in 2x SSC with 100 mg/mL dextran sulfate.
   limitations:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); U-Probe keeps every passing non-overlapping site (RNA mode has no per-gene count).
+    - With aligner bowtie2, 20-mers do not align (Bowtie2's local mode needs at least 22 nt), so target_mapped_genes is 0 and does not filter; aligner bowtie (see the attribute) searches every site within max_mismatches substitutions.
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here)"
@@ -105,6 +106,13 @@ attributes:
     target: target_region
     type: mapped_genes
     aligner: bowtie2
+    # Bowtie2's local mode cannot align sequences shorter than 22 nt, so for
+    # these 20-mers this attribute is 0 and its filter keeps every probe. For
+    # every transcript site within 2 substitutions on the strand the probe
+    # binds, add bowtie to the genome's align_index and use instead:
+    #   aligner: bowtie
+    #   max_mismatches: 2
+    #   strand: sense
 
 post_process:
   filters:

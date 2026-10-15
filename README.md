@@ -22,7 +22,7 @@ Whether you are designing standard probes for established protocols or developin
 
 - **Universal Probe Architecture**: Features a declarative configuration system and a directed acyclic graph (DAG)-based assembly engine. Easily design arbitrary and complex multi-part probe structures (e.g., DNA-FISH, smFISH, MERFISH, seqFISH, $\pi$-FISH, MiP-seq, RCA) without modifying any source code.
 - **Agentic AI Workflow**: Integrates hierarchical LLM-based AI agents (via PantheonOS) for conversational design. Users can describe experimental goals in plain language or provide scRNA-seq data, and the agents will autonomously construct configurations, select parameters, and execute the design pipeline.
-- **Comprehensive Quality Filtering**: Automatically computes and filters candidates based on GC content, melting temperature, secondary structure stability (via ViennaRNA), off-target mapping (via Bowtie2), and k-mer frequency (via Jellyfish).
+- **Comprehensive Quality Filtering**: Automatically computes and filters candidates based on GC content, melting temperature, secondary structure stability (via ViennaRNA), off-target mapping (via Bowtie2, or exhaustively within a number of mismatches via Bowtie 1), and k-mer frequency (via Jellyfish).
 - **End-to-End Automation**: Streamlines the entire process from target sequence extraction to advanced post-processing, including overlap removal and equal spacing for tiling designs.
 - **Extensible API & Web UI**: Offers a clean Python API for programmatic integration, a command-line interface, and an interactive web server for visual workflow management and result analysis.
 
@@ -53,6 +53,8 @@ conda env create -f environments.yaml
 conda activate uprobe
 pip install -e .
 ```
+
+The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`; Bowtie 1 (`bowtie`) is only needed for the [exhaustive off-target search](#off-target-search).
 
 ## Usage Guide
 
@@ -257,9 +259,12 @@ GRCh38:
   gtf: "/path/to/GRCh38.gtf"
   align_index:
     - bowtie2
+    - bowtie     # optional: Bowtie 1 transcriptome index for mapped_genes with aligner: bowtie
     - blast
   jellyfish: false  
 ```
+
+`uprobe build-index` builds the indexes of the aligners in `align_index`; the transcriptome (`transcript.fa`, spliced from the GTF) is indexed for `bowtie2`, `blast` and `bowtie`, which has no genome index.
 
 Entries written by `uprobe genome fetch` also record their origin under `source` (Ensembl division, release, assembly and URLs), which each run copies into `summary.json`; the verified checksums are kept in `genome_source.json` next to the files. The workflow ignores keys it does not use.
 
@@ -351,7 +356,7 @@ summary:
   - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable), at `hybridization.temperature_c` when set.
   - `self_match`: Calculates the potential for self-dimerization.
   - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites.
-  - `mapped_genes`: Counts the number of unique genes the sequence aligns to (via Bowtie2).
+  - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search).
   - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
@@ -400,6 +405,29 @@ attributes:
 - A per-attribute override suits a published Tm window that was computed under other conditions than the experiment's. The MERFISH template, for example, hybridizes in 2x SSC with 30% formamide (top-level block) but computes `binding_tm` at 300 mM Na+, 5 nM probe and no formamide, the conditions of its 66-76 °C window.
 - `uprobe validate` reports an invalid block or override with its path. The conditions in effect are logged for every Tm/fold attribute and recorded in `summary.json` (`inputs.hybridization_conditions`). When a protocol declares them, they are also shown in the HTML report header and stored in the result `.xlsx` as custom document properties (`hybridization:<attribute>`).
 - Auto-generated Tm filters (50-90 °C) are not adjusted. Review them when you declare FISH conditions; U-Probe logs a warning when it generates them.
+
+#### Off-target search
+
+A `mapped_genes` attribute aligns a sequence to the transcriptome and counts the distinct genes it hits, the target gene included, so `target_mapped_genes <= 1` keeps sequences that hit no other gene. Choose the search with `aligner`:
+
+| `aligner` | Search | Needs |
+| --- | --- | --- |
+| `bowtie2` (templates and generated attributes) | Bowtie2 `--very-sensitive-local -k 100`: local alignments, which may cover only part of the sequence, found by a seed heuristic | `bowtie2` in `align_index` |
+| `bowtie` | Bowtie 1 `-v <max_mismatches> -a`: every end-to-end site with at most `max_mismatches` substitutions (0-3, default 2); indels are not considered | `bowtie` in `align_index` and Bowtie 1 installed |
+
+```yaml
+attributes:
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense
+```
+
+- `strand` (both aligners): `both` (default) counts sites on either transcript strand; `sense` only sites where the sequence itself occurs in a transcript, right for `target_region`, whose probes bind exactly there; `antisense` only sites of its reverse complement, right for a probe's binding sequence. A probe does not bind an RNA that contains its own sequence, so `both` also counts antisense transcripts the probe cannot bind.
+- Bowtie2's local mode requires a score of at least 20 + 8 ln(length), more than a perfect match scores (2 per base) below 22 nt: shorter sequences never align and count 0 genes, so a filter on them keeps every candidate. `uprobe run` logs a warning and `uprobe validate` reports it; use `aligner: bowtie` for smFISH-length oligos.
+- On the Ensembl 113 human transcriptome (386,885 primary-assembly transcripts), for all 15,295 18-22-mers of the ACTB and GAPDH MANE Select transcripts: `aligner: bowtie` (`max_mismatches: 2`) reported exactly the sites a brute-force scan of every transcript window found, for a random sample of 1,000 of them (147,426 sites); `bowtie2` found 1.5% of the off-target genes with a site within 2 substitutions (none for 18-21-mers; for 30- and 40-mers it found 56% and 82%). The Bowtie 1 search took 4.6 s for the 15,295 sequences with 8 threads (2.5 s with `strand: sense`; Bowtie2 1.6 s); its index took about 5 minutes to build and 650 MB of disk.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 
