@@ -19,7 +19,7 @@ probes:
     parts:
       part1:
         length: 12
-        expr: "encoding[gene_id]['BC2']"
+        expr: "encoding[target]['BC2']"
       part2:
         length: 12
-        expr: "encoding[gene_id]['BC3']"
+        expr: "encoding[target]['BC3']"

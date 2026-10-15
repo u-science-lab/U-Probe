@@ -37,10 +37,8 @@ def dna():
 
 @pytest.fixture
 def rna():
-    """RNA_format.yaml with its known problems fixed (see test_known_problems_in_test_data)."""
+    """RNA_format.yaml without its ignored min_mapq option."""
     protocol = load('RNA_format.yaml')
-    protocol['targets'] = [{'xxx': 'ACGTTGCAAC' * 6}, {'ccc': 'TTGGAAACCC' * 6}]
-    protocol['attributes']['target_mappedGenes']['type'] = 'mapped_genes'
     del protocol['attributes']['target_mappedGenes']['min_mapq']
     return protocol
 
@@ -66,19 +64,34 @@ def test_fixed_rna_format_is_valid(rna):
     assert validate_protocol(rna) == []
 
 
-def test_known_problems_in_test_data():
-    # These fixtures predate the rename n_mapped_genes -> mapped_genes and the
-    # `target` expression name, and RNA_format's sequences are shorter than length.
-    rna = validate_files(DATA / 'RNA_format.yaml')
-    assert {f.path for f in errors(rna)} == {
-        'targets[0].xxx', 'targets[1].ccc', 'attributes.target_mappedGenes.type'}
-    assert "'mapped_genes'" in find(rna, 'attributes.target_mappedGenes.type').suggestion
-    rca = validate_files(DATA / 'double_hyb_rca.yaml')
+@pytest.mark.parametrize('name', ['DNA_format.yaml', 'RNA_format.yaml', 'double_hyb_rca.yaml'])
+def test_test_data_protocols_are_valid(name):
+    assert errors(validate_files(DATA / name)) == []
+
+
+def test_rna_format_yields_candidates_for_every_target(tmp_path):
+    from uprobe.core.api import UProbeAPI
+    api = UProbeAPI(load('RNA_format.yaml'), {}, tmp_path, require_genome=False)
+    targets = api.generate_target_seqs()
+    assert set(targets['target']) == {'xxx', 'ccc'}
+    probes = api.construct_probes(targets)
+    assert len(probes) == len(targets) and (probes != '').all().all()
+
+
+def test_legacy_names_get_fixes(tmp_path):
+    # Protocols written before the renames gene_id -> target and n_mapped_genes ->
+    # mapped_genes (as the test data were) get the current name as the fix.
+    path = tmp_path / 'legacy.yaml'
+    path.write_text((DATA / 'double_hyb_rca.yaml').read_text(encoding='utf-8')
+                    .replace('encoding[target]', 'encoding[gene_id]')
+                    .replace('type: mapped_genes', 'type: n_mapped_genes'))
+    rca = validate_files(path)
     barcode1 = 'probes.circle_probe.parts.part2.parts.barcode1.expr'
     assert {f.path for f in errors(rca)} == {
         barcode1, 'probes.circle_probe.parts.part2.parts.barcode2.expr', 'attributes.n_mapped_genes.type'}
     assert "encoding[target]['barcode1']" in find(rca, barcode1).suggestion
     assert find(rca, barcode1).line == 35
+    assert "'mapped_genes'" in find(rca, 'attributes.n_mapped_genes.type').suggestion
 
 
 def test_default_protocol_template():
@@ -412,12 +425,18 @@ def test_cli_json_and_exit_codes(tmp_path):
     assert result.exit_code == 0
     assert json.loads(result.output) == {'summary': {'valid': True, 'errors': 0, 'warnings': 0}, 'findings': []}
     result = runner.invoke(cli, ['validate', '-p', str(DATA / 'RNA_format.yaml'), '--json'])
+    assert result.exit_code == 0
+    assert json.loads(result.output)['summary'] == {'valid': True, 'errors': 0, 'warnings': 1}  # min_mapq
+    broken = tmp_path / 'broken.yaml'
+    broken.write_text((DATA / 'RNA_format.yaml').read_text(encoding='utf-8')
+                      .replace('type: mapped_genes', 'type: n_mapped_genes'))
+    result = runner.invoke(cli, ['validate', '-p', str(broken), '--json'])
     assert result.exit_code == 1
     report = json.loads(result.output)
-    assert report['summary'] == {'valid': False, 'errors': 3, 'warnings': 1}
+    assert report['summary'] == {'valid': False, 'errors': 1, 'warnings': 1}
     assert set(report['findings'][0]) == {'severity', 'path', 'message', 'suggestion', 'file', 'line'}
-    result = runner.invoke(cli, ['validate', '-p', str(DATA / 'RNA_format.yaml')])
-    assert result.exit_code == 1 and '  fix: ' in result.output and 'FAILED: 3 error(s)' in result.output
+    result = runner.invoke(cli, ['validate', '-p', str(broken)])
+    assert result.exit_code == 1 and '  fix: ' in result.output and 'FAILED: 1 error(s)' in result.output
     result = runner.invoke(cli, ['validate', '-p', str(DATA / 'DNA_format.yaml'), '--check-targets'])
     assert result.exit_code == 2
     genomes = tmp_path / 'genomes.yaml'

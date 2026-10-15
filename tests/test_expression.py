@@ -258,8 +258,11 @@ def test_check_probe_expressions_names_parts():
     assert errors[1].startswith("probe part 'amp_probe.part3': unknown name 'pad_probe.part9'")
     assert check_probe_expressions(probes, check_names=False) == [errors[0]]
     assert check_probe_expressions(None) == []
-    errors = check_probe_expressions(PROTOCOLS['double_hyb_rca.yaml'][0]['probes'])
-    assert errors and all("unknown name 'gene_id'" in e for e in errors)
+    probes = PROTOCOLS['double_hyb_rca.yaml'][0]['probes']
+    assert check_probe_expressions(probes) == []
+    legacy = yaml.safe_load(yaml.safe_dump(probes).replace('encoding[target]', 'encoding[gene_id]'))
+    errors = check_probe_expressions(legacy)
+    assert len(errors) == 2 and all("unknown name 'gene_id'" in e for e in errors)
 
 
 def test_runtime_errors_are_clear():
