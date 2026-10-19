@@ -288,11 +288,16 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
                if entry.get("missing_from_table")}
     expression = (off_targets or {}).get("gene_expression") or {}
     if missing:
-        treated = ("were not counted (gene_expression.absent: ignore)" if expression.get("absent") == "ignore"
-                   else "were counted as expressed")
+        ignored = expression.get("absent") == "ignore"
+        if expression.get("level") == "transcript":
+            what = ("have hit transcripts that are not in the gene_expression table, which "
+                    + ("added nothing to their value (gene_expression.absent: ignore)" if ignored
+                       else "made them count as expressed"))
+        else:
+            what = ("are not in the gene_expression table and "
+                    + ("were not counted (gene_expression.absent: ignore)" if ignored else "were counted as expressed"))
         warnings.append({"code": "off_target_genes_not_in_expression_table", "attributes": missing,
-                         "message": f"{sum(missing.values())} off-target gene(s) are not in the gene_expression "
-                                    f"table and {treated} (see off_targets)."})
+                         "message": f"{sum(missing.values())} off-target gene(s) {what} (see off_targets)."})
     absent_targets = expression.get("targets_not_in_table")
     if absent_targets:
         warnings.append({"code": "targets_not_in_expression_table", "targets": absent_targets,
