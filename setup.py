@@ -75,6 +75,8 @@ setup(
     install_requires=get_install_requires(),
     extras_require={
         'dev': requires_dev,
+        # Chat agent of the web server (uprobe/http/agent, the /agent endpoints).
+        'web-agent': ['pantheon-agents'],
     },
     python_requires='>=3.10, <4',
     entry_points={

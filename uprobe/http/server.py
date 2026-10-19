@@ -34,8 +34,18 @@ from uprobe.http.routers.workflow import workflow
 from uprobe.http.routers.task import router as task
 from uprobe.http.routers.auth import router as auth_router
 from uprobe.http.routers.user import router as user_router
-from uprobe.http.routers.agent import agent_router
 from uprobe.http.routers.custom_probes import router as custom_probes_router
+from uprobe.http.agent import WEB_AGENT_INSTALL, agent_unavailable_router, web_agent_available
+
+# The chat agent is the optional `web-agent` extra; the rest of the server runs without it.
+if web_agent_available():
+    from uprobe.http.routers.agent import agent_router
+else:
+    logging.getLogger(__name__).warning(
+        "Web chat agent disabled: PantheonOS is not installed (%s); the /agent endpoints return 503.",
+        WEB_AGENT_INSTALL,
+    )
+    agent_router = agent_unavailable_router()
 
 from fastapi.middleware.cors import CORSMiddleware
 

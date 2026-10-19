@@ -1,3 +1,10 @@
+"""
+Chat API of the web server (``/agent``), backed by the agent in ``uprobe.http.agent``.
+
+Importing this module needs the optional ``web-agent`` extra (PantheonOS); ``uprobe.http.server``
+only imports it when the extra is installed and otherwise serves a 503 stand-in.
+"""
+
 import os
 import re
 import json
