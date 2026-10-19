@@ -111,6 +111,7 @@ hybridization:
 #   table: expression.tsv   # a gene id or name column and a numeric column
 #   value_column: TPM
 #   min_value: 1
+#   min_fraction_of_target: 0.05   # an RNA at < 5% of the target's level makes few false spots
 
 attributes:
   target_gc:

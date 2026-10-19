@@ -278,6 +278,11 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         warnings.append({"code": "off_target_genes_not_in_expression_table", "attributes": missing,
                          "message": f"{sum(missing.values())} off-target gene(s) are not in the gene_expression "
                                     "table and were counted as expressed (see off_targets)."})
+    absent_targets = ((off_targets or {}).get("gene_expression") or {}).get("targets_not_in_table")
+    if absent_targets:
+        warnings.append({"code": "targets_not_in_expression_table", "targets": absent_targets,
+                         "message": f"{len(absent_targets)} target(s) are not in the gene_expression table, so only "
+                                    "min_value, not min_fraction_of_target, applied to their off-target genes."})
 
     if status == "error":
         message = f"Run failed during {run.get('step')}: {error}"

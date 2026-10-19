@@ -33,7 +33,8 @@ e.g. ``ACTG1:0, POTEF:2`` (gene name and fewest mismatches; Bowtie2 gives
 names only). Genes are named after the GTF's gene_name; a name that several
 gene ids share is written ``name(gene_id)``. With a ``gene_expression`` table
 (see uprobe.core.gene_expression), off-target genes below its ``min_value``
-are not counted and are listed in ``<attribute>_unexpressed`` instead.
+(or below ``min_fraction_of_target`` of the target's value) are not counted
+and are listed in ``<attribute>_unexpressed`` instead.
 """
 import functools
 import re
@@ -235,27 +236,62 @@ class OffTargetCounter:
                                  f'{description["table"]} (column {", ".join(table.gene_columns)}); check the gene '
                                  'identifiers and the species')
             description.update(annotation_genes=len(names), annotation_genes_in_table=found)
+            relative = (f' or below {table.min_fraction_of_target:g} x the target\'s value'
+                        if table.min_fraction_of_target is not None else '')
             log.info(f'gene_expression: {description["table"]} lists {found} of the {len(names)} annotated genes; '
-                     f'off-target genes with {table.value_column} < {table.min_value:g} are not counted')
+                     f'off-target genes with {table.value_column} < {table.min_value:g}{relative} are not counted')
         self.report['gene_expression'] = description
         self.expression = table
+
+    def _thresholds(self, target_keys: dict) -> dict:
+        """Target -> the expression value an off-target gene of it must reach to count.
+
+        That is min_value or, with min_fraction_of_target, that fraction of the
+        target's value when it is higher. The target's value is the highest of
+        its genes (a name can belong to several gene ids). Targets the table
+        does not list keep min_value; summary.json lists them and the log warns.
+        """
+        expression = self.expression
+        if expression.min_fraction_of_target is None:
+            return {target: expression.min_value for target in target_keys}
+        description = self.report['gene_expression']
+        known = description.setdefault('targets', {})
+        absent = description.setdefault('targets_not_in_table', [])
+        thresholds, new_absent = {}, []
+        for target, keys in target_keys.items():
+            values = [expression.value(key, self.annotation.names.get(key)) for key in sorted(keys)]
+            value = max((v for v in values if v is not None), default=None)
+            thresholds[target] = expression.threshold(value)
+            if not target:
+                continue
+            if value is not None:
+                known[target] = {'value': value, 'threshold': thresholds[target]}
+            elif target not in absent:
+                absent.append(target)
+                new_absent.append(target)
+        absent.sort()
+        if new_absent:
+            log.warning(f'gene_expression: {len(new_absent)} target(s) not in the expression table, so only min_value '
+                        f'applies to their off-target genes: {", ".join(sorted(new_absent)[:_MISSING_EXAMPLES])}')
+        return thresholds
 
     def annotate(self, df, attr_name: str, column: str, sequence_hits: dict, settings: dict) -> None:
         """Write <attr_name>, <attr_name>_off_targets and, with gene_expression, <attr_name>_unexpressed.
 
         ``sequence_hits`` maps each sequence of ``df[column]`` to {gene key: fewest mismatches or None}.
         The count includes the target's own genes; other genes count unless the
-        expression table puts them below min_value.
+        expression table puts them below the target's threshold (see _thresholds).
         """
         self._load()
         annotation, expression = self.annotation, self.expression
         target_column = next((c for c in ('target', 'gene') if c in df.columns), None)
         targets = df[target_column].astype(str).tolist() if target_column else [''] * len(df)
-        rows, target_keys = {}, {}
-        hit, ignored, missing = set(), set(), set()
-        for sequence, target in set(zip(df[column], targets)):
-            if target not in target_keys:
-                target_keys[target] = annotation.target_keys(target)
+        pairs = set(zip(df[column], targets))
+        target_keys = {target: annotation.target_keys(target) for target in {target for _, target in pairs}}
+        thresholds = self._thresholds(target_keys) if expression is not None else {}
+        rows = {}
+        hit, ignored, below_fraction, missing = set(), set(), set(), set()
+        for sequence, target in pairs:
             count, counted, below = 0, [], []
             for key, mismatches in sequence_hits.get(sequence, {}).items():
                 if key in target_keys[target]:
@@ -263,9 +299,9 @@ class OffTargetCounter:
                     continue
                 hit.add(key)
                 value = expression.value(key, annotation.names.get(key)) if expression else None
-                if value is not None and value < expression.min_value:
+                if value is not None and value < thresholds[target]:
                     below.append((key, mismatches))
-                    ignored.add(key)
+                    (ignored if value < expression.min_value else below_fraction).add(key)
                     continue
                 count += 1
                 counted.append((key, mismatches))
@@ -284,9 +320,14 @@ class OffTargetCounter:
             labels = sorted(annotation.label(key) for key in missing)
             stats.update(below_min_value=len(ignored), missing_from_table=len(missing),
                          missing_from_table_examples=labels[:_MISSING_EXAMPLES], missing_labels=labels)
+            relative = ''
+            if expression.min_fraction_of_target is not None:
+                stats['below_target_fraction'] = len(below_fraction)
+                relative = (f'; {len(below_fraction)} more are below gene_expression.min_fraction_of_target of a '
+                            'target\'s value and not counted for it')
             message = (f'{attr_name}: the candidates hit {len(hit)} off-target genes; {len(ignored)} are below '
-                       f'gene_expression.min_value and not counted; {len(missing)} are not in the expression '
-                       'table and count as expressed')
+                       f'gene_expression.min_value and not counted{relative}; {len(missing)} are not in the '
+                       'expression table and count as expressed')
             if missing:
                 log.warning(f'{message} (e.g. {", ".join(labels[:5])})')
             else:

@@ -58,6 +58,10 @@ def table(tmp_path):
     ({'table': 'x.tsv', 'min_value': 1, 'min_tpm': 1}, 'unknown field'),
     ({'table': 'x.tsv', 'min_value': 1, 'gene_column': []}, 'gene_column must be'),
     ({'table': 'x.tsv', 'min_value': 1, 'value_column': 3}, 'value_column must be'),
+    ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': '0.05'}, 'min_fraction_of_target must be'),
+    ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 1.5}, 'min_fraction_of_target must be'),
+    ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': -0.1}, 'min_fraction_of_target must be'),
+    ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': True}, 'min_fraction_of_target must be'),
 ])
 def test_block_is_checked(block, message):
     with pytest.raises(ValueError, match=message):
@@ -66,7 +70,10 @@ def test_block_is_checked(block, message):
 
 def test_block_normalized():
     settings = validate_gene_expression({'table': 'x.tsv', 'gene_column': 'id', 'min_value': 1})
-    assert settings == {'table': 'x.tsv', 'gene_columns': ['id'], 'value_column': None, 'min_value': 1.0}
+    assert settings == {'table': 'x.tsv', 'gene_columns': ['id'], 'value_column': None, 'min_value': 1.0,
+                        'min_fraction_of_target': None}
+    settings = validate_gene_expression({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 0})
+    assert settings['min_fraction_of_target'] == 0.0
 
 
 def test_normalize_gene_id():
@@ -179,6 +186,49 @@ def test_target_counts_even_when_unexpressed(gtf, tmp_path):
     assert df.hits_unexpressed[0] == 'ACTG1:0'
 
 
+def test_threshold_relative_to_the_target(gtf, table, caplog):
+    # GAPDH is neither annotated nor in the table: only min_value applies to its off-targets.
+    df = pd.DataFrame({'target': ['ACTB', 'GAPDH'], 'seq': ['S1', 'S1']})
+    protocol = {'gene_expression': {'table': table, 'gene_column': 'gene_id', 'min_value': 1,
+                                    'min_fraction_of_target': 0.05}}
+    report = {}
+    OffTargetCounter(protocol, {'gtf': str(gtf)}, report).annotate(df, 'hits', 'seq', hits(), SETTINGS)
+    # ACTB (2000 TPM, found by its gene id): threshold max(1, 0.05 x 2000) = 100, so Y_RNA ENSG6 (3) no longer counts.
+    assert df.hits.tolist() == [3, 4]
+    assert df.hits_off_targets.tolist() == ['ACTG1:0, POTEF:1', 'ACTB:0, ACTG1:0, POTEF:1, Y_RNA(ENSG6):2']
+    assert df.hits_unexpressed.tolist() == ['ACTBP2:0, Y_RNA(ENSG5):2, Y_RNA(ENSG6):2', 'ACTBP2:0, Y_RNA(ENSG5):2']
+    stats = report['attributes']['hits']
+    assert (stats['below_min_value'], stats['below_target_fraction'], stats['missing_from_table']) == (2, 1, 1)
+    described = report['gene_expression']
+    assert described['min_fraction_of_target'] == 0.05
+    assert described['targets'] == {'ACTB': {'value': 2000.0, 'threshold': 100.0}}
+    assert described['targets_not_in_table'] == ['GAPDH']
+    assert 'target(s) not in the expression table, so only min_value applies' in caplog.text
+    final = df.assign(hits_off_targets=df.hits_off_targets)
+    summary = build_run_summary({'name': 'x'}, {'final': final, 'off_targets': report})
+    warning = next(w for w in summary['warnings'] if w['code'] == 'targets_not_in_expression_table')
+    assert warning['targets'] == ['GAPDH']
+
+
+def test_threshold_fraction_can_exceed_min_value_only(gtf, table):
+    df = pd.DataFrame({'target': ['ACTB', 'ACTG1'], 'seq': ['S1', 'S1']})
+    protocol = {'gene_expression': {'table': table, 'gene_column': ['gene_id', 'gene_name'], 'min_value': 1,
+                                    'min_fraction_of_target': 0.5}}
+    report = {}
+    OffTargetCounter(protocol, {'gtf': str(gtf)}, report).annotate(df, 'hits', 'seq', hits(), SETTINGS)
+    # ACTB: threshold 1000 drops ACTG1 (800); ACTG1: threshold 400 keeps ACTB (2000).
+    assert df.hits_off_targets.tolist() == ['POTEF:1', 'ACTB:0, POTEF:1']
+    assert report['gene_expression']['targets'] == {'ACTB': {'value': 2000.0, 'threshold': 1000.0},
+                                                    'ACTG1': {'value': 800.0, 'threshold': 400.0}}
+    assert report['gene_expression']['targets_not_in_table'] == []
+    # Without the option every target's threshold is min_value and no target is reported.
+    del protocol['gene_expression']['min_fraction_of_target']
+    report = {}
+    OffTargetCounter(protocol, {'gtf': str(gtf)}, report).annotate(df, 'hits', 'seq', hits(), SETTINGS)
+    assert df.hits_off_targets[0] == 'ACTG1:0, POTEF:1, Y_RNA(ENSG6):2'
+    assert 'targets' not in report['gene_expression'] and 'below_target_fraction' not in report['attributes']['hits']
+
+
 def test_table_matching_no_annotated_gene_is_an_error(gtf, tmp_path):
     table = write_table(tmp_path / 'mouse.tsv', 'gene\tTPM\nActb\t5\n')
     df = pd.DataFrame({'target': ['ACTB'], 'seq': ['S1']})
@@ -249,7 +299,8 @@ def test_run_rejects_an_invalid_block(rna):
 
 
 def test_validate_checks_the_block_and_the_table(rna, table, tmp_path):
-    rna['gene_expression'] = {'table': table, 'gene_column': 'gene_id', 'value_column': 'TPM', 'min_value': 1}
+    rna['gene_expression'] = {'table': table, 'gene_column': 'gene_id', 'value_column': 'TPM', 'min_value': 1,
+                              'min_fraction_of_target': 0.05}
     assert validate_protocol(rna) == []
 
     def finding(path, severity='error'):
@@ -266,6 +317,9 @@ def test_validate_checks_the_block_and_the_table(rna, table, tmp_path):
     assert 'not found' in finding('gene_expression.table').message
     rna['gene_expression'] = {'table': table}
     assert 'missing min_value' in finding('gene_expression').message
+    rna['gene_expression'] = {'table': table, 'min_value': 1, 'min_fraction_of_target': 5}
+    assert 'min_fraction_of_target must be a number from 0 to 1' in finding('gene_expression').message
+    assert 'min_fraction_of_target: 0.05' in finding('gene_expression').suggestion
     rna['gene_expression'] = {'table': table, 'min_value': 1}
     del rna['attributes']['target_mappedGenes']
     assert 'there is none' in finding('gene_expression', 'warning').message

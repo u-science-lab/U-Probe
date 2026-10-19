@@ -134,7 +134,8 @@ GENE_EXPRESSION_SNIPPET = ('gene_expression:\n'
                            '  table: expression.tsv   # TSV/CSV with a gene id or name column and a numeric column\n'
                            '  gene_column: gene_id    # default: the first column\n'
                            '  value_column: TPM       # default: the only numeric column\n'
-                           '  min_value: 1            # off-target genes below it are not counted')
+                           '  min_value: 1            # off-target genes below it are not counted\n'
+                           '  min_fraction_of_target: 0.05   # optional: nor those below 5% of the target\'s value')
 
 
 @dataclass

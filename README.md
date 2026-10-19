@@ -369,7 +369,7 @@ summary:
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search).
   - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
-- **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
+- **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed, or optionally expressed far below the target. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`. It visits each target's candidates in order of position and keeps one when it starts more than `location_interval` bases after the end of the last kept one. In RNA mode the positions are those on the gene's merged exon model (`target_start`/`target_end`, see [Probes per target](#probes-per-target)), so windows from alternative exons of different transcripts are compared too, and a site that several exon entries contain is kept once, with the transcripts of all of them in `transcript_names` (and their number in `n_trans`).
 - **`off_target_pool`**: Optional post-processing step that lets at most `max_probes_per_gene` probes of a target's set hit the same off-target gene, e.g. `post_process: { off_target_pool: { attribute: target_mapped_genes, max_probes_per_gene: 2 } }`. See [Off-target pool limit](#off-target-pool-limit).
@@ -456,7 +456,7 @@ attributes:
 
 #### Expression-aware off-target counting
 
-A probe can only bind RNAs that are present. Supply an expression table of your sample, and `mapped_genes` attributes no longer count off-target genes that are not expressed:
+A probe can only bind RNAs that are present. Supply an expression table of your sample, and `mapped_genes` attributes no longer count off-target genes that are not expressed, or are expressed far below the target:
 
 ```yaml
 gene_expression:
@@ -464,10 +464,12 @@ gene_expression:
   gene_column: gene_id    # Ensembl gene ids (with or without version) or gene names; default: the first column
   value_column: TPM       # default: the only numeric column
   min_value: 1            # off-target genes with a lower value are not counted
+  min_fraction_of_target: 0.05   # optional: nor those below 5% of the target's value
 ```
 
 - Genes are looked up by Ensembl gene id, then by gene name; `gene_column` may list several columns, e.g. `[gene_id, gene_name]`. A gene listed more than once counts with its highest value. Leading `#` comment lines are skipped, and GTEx `.gct` files can be used directly (choose the tissue with `value_column`).
-- An off-target gene below `min_value` is not counted in `<attribute>` and is listed in `<attribute>_unexpressed` instead of `<attribute>_off_targets`. The target gene always counts, so `<attribute> <= 1` still means "no (expressed) off-target gene".
+- An off-target gene below the threshold is not counted in `<attribute>` and is listed in `<attribute>_unexpressed` instead of `<attribute>_off_targets`. The threshold is `min_value`, or with `min_fraction_of_target` the higher of the two below. The target gene always counts, so `<attribute> <= 1` still means "no (expressed) off-target gene".
+- `min_fraction_of_target` (optional, 0-1) makes the threshold relative to the target: an off-target gene of a target counts only if its value is at least max(`min_value`, `min_fraction_of_target` x the target's value). A spot needs many probes on one RNA, and an RNA at a few percent of the target's level adds at most a few percent of false spots, so low-level pseudogenes and paralogs of a highly expressed target no longer remove its probes, while a gene expressed at a similar level still does. The target's value is read from the same table (the highest of its gene ids). A target that the table does not list keeps `min_value` alone: the log warns, and `summary.json` lists it in `off_targets.gene_expression.targets_not_in_table` (warning `targets_not_in_expression_table`), next to the value and threshold of every listed target (`off_targets.gene_expression.targets`). Per attribute, `below_target_fraction` counts the off-target genes that only the fraction removed, for at least one target.
 - Off-target genes that the table does not list count as expressed. The log and `summary.json` (`off_targets`, with a warning `off_target_genes_not_in_expression_table`) report how many there were, with examples, and which of them the final probes hit. A table that matches no gene of the annotation stops the run: its identifiers or species do not fit the genome.
 - The table applies to every `mapped_genes` attribute. Relative paths are resolved from the directory where uprobe runs. `uprobe validate` checks the block, the file and its columns.
 
