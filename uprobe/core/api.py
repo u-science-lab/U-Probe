@@ -11,7 +11,7 @@ from .layout import compile_layout, expand_layout_candidates, validate_layout_re
 from .attributes import add_attributes
 from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
-from .gen.fun import generate_target_seqs, validate_targets
+from .gen.fun import TranscriptSelectionError, generate_target_seqs, validate_targets
 from .gen.probe import construct_probes
 from .process import post_process
 from .report import generate_plot_report
@@ -148,6 +148,8 @@ class UProbeAPI:
         extraction_length = [min(compiled[1]), max(compiled[1])] if compiled else extract_params['length']
         genome_targets, direct_targets = self._parse_targets()
         dfs = []
+        # Transcripts each gene target's windows came from (gen.fun.select_transcripts).
+        self.transcripts_used = {}
         # 1. Process Genome Targets
         if genome_targets:
             log.info(f"Extracting {len(genome_targets)} targets from genome using source '{extract_params['source']}'...")
@@ -158,12 +160,16 @@ class UProbeAPI:
                     fasta_path=self.genome['fasta'],
                     gtf_path=self.genome['gtf'],
                     min_length=extraction_length,
-                    step=step
+                    step=step,
+                    transcripts=extract_params.get('transcripts', 'all'),
                 )
+                self.transcripts_used = df_genome.attrs.get('transcripts') or {}
                 if not df_genome.empty:
                     dfs.append(df_genome)
                 else:
                     log.warning("No sequences generated for genome targets.")
+            except TranscriptSelectionError:
+                raise  # a protocol error: the run fails with its message
             except Exception as e:
                 log.error(f"Failed to generate sequences for genome targets: {e}")  
         # 2. Process Direct Targets
@@ -334,6 +340,7 @@ class UProbeAPI:
         run['step'] = 'extract_target_regions'
         df_targets = self.generate_target_seqs()
         run['targets'] = df_targets
+        run['transcripts'] = self.transcripts_used
         if df_targets.empty:
             run['status'] = 'no_target_sequences'
             return pd.DataFrame()

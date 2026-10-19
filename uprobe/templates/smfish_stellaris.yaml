@@ -26,6 +26,26 @@ meta:
       title: Considerations for optimizing Stellaris RNA FISH probe design
       url: https://blog.biosearchtech.com/considerations-for-optimizing-stellaris-rna-fish-probe-design
   parameter_sources:
+    - parameter: extracts.target_region.source and transcripts
+      value: mRNA (5' UTR, CDS and 3' UTR) of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        Raj 2008, Supplement, "Probe sequences used in this study": one
+        accession per gene, tiled from the start to the stop codon (e.g. Actb,
+        BC063166, 48 oligos), i.e. the coding region of one reference mRNA. The Stellaris
+        designer takes "an input sequence, such as an mRNA coding sequence" and
+        suggests expanding a set with the 5' or 3' UTR (Biosearch, design
+        considerations). U-Probe tiles the whole reference mRNA, so that genes
+        whose coding sequence they share with paralogs or pseudogenes still
+        reach 48 probes; source CDS gives the coding region alone.
+      quote: see if your submitted sequence can be expanded by including other sequence information such as the 5' or 3' UTR for mRNA targets
+    - parameter: attributes.target_mapped_genes.exempt_copies
+      value: "{kmer: 30, min_shared: 0.5}"
+      source: >-
+        U-Probe. A gene with a transcript holding at least half of the target
+        mRNA's 30-mers (a processed pseudogene, a readthrough or overlapping
+        gene) is hit by any probe set, so it is listed in
+        target_mapped_genes_copies instead of counted; it needs no expression
+        table.
     - parameter: extracts.target_region.length
       value: 20
       source: Raj 2008, Supplementary Methods and Supp. Fig. 4; Stellaris oligos are 18-22 nt
@@ -63,7 +83,7 @@ meta:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
     - target_mapped_genes uses Bowtie 1 (aligner bowtie), so the genome's align_index must include bowtie; Bowtie2 cannot align 20-mers (its local mode needs at least 22 nt) and would count no off-target gene.
     - Without gene_expression every annotated gene counts as an off-target, including genes and pseudogenes the sample does not express, so target_mapped_genes <= 1 drops more probes than needed; add your expression table (see gene_expression below).
-    - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 16, GAPDH 6, RPL13A 1 on Ensembl 113 human, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 33-46% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets. The recommended gene_expression settings and exempt_copies (commented out below) do more: with a HeLa table, min_fraction_of_target 0.05 and exempt_copies, ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 193 probes, and 264 with gene_expression.absent set to ignore, which trusts the table to list every expressed gene (README, Copies of the target).
+    - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 15, GAPDH 6, RPL13A 1 from the Ensembl 113 human MANE mRNAs, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 35-47% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets. The recommended gene_expression settings (commented out below) do more: with a HeLa table, min_fraction_of_target 0.05 and exempt_copies, ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 192 probes, and 264 with gene_expression.absent set to ignore, which trusts the table to list every expressed gene (README, Copies of the target).
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
@@ -83,7 +103,8 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: mRNA   # the whole mRNA: 5' UTR, CDS and 3' UTR (source: CDS for the coding region only)
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 20
     step: 1
 
@@ -103,15 +124,18 @@ hybridization:
 
 # Recommended: genes not expressed in your sample are not counted as
 # off-targets (they stay listed in target_mapped_genes_unexpressed), so only
-# RNAs that are present remove probes. With a HeLa table (TPM >= 1), 53% instead
-# of 37% of the 20-mers of 30 random human genes had no off-target gene, and
-# ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 184 instead of 119 probes.
+# RNAs that are present remove probes. With a HeLa table (TPM >= 1), 54% instead
+# of 39% of the 20-mers of the MANE mRNAs of 30 random human genes had no
+# off-target gene, and ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 179
+# instead of 117 probes (192 with min_fraction_of_target: 0.05).
 # Supply your own table:
 # gene_expression:
 #   table: expression.tsv   # a gene id or name column and a numeric column
 #   value_column: TPM
 #   min_value: 1
 #   min_fraction_of_target: 0.05   # an RNA at < 5% of the target's level makes few false spots
+#   # absent: ignore   # genes the table lacks do not count; right for a table quantified
+#   #                  # on an older annotation than the genome's, which lacks its new genes
 
 attributes:
   target_gc:
@@ -130,10 +154,10 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
-    # Recommended, with or without gene_expression: genes that copy the target
-    # (processed pseudogenes, readthrough genes) are listed in
-    # target_mapped_genes_copies instead of counted.
-    # exempt_copies: {kmer: 30, min_shared: 0.5}   # a gene holding half the target's 30-mers is hit by any probe set
+    # Genes that copy the target (processed pseudogenes, readthrough genes) are
+    # listed in target_mapped_genes_copies instead of counted; no expression
+    # table is needed.
+    exempt_copies: {kmer: 30, min_shared: 0.5}   # a gene holding half the target's 30-mers is hit by any probe set
 
 post_process:
   filters:
@@ -150,15 +174,15 @@ post_process:
   # the filter above to target_mapped_genes <= 2) and at most 2 probes of the
   # set per off-target gene (uncomment off_target_pool). It runs after
   # remove_overlap and before equal_space picks the 48. The gain is small and
-  # costs cleanliness, measured on Ensembl 113 human genes (all 20-mers of the
-  # MANE Select mRNAs; probes with <= 1 / with the option, and the share of
+  # costs cleanliness, measured on Ensembl 113 human genes (this template on
+  # the MANE Select mRNAs; probes with <= 1 / with the option, and the share of
   # final probes with an off-target gene under the option):
-  #   30 random genes, no expression table:  1,294 / 1,302 probes (26 genes
-  #                                          get 48 either way); 46%
-  #   same, HeLa expression (TPM >= 1):      1,356 / 1,361 (27 get 48); 33%
+  #   30 random genes, no expression table:  1,229 / 1,246 probes (24 genes
+  #                                          get 48 either way); 44%
+  #   same, HeLa expression (TPM >= 1):      1,299 / 1,308 (26 get 48); 35%
   #   ACTB, EEF1A1, GAPDH, HSPA8, RPL13A,
-  #   TUBB, no expression table:             119 / 132 (1 gets 48); 46%
-  #   same, HeLa expression:                 184 / 194 (2 get 48); 34%
+  #   TUBB, no expression table:             117 / 131 (1 gets 48); 47%
+  #   same, HeLa expression:                 179 / 192 (2 get 48); 39%
   # equal_space picks by position, not by cleanliness, so the option mostly
   # swaps clean probes for probes with an off-target gene; it would pay off
   # with an equal_space that prefers probes free of off-targets.

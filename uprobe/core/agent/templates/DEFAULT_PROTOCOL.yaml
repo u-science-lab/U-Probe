@@ -14,16 +14,17 @@ encoding:
 
 extracts:
   target_region:
-    source:   # genome | exon | CDS | UTR
+    source:   # genome | mRNA | exon | CDS | UTR (exon = CDS of protein-coding genes)
     length:   # positive int or [min, max], inclusive
     step:   # positive int; distance between candidate starts
+    # transcripts: mane   # RNA sources: all (default) | canonical | mane | [transcript ids]
 
 probes:
 
 # NOTE:
 # - `attributes` and `post_process` can be omitted.
 # - If they are missing or empty, the CLI will auto-generate defaults
-#   based on DNA (source=genome) vs RNA (source=exon/CDS/UTR) mode.
+#   based on DNA (source=genome) vs RNA (source=mRNA/exon/CDS/UTR) mode.
 attributes:
 
 

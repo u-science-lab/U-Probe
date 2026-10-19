@@ -43,6 +43,12 @@ meta:
     - parameter: extracts.target_region (length 40, step 20)
       value: "length 40, step 20 (overlap 20 in the test protocol)"
       source: U-Probe example protocol tests/data/double_hyb_rca.yaml
+    - parameter: extracts.target_region.source and transcripts
+      value: CDS of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        U-Probe choice; no published source. The test protocol's source exon
+        is the CDS of protein-coding genes; the windows are restricted to the
+        reference transcript, as in the other templates.
   hybridization:
     ssc: 2x
     source: >-
@@ -73,7 +79,8 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: CDS
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 40
     step: 20
 

@@ -29,6 +29,16 @@ meta:
       title: Moldia/multi_padlock_design
       url: https://github.com/Moldia/multi_padlock_design
   parameter_sources:
+    - parameter: extracts.target_region.source and transcripts
+      value: mRNA of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        multi_padlock_design (readme.txt, lib/formatrefseq.py, lib/parmsa.py)
+        designs on RefSeq NM and NR mRNAs, in the sequence common to all
+        transcript variants. U-Probe has no shared-region option; the
+        reference mRNA contains those regions. 59% of the HybISS mouse targets
+        of Supplementary Table 1 that map to RefSeq mRNAs lie in 3' UTRs,
+        including the Pvalb example below, which source CDS would miss.
+      quote: run parallel multiple sequence alignment (ClustalW) to find common sequences of transcript variants
     - parameter: extracts.target_region.length (2 x 15-nt arms)
       value: 30
       source: Gyllborg 2020, Methods
@@ -101,7 +111,8 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: mRNA   # the whole mRNA, UTRs included
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 30
     step: 1
 

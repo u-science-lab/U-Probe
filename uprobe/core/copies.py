@@ -22,10 +22,12 @@ lists it in ``<attribute>_copies``. Paralogs share far fewer exact k-mers
 sequence) and stay counted.
 
 The target's sequence is what its candidate windows cover, placed by
-``target_start``/``target_end``: for ``source: exon``, ``CDS`` or ``UTR`` the
-target's merged exon model (the extracted segments with the introns removed,
-see gen.fun.segment_offsets), so the share is that of the sequence the probes
-are drawn from; for a direct sequence the sequence itself. Bases that no
+``target_start``/``target_end``: for ``source: mRNA``, ``exon``, ``CDS`` or
+``UTR`` the target's merged exon model (the extracted segments with the introns
+removed, see gen.fun.segment_offsets), so the share is that of the sequence the
+probes are drawn from (the whole mature mRNA for ``mRNA``, the coding sequence
+of a protein-coding gene for ``exon`` and ``CDS``); for a direct sequence the
+sequence itself. Bases that no
 window covers are unknown, and k-mers across them are skipped. The off-target
 genes' transcripts are read from ``transcript.fa``, the FASTA the
 transcriptome index is built from; only genes the alignment hit are read.

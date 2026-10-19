@@ -36,6 +36,14 @@ meta:
       title: example_scripts/library_design_example.m
       url: https://github.com/ZhuangLab/MERFISH_analysis/blob/master/example_scripts/library_design_example.m
   parameter_sources:
+    - parameter: extracts.target_region.source and transcripts
+      value: mRNA of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        Chen 2015, Methods (one isoform per gene); Moffitt and Zhuang 2016
+        (the transcriptome is Ensembl cDNA, i.e. whole transcripts with UTRs).
+        Moffitt 2016 weighted isoforms by abundance, which U-Probe does not
+        model; the reference transcript stands in for the most abundant one.
+      quote: Probes were designed from gene models corresponding to the most abundant isoform
     - parameter: extracts.target_region.length
       value: 30
       source: Moffitt 2016, Fig. S1 legend
@@ -120,7 +128,8 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: mRNA   # the whole mRNA, as the Ensembl cDNA the authors designed on
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 30
     step: 1
 

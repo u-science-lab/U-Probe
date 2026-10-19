@@ -87,21 +87,167 @@ def process_gtf_inplace(filepath):
     with open(filepath, 'w') as file:
         file.writelines(updated_lines)
 
+# What each RNA source of extracts.target_region extracts from the GTF, per gene:
+#   exon  its CDS features when it has any, else its exon features: the coding
+#         sequence of a protein-coding gene (no UTRs), the whole processed RNA of
+#         a non-coding gene. Segments shorter than the window are left out.
+#   CDS   the same as exon.
+#   mRNA  all its exon features: the whole mature RNA (5' UTR, CDS and 3' UTR of
+#         a protein-coding gene; the processed RNA of a non-coding gene). Exons
+#         shorter than the window give no window but still count in positions.
+#   UTR   its UTR features (GTF type UTR, or five_prime_utr and three_prime_utr
+#         as Ensembl names them). Segments shorter than the window are left out.
+RNA_SOURCES = ('exon', 'CDS', 'mRNA', 'UTR')
+UTR_TYPES = ('UTR', 'five_prime_utr', 'three_prime_utr')
+
+
+def gene_segments(df_gene: pd.DataFrame, source: str) -> pd.DataFrame:
+    """The GTF rows of one gene that an RNA source extracts (before the length filter)."""
+    if source == 'mRNA':
+        return df_gene[df_gene.type == 'exon']
+    if source == 'UTR':
+        return df_gene[df_gene.type.isin(UTR_TYPES)]
+    df_cds = df_gene[df_gene.type == 'CDS']
+    return df_cds if df_cds.shape[0] else df_gene[df_gene.type == 'exon']
+
+
+# extracts.target_region.transcripts: whose features an RNA source extracts.
+#   all        every transcript of the gene (the union of their exons)
+#   canonical  the transcript tagged Ensembl_canonical
+#   mane       the transcript tagged MANE_Select; a gene without one (outside
+#              human, most non-coding genes) uses its Ensembl_canonical transcript
+#   [ids]      the listed transcripts; each target needs at least one of them
+# Ensembl and GENCODE GTFs write the tags on every line of a transcript.
+TRANSCRIPT_RULES = ('all', 'canonical', 'mane')
+CANONICAL_TAG, MANE_TAG = 'Ensembl_canonical', 'MANE_Select'
+
+
+class TranscriptSelectionError(ValueError):
+    """The transcripts option does not fit the targets or the GTF: a protocol error, not a missing sequence."""
+
+    def __init__(self, problems):
+        self.problems = list(problems)
+        super().__init__('extracts.target_region.transcripts: ' + '; '.join(self.problems))
+
+
+def transcripts_setting(value):
+    """'all', 'canonical', 'mane' or a list of transcript ids; ValueError for anything else."""
+    if value is None:
+        return 'all'
+    if isinstance(value, str) and value in TRANSCRIPT_RULES:
+        return value
+    if isinstance(value, list) and value and all(isinstance(v, str) and v.strip() for v in value):
+        return list(dict.fromkeys(v.strip() for v in value))
+    raise ValueError(f'transcripts must be all, canonical, mane or a list of transcript ids, got {value!r}')
+
+
+def _without_version(transcript_id: str) -> str:
+    return re.sub(r'\.\d+$', '', transcript_id)
+
+
+def _tagged(rows: pd.DataFrame, tag: str) -> t.List[str]:
+    """Transcript ids of the rows with the GTF attribute tag "<tag>"."""
+    found = rows['info'].str.contains(rf'(?:^|;)\s*tag\s+"{tag}"', regex=True, na=False)
+    return sorted(set(rows.loc[found, 'transcript_id'].dropna()))
+
+
+def _listed_transcripts(df_gtf: pd.DataFrame, listed, targets) -> t.Tuple[dict, t.List[str]]:
+    """({target: listed ids of its transcripts as the GTF writes them}, problems)."""
+    known = df_gtf[['transcript_id', 'gene_name']].dropna().drop_duplicates()
+    genes = dict(zip(known.transcript_id, known.gene_name))
+    by_base = {}
+    for transcript_id in genes:
+        by_base.setdefault(_without_version(transcript_id), []).append(transcript_id)
+    chosen, problems = {}, []
+    for name in listed:
+        # Ensembl GTFs write ENST00000646664, GENCODE ENST00000646664.1: match either way.
+        matches = [name] if name in genes else by_base.get(_without_version(name), [])
+        if len(matches) != 1:
+            problems.append(f'transcript {name} is not in the GTF' if not matches else
+                            f'transcript {name} matches {", ".join(matches)} in the GTF; give the version')
+        elif genes[matches[0]] not in targets:
+            problems.append(f'transcript {name} belongs to {genes[matches[0]]}, which is not a target')
+        else:
+            chosen.setdefault(genes[matches[0]], []).append(matches[0])
+    return chosen, problems
+
+
+def select_transcripts(df_gtf: pd.DataFrame, targets, setting) -> t.Dict[str, dict]:
+    """The transcripts each target's windows come from, per transcripts_setting().
+
+    Returns {target: {'selection': all|canonical|mane|list, 'chosen_by':
+    all|MANE_Select|Ensembl_canonical|listed, 'ids': [...] or None for all}}.
+    Raises TranscriptSelectionError listing every problem.
+    """
+    setting = transcripts_setting(setting)
+    targets = list(dict.fromkeys(targets))
+    if setting == 'all':
+        return {target: {'selection': 'all', 'chosen_by': 'all', 'ids': None} for target in targets}
+    rows = df_gtf[df_gtf.gene_name.isin(targets) & df_gtf.transcript_id.notna()]
+    rows_of = dict(tuple(rows.groupby('gene_name', sort=False)))
+    problems, result = [], {}
+    if isinstance(setting, list):
+        chosen, problems = _listed_transcripts(df_gtf, setting, set(targets))
+        for target in targets:
+            if target in chosen:
+                result[target] = {'selection': 'list', 'chosen_by': 'listed', 'ids': sorted(chosen[target])}
+            elif target in rows_of:
+                example = (_tagged(rows_of[target], MANE_TAG) or _tagged(rows_of[target], CANONICAL_TAG)
+                           or sorted(set(rows_of[target].transcript_id)))[0]
+                problems.append(f'no listed transcript belongs to target {target}; list one of its transcripts '
+                                f'(e.g. {example}) or use canonical, mane or all')
+    else:
+        for target in targets:
+            if target not in rows_of:
+                continue  # not in the GTF: reported by target validation
+            ids, chosen_by = [], MANE_TAG
+            if setting == 'mane':
+                ids = _tagged(rows_of[target], MANE_TAG)
+            if not ids:
+                ids, chosen_by = _tagged(rows_of[target], CANONICAL_TAG), CANONICAL_TAG
+                if ids and setting == 'mane':
+                    log.info(f'{target} has no {MANE_TAG} transcript; using its {CANONICAL_TAG} transcript '
+                             f'{", ".join(ids)}')
+            if not ids:
+                wanted = f'{MANE_TAG} or {CANONICAL_TAG}' if setting == 'mane' else CANONICAL_TAG
+                problems.append(f'no transcript of {target} is tagged {wanted} in the GTF; list its transcript '
+                                'ids or use transcripts: all')
+                continue
+            result[target] = {'selection': setting, 'chosen_by': chosen_by, 'ids': ids}
+    if problems:
+        raise TranscriptSelectionError(problems)
+    for target, entry in result.items():
+        log.info(f'{target}: windows from transcript(s) {", ".join(entry["ids"])} ({entry["chosen_by"]})')
+    return result
+
+
+def restrict_to_transcripts(df_gtf: pd.DataFrame, selection: t.Dict[str, dict]) -> pd.DataFrame:
+    """The GTF rows minus those of the targets' unselected transcripts (see select_transcripts)."""
+    chosen = {target: set(entry['ids']) for target, entry in selection.items() if entry['ids'] is not None}
+    if not chosen:
+        return df_gtf
+    pairs = set((target, transcript) for target, ids in chosen.items() for transcript in ids)
+    selected = df_gtf.gene_name.isin(list(chosen))
+    keep = [(gene, transcript) in pairs for gene, transcript in
+            zip(df_gtf.gene_name[selected], df_gtf.transcript_id[selected])]
+    mask = ~selected
+    mask.loc[selected] = keep
+    return df_gtf[mask]
+
+
 def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
-                  genelist: pd.DataFrame, min_length: int=40
+                  genelist: pd.DataFrame, min_length: int=40, source: str = 'exon'
                   ) :
-    """Extract all exons of each gene"""
-    #import ipdb; ipdb.set_trace()
+    """Extract the exons (CDS for source exon and CDS, see gene_segments) of each gene"""
     gene2exons = {}
     for item in genelist.iterrows():
         gene = item[1]['geneID']
         df_gene = df_gtf[df_gtf.gene_name == gene]
         if df_gene.shape[0] <= 0:
             raise ValueError(f"Gene {gene} not exists in GTF file.")
-        df_exons = df_gene[df_gene.type == 'CDS'].copy()
-        if df_exons.shape[0] == 0:
-            df_exons = df_gene[df_gene.type == 'exon'].copy()
-        df_exons = df_exons[df_exons.length >= min_length]
+        df_exons = gene_segments(df_gene, source).copy()
+        if source != 'mRNA':
+            df_exons = df_exons[df_exons.length >= min_length]
         if df_exons.shape[0] == 0:
             raise ValueError(f"Gene {gene} can't found any exon records.")
         df_exons['transcript_name'] = df_exons['info'].str.extract(r'transcript_id\s+"([^"]+)"')[0]
@@ -136,12 +282,11 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             gene2exons[gene].append(exon)
     return gene2exons
 
-def get_exon_seq(genes, fa, gtf, min_length=40):
-    fa = Fasta(fa)
+def get_exon_seq(genes, fa, gtf, min_length=40, source='exon'):
     genelist = pd.DataFrame(genes, columns=['geneID'])
     df_gtf = read_gtf(gtf, extract_fields=['gene_name', "transcript_id"], get_length=True)
-    gene2exons = extract_exons_rca(df_gtf, fa, genelist, min_length)
-    return gene2exons
+    with Fasta(fa) as fasta:
+        return extract_exons_rca(df_gtf, fasta, genelist, min_length, source)
 
 def change_chrom_name(chrom):
     if chrom.startswith('chr'):
@@ -224,8 +369,8 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             if strand == '-':
                 seq = reverse_complement(seq)
             gene_features[gene].append(("exon", name, seq, n_trans, (str(row['chr']), start, end, strand)))
-        # extract utr
-        df_utrs = df_gene[df_gene.type == 'UTR'].copy()
+        # extract utr (GENCODE: UTR; Ensembl: five_prime_utr, three_prime_utr)
+        df_utrs = gene_segments(df_gene, 'UTR').copy()
         df_utrs = df_utrs[df_utrs.length >= min_length]
         if df_utrs.shape[0] > 0:
             for idx, row in df_utrs.iterrows():
@@ -347,13 +492,49 @@ def generate_target_seqs(
                         gtf_path, 
                         min_length: int = 40, 
                         overlap: t.Optional[int] = None,
-                        step: t.Optional[int] = None
+                        step: t.Optional[int] = None,
+                        transcripts='all',
                          ):
+    """Candidate windows of the targets; RNA_SOURCES describes what each RNA source extracts.
+
+    For RNA sources, ``transcripts`` (see TRANSCRIPT_RULES) chooses the
+    transcripts whose features are extracted; the windows' attrs['transcripts']
+    record them per target (select_transcripts, with the ids of all
+    transcripts that have such features for 'all').
+    """
     lower, _, step = normalize_sampling(min_length, step, overlap)
+    if source in RNA_SOURCES:
+        df_gtf = read_gtf(gtf_path, extract_fields=['gene_name', 'transcript_id'])
+        selection = select_transcripts(df_gtf, targets, transcripts)
+        df_gtf = restrict_to_transcripts(df_gtf, selection)
+        genelist = pd.DataFrame(targets, columns=['geneID'])
+        with Fasta(fasta_path) as fa:
+            if source == 'UTR':
+                info = extract_gene_features(df_gtf, fa, genelist, lower)
+            else:
+                info = extract_exons_rca(df_gtf, fa, genelist, lower, source)
+        data = _rna_windows(source, info, min_length, step)
+        for target, entry in selection.items():
+            if entry['ids'] is None:
+                rows = gene_segments(df_gtf[df_gtf.gene_name == target], source)
+                entry['ids'] = sorted(set(rows.transcript_id.dropna()))
+        data.attrs['transcripts'] = selection
+        return data
+    elif source == 'genome':
+        data_list = []
+        for target in targets:
+            seq_list = extract_fasta(fasta_path, target, min_length, step=step)
+            data_list.extend(seq_list)
+        data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'target_region'])
+        return data
+
+
+def _rna_windows(source, info, min_length, step) -> pd.DataFrame:
+    """Windows of the segments extract_exons_rca (UTR: extract_gene_features) returned."""
     # start/end count within the exon or UTR; target_start/target_end count
     # along the target (its merged exon model, see segment_offsets).
-    if source == 'exon' or source == 'CDS':
-        exon_info = get_exon_seq(targets, fasta_path, gtf_path, lower)
+    if source != 'UTR':
+        exon_info = info
         data_list = [] 
         for gene_name, exon_list in exon_info.items():
             offsets = segment_offsets(exon[4] for exon in exon_list)
@@ -371,10 +552,8 @@ def generate_target_seqs(
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region','exon_name', 'transcript_names','start', 
                                                 'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
         return data
-    elif source == 'UTR':
-        with Fasta(fasta_path) as fa:
-            df_gtf = read_gtf(gtf_path, extract_fields=['gene_name', 'transcript_id'])
-            utr_info = extract_gene_features(df_gtf, fa, pd.DataFrame(targets, columns=['geneID']), lower)
+    else:
+        utr_info = info
         data_list = []
         for gene_name, utr_list in utr_info.items():
             utr_list = [utr for utr in utr_list if utr[0] != 'exon']
@@ -394,13 +573,6 @@ def generate_target_seqs(
                                       offsets[interval] + start, offsets[interval] + end, tem, n_trans])
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'utr_name', 'transcript_names','start', 
                                                 'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
-        return data
-    elif source == 'genome':
-        data_list = []
-        for target in targets:
-            seq_list = extract_fasta(fasta_path, target, min_length, step=step)
-            data_list.extend(seq_list)
-        data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'target_region'])
         return data
 
 def validate_targets(targets, gtf_path, DTF_NAME_FIX=False):

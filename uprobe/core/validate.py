@@ -47,8 +47,8 @@ OPTIONAL_KEYS = (
     'meta',  # probe-template metadata
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
-SOURCES = ('genome', 'exon', 'CDS', 'UTR')
-REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout')
+SOURCES = ('genome', 'mRNA', 'exon', 'CDS', 'UTR')
+REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
@@ -83,12 +83,12 @@ DRY_RUN_TARGETS = 200
 SNIPPETS = {
     'genome': 'genome: hg38   # a top-level key of genomes.yaml',
     'targets': ('targets:\n'
-                '  - CD4               # gene name (source: exon, CDS or UTR)\n'
+                '  - CD4               # gene name (source: mRNA, exon, CDS or UTR)\n'
                 '  - chr1:1000-2000    # region (source: genome)\n'
                 '  - my_seq: ACGTACGT  # literal sequence'),
     'extracts': ('extracts:\n'
                  '  target_region:\n'
-                 '    source: exon   # genome | exon | CDS | UTR\n'
+                 '    source: mRNA   # genome | mRNA | exon | CDS | UTR\n'
                  '    length: 40     # or an inclusive range: [38, 42]\n'
                  '    step: 20'),
     'encoding': 'encoding:\n  CD4:\n    BC1: ACGTACGTACGT',
@@ -126,6 +126,8 @@ HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELD
                       '  temperature_c: 37\n'
                       '  na_mM: 390          # 2x SSC\n'
                       '  formamide_pct: 30')
+TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; canonical: Ensembl_canonical; mane: '
+                    'MANE_Select, else Ensembl_canonical; or a list of transcript ids, e.g. [ENST00000646664]')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
                   '  kmer: 30          # k-mer length, 12-32\n'
                   '  min_shared: 0.5   # share of the target\'s k-mers that one transcript of a copy contains')
@@ -277,6 +279,7 @@ class _Validator:
         self.referenced: T.Set[str] = set()
         self.dag_ok = False
         self.attributes: dict = {}
+        self.coding_targets = None  # genome targets with CDS features in the GTF, once it was read
         self.built_lengths: T.Dict[str, int] = {}  # probe/part name -> shortest sequence in the dry run
 
     # -- bookkeeping -----------------------------------------------------
@@ -345,6 +348,7 @@ class _Validator:
         self.check_summary(protocol)
         if self.genomes is not None:
             self.check_genome(protocol, 'attributes' in generated)
+        self.check_exon_source()
         self.dry_run()
         self.check_alignment_lengths(protocol, 'attributes' in generated)
         return self.findings
@@ -398,11 +402,12 @@ class _Validator:
         if source is None:
             self.error(path + ('source',), 'missing `source`',
                        'source: one of genome (targets are regions such as chr1:100-200), '
-                       'exon, CDS or UTR (targets are gene names)')
+                       'mRNA, exon, CDS or UTR (targets are gene names)')
         elif source not in SOURCES:
             self.error(path + ('source',), f'unknown source {source!r}', _did_you_mean(source, SOURCES))
         else:
             self.source = source
+        self.check_transcripts(region, path)
         if region.get('length') is None:
             self.error(path + ('length',), 'missing `length`',
                        'length: 40   # positive integer, or an inclusive range: [38, 42]')
@@ -424,6 +429,22 @@ class _Validator:
                 self.error(path + ('layout',), str(exc), LAYOUT_HINT)
                 return
             self.lengths = (min(self.layout[1]), max(self.layout[1]))
+
+    def check_transcripts(self, region, path):
+        from .gen.fun import TRANSCRIPT_RULES, transcripts_setting
+        if 'transcripts' not in region:
+            return
+        value = region['transcripts']
+        try:
+            setting = transcripts_setting(value)
+        except ValueError as exc:
+            hint = _did_you_mean(value, TRANSCRIPT_RULES) if isinstance(value, str) else ''
+            hint = hint + '\n' if hint.startswith('did') else ''
+            self.error(path + ('transcripts',), str(exc), hint + TRANSCRIPTS_HINT)
+            return
+        if self.source == 'genome' and setting != 'all':
+            self.warning(path + ('transcripts',), 'transcripts applies to gene targets (source mRNA, exon, CDS or '
+                         'UTR) and is ignored for source: genome', 'remove transcripts')
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -468,7 +489,7 @@ class _Validator:
                 match = REGION_RE.match(str(name))
                 if not match:
                     self.error(path, f'target {name!r} is not a region; source: genome needs chrom:start-end',
-                               'e.g. chr1:100000-101000, or use source: exon, CDS or UTR for gene names')
+                               'e.g. chr1:100000-101000, or use source: mRNA, exon, CDS or UTR for gene names')
                 elif int(match[2]) >= int(match[3]):
                     self.error(path, f'region {name!r} has start >= end', 'write chrom:start-end with start < end')
             elif self.source is not None and REGION_RE.match(str(name)):
@@ -817,7 +838,7 @@ class _Validator:
                     self._check_mapped_genes(path, attr)
                 if kind == 'blocks' and self.source == 'genome' and not self.direct_targets:
                     self.warning(path + ('type',), 'blocks needs a start column, which source: genome does not '
-                                 'produce; the attribute is skipped', 'remove it, or use source exon, CDS or UTR')
+                                 'produce; the attribute is skipped', 'remove it, or use source mRNA, exon, CDS or UTR')
             target = attr.get('target')
             if target is None:
                 self.error(path + ('target',), 'missing attribute `target`',
@@ -1304,10 +1325,16 @@ class _Validator:
             from .gen.fun import read_gtf
             try:
                 # The same gene_name lookup as gen.fun.validate_targets.
-                genes = set(read_gtf(entry['gtf'])['gene_name'].dropna().unique())
+                transcripts = self.region().get('transcripts', 'all')
+                gtf = read_gtf(entry['gtf'], extract_fields=['gene_name'] if transcripts == 'all'
+                               else ['gene_name', 'transcript_id'])
+                genes = set(gtf['gene_name'].dropna().unique())
             except Exception as exc:
                 self.error(('genome',), f'cannot read the GTF: {exc}', 'check the gtf file')
                 return
+            coding = set(gtf.loc[gtf['type'] == 'CDS', 'gene_name'].dropna())
+            self.coding_targets = [target for target in self.genome_targets if target in coding]
+            self.check_transcripts_in_genome(gtf, [target for target in self.genome_targets if target in genes])
             for target in self.genome_targets:
                 if target not in genes:
                     close = _closest(target, genes)
@@ -1315,6 +1342,41 @@ class _Validator:
                                f'target {target!r} is not a gene_name in the GTF',
                                f"did you mean '{close}'?" if close else
                                'check the gene symbol (GTF gene_name/gene attributes are matched, not gene IDs)')
+
+    def check_transcripts_in_genome(self, gtf, targets):
+        """The transcripts option against the GTF: listed ids, and the tags canonical and mane read."""
+        from .gen.fun import TranscriptSelectionError, select_transcripts, transcripts_setting
+        try:
+            setting = transcripts_setting(self.region().get('transcripts'))
+        except ValueError:
+            return  # reported by check_transcripts
+        if setting == 'all' or not targets:
+            return
+        logger = logging.getLogger('uprobe.core.gen.fun')
+        level = logger.level
+        logger.setLevel(logging.WARNING)
+        try:
+            select_transcripts(gtf, targets, setting)
+        except TranscriptSelectionError as exc:
+            for problem in exc.problems:
+                self.error(('extracts', 'target_region', 'transcripts'), problem, TRANSCRIPTS_HINT)
+        finally:
+            logger.setLevel(level)
+
+    def check_exon_source(self):
+        """Warn that source: exon is the coding sequence of protein-coding genes (see gen.fun.RNA_SOURCES)."""
+        if self.source != 'exon' or not self.genome_targets:
+            return
+        path = ('extracts', 'target_region', 'source')
+        fix = ('source: mRNA   # the whole mature mRNA: 5\' UTR, CDS and 3\' UTR\n'
+               'or source: CDS to keep the coding sequence and say so')
+        if self.coding_targets is None:  # the GTF was not read
+            self.warning(path, 'source: exon extracts only the coding sequence (CDS features) of protein-coding '
+                         'genes, without their UTRs; only genes without CDS keep all their exons', fix)
+        elif self.coding_targets:
+            shown = ', '.join(self.coding_targets[:10]) + (', ...' if len(self.coding_targets) > 10 else '')
+            self.warning(path, f'{len(self.coding_targets)} target(s) are protein-coding ({shown}): source: exon '
+                         'extracts only their coding sequence (CDS features), without the UTRs', fix)
 
     # -- probe construction on synthetic targets -------------------------
     def dry_run(self):

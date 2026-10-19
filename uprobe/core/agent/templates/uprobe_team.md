@@ -122,9 +122,10 @@ targets:
   - <gene_symbol>
   - <custom_name>: <custom_sequence_optional>
 extracts:
-  source: <genome|exon|CDS|UTR; omit if supplied by selected probe_method preset>
+  source: <genome|mRNA|exon|CDS|UTR (mRNA: whole mature mRNA; exon and CDS: coding sequence of protein-coding genes); omit if supplied by selected probe_method preset>
   length: <int_bp; omit if supplied by selected probe_method preset>
   step: <positive_int_bp; omit if supplied by selected probe_method preset>
+  transcripts: <optional for RNA sources: all (default) | canonical | mane (MANE Select, else Ensembl canonical) | [transcript ids]; use mane, or the transcript the user names, when probes must lie on the reference transcript>
 probe_method: <optional method name such as MiP-Seq, OpenFISH, MERFISH>
 probe_structure_mode: <preset_probe_json|advanced_yaml>
 probes_yaml: <only if advanced_yaml; must include root key 'probes'>
@@ -511,7 +512,7 @@ Follow this SOP exactly. Do not skip steps.
 - If `probes` references `encoding[target]['BCx']`, verify every referenced barcode key exists for every target.
 - If `probes` references `encoding[target]['BCx']` and barcode sequences are not user-provided, verify `barcode_length` is present before barcode generation. Missing `barcode_length` is a user-facing required parameter, not an auto-fixable validation issue.
 - If `probes` does not reference `encoding[target]`, verify barcode fields are not being invented unnecessarily.
-- Verify `extracts.target_region.source` is one of `genome`, `exon`, `CDS`, or `UTR`.
+- Verify `extracts.target_region.source` is one of `genome`, `mRNA`, `exon`, `CDS`, or `UTR` (`exon` is only the CDS of protein-coding genes; use `mRNA` to tile the whole mRNA with its UTRs).
 - Verify `length` is a positive integer or an inclusive `[min, max]` range, and `step` is a positive integer.
 - Verify `probes` came from either user-provided YAML or a selected `probe.json` preset.
 - If `probes` came from `probe.json`, verify the protocol `probes` mapping is structurally identical to the selected preset unless the user explicitly requested a subset or override.
