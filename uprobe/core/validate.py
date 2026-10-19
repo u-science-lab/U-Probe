@@ -48,7 +48,7 @@ OPTIONAL_KEYS = (
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
 SOURCES = ('genome', 'mRNA', 'exon', 'CDS', 'UTR')
-REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout')
+REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
@@ -126,6 +126,8 @@ HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELD
                       '  temperature_c: 37\n'
                       '  na_mM: 390          # 2x SSC\n'
                       '  formamide_pct: 30')
+TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; canonical: Ensembl_canonical; mane: '
+                    'MANE_Select, else Ensembl_canonical; or a list of transcript ids, e.g. [ENST00000646664]')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
                   '  kmer: 30          # k-mer length, 12-32\n'
                   '  min_shared: 0.5   # share of the target\'s k-mers that one transcript of a copy contains')
@@ -405,6 +407,7 @@ class _Validator:
             self.error(path + ('source',), f'unknown source {source!r}', _did_you_mean(source, SOURCES))
         else:
             self.source = source
+        self.check_transcripts(region, path)
         if region.get('length') is None:
             self.error(path + ('length',), 'missing `length`',
                        'length: 40   # positive integer, or an inclusive range: [38, 42]')
@@ -426,6 +429,22 @@ class _Validator:
                 self.error(path + ('layout',), str(exc), LAYOUT_HINT)
                 return
             self.lengths = (min(self.layout[1]), max(self.layout[1]))
+
+    def check_transcripts(self, region, path):
+        from .gen.fun import TRANSCRIPT_RULES, transcripts_setting
+        if 'transcripts' not in region:
+            return
+        value = region['transcripts']
+        try:
+            setting = transcripts_setting(value)
+        except ValueError as exc:
+            hint = _did_you_mean(value, TRANSCRIPT_RULES) if isinstance(value, str) else ''
+            hint = hint + '\n' if hint.startswith('did') else ''
+            self.error(path + ('transcripts',), str(exc), hint + TRANSCRIPTS_HINT)
+            return
+        if self.source == 'genome' and setting != 'all':
+            self.warning(path + ('transcripts',), 'transcripts applies to gene targets (source mRNA, exon, CDS or '
+                         'UTR) and is ignored for source: genome', 'remove transcripts')
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -1306,13 +1325,16 @@ class _Validator:
             from .gen.fun import read_gtf
             try:
                 # The same gene_name lookup as gen.fun.validate_targets.
-                gtf = read_gtf(entry['gtf'])
+                transcripts = self.region().get('transcripts', 'all')
+                gtf = read_gtf(entry['gtf'], extract_fields=['gene_name'] if transcripts == 'all'
+                               else ['gene_name', 'transcript_id'])
                 genes = set(gtf['gene_name'].dropna().unique())
             except Exception as exc:
                 self.error(('genome',), f'cannot read the GTF: {exc}', 'check the gtf file')
                 return
             coding = set(gtf.loc[gtf['type'] == 'CDS', 'gene_name'].dropna())
             self.coding_targets = [target for target in self.genome_targets if target in coding]
+            self.check_transcripts_in_genome(gtf, [target for target in self.genome_targets if target in genes])
             for target in self.genome_targets:
                 if target not in genes:
                     close = _closest(target, genes)
@@ -1320,6 +1342,26 @@ class _Validator:
                                f'target {target!r} is not a gene_name in the GTF',
                                f"did you mean '{close}'?" if close else
                                'check the gene symbol (GTF gene_name/gene attributes are matched, not gene IDs)')
+
+    def check_transcripts_in_genome(self, gtf, targets):
+        """The transcripts option against the GTF: listed ids, and the tags canonical and mane read."""
+        from .gen.fun import TranscriptSelectionError, select_transcripts, transcripts_setting
+        try:
+            setting = transcripts_setting(self.region().get('transcripts'))
+        except ValueError:
+            return  # reported by check_transcripts
+        if setting == 'all' or not targets:
+            return
+        logger = logging.getLogger('uprobe.core.gen.fun')
+        level = logger.level
+        logger.setLevel(logging.WARNING)
+        try:
+            select_transcripts(gtf, targets, setting)
+        except TranscriptSelectionError as exc:
+            for problem in exc.problems:
+                self.error(('extracts', 'target_region', 'transcripts'), problem, TRANSCRIPTS_HINT)
+        finally:
+            logger.setLevel(level)
 
     def check_exon_source(self):
         """Warn that source: exon is the coding sequence of protein-coding genes (see gen.fun.RNA_SOURCES)."""

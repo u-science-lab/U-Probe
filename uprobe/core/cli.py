@@ -345,6 +345,15 @@ def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None)
     region = protocol_config['extracts']['target_region']
     _, _, region['step'] = normalize_sampling(region.get('length'), region.get('step'), region.get('overlap'))
     region.pop('overlap', None)
+    if 'transcripts' in region:
+        from .gen.fun import transcripts_setting
+        try:
+            region['transcripts'] = transcripts_setting(region['transcripts'])
+        except ValueError as exc:
+            raise ValueError(f'extracts.target_region.{exc}') from None
+        if region.get('source', 'genome') == 'genome' and region['transcripts'] != 'all':
+            log.warning('extracts.target_region.transcripts applies to gene targets (source mRNA, exon, CDS or '
+                        'UTR); it is ignored for source: genome')
     if 'layout' in region:
         from .layout import compile_layout
         compile_layout(region['layout'], region['length'])

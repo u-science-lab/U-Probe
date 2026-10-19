@@ -179,7 +179,9 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     raw (after attributes), final (after post-processing), files
     ({'xlsx', 'raw_xlsx', 'tsv', 'html'}), no_filtered_probes, raw_file,
     genome_source (the genome entry's ``source``, as written by ``uprobe genome fetch``),
-    off_targets (the off-target statistics add_attributes recorded).
+    off_targets (the off-target statistics add_attributes recorded),
+    transcripts (per gene target, the transcripts its windows came from, as
+    gen.fun.select_transcripts records them).
     """
     protocol = protocol if isinstance(protocol, dict) else {}
     region = (protocol.get("extracts") or {}).get("target_region") or {}
@@ -206,6 +208,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     final_counts = _target_counts(final)
 
     names = list(dict.fromkeys((requested if valid is None else valid) + list(windows or {})))
+    transcripts = run.get("transcripts") or {}
     targets = {}
     eliminated = {}
     for name in names:
@@ -216,6 +219,8 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
             "final": final_counts.get(name, 0) if final_counts is not None else 0,
             "requested_probes": _requested_probes(protocol, name),
             "top_removal_stage": None,
+            # {selection, chosen_by, ids}: e.g. mane, Ensembl_canonical (no MANE Select), [ENSMUST...].
+            "transcripts": transcripts.get(name),
         }
         if before_post is not None and stage_counts:
             before, most = before_post.get(name, 0), 0
@@ -335,6 +340,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         "inputs": {
             "genome": protocol.get("genome"),
             "extract_source": region.get("source"),
+            "transcripts": region.get("transcripts", "all") if region.get("source") not in (None, "genome") else None,
             "target_length": region.get("length"),
             "step": region.get("step"),
             "requested_targets": requested,

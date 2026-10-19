@@ -125,6 +125,7 @@ extracts:
   source: <genome|mRNA|exon|CDS|UTR (mRNA: whole mature mRNA; exon and CDS: coding sequence of protein-coding genes); omit if supplied by selected probe_method preset>
   length: <int_bp; omit if supplied by selected probe_method preset>
   step: <positive_int_bp; omit if supplied by selected probe_method preset>
+  transcripts: <optional for RNA sources: all (default) | canonical | mane (MANE Select, else Ensembl canonical) | [transcript ids]; use mane, or the transcript the user names, when probes must lie on the reference transcript>
 probe_method: <optional method name such as MiP-Seq, OpenFISH, MERFISH>
 probe_structure_mode: <preset_probe_json|advanced_yaml>
 probes_yaml: <only if advanced_yaml; must include root key 'probes'>

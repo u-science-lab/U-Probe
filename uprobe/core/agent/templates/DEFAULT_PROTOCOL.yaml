@@ -17,6 +17,7 @@ extracts:
     source:   # genome | mRNA | exon | CDS | UTR (exon = CDS of protein-coding genes)
     length:   # positive int or [min, max], inclusive
     step:   # positive int; distance between candidate starts
+    # transcripts: mane   # RNA sources: all (default) | canonical | mane | [transcript ids]
 
 probes:
 
