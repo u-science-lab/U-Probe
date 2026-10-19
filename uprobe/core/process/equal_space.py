@@ -21,8 +21,9 @@ def positions_along_target(df: pd.DataFrame) -> pd.Series:
     """Start of each candidate along its target.
 
     mRNA, exon, CDS and UTR windows number start/end within their exon or
-    UTR, so they carry target_start, their position on the gene's merged exon
-    model.
+    UTR (a window across exon junctions: along the exons it spans), so they
+    carry target_start, their position on the gene's merged exon model, or on
+    its one selected transcript (gen.fun.SPLICED_SOURCES).
     Genome windows and direct sequences are numbered along the region or
     sequence itself.
     """

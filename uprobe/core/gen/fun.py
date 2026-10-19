@@ -1,3 +1,5 @@
+import bisect
+import itertools
 import pandas as pd
 import os
 import tempfile
@@ -97,8 +99,35 @@ def process_gtf_inplace(filepath):
 #         shorter than the window give no window but still count in positions.
 #   UTR   its UTR features (GTF type UTR, or five_prime_utr and three_prime_utr
 #         as Ensembl names them). Segments shorter than the window are left out.
+# Each window lies within one segment, except for a target whose windows come
+# from one transcript (see SPLICED_SOURCES).
 RNA_SOURCES = ('exon', 'CDS', 'mRNA', 'UTR')
 UTR_TYPES = ('UTR', 'five_prime_utr', 'three_prime_utr')
+
+# Windows across exon-exon junctions. When transcripts (canonical, mane or a
+# list) selects exactly one transcript of a target, mRNA tiles the spliced RNA
+# of that transcript and exon and CDS its spliced coding sequence (its exons if
+# it has no CDS): the segments are joined 5' to 3', every one however short, so
+# windows also span the junctions between them and bind only the mature RNA.
+#   target_start/end  the window on the spliced sequence (1-based, inclusive)
+#   exon_name         the segment the window lies on or, across junctions, the
+#                     segments it spans, 5' to 3', joined by ';'
+#   start/end         the window on these segments joined, so on its segment
+#                     for a window within one, as for the other windows
+#   transcript_names  the transcript; n_trans 1
+# transcripts: all (the merged exon model), several transcripts of a target,
+# and source UTR keep one window per segment.
+SPLICED_SOURCES = ('exon', 'CDS', 'mRNA')
+SEGMENT_SEPARATOR = ';'
+
+
+def tiles_spliced(source: str, entry: dict) -> bool:
+    """Whether a target's windows tile one spliced transcript (see SPLICED_SOURCES).
+
+    ``entry`` is the target's select_transcripts entry.
+    """
+    return (source in SPLICED_SOURCES and entry['selection'] != 'all'
+            and entry['ids'] is not None and len(entry['ids']) == 1)
 
 
 def gene_segments(df_gene: pd.DataFrame, source: str) -> pd.DataFrame:
@@ -263,24 +292,57 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             chr_, start, end, strand, trans_name = str(row['chr']), row['start'], row['end'], row['strand'], row['transcript_name']
             exon_name = '_'.join([chr_, str(start), str(end), strand])
             n_trans = row['count']
-            if str(chr_) not in fa.keys():
-                chr_fixed = str(chr_).replace('chr', '')
-                if chr_fixed in fa.keys():
-                    chr_ = chr_fixed
-                else:
-                    chr_fixed = 'chr' + str(chr_)
-                    if chr_fixed in fa.keys():
-                        chr_ = chr_fixed
-            try:
-                seq = fa[chr_][start - 1:end].seq.upper()
-            except Exception:
-                log.error(f"Cannot read {chr_}:{start}-{end} from FASTA (first keys: {list(fa.keys())[:5]})")
-                raise
-            if strand == '-':
-                seq = reverse_complement(seq)
+            seq = _read_segment(fa, chr_, start, end, strand)
             exon = (exon_name, trans_name, seq, n_trans, (str(row['chr']), start, end, strand))
             gene2exons[gene].append(exon)
     return gene2exons
+
+
+def _read_segment(fa: Fasta, chrom: str, start: int, end: int, strand: str) -> str:
+    """The sequence of a GTF interval (1-based, inclusive), 5' to 3' on its strand.
+
+    The GTF chromosome is looked up in the FASTA as written, else without or
+    with a 'chr' prefix.
+    """
+    chrom = str(chrom)
+    if chrom not in fa.keys():
+        for alias in (chrom.replace('chr', ''), 'chr' + chrom):
+            if alias in fa.keys():
+                chrom = alias
+                break
+    try:
+        seq = fa[chrom][start - 1:end].seq.upper()
+    except Exception:
+        log.error(f"Cannot read {chrom}:{start}-{end} from FASTA (first keys: {list(fa.keys())[:5]})")
+        raise
+    return reverse_complement(seq) if strand == '-' else seq
+
+
+SplicedTranscript = t.Tuple[str, t.List[t.Tuple[str, str]]]  # (transcript id, [(segment name, sequence)] 5' to 3')
+
+
+def extract_spliced(df_gtf: pd.DataFrame, fa: Fasta, gene: str, source: str) -> SplicedTranscript:
+    """The segments of a target's one selected transcript, 5' to 3' (see SPLICED_SOURCES).
+
+    ``df_gtf`` holds only that transcript of the gene (restrict_to_transcripts).
+    Segments are not filtered by length: all of them make up the spliced sequence.
+    """
+    df_gene = df_gtf[df_gtf.gene_name == gene]
+    if df_gene.shape[0] <= 0:
+        raise ValueError(f"Gene {gene} not exists in GTF file.")
+    rows = gene_segments(df_gene, source)
+    if rows.shape[0] == 0:
+        raise ValueError(f"Gene {gene} can't found any exon records.")
+    transcripts = sorted(set(rows.transcript_id.dropna()))
+    intervals = sorted(set(zip(rows.chr.astype(str), rows.start, rows.end, rows.strand)), key=lambda iv: (iv[1], iv[2]))
+    if len(transcripts) != 1 or len({(chrom, strand) for chrom, _, _, strand in intervals}) != 1:
+        raise ValueError(f"Gene {gene}: expected the segments of one transcript on one strand, got "
+                         f"{len(transcripts)} transcript(s) on {sorted({(c, s) for c, _, _, s in intervals})}")
+    if intervals[0][3] == '-':
+        intervals.reverse()
+    segments = [('_'.join([chrom, str(start), str(end), strand]), _read_segment(fa, chrom, start, end, strand))
+                for chrom, start, end, strand in intervals]
+    return transcripts[0], segments
 
 def get_exon_seq(genes, fa, gtf, min_length=40, source='exon'):
     genelist = pd.DataFrame(genes, columns=['geneID'])
@@ -500,20 +562,23 @@ def generate_target_seqs(
     For RNA sources, ``transcripts`` (see TRANSCRIPT_RULES) chooses the
     transcripts whose features are extracted; the windows' attrs['transcripts']
     record them per target (select_transcripts, with the ids of all
-    transcripts that have such features for 'all').
+    transcripts that have such features for 'all'). A target with one
+    selected transcript is tiled along its spliced sequence (SPLICED_SOURCES).
     """
     lower, _, step = normalize_sampling(min_length, step, overlap)
     if source in RNA_SOURCES:
         df_gtf = read_gtf(gtf_path, extract_fields=['gene_name', 'transcript_id'])
         selection = select_transcripts(df_gtf, targets, transcripts)
         df_gtf = restrict_to_transcripts(df_gtf, selection)
-        genelist = pd.DataFrame(targets, columns=['geneID'])
+        single = [target for target, entry in selection.items() if tiles_spliced(source, entry)]
+        genelist = pd.DataFrame([target for target in targets if target not in single], columns=['geneID'])
         with Fasta(fasta_path) as fa:
             if source == 'UTR':
                 info = extract_gene_features(df_gtf, fa, genelist, lower)
             else:
                 info = extract_exons_rca(df_gtf, fa, genelist, lower, source)
-        data = _rna_windows(source, info, min_length, step)
+            spliced = {target: extract_spliced(df_gtf, fa, target, source) for target in single}
+        data = _rna_windows(source, info, min_length, step, spliced, order=targets)
         for target, entry in selection.items():
             if entry['ids'] is None:
                 rows = gene_segments(df_gtf[df_gtf.gene_name == target], source)
@@ -529,14 +594,36 @@ def generate_target_seqs(
         return data
 
 
-def _rna_windows(source, info, min_length, step) -> pd.DataFrame:
-    """Windows of the segments extract_exons_rca (UTR: extract_gene_features) returned."""
+def _spliced_windows(gene_name: str, transcript: SplicedTranscript, min_length, step) -> list:
+    """Window rows (as _rna_windows writes them) along one spliced transcript; see SPLICED_SOURCES."""
+    transcript_id, segments = transcript
+    sequence = ''.join(seq for _, seq in segments)
+    ends = list(itertools.accumulate(len(seq) for _, seq in segments))  # 0-based exclusive end of each segment
+    rows = []
+    for n, (i, window_end, tem) in enumerate(iter_target_windows(sequence, min_length, step), start=1):
+        first, last = bisect.bisect_right(ends, i), bisect.bisect_right(ends, window_end - 1)
+        start = i + 1 - (ends[first - 1] if first else 0)
+        end = start + window_end - i - 1
+        exon_name = SEGMENT_SEPARATOR.join(name for name, _ in segments[first:last + 1])
+        rows.append([f"{gene_name}_{n}", gene_name, f"{start}_{end}", exon_name, [transcript_id], start, end,
+                     i + 1, window_end, tem, 1])
+    return rows
+
+
+def _rna_windows(source, info, min_length, step, spliced=None, order=None) -> pd.DataFrame:
+    """Windows of the segments extract_exons_rca (UTR: extract_gene_features) returned.
+
+    ``spliced`` maps targets with one transcript to extract_spliced results,
+    tiled along the spliced sequence; targets are written in ``order``.
+    """
     # start/end count within the exon or UTR; target_start/target_end count
-    # along the target (its merged exon model, see segment_offsets).
+    # along the target (its merged exon model, see segment_offsets, or its
+    # spliced transcript, see SPLICED_SOURCES).
     if source != 'UTR':
         exon_info = info
-        data_list = [] 
+        rows = {}
         for gene_name, exon_list in exon_info.items():
+            data_list = rows[gene_name] = []
             offsets = segment_offsets(exon[4] for exon in exon_list)
             n = 1
             for j, exon_data in enumerate(exon_list, start=1):
@@ -549,6 +636,10 @@ def _rna_windows(source, info, min_length, step) -> pd.DataFrame:
                     n += 1
                     data_list.append([gene_id, gene_name, sub_region, exon_name, trans_name, start, end,
                                       offsets[interval] + start, offsets[interval] + end, tem, n_trans])
+        for gene_name, transcript in (spliced or {}).items():
+            rows[gene_name] = _spliced_windows(gene_name, transcript, min_length, step)
+        data_list = [row for gene_name in dict.fromkeys([*(order or []), *rows])
+                     for row in rows.get(gene_name, [])]
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region','exon_name', 'transcript_names','start', 
                                                 'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
         return data

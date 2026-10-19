@@ -361,8 +361,8 @@ summary:
   - `CDS`: the same as `exon`, under the name that says what it extracts.
   - `UTR`: the UTR features (`UTR` in GENCODE GTFs, `five_prime_utr` and `three_prime_utr` in Ensembl GTFs).
 
-  Each window lies within one exon (or CDS or UTR segment), so no window spans a splice junction. With `exon`, `CDS` and `UTR`, segments shorter than the window are left out; with `mRNA`, short exons give no window but still count in the positions along the RNA (`target_start`, see [Probes per target](#probes-per-target)).
-  - `transcripts` (RNA sources): which transcripts of each gene the windows come from. `all` (the default) takes the exons of all its transcripts, the merged exon model, so windows can lie on exons that only rare isoforms, or retained-intron transcripts, contain. `canonical` takes the transcript the GTF tags `Ensembl_canonical`; `mane` the one tagged `MANE_Select` (human), and for a gene without one (other species, most non-coding genes) its `Ensembl_canonical` transcript, with a log note; a list of transcript ids, e.g. `transcripts: [ENST00000646664]`, takes those (with or without version), and every target needs at least one of them. Ensembl and GENCODE GTFs carry both tags. An unknown id, an id of a gene that is not a target, a target without a listed id, or a gene without the tag stops the run with an error; `uprobe validate --check-targets` reports them beforehand. With one transcript, `target_start` is the position on that spliced transcript (`mRNA`) or on its CDS (`exon`, `CDS`), and `exempt_copies` judges copies against it. `summary.json` lists each target's transcripts: `selection`, `chosen_by` (`all`, `MANE_Select`, `Ensembl_canonical` or `listed`) and `ids`.
+  With `transcripts: all` (the default), each window lies within one exon (or CDS or UTR segment), so no window spans a splice junction. With `exon`, `CDS` and `UTR`, segments shorter than the window are left out; with `mRNA`, short exons give no window but still count in the positions along the RNA (`target_start`, see [Probes per target](#probes-per-target)). When `transcripts` selects one transcript of a target, `mRNA`, `exon` and `CDS` tile its spliced sequence instead, so windows also span its exon junctions; see [Windows across exon junctions](#windows-across-exon-junctions).
+  - `transcripts` (RNA sources): which transcripts of each gene the windows come from. `all` (the default) takes the exons of all its transcripts, the merged exon model, so windows can lie on exons that only rare isoforms, or retained-intron transcripts, contain. `canonical` takes the transcript the GTF tags `Ensembl_canonical`; `mane` the one tagged `MANE_Select` (human), and for a gene without one (other species, most non-coding genes) its `Ensembl_canonical` transcript, with a log note; a list of transcript ids, e.g. `transcripts: [ENST00000646664]`, takes those (with or without version), and every target needs at least one of them. Ensembl and GENCODE GTFs carry both tags. An unknown id, an id of a gene that is not a target, a target without a listed id, or a gene without the tag stops the run with an error; `uprobe validate --check-targets` reports them beforehand. With one transcript, the windows tile that spliced transcript (`mRNA`) or its spliced CDS (`exon`, `CDS`), across its exon junctions, `target_start` is the position on it, and `exempt_copies` judges copies against it. `summary.json` lists each target's transcripts: `selection`, `chosen_by` (`all`, `MANE_Select`, `Ensembl_canonical` or `listed`) and `ids`.
 - **`encoding`**: Mapping of specific genes to custom barcodes or identifiers (e.g., assigning `BC1` and `BC2` to `CD4`).
 - **`probes`**: The core of the design, powered by a **Directed Acyclic Graph (DAG)** architecture. This allows for complex, modular probe construction where parts and probes can reference each other.
   - **`template`**: Construct sequences using placeholders (e.g., `{part1}{part2}`).
@@ -373,13 +373,13 @@ summary:
   - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3, under the protocol's `hybridization` conditions.
   - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable), at `hybridization.temperature_c` when set.
   - `self_match`: Calculates the potential for self-dimerization.
-  - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites.
+  - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites. A window across an exon junction has no contiguous genomic site ([Windows across exon junctions](#windows-across-exon-junctions)).
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search); with `exempt_copies`, genes that copy most of the target are not counted ([Copies of the target](#copies-of-the-target)).
-  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity.
+  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity. For windows across exon junctions see [Windows across exon junctions](#windows-across-exon-junctions).
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`gene_expression`** (optional): An expression table of your sample; `mapped_genes` attributes then ignore off-target genes that are not expressed, or optionally expressed far below the target. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
-- **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`. It visits each target's candidates in order of position and keeps one when it starts more than `location_interval` bases after the end of the last kept one. In RNA mode the positions are those on the gene's merged exon model (`target_start`/`target_end`, see [Probes per target](#probes-per-target)), so windows from alternative exons of different transcripts are compared too, and a site that several exon entries contain is kept once, with the transcripts of all of them in `transcript_names` (and their number in `n_trans`).
+- **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`. It visits each target's candidates in order of position and keeps one when it starts more than `location_interval` bases after the end of the last kept one. In RNA mode the positions are those along the target (`target_start`/`target_end`: on the gene's merged exon model, or on its one selected transcript; see [Probes per target](#probes-per-target)), so windows from alternative exons of different transcripts are compared too, and a site that several exon entries contain is kept once, with the transcripts of all of them in `transcript_names` (and their number in `n_trans`).
 - **`off_target_pool`**: Optional post-processing step that lets at most `max_probes_per_gene` probes of a target's set hit the same off-target gene, e.g. `post_process: { off_target_pool: { attribute: target_mapped_genes, max_probes_per_gene: 2 } }`. See [Off-target pool limit](#off-target-pool-limit).
 - **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).
 - **`summary`**: Define the `report_name` (e.g., `rna_report` or `dna_report`) and the specific `attributes` you want to visualize and output in the final report.
@@ -387,11 +387,21 @@ summary:
 
 The `post_process` steps always run in this order, whatever their order in the protocol: `filters`, `avoid_otp` (DNA mode), `remove_overlap`, `off_target_pool`, `equal_space`, `sorts`.
 
+#### Windows across exon junctions
+
+When `extracts.target_region.transcripts` selects exactly one transcript of a target (`canonical`, `mane`, or a list with one of its ids), U-Probe tiles the spliced sequence of that transcript, as one would tile its cDNA: `source: mRNA` joins all its exons, `exon` and `CDS` its CDS pieces (its exons if it has no CDS), 5' to 3', every one however short. Windows therefore also span its exon-exon junctions. They are valid windows of the spliced RNA and bind only the mature RNA, not the pre-mRNA. On Ensembl 113, the MANE Select mRNA of ACTB (ENST00000646664, 6 exons) gives 1,793 20-nt windows instead of the 1,698 that lie within one exon, exactly the 20-mers of its Ensembl cDNA; ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB give 12,401 instead of 11,679 (19 more per junction). `transcripts: all` (the merged exon model), several selected transcripts of a target, and `source: UTR` keep one window per exon or segment.
+
+- `target_start`/`target_end`: the window's position on the spliced transcript (or spliced CDS), which `remove_overlap`, `equal_space`, `off_target_pool` and `exempt_copies` use as for any window.
+- `exon_name`: the exon (or CDS piece) the window lies on, `chrom_start_end_strand`, or, for a window across junctions, the exons it spans, 5' to 3', joined by `;`, e.g. `7_5530524_5530601_-;7_5529535_5529663_-`.
+- `start`/`end` and `sub_region`: the window's position along the exons that `exon_name` names, joined; for a window within one exon, its position on that exon, as for every other window. ACTB's window at 70-89, on the exons above, covers the last 9 nt of the 78-nt first exon and the first 11 of the second. `exon_name` and `start`/`end` thus place every window on the genome.
+- `transcript_names`: the transcript; `n_trans`: 1.
+- Attributes: `mapped_genes` and `exempt_copies` search the spliced transcripts (`transcript.fa`), so they find a junction window on its own transcript like any other window; the sequence attributes (Tm, GC, folding, self-match) read the window itself. `mapped_sites` and `kmer_count` search the genome, where an intron interrupts a junction window: `mapped_sites` finds the window's own site in part (a local alignment) or not at all, and `kmer_count` finds its k-mers that cross the junction only in processed copies of the gene, so their values for junction windows do not compare with those of other windows. Use `mapped_genes` to judge the specificity of RNA probes.
+
 #### Probes per target
 
 `equal_space` works in DNA (`source: genome`) and RNA mode (`mRNA`, `exon`, `CDS`, `UTR`). It runs after the filters, `remove_overlap` and `off_target_pool`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
 
-- **Along the target**: in DNA mode, along the genomic region. In RNA mode, windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of all its transcripts with the introns removed, read 5' to 3'. With one transcript (the gene has one, or `transcripts` selects one) and `source: mRNA` this is the position on the spliced RNA; exons of different transcripts that overlap share positions. With `exon`, `CDS` and `UTR`, segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
+- **Along the target**: in DNA mode, along the genomic region. In RNA mode, windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position along the target. When `transcripts` selects one transcript of the target, that is the position on the spliced transcript (`mRNA`) or its spliced CDS (`exon`, `CDS`); see [Windows across exon junctions](#windows-across-exon-junctions). Otherwise it is the position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of its transcripts with the introns removed, read 5' to 3': for a gene with one transcript and `source: mRNA` the position on the spliced RNA, while exons of different transcripts that overlap share positions, and with `exon`, `CDS` and `UTR`, segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
 - **Fewer candidates than requested**: the target keeps all of them. `summary.json` lists `requested_probes` and `final` for every target and a `fewer_probes_than_requested` warning with the counts, the run status is `partial`, and `uprobe run` logs the per-target counts as `final/requested`.
 
 #### Hybridization conditions
@@ -516,19 +526,19 @@ Shares of the target's 30-mers on Ensembl 113, for the canonical mRNA and for th
 | RPL13A | RPL13AP5 (processed pseudogene) | 44.9% | 64.9% |
 | mouse Gapdh | Gm13394 (retrocopy, 668 TPM in NIH/3T3) | 75.6% | |
 
-Measured with template runs of the smFISH template on Ensembl 113 (GRCh38 and GRCm39 primary assemblies with their GTFs): windows from the whole reference mRNA (`source: mRNA`, `transcripts: mane`: MANE Select in human, Ensembl canonical in mouse), 20-mers, Bowtie 1 within 2 substitutions, `target_mapped_genes <= 1`, `remove_overlap` 2, 48 probes per gene, with HeLa-S3 and NIH/3T3 tables (TPM, `min_value: 1`). Final probes (genes with 48); each row adds its option to the row above, except `exempt_copies` alone, which is the template's default:
+Measured with template runs of the smFISH template on Ensembl 113 (GRCh38 and GRCm39 primary assemblies with their GTFs): windows from the whole reference mRNA, across its exon junctions (`source: mRNA`, `transcripts: mane`: MANE Select in human, Ensembl canonical in mouse), 20-mers, Bowtie 1 within 2 substitutions, `target_mapped_genes <= 1`, `remove_overlap` 2, 48 probes per gene, with HeLa-S3 and NIH/3T3 tables (TPM, `min_value: 1`). Final probes (genes with 48); each row adds its option to the row above, except `exempt_copies` alone, which is the template's default:
 
 | Setting | Human ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | Human, 30 random genes | Mouse Actb, Eef1a1, Gapdh, Hspa8, Rpl13a, Rpl3, Tubb5 | Mouse, 30 random genes |
 | --- | --- | --- | --- | --- |
-| No expression table | 117 (1) | 1,197 (24) | 117 (1) | 1,284 (23) |
-| `exempt_copies` alone (template default) | 117 (1) | 1,229 (24) | 121 (1) | 1,295 (23) |
-| Table, TPM >= 1 | 179 (2) | 1,251 (25) | 122 (1) | 1,389 (26) |
-| + `min_fraction_of_target: 0.05` | 192 (2) | 1,279 (25) | 197 (2) | 1,389 (26) |
-| + `exempt_copies` (recommended) | 192 (2) | 1,327 (26) | 270 (4) | 1,389 (26) |
-| + `absent: ignore` | 264 (5) | 1,332 (26) | 332 (6) | 1,423 (28) |
+| No expression table | 119 (1) | 1,198 (24) | 120 (1) | 1,288 (23) |
+| `exempt_copies` alone (template default) | 119 (1) | 1,231 (24) | 125 (1) | 1,300 (23) |
+| Table, TPM >= 1 | 180 (2) | 1,255 (25) | 125 (1) | 1,394 (27) |
+| + `min_fraction_of_target: 0.05` | 193 (2) | 1,285 (25) | 203 (2) | 1,394 (27) |
+| + `exempt_copies` (recommended) | 193 (2) | 1,333 (26) | 275 (4) | 1,394 (27) |
+| + `absent: ignore` | 264 (5) | 1,337 (26) | 335 (6) | 1,426 (28) |
 
-- The relative threshold helps highly expressed genes whose pseudogenes are expressed at a few percent of their level: human GAPDH 7 -> 14 probes and ACTB 38 -> 44, mouse Eef1a1 17 -> 48 and Rpl13a 17 -> 42. It changed little for random genes.
-- Copies matter where a copy is expressed: mouse Rpl3 (Rpl3-ps1 holds 85% of its 30-mers) went from 6 to 48 probes and Hspa8 from 18 to 48 with both options; among the random genes the copies were lncRNA genes overlapping NDUFV2 and EIF3L on the same strand, the SPDYE family, and mouse Vmn2r92 for Vmn2r91 (73%). Human GAPDH has no copy above 30%; it reached 48 probes only when, on top of the fraction, its pseudogenes missing from the HeLa table were ignored. Mouse Gapdh has 35 retrocopies holding 50-92% of its 30-mers, all exempt, but others holding less are missing from the NIH/3T3 table and kept it at 5 probes until they were ignored. `absent: ignore` trusts the table to list every expressed gene.
+- The relative threshold helps highly expressed genes whose pseudogenes are expressed at a few percent of their level: human GAPDH 7 -> 14 probes and ACTB 38 -> 44, mouse Eef1a1 17 -> 48 and Rpl13a 17 -> 46. It changed little for random genes.
+- Copies matter where a copy is expressed: mouse Rpl3 (Rpl3-ps1 holds 85% of its 30-mers) went from 7 to 48 probes and Hspa8 from 18 to 48 with both options; among the random genes the copies were lncRNA genes overlapping NDUFV2 and EIF3L on the same strand, the SPDYE family, and mouse Vmn2r92 for Vmn2r91 (73%). Human GAPDH has no copy above 30%; it reached 48 probes only when, on top of the fraction, its pseudogenes missing from the HeLa table were ignored. Mouse Gapdh has 35 retrocopies holding 50-92% of its 30-mers, all exempt, but others holding less are missing from the NIH/3T3 table and kept it at 6 probes until they were ignored. `absent: ignore` trusts the table to list every expressed gene.
 
 Where the windows come from matters as much. Up to U-Probe 0.2 the template used `source: exon`, the CDS of all coding isoforms; `mRNA` with `transcripts: all` takes the exons of every isoform, retained introns included. Probes (genes with 48) and the share of final probes whose site lies on the reference mRNA, without an expression table (`exempt_copies` on) and with the recommended settings (TPM >= 1, `min_fraction_of_target: 0.05`, `exempt_copies`):
 
@@ -538,10 +548,10 @@ Where the windows come from matters as much. Up to U-Probe 0.2 the template used
 | `exon` (CDS), all transcripts (template up to 0.2) | recommended | 125 (2), 94% | 1,119 (16), 95% | 222 (3), 95% | 1,209 (19), 99% |
 | `mRNA`, all transcripts | none | 288 (6), 16% | 1,334 (27), 68% | 332 (5), 27% | 1,337 (26), 76% |
 | `mRNA`, all transcripts | recommended | 288 (6), 31% | 1,376 (28), 72% | 336 (7), 38% | 1,400 (28), 77% |
-| `mRNA`, `transcripts: mane` (template) | none | 117 (1), 100% | 1,229 (24), 100% | 121 (1), 100% | 1,295 (23), 100% |
-| `mRNA`, `transcripts: mane` (template) | recommended | 192 (2), 100% | 1,327 (26), 100% | 270 (4), 100% | 1,389 (26), 100% |
+| `mRNA`, `transcripts: mane` (template) | none | 119 (1), 100% | 1,231 (24), 100% | 125 (1), 100% | 1,300 (23), 100% |
+| `mRNA`, `transcripts: mane` (template) | recommended | 193 (2), 100% | 1,333 (26), 100% | 275 (4), 100% | 1,394 (27), 100% |
 
-The reference mRNA gave the six human housekeeping genes 117 probes against 11 from the CDS of all isoforms without a table, and 192 against 125 with it; paralogs and pseudogenes share their coding sequence more than their UTRs. All transcripts reach 48 probes for nearly every housekeeping gene, but mostly on exons of other isoforms and retained introns: only 16-38% of these probes lie on the reference mRNA.
+The reference mRNA gave the six human housekeeping genes 119 probes against 11 from the CDS of all isoforms without a table, and 193 against 125 with it; paralogs and pseudogenes share their coding sequence more than their UTRs. All transcripts reach 48 probes for nearly every housekeeping gene, but mostly on exons of other isoforms and retained introns: only 16-38% of these probes lie on the reference mRNA.
 
 #### Off-target pool limit
 
@@ -574,12 +584,12 @@ Measured on Ensembl 113 human genes with template runs of the smFISH template (t
 
 | Genes | Expression table | `<= 1`: probes (genes with 48) | `<= 2` + pool: probes (genes with 48) | Final probes with an off-target gene, `<= 2` + pool |
 | --- | --- | --- | --- | --- |
-| 30 random protein-coding genes | none | 1,229 (24) | 1,246 (24) | 44% |
-| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,299 (26) | 1,308 (26) | 35% |
-| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 117 (1) | 131 (1) | 47% |
-| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 179 (2) | 192 (2) | 39% |
+| 30 random protein-coding genes | none | 1,231 (24) | 1,249 (24) | 47% |
+| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,303 (26) | 1,312 (26) | 34% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 119 (1) | 132 (1) | 45% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 180 (2) | 195 (2) | 36% |
 
-The limit added 9-17 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 62 and 70 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
+The limit added 9-18 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 61 and 72 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 
