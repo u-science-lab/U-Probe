@@ -21,7 +21,7 @@ Whether you are designing standard probes for established protocols or developin
 ## Features
 
 - **Universal Probe Architecture**: Features a declarative configuration system and a directed acyclic graph (DAG)-based assembly engine. Easily design arbitrary and complex multi-part probe structures (e.g., DNA-FISH, smFISH, MERFISH, seqFISH, $\pi$-FISH, MiP-seq, RCA) without modifying any source code.
-- **Agentic AI Workflow**: Integrates hierarchical LLM-based AI agents (via PantheonOS) for conversational design. Users can describe experimental goals in plain language or provide scRNA-seq data, and the agents will autonomously construct configurations, select parameters, and execute the design pipeline.
+- **Agentic AI Workflow**: An Agent Skill (`uprobe/skills/u-probe/`) lets AI coding agents such as Claude Code or Codex design probes with U-Probe, and the web server offers conversational design through hierarchical LLM-based AI agents (via PantheonOS, an optional extra). Users can describe experimental goals in plain language or provide scRNA-seq data, and the agents will autonomously construct configurations, select parameters, and execute the design pipeline.
 - **Comprehensive Quality Filtering**: Automatically computes and filters candidates based on GC content, melting temperature, secondary structure stability (via ViennaRNA), off-target mapping (via Bowtie2, or exhaustively within a number of mismatches via Bowtie 1), and k-mer frequency (via Jellyfish).
 - **End-to-End Automation**: Streamlines the entire process from target sequence extraction to advanced post-processing, including overlap removal and equal spacing for tiling designs.
 - **Extensible API & Web UI**: Offers a clean Python API for programmatic integration, a command-line interface, and an interactive web server for visual workflow management and result analysis.
@@ -82,20 +82,8 @@ uprobe validate -p protocol.yaml -g genomes.yaml --check-targets
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --json
 ```
 
-#### 🤖 AI Smart Assistant 
-U-Probe includes an interactive AI Agent powered by Pantheon. You can design probes through natural language conversation without writing YAML files manually.
-
-```bash
-uprobe agent
-```
-
-CLI Agent sessions set `UPROBE_OUTPUT_DIR` automatically. New generated files should be under:
-
-```text
-<workspace>/outputs/agent/<user>/<session>/agent_runs/<run>/
-```
-
-Use `uprobe agent --force` after upgrading if you need to refresh the installed Pantheon team template.
+#### 🤖 Using U-Probe with an AI Agent
+The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
 
 #### 🌐 Start Web Server 
 Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. First check `config.ini`: use local Linux paths under `[Paths]` and `frontend_url = http://localhost:5173` under `[Server]`.
@@ -655,7 +643,7 @@ U-Probe is released under the [MIT License](LICENSE). See the `LICENSE` file for
 
 We thank the bioinformatics community for valuable feedback during development, and the authors of the following tools that U-Probe integrates:
 
-- [PantheonOS](https://github.com/aristoteleo/PantheonOS) - The multi-agent framework powering our AI agent design
+- [PantheonOS](https://github.com/aristoteleo/PantheonOS) - The multi-agent framework powering the web server's chat agent
 - [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/) - Fast and memory-efficient sequence alignment
 - [BLAST+](https://blast.ncbi.nlm.nih.gov/) - Sequence similarity search  
 - [MMseqs2](https://github.com/soedinglab/MMseqs2) - Ultra-fast and sensitive sequence search and clustering
