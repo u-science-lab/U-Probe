@@ -516,20 +516,32 @@ Shares of the target's 30-mers on Ensembl 113, for the canonical mRNA and for th
 | RPL13A | RPL13AP5 (processed pseudogene) | 44.9% | 64.9% |
 | mouse Gapdh | Gm13394 (retrocopy, 668 TPM in NIH/3T3) | 75.6% | |
 
-Measured with the smFISH template (20-mers, Bowtie 1 within 2 substitutions, `target_mapped_genes <= 1`, `remove_overlap` 2, 48 probes per gene) on canonical mRNAs given as sequences (human: MANE Select), with HeLa-S3 and NIH/3T3 tables (TPM, `min_value: 1`). Final probes (genes with 48); each row adds its option to the row above, except `exempt_copies` alone:
+Measured with template runs of the smFISH template on Ensembl 113 (GRCh38 and GRCm39 primary assemblies with their GTFs): windows from the whole reference mRNA (`source: mRNA`, `transcripts: mane`: MANE Select in human, Ensembl canonical in mouse), 20-mers, Bowtie 1 within 2 substitutions, `target_mapped_genes <= 1`, `remove_overlap` 2, 48 probes per gene, with HeLa-S3 and NIH/3T3 tables (TPM, `min_value: 1`). Final probes (genes with 48); each row adds its option to the row above, except `exempt_copies` alone, which is the template's default:
 
 | Setting | Human ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | Human, 30 random genes | Mouse Actb, Eef1a1, Gapdh, Hspa8, Rpl13a, Rpl3, Tubb5 | Mouse, 30 random genes |
 | --- | --- | --- | --- | --- |
-| No expression table | 119 (1) | 1,198 (24) | 120 (1) | 1,288 (23) |
-| `exempt_copies` alone | 119 (1) | 1,231 (24) | 125 (1) | 1,300 (23) |
-| Table, TPM >= 1 | 180 (2) | 1,255 (25) | 125 (1) | 1,394 (27) |
-| + `min_fraction_of_target: 0.05` | 193 (2) | 1,285 (25) | 203 (2) | 1,394 (27) |
-| + `exempt_copies` | 193 (2) | 1,333 (26) | 275 (4) | 1,394 (27) |
-| + `absent: ignore` | 264 (5) | 1,337 (26) | 335 (6) | 1,426 (28) |
+| No expression table | 117 (1) | 1,197 (24) | 117 (1) | 1,284 (23) |
+| `exempt_copies` alone (template default) | 117 (1) | 1,229 (24) | 121 (1) | 1,295 (23) |
+| Table, TPM >= 1 | 179 (2) | 1,251 (25) | 122 (1) | 1,389 (26) |
+| + `min_fraction_of_target: 0.05` | 192 (2) | 1,279 (25) | 197 (2) | 1,389 (26) |
+| + `exempt_copies` (recommended) | 192 (2) | 1,327 (26) | 270 (4) | 1,389 (26) |
+| + `absent: ignore` | 264 (5) | 1,332 (26) | 332 (6) | 1,423 (28) |
 
-- The relative threshold helps highly expressed genes whose pseudogenes are expressed at a few percent of their level: human GAPDH 7 -> 14 probes, mouse Eef1a1 17 -> 48 and Rpl13a 17 -> 46. It changed little for random genes.
-- Copies matter where a copy is expressed: mouse Rpl3 (Rpl3-ps1 holds 85% of its 30-mers) went from 7 to 48 probes and Hspa8 from 18 to 48 with both options; among the random genes the copies were lncRNA genes overlapping NDUFV2 and EIF3L on the same strand, and the SPDYE family. Human GAPDH has no copy above 30%; it reached 48 probes only when, on top of the fraction, its pseudogenes missing from the HeLa table were ignored. Mouse Gapdh has 35 retrocopies holding 50-92% of its 30-mers, all exempt, but others holding less are missing from the NIH/3T3 table and kept it at 6 probes until they were ignored. `absent: ignore` trusts the table to list every expressed gene.
-- With the template's `source: exon` (the CDS of protein-coding genes), the six human genes kept 69 probes with the HeLa table and 125 with `min_fraction_of_target` (EEF1A1 3 -> 48), and among 30 random genes `exempt_copies` added 90 probes for ST6GALNAC6 and QRICH1, 98% and 76% of whose CDS 30-mers an overlapping gene holds.
+- The relative threshold helps highly expressed genes whose pseudogenes are expressed at a few percent of their level: human GAPDH 7 -> 14 probes and ACTB 38 -> 44, mouse Eef1a1 17 -> 48 and Rpl13a 17 -> 42. It changed little for random genes.
+- Copies matter where a copy is expressed: mouse Rpl3 (Rpl3-ps1 holds 85% of its 30-mers) went from 6 to 48 probes and Hspa8 from 18 to 48 with both options; among the random genes the copies were lncRNA genes overlapping NDUFV2 and EIF3L on the same strand, the SPDYE family, and mouse Vmn2r92 for Vmn2r91 (73%). Human GAPDH has no copy above 30%; it reached 48 probes only when, on top of the fraction, its pseudogenes missing from the HeLa table were ignored. Mouse Gapdh has 35 retrocopies holding 50-92% of its 30-mers, all exempt, but others holding less are missing from the NIH/3T3 table and kept it at 5 probes until they were ignored. `absent: ignore` trusts the table to list every expressed gene.
+
+Where the windows come from matters as much. Up to U-Probe 0.2 the template used `source: exon`, the CDS of all coding isoforms; `mRNA` with `transcripts: all` takes the exons of every isoform, retained introns included. Probes (genes with 48) and the share of final probes whose site lies on the reference mRNA, without an expression table (`exempt_copies` on) and with the recommended settings (TPM >= 1, `min_fraction_of_target: 0.05`, `exempt_copies`):
+
+| Windows | Expression table | Human ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | Human, 30 random genes | Mouse Actb, Eef1a1, Gapdh, Hspa8, Rpl13a, Rpl3, Tubb5 | Mouse, 30 random genes |
+| --- | --- | --- | --- | --- | --- |
+| `exon` (CDS), all transcripts (template up to 0.2) | none | 11 (0), 45% | 1,021 (13), 95% | 38 (0), 68% | 1,082 (17), 98% |
+| `exon` (CDS), all transcripts (template up to 0.2) | recommended | 125 (2), 94% | 1,119 (16), 95% | 222 (3), 95% | 1,209 (19), 99% |
+| `mRNA`, all transcripts | none | 288 (6), 16% | 1,334 (27), 68% | 332 (5), 27% | 1,337 (26), 76% |
+| `mRNA`, all transcripts | recommended | 288 (6), 31% | 1,376 (28), 72% | 336 (7), 38% | 1,400 (28), 77% |
+| `mRNA`, `transcripts: mane` (template) | none | 117 (1), 100% | 1,229 (24), 100% | 121 (1), 100% | 1,295 (23), 100% |
+| `mRNA`, `transcripts: mane` (template) | recommended | 192 (2), 100% | 1,327 (26), 100% | 270 (4), 100% | 1,389 (26), 100% |
+
+The reference mRNA gave the six human housekeeping genes 117 probes against 11 from the CDS of all isoforms without a table, and 192 against 125 with it; paralogs and pseudogenes share their coding sequence more than their UTRs. All transcripts reach 48 probes for nearly every housekeeping gene, but mostly on exons of other isoforms and retained introns: only 16-38% of these probes lie on the reference mRNA.
 
 #### Off-target pool limit
 
@@ -558,16 +570,16 @@ post_process:
 - `equal_space` picks the final probes by position, not by their off-target genes, so when a target has more candidates than it needs, the limit mostly swaps clean probes for probes with an off-target gene instead of adding probes (measured below). It would pay off with an `equal_space` that prefers probes without off-target genes, which U-Probe does not have yet.
 - For padlock/RCA probes a single probe makes signal, so allow no expressed off-target per probe with a filter instead: `target_mapped_genes <= 1` (with `gene_expression`).
 
-Measured on Ensembl 113 human genes with the smFISH template (all 20-mers of the MANE Select mRNAs, off-targets within 2 substitutions by Bowtie 1, `remove_overlap` 2, 48 probes per gene): `target_mapped_genes <= 1` alone, against `target_mapped_genes <= 2` with `max_probes_per_gene: 2`.
+Measured on Ensembl 113 human genes with template runs of the smFISH template (the MANE Select mRNAs, `exempt_copies`, off-targets within 2 substitutions by Bowtie 1, `remove_overlap` 2, 48 probes per gene; the genes of [Copies of the target](#copies-of-the-target)): `target_mapped_genes <= 1` alone, against `target_mapped_genes <= 2` with `max_probes_per_gene: 2`.
 
 | Genes | Expression table | `<= 1`: probes (genes with 48) | `<= 2` + pool: probes (genes with 48) | Final probes with an off-target gene, `<= 2` + pool |
 | --- | --- | --- | --- | --- |
-| 30 random protein-coding genes | none | 1,294 (26) | 1,302 (26) | 46% |
-| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,356 (27) | 1,361 (27) | 33% |
-| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 119 (1) | 132 (1) | 46% |
-| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 184 (2) | 194 (2) | 34% |
+| 30 random protein-coding genes | none | 1,229 (24) | 1,246 (24) | 44% |
+| 30 random protein-coding genes | HeLa, TPM >= 1 | 1,299 (26) | 1,308 (26) | 35% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | none | 117 (1) | 131 (1) | 47% |
+| ACTB, EEF1A1, GAPDH, HSPA8, RPL13A, TUBB | HeLa, TPM >= 1 | 179 (2) | 192 (2) | 39% |
 
-The limit added 5-13 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 62 and 65 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
+The limit added 9-17 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 62 and 70 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
 
 For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 
