@@ -87,21 +87,43 @@ def process_gtf_inplace(filepath):
     with open(filepath, 'w') as file:
         file.writelines(updated_lines)
 
+# What each RNA source of extracts.target_region extracts from the GTF, per gene:
+#   exon  its CDS features when it has any, else its exon features: the coding
+#         sequence of a protein-coding gene (no UTRs), the whole processed RNA of
+#         a non-coding gene. Segments shorter than the window are left out.
+#   CDS   the same as exon.
+#   mRNA  all its exon features: the whole mature RNA (5' UTR, CDS and 3' UTR of
+#         a protein-coding gene; the processed RNA of a non-coding gene). Exons
+#         shorter than the window give no window but still count in positions.
+#   UTR   its UTR features (GTF type UTR, or five_prime_utr and three_prime_utr
+#         as Ensembl names them). Segments shorter than the window are left out.
+RNA_SOURCES = ('exon', 'CDS', 'mRNA', 'UTR')
+UTR_TYPES = ('UTR', 'five_prime_utr', 'three_prime_utr')
+
+
+def gene_segments(df_gene: pd.DataFrame, source: str) -> pd.DataFrame:
+    """The GTF rows of one gene that an RNA source extracts (before the length filter)."""
+    if source == 'mRNA':
+        return df_gene[df_gene.type == 'exon']
+    if source == 'UTR':
+        return df_gene[df_gene.type.isin(UTR_TYPES)]
+    df_cds = df_gene[df_gene.type == 'CDS']
+    return df_cds if df_cds.shape[0] else df_gene[df_gene.type == 'exon']
+
+
 def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
-                  genelist: pd.DataFrame, min_length: int=40
+                  genelist: pd.DataFrame, min_length: int=40, source: str = 'exon'
                   ) :
-    """Extract all exons of each gene"""
-    #import ipdb; ipdb.set_trace()
+    """Extract the exons (CDS for source exon and CDS, see gene_segments) of each gene"""
     gene2exons = {}
     for item in genelist.iterrows():
         gene = item[1]['geneID']
         df_gene = df_gtf[df_gtf.gene_name == gene]
         if df_gene.shape[0] <= 0:
             raise ValueError(f"Gene {gene} not exists in GTF file.")
-        df_exons = df_gene[df_gene.type == 'CDS'].copy()
-        if df_exons.shape[0] == 0:
-            df_exons = df_gene[df_gene.type == 'exon'].copy()
-        df_exons = df_exons[df_exons.length >= min_length]
+        df_exons = gene_segments(df_gene, source).copy()
+        if source != 'mRNA':
+            df_exons = df_exons[df_exons.length >= min_length]
         if df_exons.shape[0] == 0:
             raise ValueError(f"Gene {gene} can't found any exon records.")
         df_exons['transcript_name'] = df_exons['info'].str.extract(r'transcript_id\s+"([^"]+)"')[0]
@@ -136,12 +158,11 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             gene2exons[gene].append(exon)
     return gene2exons
 
-def get_exon_seq(genes, fa, gtf, min_length=40):
-    fa = Fasta(fa)
+def get_exon_seq(genes, fa, gtf, min_length=40, source='exon'):
     genelist = pd.DataFrame(genes, columns=['geneID'])
     df_gtf = read_gtf(gtf, extract_fields=['gene_name', "transcript_id"], get_length=True)
-    gene2exons = extract_exons_rca(df_gtf, fa, genelist, min_length)
-    return gene2exons
+    with Fasta(fa) as fasta:
+        return extract_exons_rca(df_gtf, fasta, genelist, min_length, source)
 
 def change_chrom_name(chrom):
     if chrom.startswith('chr'):
@@ -224,8 +245,8 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             if strand == '-':
                 seq = reverse_complement(seq)
             gene_features[gene].append(("exon", name, seq, n_trans, (str(row['chr']), start, end, strand)))
-        # extract utr
-        df_utrs = df_gene[df_gene.type == 'UTR'].copy()
+        # extract utr (GENCODE: UTR; Ensembl: five_prime_utr, three_prime_utr)
+        df_utrs = gene_segments(df_gene, 'UTR').copy()
         df_utrs = df_utrs[df_utrs.length >= min_length]
         if df_utrs.shape[0] > 0:
             for idx, row in df_utrs.iterrows():
@@ -349,11 +370,12 @@ def generate_target_seqs(
                         overlap: t.Optional[int] = None,
                         step: t.Optional[int] = None
                          ):
+    """Candidate windows of the targets; RNA_SOURCES describes what each RNA source extracts."""
     lower, _, step = normalize_sampling(min_length, step, overlap)
     # start/end count within the exon or UTR; target_start/target_end count
     # along the target (its merged exon model, see segment_offsets).
-    if source == 'exon' or source == 'CDS':
-        exon_info = get_exon_seq(targets, fasta_path, gtf_path, lower)
+    if source in ('exon', 'CDS', 'mRNA'):
+        exon_info = get_exon_seq(targets, fasta_path, gtf_path, lower, source)
         data_list = [] 
         for gene_name, exon_list in exon_info.items():
             offsets = segment_offsets(exon[4] for exon in exon_list)

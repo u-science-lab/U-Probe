@@ -111,7 +111,7 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: CDS
     length: 52
     step: 1
     layout:

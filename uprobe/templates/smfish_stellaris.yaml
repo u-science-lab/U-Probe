@@ -83,7 +83,7 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: CDS
     length: 20
     step: 1
 

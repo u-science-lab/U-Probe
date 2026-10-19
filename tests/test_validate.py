@@ -103,7 +103,7 @@ def test_default_protocol_template():
     assert 'skips it' in find(findings, 'post_process.remove_overlap', 'warning').message
     protocol = yaml.safe_load(DEFAULT_PROTOCOL.read_text(encoding='utf-8'))
     protocol.update(name='filled', genome='hg38', encoding={'xxx1': {'BC1': 'ACGTACGTAC', 'BC2': 'TTGCAAGGTC'}})
-    protocol['extracts']['target_region'].update(source='exon', length=40, step=20)
+    protocol['extracts']['target_region'].update(source='mRNA', length=40, step=20)
     protocol['probes'] = {'probe_1': {'template': '{part1}{part2}', 'parts': {
         'part1': {'expr': 'rc(target_region[0:20])'}, 'part2': {'expr': "encoding[target]['BC1']"}}}}
     protocol['summary']['report_name'] = 'rna_report'

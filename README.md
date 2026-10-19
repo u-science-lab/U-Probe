@@ -290,7 +290,7 @@ targets:
 
 extracts:
   target_region:
-    source: exon  # genome / exon / CDS / UTR
+    source: mRNA  # genome / mRNA / exon / CDS / UTR
     length: 30
     overlap: 15
 
@@ -354,7 +354,14 @@ summary:
 #### Key Sections in `protocol.yaml`:
 - **`name` & `genome`**: Basic metadata. The `genome` must match a key in your `genomes.yaml`.
 - **`targets`**: A list of target gene names or IDs you want to design probes for.
-- **`extracts`**: Parameters for extracting target sequences. The `source` can be `genome`, `exon`, `CDS`, or `UTR`. You can also define the sliding window `length` and `overlap`.
+- **`extracts`**: Parameters for extracting target sequences: the sliding window `length` and `step` (or `overlap`), and the `source` the windows are taken from:
+  - `genome`: targets are regions such as `chr1:1000-2000`, tiled along the genomic sequence.
+  - `mRNA`: the whole mature RNA of each target gene, i.e. all its `exon` features: 5' UTR, CDS and 3' UTR of a protein-coding gene, the processed RNA of a non-coding gene. Use it when probes may bind anywhere on the mRNA, as smFISH probe sets do.
+  - `exon`: the coding sequence of a protein-coding gene (its `CDS` features, without the UTRs), and all exons only of a gene without CDS. Despite its name it is not the whole mRNA of a protein-coding gene; `uprobe validate` warns and points to `mRNA`.
+  - `CDS`: the same as `exon`, under the name that says what it extracts.
+  - `UTR`: the UTR features (`UTR` in GENCODE GTFs, `five_prime_utr` and `three_prime_utr` in Ensembl GTFs).
+
+  Each window lies within one exon (or CDS or UTR segment), so no window spans a splice junction. With `exon`, `CDS` and `UTR`, segments shorter than the window are left out; with `mRNA`, short exons give no window but still count in the positions along the RNA (`target_start`, see [Probes per target](#probes-per-target)). By default the exons of all transcripts of the gene are used.
 - **`encoding`**: Mapping of specific genes to custom barcodes or identifiers (e.g., assigning `BC1` and `BC2` to `CD4`).
 - **`probes`**: The core of the design, powered by a **Directed Acyclic Graph (DAG)** architecture. This allows for complex, modular probe construction where parts and probes can reference each other.
   - **`template`**: Construct sequences using placeholders (e.g., `{part1}{part2}`).
@@ -381,9 +388,9 @@ The `post_process` steps always run in this order, whatever their order in the p
 
 #### Probes per target
 
-`equal_space` works in DNA (`source: genome`) and RNA mode (`exon`, `CDS`, `UTR`). It runs after the filters, `remove_overlap` and `off_target_pool`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
+`equal_space` works in DNA (`source: genome`) and RNA mode (`mRNA`, `exon`, `CDS`, `UTR`). It runs after the filters, `remove_overlap` and `off_target_pool`, orders each target's remaining candidates along the target and keeps every k-th one (evenly spaced ranks, first and last included), so the kept probes follow the candidates from one end of the target to the other. Use it together with `remove_overlap`; otherwise overlapping windows can be kept (`uprobe validate` warns).
 
-- **Along the target**: in DNA mode, along the genomic region. In RNA mode, exon, CDS and UTR windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of all its transcripts with the introns removed, read 5' to 3'. For a gene with one transcript this is the position on the spliced RNA; exons of different transcripts that overlap share positions. Segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
+- **Along the target**: in DNA mode, along the genomic region. In RNA mode, windows number `start`/`end` within their exon or UTR, so U-Probe also writes `target_start`/`target_end`: the window's position on the gene's merged exon model, the union of the extracted exons (CDS or UTRs) of all its transcripts with the introns removed, read 5' to 3'. For a gene with one transcript and `source: mRNA` this is the position on the spliced RNA; exons of different transcripts that overlap share positions. With `exon`, `CDS` and `UTR`, segments shorter than the window length are not extracted and do not count. Direct sequences use their own coordinates.
 - **Fewer candidates than requested**: the target keeps all of them. `summary.json` lists `requested_probes` and `final` for every target and a `fewer_probes_than_requested` warning with the counts, the run status is `partial`, and `uprobe run` logs the per-target counts as `final/requested`.
 
 #### Hybridization conditions
@@ -492,7 +499,7 @@ attributes:
 ```
 
 - An off-target gene is a copy of a target when one of its transcripts contains, exactly and in the same orientation, at least `min_shared` of the distinct `kmer`-mers of the target's sequence. A copy is not counted in `<attribute>` and is listed in `<attribute>_copies` (name and fewest mismatches, as in `_off_targets`) instead of `<attribute>_off_targets`, so `off_target_pool` does not limit it either. It is exempt whatever its expression; `gene_expression` applies to the other off-target genes. Paralogs share few exact 30-mers and stay counted.
-- The target's sequence is what its candidate windows cover, placed by `target_start`/`target_end`: in RNA mode its merged exon model (the extracted segments of all its transcripts with the introns removed, the coordinates `remove_overlap` and `equal_space` use), so the share is that of the sequence the probes are drawn from; for a direct sequence, the sequence itself. With `source: exon`, U-Probe extracts the CDS of protein-coding genes, so their copies are judged on the coding sequence. Bases that no window covers are unknown, so keep `step` at most the window length (`uprobe validate` warns).
+- The target's sequence is what its candidate windows cover, placed by `target_start`/`target_end`: in RNA mode its merged exon model (the extracted segments of all its transcripts with the introns removed, the coordinates `remove_overlap` and `equal_space` use), so the share is that of the sequence the probes are drawn from; for a direct sequence, the sequence itself. With `source: mRNA` that is the whole mRNA; with `exon` or `CDS`, U-Probe extracts the CDS of protein-coding genes, so their copies are judged on the coding sequence. Bases that no window covers are unknown, so keep `step` at most the window length (`uprobe validate` warns).
 - The transcripts of the genes the alignment hit are read from `transcript.fa`, the FASTA the transcriptome index is built from (extracted again if it is missing), in one pass, with the k-mers packed into 64-bit integers. Checking every gene of the Ensembl 113 human transcriptome (410,909 transcripts, 597 Mb) against 4 targets took 9 s; in the runs below the check added 3-13 s to a run.
 - It needs no expression table, since a copy is a matter of sequence, and works with either aligner, so it can be enabled on its own.
 - The log and `summary.json` name every exempt gene: per attribute, `copy_genes`, `copies` (each target's copies with their shares) and `final_copy_genes` (those the final probes hit). A target whose windows give no k-mer keeps all its off-target genes and is reported (`targets_without_sequence`, warning `copies_not_checked`).

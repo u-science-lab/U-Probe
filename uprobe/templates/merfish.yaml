@@ -120,7 +120,7 @@ encoding:
 
 extracts:
   target_region:
-    source: exon
+    source: CDS
     length: 30
     step: 1
 

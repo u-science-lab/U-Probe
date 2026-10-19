@@ -106,7 +106,7 @@ def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
 
 
 def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_interval: int) -> pd.DataFrame:
-    """remove_overlap for exon, CDS and UTR windows, on each target's merged exon model.
+    """remove_overlap for mRNA, exon, CDS and UTR windows, on each target's merged exon model.
 
     target_start/target_end place every window on the gene's merged exon
     model (gen.fun.segment_offsets), so windows of alternative exon entries
