@@ -96,6 +96,8 @@ uprobe server --env development --host 127.0.0.1 --port 8005 --workers 1
 
 Development mode reloads Python changes automatically. Alternatively, run `APP_ENV=development PORT=8005 python -m uprobe.http.server` from the project root. Running without overrides uses `config.ini`, which may select production mode.
 
+The web chat (the `/agent` endpoints) is the optional `web-agent` extra: install it with `pip install 'uprobe[web-agent]'`, or `pip install -e '.[web-agent]'` from source. Without it the server starts and those endpoints answer 503; deployments that serve the chat, such as app.u-probe.org, must install it.
+
 In a separate Windows PowerShell terminal:
 
 ```powershell
