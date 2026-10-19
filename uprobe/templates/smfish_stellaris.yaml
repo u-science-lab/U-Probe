@@ -128,9 +128,11 @@ hybridization:
 # of 39% of the 20-mers of the MANE mRNAs of 30 random human genes had no
 # off-target gene, and ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 180
 # instead of 119 probes (193 with min_fraction_of_target: 0.05).
-# Supply your own table:
+# Supply your own table, by transcript if you have one (e.g. salmon's quant.sf):
+# only RNAs carrying a probe's site make false spots, not the gene's other isoforms.
 # gene_expression:
 #   table: expression.tsv   # a gene id or name column and a numeric column
+#   # level: transcript     # for a table of transcript ids (salmon quant.sf: Name, TPM)
 #   value_column: TPM
 #   min_value: 1
 #   min_fraction_of_target: 0.05   # an RNA at < 5% of the target's level makes few false spots

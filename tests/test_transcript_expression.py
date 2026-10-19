@@ -128,3 +128,58 @@ def test_the_pool_limit_counts_the_genes(gtf, transcript_table):
     kept, report = limit_off_target_pool(df, {'attribute': 'hits', 'max_probes_per_gene': 1})
     # Genes, not transcripts, are limited: the second S3 probe hits Para again.
     assert kept.seq.tolist() == ['S2', 'S3', 'S6'] and report['genes_at_limit'] == {'Para': 1}
+
+
+# -- uprobe run / uprobe validate ------------------------------------------------------------------
+
+@pytest.fixture
+def rna():
+    protocol = yaml.safe_load((DATA / 'RNA_format.yaml').read_text(encoding='utf-8'))
+    del protocol['attributes']['target_mappedGenes']['min_mapq']
+    return protocol
+
+
+def test_run_rejects_a_gene_column_with_level_transcript(rna):
+    rna['gene_expression'] = {'table': 'q.sf', 'level': 'transcript', 'gene_column': 'gene_id', 'min_value': 1}
+    with pytest.raises(ValueError, match='gene_column applies to level: gene'):
+        _validate_and_normalize_protocol(rna)
+
+
+def test_validate_checks_the_level(rna, tmp_path):
+    table = write_table(tmp_path / 'tx.tsv', 'transcript_id\tgene_id\tTPM\tNumReads\n', {
+        'ENSMUST00000073605.15\tENSMUSG00000057666': '5\t10', 'ENSMUST00000000001.5\tENSMUSG00000000001': '1\t2'})
+
+    def findings(severity='error'):
+        return {f.path: f for f in validate_protocol(rna) if f.severity == severity}
+
+    rna['gene_expression'] = {'table': table, 'level': 'transcript', 'value_column': 'TPM', 'min_value': 1}
+    assert validate_protocol(rna) == []
+    rna['gene_expression']['transcript_column'] = 'gene_id'
+    found = findings()['gene_expression.level']
+    assert 'level is transcript, but column gene_id holds gene ids (e.g. ENSMUSG00000057666)' in found.message
+    assert found.suggestion == 'level: gene\ngene_column: gene_id   # in place of transcript_column'
+    rna['gene_expression'] = {'table': table, 'value_column': 'TPM', 'min_value': 1}  # level: gene
+    found = findings()['gene_expression.level']
+    assert 'level is gene, but column transcript_id holds transcript ids' in found.message
+    assert found.suggestion == 'level: transcript'
+    rna['gene_expression'] = {'table': table, 'level': 'transcript', 'transcript_column': 'Name', 'min_value': 1}
+    found = findings()['gene_expression.transcript_column']
+    assert 'transcript_column Name not in the expression table' in found.message
+    rna['gene_expression'] = {'table': table, 'level': 'transcript', 'min_value': 1}
+    assert 'set value_column' in findings()['gene_expression.value_column'].message
+    rna['gene_expression'] = {'table': table, 'level': 'isoform', 'min_value': 1}
+    found = findings()['gene_expression']
+    assert 'level must be one of gene, transcript' in found.message and 'level: gene' in found.suggestion
+
+
+def test_smfish_template_recommends_a_table_of_transcripts(tmp_path):
+    from uprobe.templates import read_template
+    text = read_template('smfish_stellaris')
+    lines = text[text.index('\n# gene_expression:\n') + 1:].splitlines()
+    block = '\n'.join(line[2:] for line in lines[:next(i for i, line in enumerate(lines) if not line.startswith('#'))])
+    # Uncommenting the level line makes the example a table of transcripts, valid as it stands.
+    example = yaml.safe_load(block.replace('# level: transcript', 'level: transcript'))['gene_expression']
+    settings = validate_gene_expression(example)
+    assert (settings['level'], settings['value_column'], settings['min_fraction_of_target']) == (
+        'transcript', 'TPM', 0.05)
+    assert 'by transcript if you have one' in text

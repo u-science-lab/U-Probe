@@ -137,7 +137,9 @@ OTP_SNIPPET = ('avoid_otp:\n'
                '    density_thresh: 0.00001')
 GENE_EXPRESSION_SNIPPET = ('gene_expression:\n'
                            '  table: expression.tsv   # TSV/CSV with a gene id or name column and a numeric column\n'
-                           '  gene_column: gene_id    # default: the first column\n'
+                           '  level: gene             # default; transcript for a table of transcript ids\n'
+                           '  gene_column: gene_id    # default: the first column (transcript_column with level: '
+                           'transcript)\n'
                            '  value_column: TPM       # default: the only numeric column\n'
                            '  min_value: 1            # off-target genes below it are not counted\n'
                            '  min_fraction_of_target: 0.05   # optional: nor those below 5% of the target\'s value\n'
@@ -873,7 +875,7 @@ class _Validator:
 
     # -- gene_expression ---------------------------------------------------
     def check_gene_expression(self, protocol):
-        from .gene_expression import read_table, resolve_columns, validate_gene_expression
+        from .gene_expression import identifier_level, read_table, resolve_columns, validate_gene_expression
         if self.protocol.get('gene_expression') is None:
             return
         path = ('gene_expression',)
@@ -900,10 +902,22 @@ class _Validator:
                        'use a tab-separated table (comma-separated when the name contains .csv) with a header row')
             return
         try:
-            resolve_columns(df, settings)
+            id_columns, _ = resolve_columns(df, settings)
         except ValueError as exc:
-            key = 'value_column' if 'value_column' in str(exc) else 'gene_column'
+            key = next((key for key in ('value_column', 'transcript_column') if key in str(exc)), 'gene_column')
             self.error(path + (key,), f'{table}: {exc}', f'{key}: one of {", ".join(map(str, df.columns))}')
+            return
+        # Transcript ids match no gene, and gene ids no transcript.
+        level = settings['level']
+        other = 'transcript' if level == 'gene' else 'gene'
+        if all(identifier_level(df[column].tolist()) == other for column in id_columns):
+            example = next((str(v) for v in df[id_columns[0]] if isinstance(v, str) and v.strip()), '')
+            columns = ', '.join(id_columns)
+            replaced = self.protocol['gene_expression'].get(f'{level}_column') is not None
+            self.error(path + ('level',), f'{table}: level is {level}, but column {columns} holds {other} ids '
+                       f'(e.g. {example}), which match no {level} of the annotation',
+                       f'level: {other}' + (f'\n{other}_column: {id_columns[0]}   # in place of {level}_column'
+                                            if replaced else ''))
 
     # -- post_process ----------------------------------------------------
     def check_post_process(self, protocol):
