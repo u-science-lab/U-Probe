@@ -33,8 +33,9 @@ e.g. ``ACTG1:0, POTEF:2`` (gene name and fewest mismatches; Bowtie2 gives
 names only). Genes are named after the GTF's gene_name; a name that several
 gene ids share is written ``name(gene_id)``. With a ``gene_expression`` table
 (see uprobe.core.gene_expression), off-target genes below its ``min_value``
-(or below ``min_fraction_of_target`` of the target's value) are not counted
-and are listed in ``<attribute>_unexpressed`` instead.
+(or below ``min_fraction_of_target`` of the target's value, or with
+``absent: ignore`` missing from the table) are not counted and are listed in
+``<attribute>_unexpressed`` instead.
 """
 import functools
 import re
@@ -280,7 +281,8 @@ class OffTargetCounter:
 
         ``sequence_hits`` maps each sequence of ``df[column]`` to {gene key: fewest mismatches or None}.
         The count includes the target's own genes; other genes count unless the
-        expression table puts them below the target's threshold (see _thresholds).
+        expression table puts them below the target's threshold (see _thresholds)
+        or, with gene_expression.absent: ignore, does not list them.
         """
         self._load()
         annotation, expression = self.annotation, self.expression
@@ -299,14 +301,18 @@ class OffTargetCounter:
                     continue
                 hit.add(key)
                 value = expression.value(key, annotation.names.get(key)) if expression else None
-                if value is not None and value < thresholds[target]:
+                if expression is not None and value is None:
+                    missing.add(key)
+                    ruled_out = expression.absent == 'ignore'
+                else:
+                    ruled_out = value is not None and value < thresholds[target]
+                    if ruled_out:
+                        (ignored if value < expression.min_value else below_fraction).add(key)
+                if ruled_out:
                     below.append((key, mismatches))
-                    (ignored if value < expression.min_value else below_fraction).add(key)
                     continue
                 count += 1
                 counted.append((key, mismatches))
-                if expression is not None and value is None:
-                    missing.add(key)
             rows[(sequence, target)] = (count, format_gene_hits(counted, annotation),
                                         format_gene_hits(below, annotation))
         keys = list(zip(df[column], targets))
@@ -318,16 +324,18 @@ class OffTargetCounter:
                  'strand': settings['strand'], 'off_target_genes': len(hit)}
         if expression is not None:
             labels = sorted(annotation.label(key) for key in missing)
-            stats.update(below_min_value=len(ignored), missing_from_table=len(missing),
+            stats.update(below_min_value=len(ignored), missing_from_table=len(missing), absent=expression.absent,
                          missing_from_table_examples=labels[:_MISSING_EXAMPLES], missing_labels=labels)
             relative = ''
             if expression.min_fraction_of_target is not None:
                 stats['below_target_fraction'] = len(below_fraction)
                 relative = (f'; {len(below_fraction)} more are below gene_expression.min_fraction_of_target of a '
                             'target\'s value and not counted for it')
+            absent = ('are not counted (gene_expression.absent: ignore)' if expression.absent == 'ignore'
+                      else 'count as expressed')
             message = (f'{attr_name}: the candidates hit {len(hit)} off-target genes; {len(ignored)} are below '
                        f'gene_expression.min_value and not counted{relative}; {len(missing)} are not in the '
-                       'expression table and count as expressed')
+                       f'expression table and {absent}')
             if missing:
                 log.warning(f'{message} (e.g. {", ".join(labels[:5])})')
             else:

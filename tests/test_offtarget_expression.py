@@ -62,6 +62,8 @@ def table(tmp_path):
     ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 1.5}, 'min_fraction_of_target must be'),
     ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': -0.1}, 'min_fraction_of_target must be'),
     ({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': True}, 'min_fraction_of_target must be'),
+    ({'table': 'x.tsv', 'min_value': 1, 'absent': 'skip'}, 'absent must be one of count, ignore'),
+    ({'table': 'x.tsv', 'min_value': 1, 'absent': None}, 'absent must be one of count, ignore'),
 ])
 def test_block_is_checked(block, message):
     with pytest.raises(ValueError, match=message):
@@ -71,9 +73,10 @@ def test_block_is_checked(block, message):
 def test_block_normalized():
     settings = validate_gene_expression({'table': 'x.tsv', 'gene_column': 'id', 'min_value': 1})
     assert settings == {'table': 'x.tsv', 'gene_columns': ['id'], 'value_column': None, 'min_value': 1.0,
-                        'min_fraction_of_target': None}
-    settings = validate_gene_expression({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 0})
-    assert settings['min_fraction_of_target'] == 0.0
+                        'min_fraction_of_target': None, 'absent': 'count'}
+    settings = validate_gene_expression({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 0,
+                                         'absent': 'ignore'})
+    assert (settings['min_fraction_of_target'], settings['absent']) == (0.0, 'ignore')
 
 
 def test_normalize_gene_id():
@@ -229,6 +232,31 @@ def test_threshold_fraction_can_exceed_min_value_only(gtf, table):
     assert 'targets' not in report['gene_expression'] and 'below_target_fraction' not in report['attributes']['hits']
 
 
+@pytest.mark.parametrize('absent', ['count', 'ignore'])
+def test_genes_missing_from_the_table(gtf, table, caplog, absent):
+    df = pd.DataFrame({'target': ['ACTB'], 'seq': ['S1']})
+    protocol = {'gene_expression': {'table': table, 'gene_column': 'gene_id', 'min_value': 1, 'absent': absent}}
+    report = {}
+    OffTargetCounter(protocol, {'gtf': str(gtf)}, report).annotate(df, 'hits', 'seq', hits(), SETTINGS)
+    # POTEF is not in the table: counted by default, otherwise listed with the unexpressed genes.
+    if absent == 'count':
+        assert (df.hits[0], df.hits_off_targets[0]) == (4, 'ACTG1:0, POTEF:1, Y_RNA(ENSG6):2')
+        assert df.hits_unexpressed[0] == 'ACTBP2:0, Y_RNA(ENSG5):2'
+        assert 'are not in the expression table and count as expressed (e.g. POTEF)' in caplog.text
+    else:
+        assert (df.hits[0], df.hits_off_targets[0]) == (3, 'ACTG1:0, Y_RNA(ENSG6):2')
+        assert df.hits_unexpressed[0] == 'ACTBP2:0, POTEF:1, Y_RNA(ENSG5):2'
+        assert 'are not in the expression table and are not counted (gene_expression.absent: ignore)' in caplog.text
+    stats = report['attributes']['hits']
+    assert (stats['missing_from_table'], stats['missing_from_table_examples'], stats['absent']) == (1, ['POTEF'], absent)
+    assert report['gene_expression']['absent'] == absent
+    summary = build_run_summary({'name': 'x'}, {'final': df, 'off_targets': report})
+    assert summary['off_targets']['attributes']['hits']['final_missing_from_table'] == ['POTEF']
+    warning = next(w for w in summary['warnings'] if w['code'] == 'off_target_genes_not_in_expression_table')
+    assert warning['attributes'] == {'hits': 1}
+    assert ('were not counted' if absent == 'ignore' else 'were counted as expressed') in warning['message']
+
+
 def test_table_matching_no_annotated_gene_is_an_error(gtf, tmp_path):
     table = write_table(tmp_path / 'mouse.tsv', 'gene\tTPM\nActb\t5\n')
     df = pd.DataFrame({'target': ['ACTB'], 'seq': ['S1']})
@@ -320,6 +348,10 @@ def test_validate_checks_the_block_and_the_table(rna, table, tmp_path):
     rna['gene_expression'] = {'table': table, 'min_value': 1, 'min_fraction_of_target': 5}
     assert 'min_fraction_of_target must be a number from 0 to 1' in finding('gene_expression').message
     assert 'min_fraction_of_target: 0.05' in finding('gene_expression').suggestion
+    rna['gene_expression'] = {'table': table, 'min_value': 1, 'absent': 'drop'}
+    assert "absent must be one of count, ignore, got 'drop'" in finding('gene_expression').message
+    rna['gene_expression']['absent'] = 'ignore'
+    assert not [f for f in validate_protocol(rna) if f.path.startswith('gene_expression')]
     rna['gene_expression'] = {'table': table, 'min_value': 1}
     del rna['attributes']['target_mappedGenes']
     assert 'there is none' in finding('gene_expression', 'warning').message

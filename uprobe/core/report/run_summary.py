@@ -16,7 +16,7 @@ import pandas as pd
 
 from uprobe import __version__
 from ..hybridization import effective_conditions
-from ..offtarget import OFF_TARGETS_SUFFIX, parse_gene_hits
+from ..offtarget import OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX, parse_gene_hits
 from ..process.equal_space import number_desired
 
 SUMMARY_FILENAME = "summary.json"
@@ -128,8 +128,9 @@ def _off_target_summary(report, final):
     """The expression table in use, per mapped_genes attribute the off-target genes found, and the pool limit.
 
     ``report`` is what add_attributes recorded; final_* counts come from the
-    <attribute>_off_targets column of the final table, and ``pool`` from
-    post_process.off_target_pool.
+    <attribute>_off_targets column of the final table (final_missing_from_table
+    also from <attribute>_unexpressed, where absent: ignore lists them), and
+    ``pool`` from post_process.off_target_pool.
     """
     if not isinstance(report, dict) or not report.get("attributes"):
         return None
@@ -141,7 +142,9 @@ def _off_target_summary(report, final):
             genes = {label for cell in final[column] for label in parse_gene_hits(cell)}
             entry["final_off_target_genes"] = len(genes)
             if "missing_labels" in stats:
-                entry["final_missing_from_table"] = sorted(genes & set(stats["missing_labels"]))
+                unexpressed = final.get(name + UNEXPRESSED_SUFFIX, pd.Series(dtype=object))
+                hit = genes | {label for cell in unexpressed for label in parse_gene_hits(cell)}
+                entry["final_missing_from_table"] = sorted(hit & set(stats["missing_labels"]))
         attributes[name] = entry
     pool = final.attrs.get("off_target_pool") if final is not None else None
     return {"gene_expression": report.get("gene_expression"), "attributes": attributes, "pool": pool}
@@ -274,11 +277,14 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     off_targets = _off_target_summary(run.get("off_targets"), final)
     missing = {name: entry["missing_from_table"] for name, entry in (off_targets or {}).get("attributes", {}).items()
                if entry.get("missing_from_table")}
+    expression = (off_targets or {}).get("gene_expression") or {}
     if missing:
+        treated = ("were not counted (gene_expression.absent: ignore)" if expression.get("absent") == "ignore"
+                   else "were counted as expressed")
         warnings.append({"code": "off_target_genes_not_in_expression_table", "attributes": missing,
                          "message": f"{sum(missing.values())} off-target gene(s) are not in the gene_expression "
-                                    "table and were counted as expressed (see off_targets)."})
-    absent_targets = ((off_targets or {}).get("gene_expression") or {}).get("targets_not_in_table")
+                                    f"table and {treated} (see off_targets)."})
+    absent_targets = expression.get("targets_not_in_table")
     if absent_targets:
         warnings.append({"code": "targets_not_in_expression_table", "targets": absent_targets,
                          "message": f"{len(absent_targets)} target(s) are not in the gene_expression table, so only "
