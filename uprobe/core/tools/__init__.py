@@ -67,6 +67,17 @@ _TRANSCRIPT_INDEX_EXISTS = {
 # transcriptome, so it gets no genome index.
 _TRANSCRIPT_ONLY = ("bowtie",)
 
+
+def transcript_fasta(fasta: Path, outdir: Path) -> Path:
+    """The transcript.fa a transcriptome index in ``outdir`` is built from.
+
+    It lies next to the genome FASTA or in ``outdir``; when neither exists,
+    the path next to the genome FASTA, where it is extracted.
+    """
+    candidates = (fasta.parent / "transcript.fa", outdir / "transcript.fa")
+    return next((p for p in candidates if p.is_file() and p.stat().st_size > 0), candidates[0])
+
+
 def build_transcripts_index(gtf: Path,
                              fasta: Path,
                              outdir: Path,
@@ -83,9 +94,7 @@ def build_transcripts_index(gtf: Path,
     index_exists = _TRANSCRIPT_INDEX_EXISTS[aligner]
     if index_exists(index_prefix):
         return str(index_prefix)
-    candidates = (fasta.parent / "transcript.fa", outdir / "transcript.fa")
-    trans_fasta_path = next((p for p in candidates if p.is_file() and p.stat().st_size > 0),
-                           candidates[0])
+    trans_fasta_path = transcript_fasta(fasta, outdir)
     if not trans_fasta_path.is_file() or trans_fasta_path.stat().st_size == 0:
         extract_trans_seqs(gtf, fasta, trans_fasta_path)
     if not trans_fasta_path.is_file() or trans_fasta_path.stat().st_size == 0:
