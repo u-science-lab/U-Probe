@@ -37,9 +37,12 @@ meta:
         20-25 nt, with an 0-2 nt gap in between ... each primer or padlock probe
         has 19-25 nt (the paper gives 20-25 in the methods text and 19-25 in
         Fig. S1A)
-    - parameter: extracts.target_region.source
-      value: CDS
-      source: Wang 2018, Supplementary Materials
+    - parameter: extracts.target_region.source and transcripts
+      value: CDS of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        Wang 2018, Supplementary Materials. U-Probe has no shortest-isoform
+        option; one reference transcript's CDS is the closest choice, and never
+        adds exons of other isoforms.
       quote: only the shortest isoforms were considered and the coding regions were used
     - parameter: primer tail / padlock ends
       value: 6 nt on each padlock end (12-nt primer tail)
@@ -99,6 +102,7 @@ encoding:
 extracts:
   target_region:
     source: CDS
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: [40, 46]
     step: 1
     layout:

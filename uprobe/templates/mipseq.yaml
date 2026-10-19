@@ -25,6 +25,14 @@ meta:
       doi: 10.1101/2023.01.07.523058
       url: https://www.biorxiv.org/content/10.1101/2023.01.07.523058v1
   parameter_sources:
+    - parameter: extracts.target_region.source and transcripts
+      value: mRNA of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        Preprint Methods (an exon near the 5' end; CDS and UTRs are not
+        distinguished). Of the 217-gene set's padlock sites that map to mouse
+        RefSeq mRNAs, 290 of 380 lie in the CDS and 64 in the 5' or 3' UTR;
+        343 lie in every RefSeq variant of their gene.
+      quote: Try to choose the exon close to the 5' end, and select 2 target sites for each gene
     - parameter: padlock arms (layout arm5_site, arm3_site)
       value: 13 nt each, adjacent on the RNA (no ligation gap)
       source: >-
@@ -80,7 +88,8 @@ encoding:
 
 extracts:
   target_region:
-    source: CDS
+    source: mRNA   # the whole mRNA; target_start counts from its 5' end
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 40
     step: 1
     layout:

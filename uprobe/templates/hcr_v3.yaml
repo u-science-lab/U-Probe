@@ -34,6 +34,14 @@ meta:
       doi: 10.1002/jez.b.23100
       url: https://github.com/rwnull/insitu_probe_generator
   parameter_sources:
+    - parameter: extracts.target_region.source and transcripts
+      value: mRNA of the MANE Select transcript, the Ensembl canonical one without it
+      source: >-
+        Choi 2018, SI section S4 (target mRNA sequences from NCBI). The
+        published human ACTB probe set binds the UTRs: 19 of its 20 binding
+        sites lie on the Ensembl 113 MANE Select ACTB mRNA, all in the 5' or 3'
+        UTR. insitu_probe_generator tiles whatever sequence it is given.
+      quote: Target mRNA sequences were obtained from the National Center for Biotechnology Information (NCBI)
     - parameter: extracts.target_region.layout (left 25, gap 2, right 25)
       value: 25 + 2 + 25 = 52 nt
       source: Choi 2018, SI section S3.2
@@ -111,7 +119,8 @@ encoding:
 
 extracts:
   target_region:
-    source: CDS
+    source: mRNA   # the whole mRNA, UTRs included
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 52
     step: 1
     layout:

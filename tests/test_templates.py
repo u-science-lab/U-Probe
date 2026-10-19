@@ -194,16 +194,36 @@ def test_smfish_gene_expression_example_uses_the_recommended_settings():
     assert (settings['min_value'], settings['min_fraction_of_target']) == (1, 0.05)
 
 
-def test_smfish_exempt_copies_option_is_valid(tmp_path):
-    text = read_template('smfish_stellaris')
-    option = '    # exempt_copies: {kmer: 30, min_shared: 0.5}'
-    assert text.count(option) == 1
-    path = tmp_path / 'smfish_copies.yaml'
-    path.write_text(text.replace(option, option.replace('# ', '', 1)), encoding='utf-8')
-    attr = yaml.safe_load(path.read_text(encoding='utf-8'))['attributes']['target_mapped_genes']
+def test_smfish_tiles_the_reference_mrna_and_exempts_copies(tmp_path):
+    # The whole mRNA of the MANE Select (else Ensembl canonical) transcript; copies of the
+    # target are exempt by default, which needs no expression table.
+    protocol = load_template('smfish_stellaris')
+    region = protocol['extracts']['target_region']
+    assert (region['source'], region['transcripts']) == ('mRNA', 'mane')
+    attr = protocol['attributes']['target_mapped_genes']
     assert mapped_genes_settings(attr)['exempt_copies'] == {'kmer': 30, 'min_shared': 0.5}
+    # The gene_expression example, uncommented, is valid as it stands.
+    example = commented_block(read_template('smfish_stellaris'), 'gene_expression:')['gene_expression']
+    example['table'] = str(tmp_path / 'expression.tsv')
+    (tmp_path / 'expression.tsv').write_text('gene_id\tTPM\nENSG00000111640\t2000\n')
+    path = tmp_path / 'smfish_expression.yaml'
+    path.write_text(yaml.safe_dump({**protocol, 'gene_expression': example}), encoding='utf-8')
     findings = validate_files(path)
     assert not findings, render_text(findings)
+
+
+RNA_TEMPLATES = [name for name in NAMES if load_template(name)['extracts']['target_region']['source'] != 'genome']
+
+
+@pytest.mark.parametrize('name', RNA_TEMPLATES)
+def test_rna_templates_choose_source_and_transcripts(name):
+    # Every RNA template names what it extracts (not the ambiguous exon) and designs on
+    # the reference transcript; meta.parameter_sources gives the evidence.
+    protocol = load_template(name)
+    region = protocol['extracts']['target_region']
+    assert region['source'] in ('mRNA', 'CDS') and region['transcripts'] == 'mane'
+    rows = [row for row in protocol['meta']['parameter_sources'] if 'transcripts' in row['parameter']]
+    assert len(rows) == 1 and rows[0]['source']
 
 
 @pytest.mark.parametrize('name, count', [('smfish_stellaris', 48), ('merfish', 92), ('seqfish_plus', 24),

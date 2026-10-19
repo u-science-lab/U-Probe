@@ -23,6 +23,14 @@ meta:
       value: 28 nt from CDS exons
       source: Eng 2019, Methods
       quote: 28-nt sequences of each gene were extracted first using the exons from within the CDS region
+    - parameter: extracts.target_region.transcripts
+      value: mane (the CDS of the MANE Select transcript, the Ensembl canonical one without it)
+      source: >-
+        Eng 2019 designed "as previously described", i.e. as Eng 2017 (RNA
+        SPOTs, Methods), on the regions shared by all spliced isoforms. U-Probe
+        has no shared-region option; the reference transcript's CDS contains
+        them, and never adds exons of other isoforms.
+      quote: Consensus regions of all spliced isoforms were identified (Eng 2017)
     - parameter: post_process.filters.target_gc
       value: 0.45-0.65
       source: Eng 2019, Methods
@@ -56,6 +64,7 @@ meta:
       Readout probes are hybridized at room temperature in 10% ethylene
       carbonate, 10% dextran sulfate, 4x SSC.
   limitations:
+    - Eng 2019 added UTR exons for genes whose CDS gave too few probes; the template uses the CDS only (source mRNA adds the UTRs, for every gene).
     - Eng 2019 dropped genes with fewer than 24 probes and used 24 per gene; equal_space keeps 24, spread evenly along the CDS, and all passing regions of a gene with fewer (summary.json reports the shortfall; drop such genes as Eng 2019 did).
     - "TODO: verify the 5'/3' order of the overhangs (Fig. 1a is unlabelled), any spacers, and the primer handles; the final probe was ~93 nt, more than 28 + 4 x 15."
     - "TODO: verify the minimum spacing between primary probes; regions are only required not to overlap here."
@@ -82,6 +91,7 @@ encoding:
 extracts:
   target_region:
     source: CDS
+    transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 28
     step: 1
 
