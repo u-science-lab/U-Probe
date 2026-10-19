@@ -1,0 +1,157 @@
+# Troubleshooting U-Probe runs
+
+Read this when `uprobe validate` or `uprobe run` fails, a run ends with no or too few probes, or the
+result looks wrong (strand, overlaps, off-targets). Each entry: **symptom**, **cause**, **fix**.
+Start every diagnosis from the exit code and `summary.json` (`status`, `message`, `stopped_at`,
+`error`, `warnings`, `targets.<t>.after_stage`, `top_removal_stage`); see `references/uprobe/workflow.md`.
+
+## Triage by status
+
+| Exit / `status` | Look at | Usual cause |
+| --- | --- | --- |
+| 2, no summary | the command line | missing `-p`/`-g`, a path that does not exist |
+| 1 `error`, `stopped_at: load_inputs` or `normalize_protocol` | `error` | protocol rejected (run `uprobe validate`), genome name not in `genomes.yaml`, FASTA/GTF path missing |
+| 1 `error`, `stopped_at: build_index` | stderr log | aligner not installed, unreadable FASTA, disk space |
+| 1 `error`, later steps | `error` | aligner missing at alignment time, transcript selection, expression table, Excel limit |
+| 3 `no_valid_targets` | `inputs.invalid_targets` | no target name is a GTF `gene_name` |
+| 3 `no_target_sequences` | log line `Failed to generate sequences` | no window fits a segment (below) |
+| 3 `no_probes_constructed` | `warnings: probe_construction_failed` | an expression fails for every candidate |
+| 3 `no_probes` | `stages`, raw table | filters removed everything |
+| 0 `partial` | `warnings`, per-target `final` | some targets short or empty |
+
+## Validation errors
+
+- **Symptom:** `uprobe validate` exits 1. **Cause:** schema, expression, column or genome problems.
+  **Fix:** apply each `fix:` line; rerun until `OK`. Errors that `validate` catches but `run` would
+  **ignore silently**: misspelled `post_process` step (e.g. `remove_overlaps`), filter or sort on an
+  unknown column, `or`/`|` or text after a number in a condition. Always validate after editing.
+- **Symptom:** `condition` rejected or misread. **Cause:** only `<column> <op> <number>` joined by `&`;
+  no negative numbers, no scientific notation, no `or`. **Fix:** split into several filters; write
+  `0.00001` not `1e-5`; `fold_score` is >= 0, so `target_fold <= 5`, never `>= -5`.
+- **Symptom:** `unknown name 'gene'` / `'ACGT'` in an expression. **Fix:** the target name is `target`;
+  quote literals inside the YAML string: `expr: "'ACGT'"`; constant parts can also be
+  `{template: "ACGT", parts: {}}`.
+
+## Genome, indexes and aligners
+
+- **Symptom:** `AssertionError: bowtie must be enabled in genome align_index` (or `bowtie2`,
+  `Jellyfish must be enabled`). **Cause:** an attribute needs an index the genome entry does not list.
+  **Fix:** add `bowtie`/`bowtie2` to `align_index` or set `jellyfish: true`; `uprobe build-index`.
+- **Symptom:** run fails with `FileNotFoundError` naming `bowtie-build` (at `build_index`) or `bowtie`
+  (at the attributes), or `validate -g` warns `bowtie-build and bowtie not found on PATH`. **Cause:** Bowtie 1 not installed (it is a separate
+  package from Bowtie2). **Fix:** `conda install -c bioconda bowtie`; check `which bowtie bowtie-build`.
+- **Symptom:** log says `Auto-generated target_mapped_genes: aligner bowtie2, because ...` and the
+  off-target filter removes nothing on 18-21-nt windows. **Cause:** Bowtie 1 or the `bowtie` entry is
+  missing, so the generated attribute fell back to Bowtie2, whose local mode cannot align < 22 nt
+  (every window counts 0 genes). **Fix:** install Bowtie 1, add `bowtie` to `align_index`, or write the
+  attribute with `aligner: bowtie`. Never deliver short probes checked only by Bowtie2.
+- **Symptom:** first run takes hours at `build_index`. **Cause:** every `align_index` entry is built,
+  including a Bowtie2 genome index. **Fix:** build once with `uprobe build-index -t <cores>` before
+  designing; keep only the aligners you use (`[bowtie]` suffices for `mapped_genes` with Bowtie 1).
+- **Symptom:** index build fails immediately / "does not contain a valid sequence". **Cause:**
+  gzipped or truncated FASTA, a Git LFS pointer file, or a broken aligner binary. **Fix:** `head` the
+  FASTA (must start with `>`); run `bowtie-build`/`bowtie2-build` by hand on a small FASTA.
+- **Symptom:** `kmer_count` values look wrong after changing `kmer_len`. **Cause:** the Jellyfish index
+  `jf_genome/<stem>.jf` is built once and not rebuilt for a new k. **Fix:** delete `jf_genome/` and rerun.
+
+## Targets and transcripts
+
+- **Symptom:** `invalid_targets` warning or `no_valid_targets`. **Cause:** names are matched against
+  GTF `gene_name`, case-sensitively (`GAPDH` human, `Gapdh` mouse); gene ids and old aliases do not
+  match; genes without a `gene_name` cannot be named. **Fix:** `validate --check-targets` suggests the
+  closest name; look the gene up in the GTF; for an unnamed gene use a literal sequence target named
+  after its gene id. Invalid targets are skipped and the run continues (`partial`) even without
+  `--continue-invalid`; that flag only changes the all-invalid case (exit 3 instead of exit 1).
+- **Symptom:** `no transcript of X is tagged MANE_Select or Ensembl_canonical`. **Cause:** non-Ensembl
+  GTF (RefSeq, custom), or an old release without tags. **Fix:** list transcript ids
+  (`transcripts: [ENST...]`), or `transcripts: all`; MANE exists only for human.
+- **Symptom:** `no_target_sequences` and the log says `Gene X can't found any exon records`.
+  **Cause:** with `exon`/`CDS`/`UTR` and `transcripts: all`, segments shorter than `length` are
+  dropped; if one target has none left, extraction fails **for every gene target in the run**.
+  **Fix:** use a single transcript (`transcripts: mane`/`canonical`/list: spliced tiling, no length
+  filter) or `source: mRNA`, shorten the window, or move that target to its own run.
+- **Symptom:** a target gets no windows with `source: UTR`. **Cause:** no UTR features (non-coding
+  gene, or a GTF without UTR lines). **Fix:** `source: mRNA`.
+
+## Too few probes
+
+Read `targets.<t>.after_stage` and `top_removal_stage`, then:
+
+| Stage that removed most | Likely cause | Fix (keep the method's specificity rule) |
+| --- | --- | --- |
+| `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true`; `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
+| `Filters` (Tm/GC) | window computed under other conditions, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; allow a `length` range so each site can meet the Tm window |
+| `Remove overlap` | short target: few non-overlapping sites | lower `location_interval` (smFISH: 2 is the Stellaris default), shorter windows, longer region (`mRNA` not `CDS`), amplified methods for very short RNAs (`references/concepts/targets-and-isoforms.md`) |
+| `Off-target pool limit` | many probes share one off-target gene | expected; it trades count for cleanliness |
+| `Equal spacing` | never below the request | the shortfall is upstream |
+
+Count which filter fails: rerun with `--raw`, load `*_raw.xlsx` (`pandas.read_excel`) and evaluate each
+condition separately per target.
+
+## Formamide makes Tm filters remove everything
+
+- **Symptom:** `stage_removed_all` at `Filters`; the Tm attribute's median is far below the window.
+- **Cause:** a published Tm window (often computed at 0% formamide, e.g. MERFISH 66-76 °C at 300 mM
+  Na+) applied to Tm computed under the protocol's `hybridization` block with formamide. Primer3 lowers
+  Tm by about 0.6-0.7 °C per % formamide (`references/concepts/hybridization-and-tm.md`): a 20-mer at 45% GC
+  computes about 60 °C in 2x SSC, 40 °C at 30% formamide, 27 °C at 50%.
+- **Fix:** give the Tm attribute the window's own design conditions with a per-attribute override,
+  `hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}` (as the MERFISH template does); or set
+  the window relative to the real hybridization temperature under the real conditions. Never shift a
+  window without saying which conditions it refers to.
+- Related: auto-generated filters (no `post_process`) put a Tm window [T, T+40] °C on every probe
+  *and part*, constant readouts included; one constant part outside it removes every candidate. Write
+  `post_process` yourself.
+
+## Wrong strand
+
+- **Symptom:** probes have the same sequence as the mRNA; `target_mapped_genes` is 0 on every row;
+  or off-target lists contain antisense transcripts. **Causes and fixes:**
+  - Binding part written as `target_region` for an RNA target: it must be `rc(target_region)`
+    (`target_region` is the RNA sense sequence, 5'->3'). Exception: padlocks that bind **cDNA**
+    (HybISS) carry the RNA-sense sequence in their arms.
+  - `mapped_genes` on a binding part (antisense) with `strand: sense`: use `strand: antisense`, or
+    better run the attribute on `target_region` with `strand: sense`.
+  - `strand: both` (default) also counts transcripts antisense to the target, which the probe cannot
+    bind: set `sense` for `target_region`.
+- Check: a correct RNA design has `binding == rc(target_region)` and `target_mapped_genes >= 1` on every
+  row (the own gene), except literal-sequence targets absent from the annotation.
+
+## Overlapping or clustered probes
+
+- **Symptom:** final probes overlap. **Cause:** `equal_space` without `remove_overlap` picks evenly
+  spaced *ranks* of overlapping windows. **Fix:** add `remove_overlap: {location_interval: N}`.
+- With `length: [min, max]` or a `layout` with ranges, several candidates share a start; `remove_overlap`
+  keeps the first (shortest) passing one. Filter lengths you do not want.
+- Probes cluster in one region: the rest of the target failed filters (check positions of the raw
+  candidates); `equal_space` spaces by rank among survivors, not by distance.
+
+## Off-target counts look wrong
+
+- 22-30-nt windows with `aligner: bowtie2`: sites are missed (README: Bowtie2 flagged only 69-88% of
+  25-30-nt windows with a site within 2 substitutions in another gene). Use `aligner: bowtie`.
+- Windows in repeats hit hundreds of genes; Bowtie2 reports at most 100 alignments, so counts saturate.
+- Junction windows (one selected transcript): `mapped_sites` and `kmer_count` search the genome, where
+  the intron splits the window; judge RNA probes by `mapped_genes`.
+- A gene listed in `_copies` is exempt from the count and from `off_target_pool`; read the list before
+  delivery (a copy that is a real, expressed gene still produces signal).
+- `gene_expression`: `off_target_genes_not_in_expression_table` (genes, or with `level: transcript`
+  genes with hit transcripts the table lacks; counted unless `absent: ignore`); a table with no
+  matching id stops the run (wrong species, identifiers or annotation release);
+  `targets_not_in_expression_table` means `min_fraction_of_target` did not apply to those targets.
+- **Symptom:** `validate`: `level is gene, but column ... holds transcript ids` (or the reverse);
+  `run`: `none of the ... genes|transcripts of the genome annotation is in <table>`. **Fix:** set `level: transcript` with `transcript_column` (salmon `Name`), or `level: gene`
+  with `gene_column`; `gene_column` is rejected with `level: transcript`.
+- A transcript table quantified on another annotation release misses new transcript ids (counted
+  under `absent: count`); quantify on the genome's GTF, or accept `absent: ignore` knowingly.
+
+## Output files
+
+- **Symptom:** run fails with `Excel cell exceeds 32767 characters: <column>`. **Cause:** an Excel cell
+  holds at most 32,767 characters; with `--raw` (or when no probe passes, which also writes the raw
+  table) repeat windows can carry off-target lists or site lists longer than that. **Fix:** drop
+  `--raw`; add a `sequence_pattern` or off-target filter so such windows never reach the final table.
+- **Symptom:** raw `.xlsx` has fewer rows than `candidate_windows`. **Cause:** Excel's 1,048,576-row
+  limit; extra rows are silently not written. **Fix:** fewer targets per run, larger `step`, or read
+  the candidates through the Python API (`UProbeAPI` step methods return DataFrames).
+- Several result tables in one directory: tables are timestamped; trust `summary.json -> output_files`.
