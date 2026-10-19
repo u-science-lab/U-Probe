@@ -59,7 +59,7 @@ ATTRIBUTE_TYPES = {
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand')
+                  'max_mismatches', 'strand', 'exempt_copies')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -126,6 +126,9 @@ HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELD
                       '  temperature_c: 37\n'
                       '  na_mM: 390          # 2x SSC\n'
                       '  formamide_pct: 30')
+COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
+                  '  kmer: 30          # k-mer length, 12-32\n'
+                  '  min_shared: 0.5   # share of the target\'s k-mers that one transcript of a copy contains')
 OTP_SNIPPET = ('avoid_otp:\n'
                '  chr1:1000-2000:          # a target\n'
                '    target_regions: [chr1:1000-2000]\n'
@@ -829,7 +832,8 @@ class _Validator:
 
     def _check_mapped_genes(self, path, attr):
         hints = {'strand': 'strand: sense   # both, sense (for target_region) or antisense (for a probe binding part)',
-                 'max_mismatches': f'max_mismatches: 2   # substitutions, 0-{MAX_MISMATCHES_LIMIT}'}
+                 'max_mismatches': f'max_mismatches: 2   # substitutions, 0-{MAX_MISMATCHES_LIMIT}',
+                 'exempt_copies': COPIES_SNIPPET}
         for option, hint in hints.items():
             if option in attr:
                 try:
@@ -839,6 +843,12 @@ class _Validator:
         if attr['aligner'] == 'bowtie2' and 'max_mismatches' in attr:
             self.warning(path + ('max_mismatches',), 'max_mismatches only applies to aligner: bowtie and is ignored',
                          'aligner: bowtie   # every site within max_mismatches substitutions (Bowtie 1)')
+        step = self.region().get('step')
+        if attr.get('exempt_copies') and self.lengths and type(step) is int and step > self.lengths[1]:
+            self.warning(path + ('exempt_copies',), f'extracts.target_region.step {step} leaves gaps between the '
+                         f'windows of at most {self.lengths[1]} nt, and exempt_copies reads the target\'s sequence '
+                         'from the windows: k-mers across the gaps are unknown, so copies are judged on part of the '
+                         'target or not found', f'step: {self.lengths[1]}   # or less, so the windows cover the target')
 
     # -- gene_expression ---------------------------------------------------
     def check_gene_expression(self, protocol):

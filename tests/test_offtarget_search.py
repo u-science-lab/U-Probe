@@ -157,6 +157,7 @@ def test_short_sequences_warn_with_bowtie2(monkeypatch, tmp_path, caplog):
     ({'aligner': 'bowtie', 'max_mismatches': 1.5}, 'max_mismatches must be an integer'),
     ({'aligner': 'bowtie2', 'strand': 'plus'}, 'strand must be one of both, sense, antisense'),
     ({'aligner': 'blast'}, 'aligner must be one of bowtie2, bowtie'),
+    ({'aligner': 'bowtie', 'exempt_copies': {'kmer': 40}}, r'attributes.hits.exempt_copies.kmer must be'),
 ])
 def test_mapped_genes_settings_reject(attr, message):
     with pytest.raises(ValueError, match=message):
@@ -164,8 +165,11 @@ def test_mapped_genes_settings_reject(attr, message):
 
 
 def test_mapped_genes_settings_defaults():
-    assert mapped_genes_settings({'aligner': 'bowtie'}) == {'aligner': 'bowtie', 'strand': 'both', 'max_mismatches': 2}
+    assert mapped_genes_settings({'aligner': 'bowtie'}) == {'aligner': 'bowtie', 'strand': 'both', 'max_mismatches': 2,
+                                                             'exempt_copies': None}
     assert mapped_genes_settings({'aligner': 'bowtie2'})['max_mismatches'] is None
+    assert mapped_genes_settings({'aligner': 'bowtie2', 'exempt_copies': True})['exempt_copies'] == {
+        'kmer': 30, 'min_shared': 0.5}
 
 
 # -- uprobe validate -----------------------------------------------------

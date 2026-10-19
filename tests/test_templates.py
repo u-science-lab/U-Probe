@@ -13,6 +13,7 @@ from uprobe.core.cli import cli, _extract_probe_targets, _validate_and_normalize
 from uprobe.core.gene_expression import validate_gene_expression
 from uprobe.core.hybridization import FIELDS as HYBRIDIZATION_FIELDS, TM_DEFAULTS, effective_conditions
 from uprobe.core.layout import validate_layout_references
+from uprobe.core.offtarget import mapped_genes_settings
 from uprobe.core.process import post_process
 from uprobe.core.sampling import normalize_sampling
 from uprobe.core.utils import reverse_complement
@@ -191,6 +192,18 @@ def test_smfish_gene_expression_example_uses_the_recommended_settings():
     example = commented_block(read_template('smfish_stellaris'), 'gene_expression:')['gene_expression']
     settings = validate_gene_expression(example)
     assert (settings['min_value'], settings['min_fraction_of_target']) == (1, 0.05)
+
+
+def test_smfish_exempt_copies_option_is_valid(tmp_path):
+    text = read_template('smfish_stellaris')
+    option = '    # exempt_copies: {kmer: 30, min_shared: 0.5}'
+    assert text.count(option) == 1
+    path = tmp_path / 'smfish_copies.yaml'
+    path.write_text(text.replace(option, option.replace('# ', '', 1)), encoding='utf-8')
+    attr = yaml.safe_load(path.read_text(encoding='utf-8'))['attributes']['target_mapped_genes']
+    assert mapped_genes_settings(attr)['exempt_copies'] == {'kmer': 30, 'min_shared': 0.5}
+    findings = validate_files(path)
+    assert not findings, render_text(findings)
 
 
 @pytest.mark.parametrize('name, count', [('smfish_stellaris', 48), ('merfish', 92), ('seqfish_plus', 24),

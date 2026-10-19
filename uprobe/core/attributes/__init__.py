@@ -130,7 +130,7 @@ def _add_attributes(
                         attr.get("threads", 10), settings['strand']
                     )
                 sequence_hits = {seq: gene_hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
-                # Count, off-target list and (with gene_expression) unexpressed genes per row.
+                # Count, off-target list and, as configured, unexpressed genes and copies per row.
                 if off_targets is None:
                     off_targets = OffTargetCounter(protocol, genome, report)
                 off_targets.annotate(df_probes, attr_name, actual_target, sequence_hits, settings)

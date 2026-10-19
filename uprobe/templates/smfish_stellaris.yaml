@@ -63,7 +63,7 @@ meta:
     - Stellaris orders hold at most 48 probes (at least 25 recommended); equal_space keeps 48 per gene, spread evenly along the RNA, and all passing sites of a gene with fewer (summary.json reports the shortfall).
     - target_mapped_genes uses Bowtie 1 (aligner bowtie), so the genome's align_index must include bowtie; Bowtie2 cannot align 20-mers (its local mode needs at least 22 nt) and would count no off-target gene.
     - Without gene_expression every annotated gene counts as an off-target, including genes and pseudogenes the sample does not express, so target_mapped_genes <= 1 drops more probes than needed; add your expression table (see gene_expression below).
-    - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 16, GAPDH 6, RPL13A 1 on Ensembl 113 human, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 33-46% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets.
+    - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 16, GAPDH 6, RPL13A 1 on Ensembl 113 human, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 33-46% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets. The recommended gene_expression settings and exempt_copies (commented out below) do more: with a HeLa table, min_fraction_of_target 0.05 and exempt_copies, ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 193 probes, and 264 with gene_expression.absent set to ignore, which trusts the table to list every expressed gene (README, Copies of the target).
     - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
@@ -130,6 +130,10 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
+    # Recommended, with or without gene_expression: genes that copy the target
+    # (processed pseudogenes, readthrough genes) are listed in
+    # target_mapped_genes_copies instead of counted.
+    # exempt_copies: {kmer: 30, min_shared: 0.5}   # a gene holding half the target's 30-mers is hit by any probe set
 
 post_process:
   filters:
