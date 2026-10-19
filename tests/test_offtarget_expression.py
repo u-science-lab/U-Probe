@@ -72,8 +72,8 @@ def test_block_is_checked(block, message):
 
 def test_block_normalized():
     settings = validate_gene_expression({'table': 'x.tsv', 'gene_column': 'id', 'min_value': 1})
-    assert settings == {'table': 'x.tsv', 'gene_columns': ['id'], 'value_column': None, 'min_value': 1.0,
-                        'min_fraction_of_target': None, 'absent': 'count'}
+    assert settings == {'table': 'x.tsv', 'level': 'gene', 'gene_columns': ['id'], 'transcript_column': None,
+                        'value_column': None, 'min_value': 1.0, 'min_fraction_of_target': None, 'absent': 'count'}
     settings = validate_gene_expression({'table': 'x.tsv', 'min_value': 1, 'min_fraction_of_target': 0,
                                          'absent': 'ignore'})
     assert (settings['min_fraction_of_target'], settings['absent']) == (0.0, 'ignore')

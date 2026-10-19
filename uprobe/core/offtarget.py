@@ -35,9 +35,12 @@ gene ids share is written ``name(gene_id)``. With a ``gene_expression`` table
 (see uprobe.core.gene_expression), off-target genes below its ``min_value``
 (or below ``min_fraction_of_target`` of the target's value, or with
 ``absent: ignore`` missing from the table) are not counted and are listed in
-``<attribute>_unexpressed`` instead. With ``exempt_copies`` (see
-uprobe.core.copies), off-target genes that copy most of the target's sequence
-are not counted either and are listed in ``<attribute>_copies``.
+``<attribute>_unexpressed`` instead. A table of transcripts (``level:
+transcript``) values each off-target gene by the transcripts the sequence hits,
+and ``<attribute>_hit_transcripts`` lists them with their values. With
+``exempt_copies`` (see uprobe.core.copies), off-target genes that copy most of
+the target's sequence are not counted either and are listed in
+``<attribute>_copies``.
 """
 import functools
 import re
@@ -66,6 +69,7 @@ BOWTIE2_INCOMPLETE_MAX_LENGTH = 30
 OFF_TARGETS_SUFFIX = '_off_targets'
 UNEXPRESSED_SUFFIX = '_unexpressed'
 COPIES_SUFFIX = '_copies'
+HIT_TRANSCRIPTS_SUFFIX = '_hit_transcripts'
 _MISSING_EXAMPLES = 20
 
 
@@ -122,7 +126,8 @@ def mapped_genes_settings(attr: dict, where: str = '') -> dict:
 
 # -- gene names ------------------------------------------------------------
 
-_GTF_ATTRIBUTES = {key: re.compile(rf'(?:^|;)\s*{key}\s+"([^"\r\n]*)"') for key in ('gene_id', 'gene_name', 'gene')}
+_GTF_ATTRIBUTES = {key: re.compile(rf'(?:^|;)\s*{key}\s+"([^"\r\n]*)"')
+                   for key in ('gene_id', 'gene_name', 'gene', 'transcript_id')}
 _GTF_GENE_NUMBER = re.compile(r'GeneID:(\d+)')
 
 
@@ -132,13 +137,15 @@ def _gtf_attribute(info: str, key: str):
 
 
 @functools.lru_cache(maxsize=4)
-def _read_gene_names(path: str, mtime: int, size: int) -> dict:
-    """Gene key (as in transcript.fa records) -> gene name, from the GTF's exon lines.
+def _read_genes(path: str, mtime: int, size: int, transcripts: bool = False) -> tuple:
+    """(gene key -> gene name, gene key -> {transcript.fa record: transcript id}) from the GTF's exon lines.
 
-    The gene id falls back as in gen.fun.read_gtf, which names the
-    transcript.fa records; the name falls back to the `gene` attribute.
+    Gene keys are as in transcript.fa records ``{gene_id}_{transcript_id}``:
+    the gene id falls back as in gen.fun.read_gtf, which names the records,
+    and the name falls back to the `gene` attribute. The transcripts are
+    read only when asked for (otherwise {}).
     """
-    names = {}
+    names, records = {}, defaultdict(dict)
     with open(path) as f:
         for line in f:
             fields = line.split('\t', 8)
@@ -155,26 +162,40 @@ def _read_gene_names(path: str, mtime: int, size: int) -> dict:
             key = gene_id.split('_')[0]  # as attributes.transcript_gene
             if not names.get(key):
                 names[key] = _gtf_attribute(info, 'gene_name') or _gtf_attribute(info, 'gene')
-    return names
+            if transcripts:
+                transcript_id = _gtf_attribute(info, 'transcript_id')
+                if transcript_id is not None:
+                    records[key][f'{gene_id}_{transcript_id}'] = transcript_id
+    return names, dict(records)
 
 
 class GeneAnnotation:
-    """Names of the transcriptome's genes, to label off-targets and recognize the target."""
+    """Names (and, if read, transcripts) of the transcriptome's genes, to label off-targets and recognize the target."""
 
-    def __init__(self, names: dict):
+    def __init__(self, names: dict, transcripts: dict = None):
         self.names = names
+        self.transcripts = transcripts or {}  # gene key -> {transcript.fa record: transcript id}
         self.keys_by_name = defaultdict(set)
         for key, name in names.items():
             if name:
                 self.keys_by_name[name].add(key)
 
     @classmethod
-    def from_gtf(cls, gtf) -> 'GeneAnnotation':
+    def from_gtf(cls, gtf, transcripts: bool = False) -> 'GeneAnnotation':
         path = Path(gtf) if gtf else None
         if path is None or not path.is_file():
             return cls({})
         stat = path.stat()
-        return cls(_read_gene_names(str(path.resolve()), stat.st_mtime_ns, stat.st_size))
+        return cls(*_read_genes(str(path.resolve()), stat.st_mtime_ns, stat.st_size, transcripts))
+
+    def transcript_id(self, record: str) -> str:
+        """Transcript id of a transcript.fa record ``{gene_id}_{transcript_id}``."""
+        found = self.transcripts.get(record.split('_')[0], {}).get(record)
+        return found if found is not None else record.split('_', 1)[-1]
+
+    def gene_transcripts(self, key: str) -> list:
+        """Transcript ids of a gene."""
+        return list(self.transcripts.get(key, {}).values())
 
     def label(self, key: str) -> str:
         name = self.names.get(key)
@@ -210,12 +231,25 @@ def parse_gene_hits(text) -> list:
     return labels
 
 
+def format_hit_transcripts(genes, annotation: GeneAnnotation) -> str:
+    """'ACTG1: ENST1=812.4; POTEF: ENST2=0, ENST3=NA' from [(gene key, mismatches, [(transcript, value)])].
+
+    Genes come in the order of format_gene_hits; NA marks a transcript the table does not list.
+    """
+    labelled = sorted((-1 if mismatches is None else mismatches, annotation.label(key), values)
+                      for key, mismatches, values in genes)
+    return '; '.join(f'{label}: ' + ', '.join(f'{transcript}=' + ('NA' if value is None else f'{round(value, 3):g}')
+                                               for transcript, value in sorted(values))
+                     for _, label, values in labelled)
+
+
 class OffTargetCounter:
     """Counts and lists the off-target genes of the mapped_genes attributes of one add_attributes call.
 
-    The GTF's gene names and the gene_expression table are read once, when the
-    first mapped_genes attribute needs them. ``report`` collects statistics
-    for summary.json: {'gene_expression': {...}, 'attributes': {name: {...}}}.
+    The GTF's gene names (and, for a table of transcripts, the genes'
+    transcripts) and the gene_expression table are read once, when the first
+    mapped_genes attribute needs them. ``report`` collects statistics for
+    summary.json: {'gene_expression': {...}, 'attributes': {name: {...}}}.
     """
 
     def __init__(self, protocol: dict, genome: dict, report: dict = None):
@@ -224,38 +258,77 @@ class OffTargetCounter:
         self.report = report if report is not None else {}
         self.annotation = None
         self.expression = None
+        block = protocol.get('gene_expression')
+        # A table of transcripts values each off-target gene by the transcripts a sequence hits.
+        self.transcript_level = isinstance(block, dict) and block.get('level') == 'transcript'
 
     def _load(self):
         if self.annotation is not None:
             return
-        self.annotation = GeneAnnotation.from_gtf(self.genome.get('gtf'))
+        self.annotation = GeneAnnotation.from_gtf(self.genome.get('gtf'), transcripts=self.transcript_level)
         if self.protocol.get('gene_expression') is None:
             return
         from .gene_expression import ExpressionTable
         table = ExpressionTable(self.protocol['gene_expression'])
         description = table.describe()
         names = self.annotation.names
-        if names:
+        relative = (f' or below {table.min_fraction_of_target:g} x the target\'s value'
+                    if table.min_fraction_of_target is not None else '')
+        if table.level == 'transcript':
+            found = self._check_transcripts(table, description)
+            log.info(f'gene_expression: {description["table"]} lists {found} of the '
+                     f'{description["annotation_transcripts"]} annotated transcripts; off-target genes whose hit '
+                     f'transcripts sum to {table.value_column} < {table.min_value:g}{relative} are not counted')
+        elif names:
             found = sum(table.value(key, name) is not None for key, name in names.items())
             if found == 0:
+                hint = ('; its identifiers look like transcript ids: set gene_expression.level: transcript'
+                        if table.identifiers == 'transcript' else '')
                 raise ValueError(f'gene_expression: none of the {len(names)} genes of the genome annotation is in '
                                  f'{description["table"]} (column {", ".join(table.gene_columns)}); check the gene '
-                                 'identifiers and the species')
+                                 f'identifiers and the species{hint}')
             description.update(annotation_genes=len(names), annotation_genes_in_table=found)
-            relative = (f' or below {table.min_fraction_of_target:g} x the target\'s value'
-                        if table.min_fraction_of_target is not None else '')
             log.info(f'gene_expression: {description["table"]} lists {found} of the {len(names)} annotated genes; '
                      f'off-target genes with {table.value_column} < {table.min_value:g}{relative} are not counted')
         self.report['gene_expression'] = description
         self.expression = table
+
+    def _check_transcripts(self, table, description: dict) -> int:
+        """How many annotated transcripts a table of transcripts lists; ValueError if none (or no annotation)."""
+        transcripts = self.annotation.transcripts
+        if not transcripts:
+            gtf = self.genome.get('gtf')
+            raise ValueError('gene_expression.level: transcript needs the genome\'s GTF, which assigns the '
+                             'transcripts to genes' + (f'; {gtf} lists none' if gtf else ''))
+        total = found = genes = 0
+        for records in transcripts.values():
+            listed = sum(table.transcript_value(transcript) is not None for transcript in records.values())
+            total, found, genes = total + len(records), found + listed, genes + bool(listed)
+        if found == 0:
+            hint = ('; its identifiers look like gene ids: set gene_expression.level: gene'
+                    if table.identifiers == 'gene' else '')
+            raise ValueError(f'gene_expression: none of the {total} transcripts of the genome annotation is in '
+                             f'{description["table"]} (column {table.transcript_column}); check the transcript '
+                             f'identifiers and the species{hint}')
+        description.update(annotation_transcripts=total, annotation_transcripts_in_table=found,
+                           annotation_genes=len(transcripts), annotation_genes_in_table=genes)
+        return found
+
+    def _gene_value(self, key: str):
+        """A gene's value: by id or name, or for a table of transcripts the sum over its listed transcripts."""
+        if self.expression.level == 'transcript':
+            return self.expression.transcripts_value(self.annotation.gene_transcripts(key))[0]
+        return self.expression.value(key, self.annotation.names.get(key))
 
     def _thresholds(self, target_keys: dict) -> dict:
         """Target -> the expression value an off-target gene of it must reach to count.
 
         That is min_value or, with min_fraction_of_target, that fraction of the
         target's value when it is higher. The target's value is the highest of
-        its genes (a name can belong to several gene ids). Targets the table
-        does not list keep min_value; summary.json lists them and the log warns.
+        its genes (a name can belong to several gene ids); for a table of
+        transcripts a gene's value is the sum over all its transcripts. Targets
+        the table does not list keep min_value; summary.json lists them and the
+        log warns.
         """
         expression = self.expression
         if expression.min_fraction_of_target is None:
@@ -265,7 +338,7 @@ class OffTargetCounter:
         absent = description.setdefault('targets_not_in_table', [])
         thresholds, new_absent = {}, []
         for target, keys in target_keys.items():
-            values = [expression.value(key, self.annotation.names.get(key)) for key in sorted(keys)]
+            values = [self._gene_value(key) for key in sorted(keys)]
             value = max((v for v in values if v is not None), default=None)
             thresholds[target] = expression.threshold(value)
             if not target:
@@ -325,27 +398,57 @@ class OffTargetCounter:
                  f'{report["seconds"]:g} s)' + (f': {examples}' if examples else ''))
         return stats
 
-    def annotate(self, df, attr_name: str, column: str, sequence_hits: dict, settings: dict) -> None:
-        """Write <attr_name>, <attr_name>_off_targets and, as configured, _unexpressed and _copies.
+    def _hit_values(self, records: dict) -> dict:
+        """Gene key -> (summed value or None, [hit transcripts not in the table], [(transcript, value)]).
+
+        ``records`` are the transcript.fa records ``{gene_id}_{transcript_id}``
+        that one sequence hits; each gene is valued by the transcripts of it
+        that the sequence hits.
+        """
+        by_gene = defaultdict(list)
+        for record in records:
+            by_gene[record.split('_')[0]].append(self.annotation.transcript_id(record))  # as transcript_gene
+        values = {}
+        for key, transcripts in by_gene.items():
+            listed = [(transcript, self.expression.transcript_value(transcript)) for transcript in transcripts]
+            known = [value for _, value in listed if value is not None]
+            values[key] = (sum(known) if known else None,
+                           [transcript for transcript, value in listed if value is None], listed)
+        return values
+
+    def annotate(self, df, attr_name: str, column: str, sequence_hits: dict, settings: dict,
+                 transcript_hits: dict = None) -> None:
+        """Write <attr_name>, <attr_name>_off_targets and, as configured, _unexpressed, _hit_transcripts and _copies.
 
         ``sequence_hits`` maps each sequence of ``df[column]`` to {gene key: fewest mismatches or None}.
         The count includes the target's own genes; another gene does not count
         when it copies the target (exempt_copies), when the expression table
         puts it below the target's threshold (see _thresholds) or, with
         gene_expression.absent: ignore, when the table does not list it.
+        For a table of transcripts, ``transcript_hits`` maps each sequence to
+        the transcript.fa records it hits, and an off-target gene's value is
+        the sum over the hit transcripts of it; with absent: count, a hit
+        transcript that the table does not list makes the gene count, with
+        ignore it adds nothing.
         """
         self._load()
         annotation, expression = self.annotation, self.expression
+        by_transcript = expression is not None and expression.level == 'transcript'
+        if by_transcript and transcript_hits is None:
+            raise ValueError(f'{attr_name}: gene_expression.level: transcript needs the transcripts each sequence hits')
         target_column = next((c for c in ('target', 'gene') if c in df.columns), None)
         targets = df[target_column].astype(str).tolist() if target_column else [''] * len(df)
         pairs = set(zip(df[column], targets))
         target_keys = {target: annotation.target_keys(target) for target in {target for _, target in pairs}}
         thresholds = self._thresholds(target_keys) if expression is not None else {}
         copies, copy_report = self._copies(df, pairs, target_keys, sequence_hits, settings)
-        rows = {}
+        rows, hit_values = {}, {}
         hit, ignored, below_fraction, missing, copied = set(), set(), set(), set(), set()
+        missing_transcripts = set()
         for sequence, target in pairs:
-            count, counted, below, copy_hits = 0, [], [], []
+            count, counted, below, copy_hits, valued = 0, [], [], [], []
+            if by_transcript and sequence not in hit_values:
+                hit_values[sequence] = self._hit_values(transcript_hits.get(sequence, {}))
             for key, mismatches in sequence_hits.get(sequence, {}).items():
                 if key in target_keys[target]:
                     count += 1
@@ -355,12 +458,25 @@ class OffTargetCounter:
                     copy_hits.append((key, mismatches))
                     copied.add(key)
                     continue
-                value = expression.value(key, annotation.names.get(key)) if expression else None
-                if expression is not None and value is None:
-                    missing.add(key)
-                    ruled_out = expression.absent == 'ignore'
+                if expression is None:
+                    count += 1
+                    counted.append((key, mismatches))
+                    continue
+                if by_transcript:
+                    value, unlisted, listed = hit_values[sequence].get(key, (None, [], []))
+                    valued.append((key, mismatches, listed))
+                    missing_transcripts.update(unlisted)
                 else:
-                    ruled_out = value is not None and value < thresholds[target]
+                    value = expression.value(key, annotation.names.get(key))
+                    unlisted = value is None
+                if unlisted:
+                    missing.add(key)
+                if unlisted and expression.absent == 'count':
+                    ruled_out = False
+                elif value is None:
+                    ruled_out = True  # absent: ignore, and the table lists none of it
+                else:
+                    ruled_out = value < thresholds[target]
                     if ruled_out:
                         (ignored if value < expression.min_value else below_fraction).add(key)
                 if ruled_out:
@@ -369,12 +485,15 @@ class OffTargetCounter:
                 count += 1
                 counted.append((key, mismatches))
             rows[(sequence, target)] = (count, format_gene_hits(counted, annotation),
-                                        format_gene_hits(below, annotation), format_gene_hits(copy_hits, annotation))
+                                        format_gene_hits(below, annotation), format_gene_hits(copy_hits, annotation),
+                                        format_hit_transcripts(valued, annotation))
         keys = list(zip(df[column], targets))
         df[attr_name] = [rows[key][0] for key in keys]
         df[attr_name + OFF_TARGETS_SUFFIX] = [rows[key][1] for key in keys]
         if expression is not None:
             df[attr_name + UNEXPRESSED_SUFFIX] = [rows[key][2] for key in keys]
+        if by_transcript:
+            df[attr_name + HIT_TRANSCRIPTS_SUFFIX] = [rows[key][4] for key in keys]
         if copy_report is not None:
             df[attr_name + COPIES_SUFFIX] = [rows[key][3] for key in keys]
         stats = {'aligner': settings['aligner'], 'max_mismatches': settings['max_mismatches'],
@@ -385,16 +504,26 @@ class OffTargetCounter:
             labels = sorted(annotation.label(key) for key in missing)
             stats.update(below_min_value=len(ignored), missing_from_table=len(missing), absent=expression.absent,
                          missing_from_table_examples=labels[:_MISSING_EXAMPLES], missing_labels=labels)
+            if by_transcript:
+                stats['missing_transcripts'] = len(missing_transcripts)
             relative = ''
             if expression.min_fraction_of_target is not None:
                 stats['below_target_fraction'] = len(below_fraction)
                 relative = (f'; {len(below_fraction)} more are below gene_expression.min_fraction_of_target of a '
                             'target\'s value and not counted for it')
-            absent = ('are not counted (gene_expression.absent: ignore)' if expression.absent == 'ignore'
-                      else 'count as expressed')
-            message = (f'{attr_name}: the candidates hit {len(hit)} off-target genes; {len(ignored)} are below '
-                       f'gene_expression.min_value and not counted{relative}; {len(missing)} are not in the '
-                       f'expression table and {absent}')
+            if by_transcript:
+                absent = ('add nothing to their value (gene_expression.absent: ignore)' if expression.absent == 'ignore'
+                          else 'make them count as expressed')
+                missing_text = (f'{len(missing)} have hit transcripts that are not in the expression table '
+                                f'({len(missing_transcripts)} transcripts), which {absent}')
+                below_text = 'have hit transcripts summing below gene_expression.min_value and are not counted'
+            else:
+                absent = ('are not counted (gene_expression.absent: ignore)' if expression.absent == 'ignore'
+                          else 'count as expressed')
+                missing_text = f'{len(missing)} are not in the expression table and {absent}'
+                below_text = 'are below gene_expression.min_value and not counted'
+            message = (f'{attr_name}: the candidates hit {len(hit)} off-target genes; {len(ignored)} {below_text}'
+                       f'{relative}; {missing_text}')
             if missing:
                 log.warning(f'{message} (e.g. {", ".join(labels[:5])})')
             else:

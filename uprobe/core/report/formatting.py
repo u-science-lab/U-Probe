@@ -2,7 +2,7 @@
 import ast
 import pandas as pd
 
-from ..offtarget import COPIES_SUFFIX, OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX
+from ..offtarget import COPIES_SUFFIX, HIT_TRANSCRIPTS_SUFFIX, OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX
 
 
 def format_transcripts(value):
@@ -26,8 +26,8 @@ def sequence_groups(protocol):
 
 
 def derived_attribute(column, attributes):
-    """The attribute whose off-target lists a column holds (<attr>_off_targets, _unexpressed, _copies), or None."""
-    for suffix in (OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX, COPIES_SUFFIX):
+    """The attribute whose off-target lists a column holds (<attr>_off_targets, _unexpressed, ...), or None."""
+    for suffix in (OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX, HIT_TRANSCRIPTS_SUFFIX, COPIES_SUFFIX):
         if column.endswith(suffix) and column[:-len(suffix)] in attributes:
             return column[:-len(suffix)]
     return None

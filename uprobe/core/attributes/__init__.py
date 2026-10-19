@@ -116,8 +116,12 @@ def _add_attributes(
                 # Row keys distinguish lengths at the same exon/start position.
                 unique_sequences = list(dict.fromkeys(df_probes[actual_target]))
                 recname2seq = {str(i): seq for i, seq in enumerate(unique_sequences)}
+                if off_targets is None:
+                    off_targets = OffTargetCounter(protocol, genome, report)
+                # A table of transcripts (gene_expression.level: transcript) needs the transcripts hit.
+                by_transcript = off_targets.transcript_level
                 if aligner == "bowtie":
-                    gene_hits = bowtie_gene_hits(
+                    hits = (bowtie_transcript_hits if by_transcript else bowtie_gene_hits)(
                         str(tmp_dir), recname2seq, task_id, str(index_prefix),
                         settings['max_mismatches'], attr.get("threads", 10), settings['strand']
                     )
@@ -125,15 +129,17 @@ def _add_attributes(
                     short = sum(len(seq) < BOWTIE2_LOCAL_MIN_LENGTH for seq in unique_sequences)
                     if short:
                         log.warning(short_for_bowtie2(attr_name, short, len(unique_sequences)))
-                    gene_hits = bowtie2_gene_hits(
+                    hits = (bowtie2_transcript_hits if by_transcript else bowtie2_gene_hits)(
                         str(tmp_dir), recname2seq, task_id, str(index_prefix),
                         attr.get("threads", 10), settings['strand']
                     )
-                sequence_hits = {seq: gene_hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
+                sequence_hits = {seq: hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
+                transcript_hits = None
+                if by_transcript:
+                    transcript_hits = sequence_hits
+                    sequence_hits = {seq: gene_hits_of(records) for seq, records in transcript_hits.items()}
                 # Count, off-target list and, as configured, unexpressed genes and copies per row.
-                if off_targets is None:
-                    off_targets = OffTargetCounter(protocol, genome, report)
-                off_targets.annotate(df_probes, attr_name, actual_target, sequence_hits, settings)
+                off_targets.annotate(df_probes, attr_name, actual_target, sequence_hits, settings, transcript_hits)
             else:
                 raise NotImplementedError(
                     f"Aligner {attr['aligner']} is not implemented."

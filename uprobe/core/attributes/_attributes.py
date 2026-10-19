@@ -181,6 +181,15 @@ def transcript_gene(ref_name: str) -> str:
     # Keep this extraction identical to fisheye/primer_design/seq_features.py.
     return ref_name.split("_")[0]
 
+def gene_hits_of(transcript_hits: t.Mapping[str, t.Optional[int]]) -> t.Dict[str, t.Optional[int]]:
+    """{gene: fewest mismatches} of one query's {transcript.fa record: fewest mismatches} (None for Bowtie2)."""
+    genes = {}
+    for ref_name, mismatches in transcript_hits.items():
+        gene = transcript_gene(ref_name)
+        if gene not in genes or (mismatches is not None and mismatches < genes[gene]):
+            genes[gene] = mismatches
+    return genes
+
 def bowtie2_gene_hits(
         outdir: str,
         recname2seq: t.Mapping[str, str],
@@ -197,6 +206,21 @@ def bowtie2_gene_hits(
     Returns query -> {gene: None}: local alignments may be clipped, so they
     carry no mismatch count comparable to :func:`bowtie_gene_hits`.
     """
+    return _bowtie2_hits(outdir, recname2seq, name, index_prefix, threads, strand, transcript_gene)
+
+def bowtie2_transcript_hits(
+        outdir: str,
+        recname2seq: t.Mapping[str, str],
+        name: str,
+        index_prefix: str,
+        threads: int = 10,
+        strand: str = 'both',
+        ) -> t.Dict[str, t.Dict[str, None]]:
+    """Transcripts hit by each query, as :func:`bowtie2_gene_hits`: query -> {transcript.fa record: None}."""
+    return _bowtie2_hits(outdir, recname2seq, name, index_prefix, threads, strand, lambda ref_name: ref_name)
+
+def _bowtie2_hits(outdir, recname2seq, name, index_prefix, threads, strand, key):
+    """query -> {key(transcript.fa record): None} of Bowtie2's local alignments."""
     fq_path = write_fastq(outdir, name, recname2seq)
     sam_path = f"{outdir}/{name}.sam"
     if not os.path.exists(sam_path):
@@ -207,7 +231,7 @@ def bowtie2_gene_hits(
     # Include queries without an alignment explicitly.
     hits = {rec_name: {} for rec_name in recname2seq}
     for rec_name, seq, alns in read_sam_align_blocks(sam_path):
-        hits[rec_name] = {transcript_gene(ref_name): None for ref_name, start, end in alns}
+        hits[rec_name] = {key(ref_name): None for ref_name, start, end in alns}
     return hits
 
 def count_n_bowtie2_aligned_genes(
@@ -236,6 +260,26 @@ def bowtie_gene_hits(
     mismatches, so no such site is missed; indels are not considered.
     Returns query -> {gene: fewest mismatches over the gene's sites}.
     """
+    return _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand, transcript_gene)
+
+def bowtie_transcript_hits(
+        outdir: str,
+        recname2seq: t.Mapping[str, str],
+        name: str,
+        index_prefix: str,
+        max_mismatches: int = 2,
+        threads: int = 10,
+        strand: str = 'both',
+        ) -> t.Dict[str, t.Dict[str, int]]:
+    """Transcripts with a site within ``max_mismatches`` substitutions of each query, as :func:`bowtie_gene_hits`.
+
+    Returns query -> {transcript.fa record: fewest mismatches over its sites}.
+    """
+    return _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand,
+                        lambda ref_name: ref_name)
+
+def _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand, key):
+    """query -> {key(transcript.fa record): fewest mismatches} of Bowtie 1's alignments."""
     fa_path = f"{outdir}/{name}.fa"
     with open(fa_path, "w") as f:
         for rec_name, seq in recname2seq.items():
@@ -252,10 +296,10 @@ def bowtie_gene_hits(
             # query, strand, reference, offset, mismatches (e.g. "3:G>T,10:A>C")
             fields = line.rstrip("\n").split("\t")
             mismatches = len(fields[4].split(",")) if len(fields) > 4 and fields[4] else 0
-            genes = hits[fields[0]]
-            gene = transcript_gene(fields[2])
-            if mismatches < genes.get(gene, max_mismatches + 1):
-                genes[gene] = mismatches
+            found = hits[fields[0]]
+            hit = key(fields[2])
+            if mismatches < found.get(hit, max_mismatches + 1):
+                found[hit] = mismatches
         returncode = proc.wait()
     if returncode != 0:
         with open(log_file) as f:
