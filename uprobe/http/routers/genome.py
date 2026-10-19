@@ -20,6 +20,16 @@ def get_genome_dir(genome_name: str, username: str) -> Path:
     user_dir = get_user_genomes_dir(username) / genome_name
     return user_dir
 
+def default_align_index() -> List[str]:
+    """align_index of a genome added here: bowtie2 and blast, plus bowtie when Bowtie 1 is installed.
+
+    As `uprobe genome fetch` does (core.genome_fetch.default_align_index):
+    Bowtie 1 serves the exhaustive off-target search (mapped_genes with
+    aligner: bowtie) that probes shorter than 22 nt need.
+    """
+    return ["bowtie2", "blast"] + (["bowtie"] if shutil.which("bowtie-build") else [])
+
+
 def update_genomes_yaml(genome_name: str, username: str, action: str = "add"):
     """Update user's genomes.yaml when a genome is added or removed."""
     yaml_path = get_user_genomes_yaml(username)
@@ -43,7 +53,7 @@ def update_genomes_yaml(genome_name: str, username: str, action: str = "add"):
                 "fasta": f"{genome_base}/{genome_name}.fa",
                 "gtf": f"{genome_base}/{genome_name}.gtf",
                 "out": genome_base,
-                "align_index": ["bowtie2", "blast"],
+                "align_index": default_align_index(),
                 "jellyfish": False
             }
     elif action == "delete":

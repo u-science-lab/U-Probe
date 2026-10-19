@@ -2,7 +2,7 @@
   "ExampleProbe": {
     "extracts": {
       "target_region": {
-        "source": "exon",
+        "source": "CDS",
         "length": 40,
         "overlap": 20
       }

@@ -109,9 +109,11 @@ def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_int
     """remove_overlap for mRNA, exon, CDS and UTR windows, on each target's merged exon model.
 
     target_start/target_end place every window on the gene's merged exon
-    model (gen.fun.segment_offsets), so windows of alternative exon entries
-    of different transcripts are compared, and a site that several entries
-    contain is kept once; the kept row lists the transcripts of all of them.
+    model (gen.fun.segment_offsets), or on its one selected transcript,
+    junction windows included (gen.fun.SPLICED_SOURCES), so windows of
+    alternative exon entries of different transcripts are compared, and a
+    site that several entries contain is kept once; the kept row lists the
+    transcripts of all of them.
     """
     bounds = pd.DataFrame({'start': pd.to_numeric(df['target_start'], errors='coerce'),
                            'end': pd.to_numeric(df['target_end'], errors='coerce')}, index=df.index)

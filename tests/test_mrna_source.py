@@ -1,7 +1,10 @@
-"""source: mRNA (the whole mature RNA) and extracts.target_region.transcripts on a toy annotation."""
+"""source: mRNA (the whole mature RNA), extracts.target_region.transcripts and windows across exon
+junctions (one selected transcript) on a toy annotation."""
 import json
 import logging
 import random
+import shutil
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -77,6 +80,10 @@ def ranges(gene, feature):
     return [(s, e) for g, _, _, f, s, e, _ in FEATURES if g == gene and f == feature]
 
 
+needs_bowtie = pytest.mark.skipif(not (shutil.which('bowtie') and shutil.which('bowtie-build')),
+                                  reason='needs Bowtie 1 (bowtie, bowtie-build)')
+
+
 # -- source: mRNA ------------------------------------------------------------------
 
 def test_mrna_has_utr_windows_and_exon_stays_the_coding_sequence(annotation):
@@ -102,18 +109,25 @@ def test_mrna_has_utr_windows_and_exon_stays_the_coding_sequence(annotation):
             windows['mRNA'][windows['mRNA'].target == 'N'].target_region.tolist()
 
 
-def test_mrna_windows_lie_on_the_spliced_transcript(annotation):
+def test_all_transcripts_keep_one_window_per_exon(annotation):
+    # transcripts: all tiles each exon entry of the merged exon model on its own, as before
+    # junction windows existed: P's exons 101-300 (both transcripts), 501-700 and 801-1700.
     fasta, gtf, genome = annotation
-    df = generate_target_seqs('mRNA', ['P', 'M'], fasta, gtf, min_length=20, step=1, transcripts=['ENSTP1', 'ENSTM3'])
-    for gene, transcript in (('P', 'ENSTP1'), ('M', 'ENSTM3')):
-        rna = spliced(genome, transcript)
-        rows = df[df.target == gene]
-        assert all(rna[s - 1:e] == w for s, e, w in zip(rows.target_start, rows.target_end, rows.target_region))
-    # The 10-nt exon of ENSTP1 gives no window but still counts: exon 3 starts at 200 + 10 + 1.
+    df = generate_target_seqs('mRNA', ['P', 'M'], fasta, gtf, min_length=20, step=1)
     p = df[df.target == 'P']
-    assert sorted(set(p.exon_name)) == ['1_101_300_+', '1_501_700_+']
+    assert len(p) == 181 + 181 + 881 and not df.exon_name.str.contains(';').any()
+    assert sorted(set(p.exon_name)) == ['1_101_300_+', '1_501_700_+', '1_801_1700_+']
+    assert set(p.loc[p.exon_name == '1_101_300_+', 'n_trans']) == {2}
+    assert set(p.loc[p.exon_name == '1_101_300_+', 'transcript_names'].map(sorted).map(tuple)) == {('ENSTP1', 'ENSTP2')}
+    for _, row in df.iterrows():
+        start, end = genomic(row)
+        window = genome[start - 1:end]
+        assert (window if row['exon_name'].endswith('+') else reverse_complement(window)) == row['target_region']
+    # The 10-nt exon gives no window but still counts on the model: exon 501-700 starts at 200 + 10 + 1.
     assert p.loc[p.exon_name == '1_501_700_+', 'target_start'].min() == 211
-    assert p.target_end.max() == len(spliced(genome, 'ENSTP1')) == 410
+    # Two selected transcripts are tiled on their merged exon model too.
+    both = generate_target_seqs('mRNA', ['P'], fasta, gtf, min_length=20, step=1, transcripts=['ENSTP1', 'ENSTP2'])
+    pd.testing.assert_frame_equal(both, p.reset_index(drop=True))
 
 
 def test_post_process_steps_work_on_mrna_windows(annotation):
@@ -140,6 +154,127 @@ def test_utr_source_reads_ensembl_utr_features(annotation):
     assert len(df) == 2 * 81
 
 
+# -- one transcript: windows across exon-exon junctions ------------------------------
+
+def genomic_blocks(row):
+    """Genomic intervals (1-based, 5' to 3') of a window, from exon_name and start/end along the named segments."""
+    blocks, offset = [], 0
+    for name in row['exon_name'].split(';'):
+        _, segment_start, segment_end, strand = name.split('_')
+        segment_start, segment_end = int(segment_start), int(segment_end)
+        first, last = max(row['start'] - offset, 1), min(row['end'] - offset, segment_end - segment_start + 1)
+        assert first <= last, f'{name} is named but not covered by window {row["probe_id"]}'
+        blocks.append((segment_start + first - 1, segment_start + last - 1) if strand == '+' else
+                      (segment_end - last + 1, segment_end - first + 1))
+        offset += segment_end - segment_start + 1
+    return blocks, strand
+
+
+def sequence_of(genome, blocks, strand):
+    pieces = [genome[start - 1:end] for start, end in blocks]
+    return ''.join(pieces) if strand == '+' else ''.join(reverse_complement(piece) for piece in pieces)
+
+
+@pytest.mark.parametrize('transcripts', ['mane', ['ENSTP1', 'ENSTM3.1', 'ENSTN5']])
+def test_one_transcript_is_tiled_across_its_exon_junctions(annotation, transcripts):
+    fasta, gtf, genome = annotation
+    df = generate_target_seqs('mRNA', ['P', 'M', 'N'], fasta, gtf, min_length=20, step=1, transcripts=transcripts)
+    junctions = {'P': 0, 'M': 0, 'N': 0}
+    for gene, transcript in (('P', 'ENSTP1'), ('M', 'ENSTM3'), ('N', 'ENSTN5.2')):
+        rna = spliced(genome, transcript)
+        rows = df[df.target == gene]
+        # Every 20-mer of the spliced RNA, in order, at its position on the RNA; ids numbered 5' to 3'.
+        assert rows.target_region.tolist() == [rna[i:i + 20] for i in range(len(rna) - 19)]
+        assert rows.target_start.tolist() == list(range(1, len(rna) - 18))
+        assert (rows.target_end - rows.target_start).eq(19).all()
+        assert rows.probe_id.tolist() == [f'{gene}_{n}' for n in range(1, len(rows) + 1)]
+        assert set(rows.transcript_names.map(tuple)) == {(transcript,)} and set(rows.n_trans) == {1}
+        # exon_name and start/end place each window on the genome, also across junctions.
+        for _, row in rows.iterrows():
+            blocks, strand = genomic_blocks(row)
+            assert sequence_of(genome, blocks, strand) == row['target_region']
+            assert row['sub_region'] == f'{row["start"]}_{row["end"]}' and row['end'] - row['start'] == 19
+        junctions[gene] = int(rows.exon_name.str.contains(';').sum())
+    # 19 windows span each junction; around P's 10-nt exon, 9 of them span both of its junctions.
+    assert junctions == {'P': 19 + 19 - 9, 'M': 19, 'N': 19}
+    p = df[df.target == 'P'].set_index('target_start')
+    assert p.loc[191, 'exon_name'] == '1_101_300_+;1_401_410_+' and (p.loc[191, 'start'], p.loc[191, 'end']) == (191, 210)
+    assert p.loc[192, 'exon_name'] == '1_101_300_+;1_401_410_+;1_501_700_+'
+    assert p.loc[201, 'exon_name'] == '1_401_410_+;1_501_700_+' and (p.loc[201, 'start'], p.loc[201, 'end']) == (1, 20)
+    assert p.loc[211, 'exon_name'] == '1_501_700_+' and (p.loc[211, 'start'], p.loc[211, 'end']) == (1, 20)
+    m = df[df.target == 'M'].set_index('target_start')  # - strand: the exon at 2401-2600 comes first
+    assert m.loc[1, 'exon_name'] == '1_2401_2600_-' and m.loc[200, 'exon_name'] == '1_2401_2600_-;1_2001_2200_-'
+
+
+def test_one_transcript_with_length_range_and_step(annotation):
+    fasta, gtf, genome = annotation
+    df = generate_target_seqs('mRNA', ['P'], fasta, gtf, min_length=[18, 22], step=3, transcripts='mane')
+    rna = spliced(genome, 'ENSTP1')
+    assert df.target_region.tolist() == [rna[i:i + k] for i in range(0, len(rna) - 17, 3)
+                                         for k in range(18, min(22, len(rna) - i) + 1)]
+    for _, row in df.iterrows():
+        assert rna[row['target_start'] - 1:row['target_end']] == row['target_region']
+        assert sequence_of(genome, *genomic_blocks(row)) == row['target_region']
+
+
+@pytest.mark.parametrize('source', ['CDS', 'exon'])
+def test_one_transcript_cds_is_tiled_across_its_junctions(annotation, source):
+    # The spliced coding sequence, the 10-nt CDS piece of ENSTP1 included; exon and CDS stay identical.
+    fasta, gtf, genome = annotation
+    df = generate_target_seqs(source, ['P', 'M', 'N'], fasta, gtf, min_length=20, step=1, transcripts='mane')
+    for gene, transcript, feature in (('P', 'ENSTP1', 'CDS'), ('M', 'ENSTM3', 'CDS'), ('N', 'ENSTN5.2', 'exon')):
+        sequence = spliced(genome, transcript, feature)
+        rows = df[df.target == gene]
+        assert rows.target_region.tolist() == [sequence[i:i + 20] for i in range(len(sequence) - 19)]
+        assert all(sequence[s - 1:e] == w for s, e, w in zip(rows.target_start, rows.target_end, rows.target_region))
+        for _, row in rows.iterrows():
+            assert sequence_of(genome, *genomic_blocks(row)) == row['target_region']
+    assert len(spliced(genome, 'ENSTP1', 'CDS')) == 210
+    assert set(df.loc[df.target == 'P', 'exon_name'].str.split(';').explode()) == {
+        '1_201_300_+', '1_401_410_+', '1_501_600_+'}
+
+
+def test_post_process_steps_work_on_junction_windows(annotation):
+    fasta, gtf, genome = annotation
+    df = generate_target_seqs('mRNA', ['P', 'M'], fasta, gtf, min_length=20, step=1, transcripts='mane')
+    df['hits_off_targets'] = ['OFF:0' if i % 3 == 0 else '' for i in range(len(df))]
+    spaced = post_process(df.copy(), {'post_process': {'remove_overlap': {'location_interval': 2}}})
+    # Windows 22 nt apart from the 5' end; some of them span junctions.
+    for target, group in spaced.groupby('target'):
+        assert group.target_start.tolist() == list(range(1, group.target_start.max() + 1, 22)), target
+    assert spaced.exon_name.str.contains(';').any()
+    config = {'post_process': {'remove_overlap': {'location_interval': 2},
+                               'off_target_pool': {'attribute': 'hits', 'max_probes_per_gene': 2},
+                               'equal_space': {'number_desired': 10}}}
+    result = post_process(df, config)
+    for target, group in result.groupby('target'):
+        rna = spliced(genome, {'P': 'ENSTP1', 'M': 'ENSTM3'}[target])
+        assert len(group) == 10
+        assert all(rna[s - 1:e] == w for s, e, w in zip(group.target_start, group.target_end, group.target_region))
+        starts = sorted(zip(group.target_start, group.target_end))
+        assert all(b[0] > a[1] + 2 for a, b in zip(starts, starts[1:])), target
+        assert (group.hits_off_targets != '').sum() <= 2
+
+
+@needs_bowtie
+def test_junction_windows_are_found_in_the_transcriptome(annotation, tmp_path, monkeypatch):
+    # mapped_genes searches the spliced transcripts (transcript.fa), so a window across a
+    # junction is found on its own transcript like any other window.
+    from uprobe.core.attributes import add_attributes
+    from uprobe.core.tools import build_transcripts_index
+    fasta, gtf, _ = annotation
+    build_transcripts_index(Path(gtf), Path(fasta), Path(fasta).parent / 'bowtie_transcript', threads=1,
+                            aligner='bowtie')
+    monkeypatch.chdir(tmp_path)
+    df = generate_target_seqs('mRNA', ['P', 'M'], fasta, gtf, min_length=20, step=1, transcripts='mane')
+    protocol = {'attributes': {'hits': {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie',
+                                        'max_mismatches': 2, 'strand': 'sense', 'exempt_copies': True}}}
+    genome = {'fasta': fasta, 'gtf': gtf, 'align_index': ['bowtie']}
+    result = add_attributes(df, protocol, genome, {})
+    assert result.exon_name.str.contains(';').sum() == 29 + 19
+    assert result.hits.eq(1).all() and result.hits_off_targets.eq('').all()
+
+
 # -- transcripts -------------------------------------------------------------------
 
 def test_mane_canonical_and_fallback(annotation, caplog):
@@ -162,11 +297,11 @@ def test_mane_canonical_and_fallback(annotation, caplog):
     assert everything.attrs['transcripts'] == {'P': {'selection': 'all', 'chosen_by': 'all',
                                                      'ids': ['ENSTP1', 'ENSTP2']}}
     assert len(everything) > len(df[df.target == 'P'])
-    # CDS with one transcript: positions along its coding sequence (the 10-nt CDS piece is left out).
+    # CDS with one transcript: the windows of its spliced coding sequence, the 10-nt CDS piece included.
     cds = generate_target_seqs('CDS', ['P'], fasta, gtf, min_length=20, step=1, transcripts='mane')
-    assert cds.target_end.max() == 200 and set(cds.target_region) <= set(
-        spliced(genome, 'ENSTP1', 'CDS')[:100][i:i + 20] for i in range(81)) | set(
-        spliced(genome, 'ENSTP1', 'CDS')[110:][i:i + 20] for i in range(81))
+    coding = spliced(genome, 'ENSTP1', 'CDS')
+    assert cds.target_end.max() == len(coding) == 210
+    assert cds.target_region.tolist() == [coding[i:i + 20] for i in range(191)]
 
 
 def test_listed_transcripts_match_with_or_without_version(annotation):
@@ -214,8 +349,8 @@ def test_copies_are_judged_against_the_selected_transcript(annotation):
         df = generate_target_seqs('mRNA', ['P'], fasta, gtf, min_length=20, step=1, transcripts=setting)
         sequence = target_sequences(df)['P']
         if setting == 'mane':
-            # The windows cover the spliced mRNA; only the 10-nt exon, shorter than a window, is unknown.
-            assert sequence == (rna[:200] + 'N' * 10 + rna[210:]).encode()
+            # The windows cover the whole spliced mRNA, its 10-nt exon too (junction windows).
+            assert sequence == rna.encode()
         shares[setting] = copy_fractions({'P': sequence}, {'P': {'COPY'}}, [('COPY', copy)], 30)[('P', 'COPY')]
     assert shares['mane'] == 1.0 and shares['all'] < 0.5
 
