@@ -28,5 +28,5 @@ def test_example_presets_name_the_region_they_extract(name):
 
 
 def test_agent_protocol_skeleton_offers_no_exon_default():
-    skeleton = yaml.safe_load((ROOT / 'uprobe' / 'core' / 'agent' / 'templates' / 'DEFAULT_PROTOCOL.yaml').read_text())
+    skeleton = yaml.safe_load((ROOT / 'uprobe' / 'http' / 'agent' / 'templates' / 'DEFAULT_PROTOCOL.yaml').read_text())
     assert skeleton['extracts']['target_region']['source'] is None

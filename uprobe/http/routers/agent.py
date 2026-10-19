@@ -1,3 +1,10 @@
+"""
+Chat API of the web server (``/agent``), backed by the agent in ``uprobe.http.agent``.
+
+Importing this module needs the optional ``web-agent`` extra (PantheonOS); ``uprobe.http.server``
+only imports it when the extra is installed and otherwise serves a 503 stand-in.
+"""
+
 import os
 import re
 import json
@@ -12,8 +19,8 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, R
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from uprobe.core.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
-from uprobe.core.agent.session_manager import get_session_manager
+from uprobe.http.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
+from uprobe.http.agent.session_manager import get_session_manager
 from uprobe.http.utils.paths import get_output_dir, get_data_dir, get_server_root, get_workspace_outputs_dir
 from uprobe.http.utils.agent_store import AgentStore
 from uprobe.http.routers.auth import get_current_active_user, User
