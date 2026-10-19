@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from pantheon.chatroom import ChatRoom
 from pantheon.factory.template_io import UnifiedMarkdownParser
 from pantheon.utils.vision import parse_image_mentions
-from uprobe.core.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
+from uprobe.http.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
 
 logger = logging.getLogger(__name__)
 

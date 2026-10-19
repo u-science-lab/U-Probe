@@ -3,7 +3,7 @@ U-Probe package.
 
 Note:
 This package exposes `UProbeAPI`, but we avoid importing it eagerly to keep
-lightweight entry points (e.g. `python -m uprobe.core.agent.repl_bootstrap`) working
+lightweight submodules (e.g. `uprobe.core.genome_fetch`) importable
 even in environments where optional runtime dependencies are not installed yet.
 """
 

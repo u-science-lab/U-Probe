@@ -12,7 +12,7 @@ from uprobe.core.gen.expression import check_probe_expressions
 from uprobe.core.validate import ATTRIBUTE_TYPES, render_text, validate_files, validate_protocol
 
 DATA = Path(__file__).parent / 'data'
-DEFAULT_PROTOCOL = Path(__file__).parents[1] / 'uprobe' / 'core' / 'agent' / 'templates' / 'DEFAULT_PROTOCOL.yaml'
+DEFAULT_PROTOCOL = Path(__file__).parents[1] / 'uprobe' / 'http' / 'agent' / 'templates' / 'DEFAULT_PROTOCOL.yaml'
 DNA_TARGET = 'NC_000017.11:40304334-40362489'
 
 

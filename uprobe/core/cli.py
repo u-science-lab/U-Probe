@@ -1278,7 +1278,7 @@ def agent(workspace, force, memory_dir, log_level, quiet, resync, chat_id, model
     ``<workspace>/.pantheon/teams/uprobe_team.md``.
     """
     try:
-        from uprobe.core.agent.repl_bootstrap import main as repl_main
+        from uprobe.http.agent.repl_bootstrap import main as repl_main
     except ImportError as e:
         log.error(f"Failed to import U-Probe Agent modules: {e}")
         log.error("Please ensure all agent dependencies are installed.")

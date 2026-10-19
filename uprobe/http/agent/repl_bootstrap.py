@@ -2,7 +2,7 @@
 Bootstrap Pantheon REPL in a workspace with the U-Probe team template.
 
 This module intentionally bypasses the existing U-Probe CLI and the
-`uprobe.core.agent.api.UProbeAgentAPI` workflow. Instead, it:
+`uprobe.http.agent.api.UProbeAgentAPI` workflow. Instead, it:
 1) Copies `uprobe_team.md` into `<workspace>/.pantheon/teams/`
 2) Optionally rewrites every `model:` line in the YAML frontmatter (`--model` or `UPROBE_AGENT_MODEL`)
 3) Launches `python -m pantheon.repl --template <copied_md>`
@@ -22,7 +22,7 @@ from pathlib import Path
 def _build_arg_parser() -> argparse.ArgumentParser:
     """Build CLI argument parser."""
     parser = argparse.ArgumentParser(
-        prog="python -m uprobe.core.agent.repl_bootstrap",
+        prog="python -m uprobe.http.agent.repl_bootstrap",
         description=(
             "Copy uprobe_team.md into <workspace>/.pantheon/teams/ and launch "
             "Pantheon REPL with --template so uprobe_team is loaded by default."
@@ -310,7 +310,7 @@ def main(argv: list[str] | None = None) -> int:
     if model_patch:
         _patch_team_models_in_frontmatter(template_path, model_patch)
 
-    from uprobe.core.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
+    from uprobe.http.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
 
     runtime_paths = resolve_agent_paths(
         entrypoint="cli",
