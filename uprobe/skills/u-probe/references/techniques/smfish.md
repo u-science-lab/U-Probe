@@ -28,7 +28,7 @@ RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48
 
 | Parameter | Value | Conditions / note | Source |
 | --- | --- | --- | --- |
-| Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48) | | Raj 2008 Suppl. Methods, doi:10.1038/nmeth.1253 |
+| Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48; Suppl. Fig. 4 labels these "20 bp") | | Raj 2008 Suppl. Methods and probe list, doi:10.1038/nmeth.1253 |
 | Length (Stellaris) | 18-22 nt, typically 20; 18-19 nt in GC-rich regions, 21-22 nt in AT-rich regions | | Biosearch designer FAQ / blog |
 | GC | "as close to 45 % as possible" (dynamic programming); the Actb set actually spans 35-80 % (mean 56 %) | no hard window | Raj 2008 |
 | GC (Stellaris) | no number; thermodynamic placement, skewed-GC stretches skipped | | Biosearch FAQ |
@@ -105,8 +105,8 @@ Template departures:
   catches 17-nt matches; `max_mismatches: 3` comes closer. Off-targets are counted per probe, not
   per off-target gene across the set (`off_target_pool` is the opt-in for that).
 - GC: reported, not filtered or optimized toward 45 %; `equal_space` picks 48 by position.
-- Region: whole mRNA (Raj used the CDS). The template meta says Raj's GFP test used 20-mers; the
-  d2EGFP set in the supplement is 48 x 17-mers (the figure legend says 20).
+- Region: whole mRNA (Raj used the CDS).
+- Length: 20 nt, as Raj's Actb set and the Stellaris default; Raj's GFP (d2EGFP) set was 48 17-mers.
 
 ## 7. Pitfalls
 

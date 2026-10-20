@@ -195,6 +195,16 @@ def test_smfish_allows_no_off_target_gene_and_documents_the_pool_option(tmp_path
     assert not findings, render_text(findings)
 
 
+def test_smfish_meta_gives_raj_probe_lengths():
+    # Raj 2008's probe list: the d2EGFP (GFP) set is 48 17-mers and the Actb set 48 20-mers;
+    # only Supplementary Fig. 4 labels the GFP probes "20 bp".
+    meta = load_template('smfish_stellaris')['meta']
+    description = ' '.join(meta['description'].split())
+    assert 'd2EGFP test set is 48 17-mers' in description and '20-mers in the GFP test' not in description
+    row = next(r for r in meta['parameter_sources'] if r['parameter'] == 'extracts.target_region.length')
+    assert 'GFP) set 48 17-mers' in ' '.join(row['source'].split()) and '20 bp' not in row['quote']
+
+
 def commented_block(text, first_line):
     """The YAML of a commented-out top-level block: `# <first_line>` and the commented lines after it."""
     lines = text[text.index(f'\n# {first_line}\n') + 1:].splitlines()
