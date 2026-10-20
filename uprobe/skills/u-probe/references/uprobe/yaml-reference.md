@@ -140,10 +140,13 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override |
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
-| `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` (10) |
+| `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` | `aligner: bowtie2` (required), `threads` |
 | `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
 | `blocks` | legacy; do not use | - |
+
+`threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute
+only to override the run's value.
 
 ```yaml
 attributes:

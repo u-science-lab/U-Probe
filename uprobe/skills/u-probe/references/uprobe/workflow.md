@@ -49,8 +49,8 @@ ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` or `genom
 - Bowtie 1 transcriptome index of human Ensembl 113: about 5 min and 650 MB (README). A Bowtie2 *genome*
   index of a mammalian genome takes much longer; for RNA designs that only use `aligner: bowtie`,
   `align_index: [bowtie]` avoids it.
-- `uprobe run --threads/-t` sets threads for **index building only**. Alignment threads come from each
-  attribute's own `threads:` option (default 10).
+- `uprobe run --threads/-t` (default 10) sets the threads of index building and of every aligner and
+  Jellyfish step of an attribute without its own `threads:` option; an attribute's `threads:` wins.
 
 ## 2. Start from a template
 

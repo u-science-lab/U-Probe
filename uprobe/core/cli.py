@@ -168,7 +168,6 @@ def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> 
                 'target': target_name,
                 'type': 'kmer_count',
                 'kmer_len': 35,
-                'threads': 10,
                 'size': '1G',
                 'aligner': 'jellyfish'
             }
@@ -467,8 +466,9 @@ def cli(ctx, verbose, quiet):
 @click.option('--continue-invalid', is_flag=True,
               help='Skip targets that are not in the genome annotation and design the others. '
                    'Without it, any such target stops the run before designing.')
-@click.option('--threads', '-t', default=10, type=int,
-              help='Number of threads for computation. [default: 10]')
+@click.option('--threads', '-t', default=10, type=click.IntRange(min=1),
+              help='Threads for index building and for the aligner and Jellyfish steps of every attribute '
+                   'that sets no threads of its own. [default: 10]')
 @click.option('--json', 'json_output', is_flag=True,
               help='Print the run summary (summary.json) to stdout; logs and tool output go to stderr.')
 def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
@@ -796,7 +796,10 @@ def construct_probes(protocol, genomes, targets, output):
               help='Output directory. [default: ./results]')
 @click.option('--raw', is_flag=True,
               help='Save unfiltered raw probe data.')
-def post_process(protocol, genomes, probes, output, raw):
+@click.option('--threads', '-t', default=10, type=click.IntRange(min=1),
+              help='Threads for the aligner and Jellyfish steps of every attribute that sets no threads '
+                   'of its own. [default: 10]')
+def post_process(protocol, genomes, probes, output, raw, threads):
     """
     Post-process probes (add attributes and apply filters).
     
@@ -811,7 +814,7 @@ def post_process(protocol, genomes, probes, output, raw):
             output_dir=Path(output)
         )
         df_probes = pd.read_csv(probes)       
-        df_processed = uprobe.post_process_probes(df_probes, raw_csv=raw)  
+        df_processed = uprobe.post_process_probes(df_probes, raw_csv=raw, threads=threads)
         if df_processed.empty:
             log.warning("No probes remaining after post-processing!")
         else:

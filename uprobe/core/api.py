@@ -257,7 +257,13 @@ class UProbeAPI:
             log.info(f"Successfully generated {probe_df.shape[0]} initial probes.")
         return probe_df
 
-    def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False) -> pd.DataFrame:
+    def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False,
+                            threads: int = 10) -> pd.DataFrame:
+        """Add the attributes, post-process and save the tables.
+
+        ``threads`` is used by the aligner and Jellyfish steps of attributes that
+        set no ``threads`` of their own.
+        """
         self.no_filtered_probes = False
         self.raw_file = None
         self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None}
@@ -266,7 +272,7 @@ class UProbeAPI:
             log.info(f"Hybridization conditions: {line}")
         # Off-target statistics of mapped_genes attributes, for summary.json.
         self.off_target_report = {}
-        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report)
+        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report, threads)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
@@ -319,8 +325,13 @@ class UProbeAPI:
             self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
             return df_final
 
-    def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False, threads: int = 10) -> pd.DataFrame:      
-        """Run all steps and write summary.json, also after early exits and errors."""
+    def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False,
+                     threads: int = 10) -> pd.DataFrame:
+        """Run all steps and write summary.json, also after early exits and errors.
+
+        ``threads`` is used to build the indexes and by every attribute that sets
+        no ``threads`` of its own (alignments, Jellyfish).
+        """
         run = {'started': datetime.now().astimezone(), 'step': 'normalize_protocol'}
         self.summary = None
         self.target_validation = None
@@ -380,7 +391,7 @@ class UProbeAPI:
             return pd.DataFrame()
         # 5. Post-process
         run['step'] = 'post_process'
-        df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
+        df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv, threads=threads)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
                    no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file,
                    off_targets=self.off_target_report)
