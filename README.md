@@ -330,8 +330,7 @@ post_process:
   sorts:
     is_ascending:
       - target_gc
-    is_descending:
-      - target_fold
+      - target_fold   # lower fold_score = less structure
 
 summary:
   report_name: rna_report   # rna_report / dna_report
@@ -361,14 +360,14 @@ summary:
 - **`attributes`**: Define the biochemical or physical properties you want to calculate for specific targets or probe parts. Available attribute types include:
   - `gc_content`: Calculates the GC ratio of the sequence.
   - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3, under the protocol's `hybridization` conditions.
-  - `fold_score`: Calculates the RNA folding minimum free energy (MFE) using ViennaRNA (lower is more stable), at `hybridization.temperature_c` when set.
-  - `self_match`: Calculates the potential for self-dimerization.
+  - `fold_score`: The negated minimum free energy, −MFE in kcal/mol (≥ 0), of the sequence folded alone as RNA by ViennaRNA, at `hybridization.temperature_c` when set. Higher means more stable secondary structure, so lower is better: filter with `<=` and sort it in `is_ascending`.
+  - `self_match`: Counts 4-mer matches between the sequence and its reverse complement, a measure of self-dimerization; lower is better.
   - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites. A window across an exon junction has no contiguous genomic site ([Windows across exon junctions](#windows-across-exon-junctions)).
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search); with `exempt_copies`, genes that copy most of the target are not counted ([Copies of the target](#copies-of-the-target)).
-  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity. For windows across exon junctions see [Windows across exon junctions](#windows-across-exon-junctions).
+  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity: the highest genome count among the sequence's k-mers, so lower is better. For windows across exon junctions see [Windows across exon junctions](#windows-across-exon-junctions).
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`gene_expression`** (optional): An expression table of your sample, by gene or by transcript; `mapped_genes` attributes then ignore off-target genes that are not expressed, or optionally expressed far below the target. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
-- **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending).
+- **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending). Lower is better for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: list them under `is_ascending` (`uprobe validate` warns when they are sorted descending). When `post_process` is generated, every sort is ascending: GC, Tm, mapped genes, then the fold, self-match and k-mer scores.
 - **`remove_overlap`**: Optional post-processing step for controlling spacing between probes. Put it under `post_process` when you need it, e.g. `post_process: { remove_overlap: { location_interval: 0 } }`. It visits each target's candidates in order of position and keeps one when it starts more than `location_interval` bases after the end of the last kept one. In RNA mode the positions are those along the target (`target_start`/`target_end`: on the gene's merged exon model, or on its one selected transcript; see [Probes per target](#probes-per-target)), so windows from alternative exons of different transcripts are compared too, and a site that several exon entries contain is kept once, with the transcripts of all of them in `transcript_names` (and their number in `n_trans`).
 - **`off_target_pool`**: Optional post-processing step that lets at most `max_probes_per_gene` probes of a target's set hit the same off-target gene, e.g. `post_process: { off_target_pool: { attribute: target_mapped_genes, max_probes_per_gene: 2 } }`. See [Off-target pool limit](#off-target-pool-limit).
 - **`equal_space`**: Optional post-processing step that keeps `number_desired` probes per target, spread evenly along the target, e.g. `post_process: { equal_space: { number_desired: 48 } }`, or per target: `equal_space: { GAPDH: { number_desired: 48 } }`. See [Probes per target](#probes-per-target).

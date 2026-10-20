@@ -138,11 +138,11 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
 | `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override |
-| `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure | `hybridization` (only `temperature_c` used) |
+| `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` (10) |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` | `aligner: bowtie2` (required), `threads` |
-| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k | `aligner: jellyfish` (required), `kmer_len` (35), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
 | `blocks` | legacy; do not use | - |
 
 ```yaml
@@ -252,7 +252,9 @@ post_process:
   list. Combine with a per-probe filter (e.g. `<= 2`); `<= 1` makes it a no-op (`validate` warns).
 - `equal_space`: keeps `number_desired` per target at evenly spaced ranks along the target (first and
   last kept); fewer candidates -> all kept, status `partial`. Use with `remove_overlap`.
-- `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped.
+- `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped. Lower is better
+  for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: put them in `is_ascending` (`validate`
+  warns when one is in `is_descending`).
 - `avoid_otp` (DNA, needs a `mapped_sites` attribute): per target `{target_regions: [chr:s-e],
   density_thresh: 1e-4, search_range: [-1000000, 1000000], avoid_target_overlap: true}`; removes probes
   whose off-target genome hits cluster (a density of other probes' hits within `search_range`), which
@@ -276,6 +278,6 @@ summary:
   it; 50-90 °C without a block) on **every** Tm attribute, constant parts included; GC 0.2-0.8 on
   `target_gc` and whole probes; RNA `target_mapped_genes <= 4` (up to 3 off-target genes). DNA mode
   gets no k-mer or site filter (the generated one names a `target_kmer_count` column that does not exist).
-- Sorts: GC, Tm, mapped genes ascending; `_fold`, `_self_match`, `_kmer_count` **descending** (legacy:
-  puts the most structured first). No `remove_overlap` or `equal_space`.
+- Sorts: all ascending: GC, Tm, mapped genes, then `_fold`, `_self_match`, `_kmer_count` (least
+  structured, least self-complementary, least repetitive first). No `remove_overlap` or `equal_space`.
 Write your own blocks for any real design.

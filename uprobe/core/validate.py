@@ -63,6 +63,10 @@ ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'h
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
+# Attribute types whose lower values are better; sorting them descending ranks the worst first.
+LOWER_IS_BETTER = {'fold_score': 'most structured (fold_score is -MFE: higher = more structure)',
+                   'self_match': 'most self-complementary', 'kmer_count': 'most repetitive',
+                   'mapped_genes': 'least specific'}
 OPERATORS = ('<=', '>=', '<', '>', '==')
 OPERATOR_FIXES = {'=>': '>=', '=<': '<=', '=': '=='}
 SUMMARY_KEYS = ('report_name', 'attributes', 'report')
@@ -1030,7 +1034,7 @@ class _Validator:
             return
         if not isinstance(sorts, dict):
             self.error(path, 'sorts must be a mapping with is_ascending / is_descending lists',
-                       'sorts:\n  is_ascending: [probe_1_tm]\n  is_descending: [probe_1_fold]')
+                       'sorts:\n  is_ascending: [probe_1_fold]\n  is_descending: [probe_1_tm]')
             return
         for key in sorts:
             if key not in SORT_KEYS:
@@ -1050,6 +1054,15 @@ class _Validator:
                 elif seen.setdefault(name, key) != key:
                     self.warning(path + (key, i), f'{name!r} is in both is_ascending and is_descending',
                                  'keep it in one list')
+                elif key == 'is_descending' and self._attribute_type(name) in LOWER_IS_BETTER:
+                    worst = LOWER_IS_BETTER[self._attribute_type(name)]
+                    self.warning(path + (key, i), f'{name!r} is sorted descending, which ranks the {worst} '
+                                 'candidates first; lower is better', f'move {name} to is_ascending')
+
+    def _attribute_type(self, name):
+        attr = self.attributes.get(name)
+        kind = attr.get('type') if isinstance(attr, dict) else None
+        return ATTRIBUTE_ALIASES.get(kind.lower(), kind.lower()) if isinstance(kind, str) else None
 
     def _check_remove_overlap(self, config):
         path = ('post_process', 'remove_overlap')

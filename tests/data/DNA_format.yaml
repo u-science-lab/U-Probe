@@ -92,7 +92,6 @@ post_process:
     is_ascending:
       - probe1_part2_gcContent
       - probe1_part2_tm
-    is_descending:
       - probe1_part2_selfMatch
       - probe1_part2_foldScore
       - probe1_part2_kmerCount

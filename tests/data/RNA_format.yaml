@@ -118,7 +118,6 @@ post_process:
       - probe1_part3_tm
       - probe2_part1_tm
       - probe1_tm
-    is_descending:
       - target_mappedGenes
       - target_selfMatch
       - target_foldScore

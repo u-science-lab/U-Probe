@@ -245,6 +245,11 @@ def _log_tm_windows(protocol_config: dict) -> None:
                         "hybridization temperature as hybridization.temperature_c.")
 
 
+# Generated score attributes ranked lowest first: the least structured, least
+# self-complementary and least repetitive candidates come first.
+LOWER_IS_BETTER_SUFFIXES = ('_fold', '_self_match', '_kmer_count')
+
+
 def _generate_default_post_process(protocol_config: dict, attributes: dict) -> dict:
     """
     Generate default post_process configuration based on attributes.
@@ -302,18 +307,17 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
                 'condition': f'{attr_name} >= 0.2 & {attr_name} <= 0.8'
             }
     
-    # Generate sorts
-    # Ascending: GC, Tm and mapped genes. Fewer mapped genes are better.
+    # Generate sorts, all ascending: GC and Tm first, then the scores where
+    # lower is better: fewer mapped genes, less structure (fold_score is -MFE,
+    # >= 0), less self-complementarity, lower genome k-mer counts.
     for attr_name in attributes.keys():
         if (attr_name.endswith('_gc') or attr_name.endswith('_tm')
                 or attr_name.endswith('_mapped_genes')):
             post_process['sorts']['is_ascending'].append(attr_name)
-    
-    # Preserve the existing order for the remaining score types.
     for attr_name in attributes.keys():
-        if any(attr_name.endswith(suffix) for suffix in ['_fold', '_self_match', '_kmer_count']):
-            post_process['sorts']['is_descending'].append(attr_name)
-    
+        if any(attr_name.endswith(suffix) for suffix in LOWER_IS_BETTER_SUFFIXES):
+            post_process['sorts']['is_ascending'].append(attr_name)
+
     return post_process
 
 

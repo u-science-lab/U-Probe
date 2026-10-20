@@ -306,10 +306,23 @@ def test_post_process_checks(dna):
     pp['equal_space']['NC_000017.11:40304334-40362488'] = pp['equal_space'].pop(DNA_TARGET)
     findings = validate_protocol(dna)
     assert "'filters'" in find(findings, 'post_process.filter').suggestion
-    assert find(findings, 'post_process.sorts.is_ascending[2]')
+    assert find(findings, f"post_process.sorts.is_ascending[{len(pp['sorts']['is_ascending']) - 1}]")
     assert 'location_interval' in find(findings, 'post_process.remove_overlap').suggestion
     assert DNA_TARGET in find(findings, "post_process.equal_space['NC_000017.11:40304334-40362488']",
                               'warning').suggestion
+
+
+def test_descending_sort_of_a_lower_is_better_score_warns(dna):
+    # fold_score is -MFE: sorting it descending ranks the most structured candidates first.
+    dna['post_process']['sorts'] = {'is_ascending': ['probe1_part2_gcContent'],
+                                    'is_descending': ['probe1_part2_foldScore', 'probe1_part2_kmerCount',
+                                                      'probe1_part2_tm']}
+    findings = validate_protocol(dna)
+    fold = find(findings, 'post_process.sorts.is_descending[0]', 'warning')
+    assert 'most structured' in fold.message and fold.suggestion == 'move probe1_part2_foldScore to is_ascending'
+    assert 'most repetitive' in find(findings, 'post_process.sorts.is_descending[1]', 'warning').message
+    assert not [f for f in findings if f.path == 'post_process.sorts.is_descending[2]']
+    assert errors(findings) == []
 
 
 def test_avoid_otp_and_sequence_filters(dna):

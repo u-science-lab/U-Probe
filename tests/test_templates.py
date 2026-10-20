@@ -82,6 +82,20 @@ def test_tm_window_applied_only_when_verified(name):
     assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
 
 
+@pytest.mark.parametrize('name', NAMES)
+def test_templates_rank_lower_scores_first(name, tmp_path):
+    # fold_score is -MFE: higher = more structure. Fewer self-matches, k-mer
+    # counts and mapped genes are better too.
+    protocol = load_template(name)
+    sorts = protocol['post_process'].get('sorts') or {}
+    lower_is_better = {key for key, attr in protocol['attributes'].items()
+                       if attr['type'] in ('fold_score', 'self_match', 'kmer_count', 'mapped_genes')}
+    assert not lower_is_better & set(sorts.get('is_descending') or [])
+    path = tmp_path / f'{name}.yaml'
+    path.write_text(read_template(name), encoding='utf-8')
+    assert not [f for f in validate_files(path) if 'sorted descending' in f.message]
+
+
 def test_double_hyb_rca_tm_filters_keep_legacy_conditions():
     # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones.
     conditions = effective_conditions(load_template('double_hyb_rca'))
