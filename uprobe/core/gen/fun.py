@@ -24,7 +24,8 @@ def read_gtf(
         get_length=True,
         basic_fields=GTF_FIELDS,
         ) -> pd.DataFrame:
-    df = pd.read_csv(gtf, sep='\t', header=None, comment='#')
+    # Chromosome names as text: typed per chunk, 1 and X made a mixed column (DtypeWarning).
+    df = pd.read_csv(gtf, sep='\t', header=None, comment='#', dtype={0: str})
     df.columns = basic_fields
     if filter_by_type:
         df = df[df[basic_fields[2]] == filter_by_type]

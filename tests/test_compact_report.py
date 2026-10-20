@@ -29,6 +29,17 @@ def test_empty_result_retains_raw_and_diagnostics(tmp_path):
     assert save_compact_report(raw.iloc[:0], protocol, tmp_path / "empty.html", raw)
 
 
+def test_raw_preview_embeds_only_the_rows_it_shows():
+    # The raw dialog previews 100 rows; embedding every candidate made the report of a
+    # 200-kb Oligopaint run (581,793 candidates) 422 MB, 358 MB of it unused rows.
+    _, protocol = fixture_data()
+    raw = pd.DataFrame({"probe_id": [f"p{i}" for i in range(250)], "target": ["A"] * 250, "score": range(250)})
+    data = build_report_data(raw.iloc[:1], protocol, raw)
+    assert data["rawCount"] == 250
+    assert [row["probe_id"] for row in data["rawRows"]] == [f"p{i}" for i in range(100)]
+    assert data["diagnostics"][0]["passed"] == 5
+
+
 def test_standalone_counts_are_unknown():
     raw, protocol = fixture_data()
     data = build_report_data(raw, protocol)

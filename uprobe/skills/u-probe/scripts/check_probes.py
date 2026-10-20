@@ -10,7 +10,8 @@ Reads the final table of `uprobe run` (<name>_<time>_probes.tsv) and checks that
   from --summary, or --transcript TARGET=ID), so the probes are on the reference mRNA;
 - with --gc, --tm, --min-gap or --min-probes, every probe or target meets those limits;
 and summarises per target: probes vs requested, span along the transcript, spacing,
-binding length and GC, Tm columns and off-target columns.
+binding length and GC, Tm columns and off-target columns. Spacing uses target_start/target_end,
+or sub_region (s-e along the region) for genomic regions (source: genome).
 
 Standard library only. Exit status: 0 all checks passed, 1 a check failed, 2 unusable input.
 Example:
@@ -28,6 +29,7 @@ ACGT = re.compile(r'^[ACGT]+$')
 LETTERS = re.compile(r'^[A-Za-z]+$')
 TM_COLUMN = re.compile(r'(^|_)tm\d*$')
 VERSION = re.compile(r'\.\d+$')
+SUB_REGION = re.compile(r'^(\d+)-(\d+)$')  # window along a genomic region (source: genome), 1-based
 
 
 def rc(seq):
@@ -94,6 +96,16 @@ def read_fasta(path, wanted=None, max_records=None):
     if name:
         found[name] = ''.join(chunks).upper()
     return found
+
+
+def window_position(row):
+    """(start, end) of a window along its target, 1-based inclusive: target_start/target_end, or the
+    sub_region "s-e" of a genomic-region window (source: genome); None when the row has neither."""
+    start, end = number(row.get('target_start')), number(row.get('target_end'))
+    if start is not None and end is not None:
+        return start, end
+    match = SUB_REGION.match((row.get('sub_region') or '').strip())
+    return (int(match.group(1)), int(match.group(2))) if match else None
 
 
 def gene_labels(text):
@@ -178,7 +190,8 @@ def check(args):
         window = row['target_region'].upper()
         for c in seq_columns:
             if row[c] and not ACGT.match(row[c]):
-                fail(row, f'{c} is not pure ACGT ({row[c][:30]})')
+                at = next(i for i, letter in enumerate(row[c]) if letter not in 'ACGT')
+                fail(row, f'{c} is not pure ACGT: {row[c][at]!r} at position {at + 1} of {len(row[c])}')
         for c, orientation in parts:
             seq = row[c].upper()
             expected = rc(seq) if orientation == 'rc' else seq
@@ -227,11 +240,14 @@ def check(args):
                     entry.setdefault('span', {})[i] = {'from': first, 'to': last, 'length': length,
                                                        'fraction': round((last - first + 1) / length, 3)}
         # Spacing along the target: gap = next start - previous end - 1 (1-based, inclusive).
-        located = [(number(r.get('target_start')), number(r.get('target_end'))) for r in trows]
-        if all(s is not None and e is not None for s, e in located):
+        located = [window_position(r) for r in trows]
+        if all(located):
             located = sorted(located)
         else:
             located = sorted((s, e) for _, s, e in positions)
+        if args.min_gap is not None and len(trows) > 1 and len(located) < len(trows):
+            failures.append(f'{target}: cannot check --min-gap: windows without a position (no '
+                            'target_start/target_end or sub_region, and none found with --transcripts)')
         gaps = [int(b[0] - a[1] - 1) for a, b in zip(located, located[1:])]
         if gaps:
             entry['gap'] = stats(gaps)
