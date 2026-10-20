@@ -5,21 +5,21 @@ meta:
   name: oligopaint
   technology: Oligopaint / OligoMiner DNA FISH
   description: >-
-    Each library oligo is 5'-[primer 1, 21 nt][genomic homology, 36-41 nt]
+    Each library oligo is 5'-[primer 1, 21 nt][genomic homology, 35-41 nt]
     [primer 2 site, 21 nt]-3'. Homology regions tile a genomic interval
     without overlap and are taken from the + strand (both strands of the
     denatured DNA are targets). As in OligoMiner, they are mined from a
     repeat-masked genome: windows with a soft-masked (lowercase) or N base
-    are skipped. The homology settings are the OligoMiner
-    blockParse defaults, which equal the paper's "Balance" preset (36-41 nt,
-    Tm 42-47 C under 390 mM Na+ and 50% formamide, GC 20-80%, no
-    AAAAA/TTTTT/CCCCC/GGGGG or N), followed by OligoMiner's specificity
-    checks: a unique Bowtie2 alignment (outputClean Unique Mode) and the 18-mer
-    k-mer filter, which counts each k-mer on the genome's forward strand. The flanking
-    21-nt primers follow the original Oligopaint library format (32 nt of
-    genomic sequence flanked by 21-nt primers); after amplification one primer
-    carries the fluorophore and the other a nicking site, so the final probe is
-    the labelled primer plus the homology region.
+    are skipped. The homology settings are OligoMiner's "Balance" preset as
+    in its genome-wide hg38 set (35-41 nt, Tm 42-47 C under 390 mM Na+ and
+    50% formamide, GC 20-80%, no AAAAA/TTTTT/CCCCC/GGGGG or N), followed by
+    OligoMiner's specificity checks: a unique Bowtie2 alignment (outputClean
+    Unique Mode) and the 18-mer k-mer filter, which counts each k-mer on the
+    genome's forward strand. The flanking 21-nt primers follow the original
+    Oligopaint library format (32 nt of genomic sequence flanked by 21-nt
+    primers); after amplification one primer carries the fluorophore and the
+    other a nicking site, so the final probe is the labelled primer plus the
+    homology region.
   citations:
     - short: Beliveau et al. 2018, PNAS
       title: >-
@@ -46,9 +46,14 @@ meta:
         build Bowtie2 alignment indices and Jellyfish files. Repeat-masked
         input files were used for probe discovery.
     - parameter: extracts.target_region.length
-      value: [36, 41]
-      source: OligoMiner blockParse.py -l/-L defaults; Beliveau 2018 Fig. 2A and Table S1 ("Balance")
-      quote: The minimum allowed probe length; default is 36 ... maximum ... default is 41
+      value: [35, 41]
+      source: >-
+        OligoMiner's genome-wide hg38 "Balance" probe set (hg38b.tar.gz, the
+        set PaintSHOP serves; its probes are 35-41 nt, 35 the most common
+        length), Beliveau 2018 Results and Hershberg 2021 Table 1. Beliveau
+        2018 Fig. 2A, Table S1 (the imaged 19p13.2 and Xist sets) and the
+        blockParse.py default (-l 36 -L 41) give 36-41 instead.
+      quote: a "balance" set that seeks to compromise between coverage and binding affinity (35-41 nt, 42 C hybridization; Fig. 2A)
     - parameter: post_process.filters.homology_gc
       value: 0.20-0.80
       source: OligoMiner blockParse.py -g/-G defaults
@@ -140,7 +145,7 @@ encoding:
 extracts:
   target_region:
     source: genome
-    length: [36, 41]
+    length: [35, 41]
     step: 1
     # Skip windows with a soft-masked (lowercase) or N base: OligoMiner mines
     # repeat-masked FASTA (meta.parameter_sources). Needs a soft-masked genome.
