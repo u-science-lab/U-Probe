@@ -145,7 +145,8 @@ The script (standard library only; `--help`) fails when a binding part is not th
 complement of `target_region`, a window is not on the transcript U-Probe designed on, or a sequence
 holds non-ACGT letters; it reports per target the count vs request, the span along the transcript,
 gaps and overlaps, binding length, GC, Tm and off-target columns. Add `--gc`, `--tm`, `--min-gap`,
-`--min-probes` with the method's values; `--sense` for padlock arms that bind cDNA.
+`--min-probes` with the method's values; `--sense` for padlock arms that bind cDNA (options per
+template: `references/uprobe/template-qa.md`).
 `transcript.fa` (records `<gene_id>_<transcript_id>`) appears next to the genome FASTA once a
 transcriptome index is built. Then confirm:
 
@@ -221,6 +222,7 @@ add (dyes, 5' phosphate on padlocks); every non-default choice, template departu
 | `double_hyb_rca` circle + amplification probe | `references/techniques/double-hyb-rca.md` |
 | Oligopaint, DNA FISH, chromosome paints, chromatin tracing, repeats | `references/techniques/oligopaint-dna-fish.md` |
 | Commands, outputs, pre-delivery checks | `references/uprobe/workflow.md` |
+| Runtimes, probe yields and `check_probes.py` options of each template on real genes | `references/uprobe/template-qa.md` |
 | Writing `protocol.yaml` or `genomes.yaml` | `references/uprobe/yaml-reference.md` |
 | `validate` or `run` fails, too few probes, wrong strand, odd off-target counts | `references/uprobe/troubleshooting.md` |
 | Probe parts, orientation, split pairs, padlock arms | `references/concepts/probe-architecture.md` |
