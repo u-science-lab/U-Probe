@@ -69,7 +69,7 @@ extracts:
 
 `transcripts`: `all` = union of every transcript's features (merged exon model; windows never cross a
 splice junction; segments shorter than `length` give no window, except with `mRNA` where they still
-count in positions). `canonical` = GTF tag `Ensembl_canonical`; `mane` = `MANE_Select`, else
+count in positions; a target with no long-enough segment gets no windows, the others are unaffected). `canonical` = GTF tag `Ensembl_canonical`; `mane` = `MANE_Select`, else
 `Ensembl_canonical` (logged); a list = those ids (version optional), each target needs one. When one
 transcript per target is selected, `mRNA`/`exon`/`CDS` tile its **spliced** sequence, so windows also
 span exon-exon junctions (`exon_name` then lists the joined exons with `;`). `UTR` never splices.

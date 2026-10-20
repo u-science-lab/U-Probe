@@ -434,3 +434,35 @@ def test_wrong_transcripts_fail_the_run(annotation, tmp_path):
     assert result.exit_code == 1
     assert summary['status'] == 'error' and summary['stopped_at'] == 'extract_target_regions'
     assert 'transcript ENSTX7 belongs to X, which is not a target' in summary['error']
+
+
+# -- a target whose segments are all shorter than the window -------------------------------------
+
+@pytest.mark.parametrize('source, targets, empty', [
+    ('CDS', ('P', 'N'), 'P'),    # P: CDS pieces of 100, 10, 100 and 100 nt
+    ('exon', ('P', 'N'), 'P'),   # N (non-coding): exons of 200 and 500 nt
+    ('UTR', ('P', 'Q'), 'Q'),    # Q: one 100-nt exon and no UTR; P: an 800-nt 3' UTR
+])
+def test_a_target_without_long_enough_segments_does_not_stop_the_others(annotation, source, targets, empty,
+                                                                         caplog):
+    fasta, gtf, _ = annotation
+    with caplog.at_level(logging.WARNING):
+        windows = generate_target_seqs(source, list(targets), fasta, gtf, 150, step=10)
+    other = next(target for target in targets if target != empty)
+    assert set(windows['target']) == {other} and len(windows) > 0
+    assert f'Gene {empty}' in caplog.text
+
+
+def test_run_reports_the_target_without_windows(annotation, tmp_path):
+    genomes = tmp_path / 'genomes.yaml'
+    genomes.write_text(yaml.safe_dump(genomes_of(annotation)))
+    path = tmp_path / 'protocol.yaml'
+    path.write_text(yaml.safe_dump(protocol('CDS', ('P', 'N'), length=150, step=10)))
+    output = tmp_path / 'out'
+    result = CliRunner().invoke(cli, ['run', '-p', str(path), '-g', str(genomes), '-o', str(output), '--json'])
+    assert result.exit_code == 0, result.output
+    summary = json.loads(result.stdout)
+    assert summary['status'] == 'partial'
+    assert summary['targets']['P']['candidate_windows'] == 0 and summary['targets']['N']['final'] > 0
+    warning = next(w for w in summary['warnings'] if w['code'] == 'no_candidate_windows')
+    assert warning['targets'] == ['P']

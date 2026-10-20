@@ -15,7 +15,7 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 | 1 `error`, `stopped_at: build_index` | stderr log | aligner not installed, unreadable FASTA, disk space |
 | 1 `error`, later steps | `error` | aligner missing at alignment time, transcript selection, expression table, Excel limit |
 | 3 `no_valid_targets` | `inputs.invalid_targets` | no target name is a GTF `gene_name` (with `--continue-invalid`) |
-| 3 `no_target_sequences` | log line `Failed to generate sequences` | no window fits a segment (below) |
+| 3 `no_target_sequences` | `warnings: no_candidate_windows`, log | no window fits any target's segments (below) |
 | 3 `no_probes_constructed` | `warnings: probe_construction_failed` | an expression fails for every candidate |
 | 3 `no_probes` | `stages`, raw table | filters removed everything |
 | 0 `partial` | `warnings`, per-target `final` | some targets short or empty |
@@ -73,11 +73,12 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 - **Symptom:** `no transcript of X is tagged MANE_Select or Ensembl_canonical`. **Cause:** non-Ensembl
   GTF (RefSeq, custom), or an old release without tags. **Fix:** list transcript ids
   (`transcripts: [ENST...]`), or `transcripts: all`; MANE exists only for human.
-- **Symptom:** `no_target_sequences` and the log says `Gene X can't found any exon records`.
-  **Cause:** with `exon`/`CDS`/`UTR` and `transcripts: all`, segments shorter than `length` are
-  dropped; if one target has none left, extraction fails **for every gene target in the run**.
+- **Symptom:** a target has `candidate_windows: 0` (warning `no_candidate_windows`; status
+  `no_target_sequences` if no target has any) and the log says `Gene X: all its N ... segment(s) are
+  shorter than the ...-nt window`. **Cause:** with `exon`/`CDS`/`UTR` and `transcripts: all`, segments
+  shorter than `length` are dropped, and that target had none left; the other targets are designed.
   **Fix:** use a single transcript (`transcripts: mane`/`canonical`/list: spliced tiling, no length
-  filter) or `source: mRNA`, shorten the window, or move that target to its own run.
+  filter; not for `UTR`) or `source: mRNA`, or shorten the window.
 - **Symptom:** a target gets no windows with `source: UTR`. **Cause:** no UTR features (non-coding
   gene, or a GTF without UTR lines). **Fix:** `source: mRNA`.
 

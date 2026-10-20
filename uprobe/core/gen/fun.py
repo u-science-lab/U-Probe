@@ -99,6 +99,8 @@ def process_gtf_inplace(filepath):
 #         shorter than the window give no window but still count in positions.
 #   UTR   its UTR features (GTF type UTR, or five_prime_utr and three_prime_utr
 #         as Ensembl names them). Segments shorter than the window are left out.
+# A target left without segments gets no windows (summary.json warns with
+# no_candidate_windows); the other targets are extracted as usual.
 # Each window lies within one segment, except for a target whose windows come
 # from one transcript (see SPLICED_SOURCES).
 RNA_SOURCES = ('exon', 'CDS', 'mRNA', 'UTR')
@@ -267,7 +269,12 @@ def restrict_to_transcripts(df_gtf: pd.DataFrame, selection: t.Dict[str, dict]) 
 def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
                   genelist: pd.DataFrame, min_length: int=40, source: str = 'exon'
                   ) :
-    """Extract the exons (CDS for source exon and CDS, see gene_segments) of each gene"""
+    """Extract the exons (CDS for source exon and CDS, see gene_segments) of each gene.
+
+    A gene without such segments, or (source exon, CDS) with every segment
+    shorter than ``min_length``, gets an empty list, and so no windows: one
+    such target must not stop the extraction of the others.
+    """
     gene2exons = {}
     for item in genelist.iterrows():
         gene = item[1]['geneID']
@@ -275,10 +282,13 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
         if df_gene.shape[0] <= 0:
             raise ValueError(f"Gene {gene} not exists in GTF file.")
         df_exons = gene_segments(df_gene, source).copy()
+        segments = df_exons.shape[0]
         if source != 'mRNA':
             df_exons = df_exons[df_exons.length >= min_length]
+        gene2exons[gene] = []
         if df_exons.shape[0] == 0:
-            raise ValueError(f"Gene {gene} can't found any exon records.")
+            log.warning(_no_segment_message(gene, source, segments, min_length))
+            continue
         df_exons['transcript_name'] = df_exons['info'].str.extract(r'transcript_id\s+"([^"]+)"')[0]
         exon_cnts = df_exons.groupby(
             by=['chr', 'start', 'end', 'length', 'strand'],
@@ -287,7 +297,6 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             count=('transcript_name', 'count'),  
             transcript_name=('transcript_name', lambda x: list(set(x))) 
         )
-        gene2exons[gene] = []
         for idx, row in exon_cnts.iterrows():
             chr_, start, end, strand, trans_name = str(row['chr']), row['start'], row['end'], row['strand'], row['transcript_name']
             exon_name = '_'.join([chr_, str(start), str(end), strand])
@@ -296,6 +305,18 @@ def extract_exons_rca(df_gtf: pd.DataFrame, fa: Fasta,
             exon = (exon_name, trans_name, seq, n_trans, (str(row['chr']), start, end, strand))
             gene2exons[gene].append(exon)
     return gene2exons
+
+
+def _no_segment_message(gene: str, source: str, segments: int, min_length: int) -> str:
+    """Why a gene target gets no windows from extract_exons_rca or extract_gene_features."""
+    kind = {'UTR': 'UTR', 'mRNA': 'exon'}.get(source, 'CDS (or, without CDS, exon)')
+    if not segments:
+        return f"Gene {gene} has no {kind} features in the GTF; it gets no windows with source {source}."
+    fixes = ("source: mRNA or a shorter window" if source == 'UTR' else
+             "source: mRNA, one transcript per target (transcripts: mane or canonical, tiled across its exon "
+             "junctions) or a shorter window")
+    return (f"Gene {gene}: all its {segments} {kind} segment(s) are shorter than the {min_length}-nt window, "
+            f"so it gets no windows with source {source}. Use {fixes}.")
 
 
 def _read_segment(fa: Fasta, chrom: str, start: int, end: int, strand: str) -> str:
@@ -394,18 +415,20 @@ def segment_offsets(intervals: t.Iterable[Interval]) -> t.Dict[Interval, int]:
 def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
                           genelist: pd.DataFrame, min_length: int=40
                           ) -> t.Mapping[str, t.List[t.Tuple[str, str]]]:
-    """Extract all exons and UTRs of each gene"""
+    """Extract all exons and UTRs of each gene (source UTR windows read only the UTRs).
+
+    A gene without UTRs, or with every UTR shorter than ``min_length``, gets
+    no windows; it does not stop the extraction of the other targets.
+    """
     gene_features = {}
     for item in genelist.iterrows():
         gene = item[1]['geneID']
         df_gene = df_gtf[df_gtf.gene_name == gene]
         if df_gene.shape[0] <= 0:
             raise ValueError(f"Gene {gene} not exists in GTF file.")
-        # extract CDS/exon
+        # extract CDS/exon (not windowed; source UTR reads the UTRs below)
         df_exons = df_gene[df_gene.type.isin(['CDS', 'exon'])].copy()
         df_exons = df_exons[df_exons.length >= min_length]
-        if df_exons.shape[0] == 0:
-            raise ValueError(f"Gene {gene} can't find any exon records.")
         gene_features[gene] = []
         df_exons['transcript_name'] = df_exons['info'].str.extract(r'transcript_id\s+"([^"]+)"')[0]
         df_exons = df_exons.groupby(
@@ -414,7 +437,7 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
         ).agg(
             count=('transcript_name', 'count'),  
             transcript_name=('transcript_name', lambda x: list(set(x))) 
-        )
+        ) if df_exons.shape[0] else df_exons
         for idx, row in df_exons.iterrows():
             chr_, start, end, strand = str(row['chr']), row['start'], row['end'], row['strand']
             name = f"{gene}_{start}_{end}"
@@ -433,7 +456,10 @@ def extract_gene_features(df_gtf: pd.DataFrame, fa: Fasta,
             gene_features[gene].append(("exon", name, seq, n_trans, (str(row['chr']), start, end, strand)))
         # extract utr (GENCODE: UTR; Ensembl: five_prime_utr, three_prime_utr)
         df_utrs = gene_segments(df_gene, 'UTR').copy()
+        segments = df_utrs.shape[0]
         df_utrs = df_utrs[df_utrs.length >= min_length]
+        if df_utrs.shape[0] == 0:
+            log.warning(_no_segment_message(gene, 'UTR', segments, min_length))
         if df_utrs.shape[0] > 0:
             for idx, row in df_utrs.iterrows():
                 chr_, start, end, strand = str(row['chr']), row['start'], row['end'], row['strand']
