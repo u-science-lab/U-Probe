@@ -115,7 +115,7 @@ attributes:
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:
   filters: {target_mapped_genes: {condition: target_mapped_genes <= 1}}
-  remove_overlap: {location_interval: 3}
+  remove_overlap: {location_interval: 2}   # pairs 2 nt apart, as the Choi 2018 sets
   equal_space: {number_desired: 20}
 ```
 
@@ -127,7 +127,8 @@ What to edit:
 - Optional exhaustive search: add `bowtie` to `align_index` and set `aligner: bowtie`, `max_mismatches: 2`.
 
 Template departures:
-- Spacing: `location_interval: 3` (insitu_probe_generator code); Choi 2018 sets sit 2 nt apart.
+- Spacing: not a departure; `location_interval: 2` keeps pairs at least 2 nt apart, as in the Choi
+  2018 sets (the community tools in section 3 use 3 nt).
 - Off-targets: Bowtie2 local on the 52-nt window (heuristic, <= 100 alignments; flagged 99 % of windows
   with a <= 2-substitution site in another gene). It also counts partial matches of ~25 nt, i.e. one
   half: conservative, it drops pairs that could not amplify on that gene.

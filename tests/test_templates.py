@@ -318,6 +318,16 @@ def test_hcr_matches_insitu_probe_generator():
         assert even == w[0:25] + encoding['spacer_even'] + encoding['init_even']
 
 
+def test_hcr_pairs_are_two_nt_apart_as_in_choi_2018():
+    # The published Choi 2018 sets tile pairs on a 54-nt grid: 52-nt windows, 2 nt apart.
+    protocol = _validate_and_normalize_protocol(load_template('hcr_v3'))
+    assert protocol['post_process']['remove_overlap'] == {'location_interval': 2}
+    api = offline_api(protocol, SEQ[:270])
+    windows = api.generate_target_seqs()
+    kept = post_process(windows, {'post_process': {'remove_overlap': protocol['post_process']['remove_overlap']}})
+    assert kept['start'].tolist() == [1, 55, 109, 163, 217]
+
+
 def test_double_hyb_rca_primer_binds_rna_at_5_prime_and_circle_at_3_prime():
     encoding = {'barcode1': 'A' * 17, 'barcode2': 'ACGTTGCAACGTTGCAA'}
     targets, probes = design('double_hyb_rca', SEQ[:40], encoding)

@@ -62,9 +62,12 @@ meta:
         probe tables
       quote: "I1 36 gAggAgggCAgCAAACgggAAgAgTCTTCCTTTACg (Choi 2018 SI Table S1)"
     - parameter: post_process.remove_overlap.location_interval
-      value: 3
-      source: insitu_probe_generator maker37cb.py line 284 (Choi 2018 states no spacing rule)
-      quote: "if pos[a][0] > (stp + 2):  (successive 52-nt windows at least 3 nt apart)"
+      value: 2
+      source: >-
+        Choi 2018 SI probe tables, mapped onto RefSeq mRNAs: adjacent pairs of
+        the published sets sit 2 nt apart (a 54-nt grid), e.g. GAPDH, BRAF,
+        PGK1. Choi 2018 states no spacing rule; community tools such as
+        insitu_probe_generator keep 3 nt.
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: U-Probe approximation of target specificity; not specified by Choi 2018.
@@ -197,7 +200,7 @@ post_process:
     is_ascending:
       - target_mapped_genes
   remove_overlap:
-    location_interval: 3
+    location_interval: 2   # 2 nt between pairs, as the Choi 2018 sets
   equal_space:
     number_desired: 20
 
