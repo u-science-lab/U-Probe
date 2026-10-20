@@ -12,7 +12,8 @@ from .layout import compile_layout, expand_layout_candidates, validate_layout_re
 from .attributes import add_attributes
 from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
-from .gen.fun import TranscriptSelectionError, generate_target_seqs, validate_targets
+from .gen.fun import (GTF_RUN_FIELDS, RNA_SOURCES, TranscriptSelectionError, generate_target_seqs, read_gtf,
+                      validate_targets)
 from .gen.expression import PROBE_INDEX, probe_index_nodes
 from .gen.probe import construct_probes
 from .process import post_process
@@ -62,6 +63,18 @@ class UProbeAPI:
         self._include_plots = True 
         self._embed_plots = True  
         self._csv_filename = None
+        # The GTF parsed once for target validation and extraction (see _gtf_table).
+        self._gtf = None
+
+    def _gtf_table(self) -> pd.DataFrame:
+        """The genome's GTF, parsed once: target validation and extraction share it.
+
+        Parsing the human Ensembl GTF takes about 23 s; the workflow drops the
+        table once the windows are extracted.
+        """
+        if getattr(self, '_gtf', None) is None:  # also for objects made without __init__
+            self._gtf = read_gtf(self.genome['gtf'], extract_fields=GTF_RUN_FIELDS)
+        return self._gtf
 
     def _parse_targets(self) -> T.Tuple[T.List[str], T.Dict[str, str]]:
         """
@@ -146,7 +159,8 @@ class UProbeAPI:
         invalid_list = []
         if genome_targets:
             gtf_path = Path(self.genome['gtf'])
-            _, valid_list, invalid_list = validate_targets(genome_targets, gtf_path, DTF_NAME_FIX=True)
+            _, valid_list, invalid_list = validate_targets(genome_targets, gtf_path, DTF_NAME_FIX=True,
+                                                           df_gtf=self._gtf_table())
             valid_genome_targets = valid_list
         self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
         if invalid_list and not continue_on_invalid:
@@ -191,6 +205,7 @@ class UProbeAPI:
                     step=step,
                     transcripts=extract_params.get('transcripts', 'all'),
                     masked=extract_params.get('masked', 'keep'),
+                    df_gtf=self._gtf_table() if extract_params['source'] in RNA_SOURCES else None,
                 )
                 self.transcripts_used = df_genome.attrs.get('transcripts') or {}
                 if not df_genome.empty:
@@ -454,6 +469,7 @@ class UProbeAPI:
         # 3. Generate Target Region Sequences
         run['step'] = 'extract_target_regions'
         df_targets = self.generate_target_seqs()
+        self._gtf = None  # parsed once for validation and extraction; free it for the attributes
         run['targets'] = df_targets
         run['transcripts'] = self.transcripts_used
         if df_targets.empty:

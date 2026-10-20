@@ -32,9 +32,8 @@ Oligopaint run used Jellyfish 18-mer indexes restricted to the k-mers of its loc
 
 ## Results
 
-Wall time of `uprobe run` with the indexes in place. About 45 s of a human RNA run (30 s of a mouse
-one) is reading the GTF, which target validation and extraction each do; the design itself takes
-5-25 s.
+Wall time of `uprobe run` with the indexes in place. About 30 s of a human RNA run (20 s of a mouse
+one) is parsing the GTF, once for target validation and extraction; the design itself takes 5-25 s.
 
 | Template | Targets | Probes / requested | Time | Stage that removed most | Notes |
 | --- | --- | --- | --- | --- | --- |
