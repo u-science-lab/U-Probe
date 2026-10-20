@@ -12,10 +12,14 @@ from .formatting import prepare_result_table
 from .excel import column_styles, exceeds_excel_rows, workbook_bytes
 from ..hybridization import declares_hybridization, describe_conditions
 
+# Raw candidates embedded as rows: the raw dialog previews this many. The raw workbook embedded
+# for download holds them all; every row as JSON as well made reports of large designs huge.
+RAW_PREVIEW_ROWS = 100
+
 
 def build_report_data(df, protocol, raw_df=None, csv_filename=None):
     display_df = prepare_result_table(df, protocol)
-    display_raw = prepare_result_table(raw_df, protocol) if raw_df is not None else None
+    display_raw = prepare_result_table(raw_df.head(RAW_PREVIEW_ROWS), protocol) if raw_df is not None else None
     target_col = next((c for c in ("target", "gene") if c in df.columns), None)
     raw_target = next((c for c in ("target", "gene") if raw_df is not None and c in raw_df.columns), None)
     requested = []
