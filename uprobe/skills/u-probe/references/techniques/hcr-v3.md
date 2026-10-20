@@ -110,7 +110,7 @@ extracts:
 probes:
   probe_odd:  {template: "{initiator}{spacer}{binding}", ...}   # binding = rc(target_parts['left'])
   probe_even: {template: "{binding}{spacer}{initiator}", ...}   # binding = rc(target_parts['right'])
-hybridization: {temperature_c: 37, na_mM: 975, probe_nM: 4, formamide_pct: 30}   # 5x SSC
+hybridization: {temperature_c: 37, na_mM: 975, probe_nM: 4, formamide_pct: 30, dntp_mM: 0}   # 5x SSC
 attributes:
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:

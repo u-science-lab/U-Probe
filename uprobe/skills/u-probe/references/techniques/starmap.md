@@ -171,7 +171,7 @@ probes:
   primer:
     template: "{binding}TA{code_rc}TTATCTT"
     ...  binding: {expr: "rc(target_parts['primer_site'])"}; code_rc: rc(encoding code)
-hybridization: {temperature_c: 40, na_mM: 390, probe_nM: 100, formamide_pct: 10}
+hybridization: {temperature_c: 40, na_mM: 390, probe_nM: 100, formamide_pct: 10, dntp_mM: 0}
 attributes:
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:

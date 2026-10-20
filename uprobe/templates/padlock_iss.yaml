@@ -123,7 +123,7 @@ meta:
     target: target_region (the whole 30-nt arm pair)
     attribute: target_tm
     tm_method: multi_padlock_design
-    conditions: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
+    conditions: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20, dntp_mM: 0}
     source: Gyllborg 2020, Methods; multi_padlock_design readme.txt and lib/screenseq.py
     note: >-
       Applied: attributes.target_tm computes the design code's own Tm
@@ -190,6 +190,7 @@ hybridization:
   mg_mM: 10
   probe_nM: 10
   formamide_pct: 20
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 # Optional: genes not expressed in your sample are not counted as off-targets
 # (they stay listed in target_mapped_genes_unexpressed). A single padlock makes
@@ -210,7 +211,7 @@ attributes:
     # The formula and design conditions of the 65-75 C window (meta.tm_window);
     # primer3 would give 3.4 C less on average.
     tm_method: multi_padlock_design
-    hybridization: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
+    hybridization: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20, dntp_mM: 0}
   arm_5_tm:
     target: padlock.arm_5
     type: annealing_temperature

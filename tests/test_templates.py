@@ -115,10 +115,52 @@ def test_templates_rank_lower_scores_first(name, tmp_path):
 
 
 def test_double_hyb_rca_tm_filters_keep_legacy_conditions():
-    # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones.
+    # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones;
+    # without Mg2+ their 0.6 mM dNTP changed no Tm, so the template's 0 keeps the window.
     conditions = effective_conditions(load_template('double_hyb_rca'))
-    assert conditions['tm1'] == conditions['tm2'] == conditions['tm3'] == TM_DEFAULTS
+    assert conditions['tm1'] == conditions['tm2'] == conditions['tm3'] == {**TM_DEFAULTS, 'dntp_mM': 0}
     assert conditions['circle_fold_score'] == {'temperature_c': 37}
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_templates_compute_tm_without_dntps(name):
+    # FISH buffers hold no dNTPs; unset, the legacy PCR default of 0.6 mM applied to every Tm
+    # and, with padlock_iss's 10 mM Mg2+, lowered the free Mg2+ of its arm Tm.
+    protocol = load_template(name)
+    assert protocol['hybridization']['dntp_mM'] == 0
+    conditions = effective_conditions(protocol)
+    for attr, spec in protocol['attributes'].items():
+        if spec['type'] == 'annealing_temperature':
+            assert conditions[attr]['dntp_mM'] == 0, attr
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_tm_filters_filter_as_under_the_legacy_dntp(name):
+    # dNTPs only bind Mg2+: every filtered Tm has no Mg2+ or a formula without dNTPs, so the
+    # published windows (MERFISH, HybISS, Oligopaint, double_hyb_rca) filter as before.
+    from uprobe.core.attributes._attributes import cal_temp, cal_temp_multi_padlock_design
+    from uprobe.core.hybridization import multi_padlock_design_arguments, tm_arguments
+    protocol = load_template(name)
+    conditions = effective_conditions(protocol)
+    filtered = set(protocol['post_process'].get('filters') or {})
+    rng = random.Random(5)
+    for attr, spec in protocol['attributes'].items():
+        if spec['type'] != 'annealing_temperature' or attr not in filtered:
+            continue
+        legacy = {**conditions[attr], 'dntp_mM': 0.6}
+        for length in (13, 15, 20, 25, 30, 41):
+            seq = ''.join(rng.choice('ACGT') for _ in range(length))
+            if spec.get('tm_method') == 'multi_padlock_design':
+                now = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(conditions[attr]))
+                before = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(legacy))
+            else:
+                now, before = cal_temp(seq, **tm_arguments(conditions[attr])), cal_temp(seq, **tm_arguments(legacy))
+            assert now == pytest.approx(before), (attr, seq)
+
+
+def test_smfish_tm_uses_the_stellaris_concentration_per_oligo():
+    # Stellaris hybridizes the 48-oligo set at 125 nM in total, about 2.6 nM per oligo.
+    assert load_template('smfish_stellaris')['hybridization']['probe_nM'] == 2.6
 
 
 def offline_api(protocol, seq=SEQ, encoding=None):

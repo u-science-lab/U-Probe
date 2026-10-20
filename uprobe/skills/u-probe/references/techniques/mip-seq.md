@@ -158,7 +158,7 @@ probes:
   rca_primer:
     template: "{binding}{gap_base}AGGCTCCACTA"     # 25 nt; the 26-nt form adds a C before the tail
     parts: {binding: {expr: "rc(target_parts['primer_site'])"}, gap_base: {expr: "target_parts['gap']"}}
-hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 30, formamide_pct: 10}
+hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 30, formamide_pct: 10, dntp_mM: 0}
 post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}

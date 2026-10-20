@@ -134,10 +134,10 @@ probes:
   encoding_probe:
     template: "{primer_1}A{readout_1}{binding}A{readout_2}{readout_3}{primer_2_rc}"
     # readout_i: rc(encoding[target]['readouts'][(probe_index + i) % 4]), i = 1, 2, 3
-hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30}
+hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30, dntp_mM: 0}
 attributes:
   binding_tm: {target: encoding_probe.binding, type: annealing_temperature,
-               hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}}   # design conditions of 66-76 C
+               hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}}   # design conditions of 66-76 C
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.43 & target_gc <= 0.63}

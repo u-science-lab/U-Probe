@@ -116,7 +116,7 @@ probes:
     template: "{primer_fwd}{overhang_1}T{overhang_2}T{binding}T{overhang_3}T{overhang_4}{t7_rc}"
     # primer_fwd GTCTTATCATGTGCCTTTCCT, t7_rc CCCTATAGTGAGTCGTATTA;
     # overhang_j = rc(encoding[target]['readouts'][(probe_index + j - 1) % 4])
-hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 1, formamide_pct: 40}
+hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 1, formamide_pct: 40, dntp_mM: 0}
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.45 & target_gc <= 0.65}

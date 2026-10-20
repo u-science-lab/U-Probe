@@ -82,7 +82,7 @@ extracts:
   target_region: {source: mRNA, transcripts: mane, length: 20, step: 1}
 probes:
   smfish_probe: {template: "{binding}", parts: {binding: {expr: "rc(target_region)"}}}
-hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10}   # 2x SSC, 10 % formamide
+hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10, probe_nM: 2.6, dntp_mM: 0}   # 2x SSC, 10 % FA; 125 nM / 48 oligos
 attributes:
   target_mapped_genes:
     {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2, strand: sense,

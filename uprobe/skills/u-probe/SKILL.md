@@ -99,8 +99,8 @@ Read its `meta.replace` and `meta.limitations`, then set:
 - the designated transcript, `extracts.target_region.transcripts`: `mane` (human) or `canonical`,
   or `[ENST...]` for an isoform the user names; `source` as the technique file says;
 - `hybridization:` the user's conditions (`temperature_c`, `na_mM` with 2x SSC = 390,
-  `formamide_pct`, `probe_nM`, `mg_mM`); keep per-attribute overrides that reproduce a published
-  Tm window under its own conditions;
+  `formamide_pct`, `probe_nM` per oligo, `mg_mM`, `dntp_mM: 0`); keep per-attribute overrides that
+  reproduce a published Tm window under its own conditions;
 - `gene_expression:` when the cell type is known (see "Expression profile" below);
 - `post_process.equal_space.number_desired`: the probe count, with `remove_overlap` at the
   method's spacing.

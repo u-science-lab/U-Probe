@@ -82,7 +82,7 @@ amp_probe (template order "{part2}N{part1}"), 31 nt:
 | Barcodes | 17 + N + 17 (placeholders) | nt | test protocol barcode lengths; sequences (unverified) |
 | Primer | 13 (RNA) + N + 17 (rc barcode2) = 31 | nt | test protocol; orientation per Wu 2023, doi:10.1101/2023.01.07.523058 |
 | Unbound nt between sites | 1 (nt 27) | nt | test protocol (primer site = window[-13:]) |
-| Arm / primer-site Tm | 35-45 under 50 mM Na+, 0.6 mM dNTP, 50 nM, 0% formamide | C | test protocol (legacy U-Probe Tm conditions); criterion (unverified) |
+| Arm / primer-site Tm | 35-45 under 50 mM Na+, 50 nM, 0% formamide (the legacy 0.6 mM dNTP changes no Tm without Mg2+; the template sets 0) | C | test protocol (legacy U-Probe Tm conditions); criterion (unverified) |
 | Same window, MiP-seq conditions | about +1.5 to +2.3 C vs legacy, i.e. ~37-47 | C | primer3 estimate (2x SSC, 10% FA, 30 nM) |
 | Off-target genes | <= 1 on the 40-nt window (`n_mapped_genes`, Bowtie2) and <= 1 on the 26-nt arm site (`arm_mapped_genes`, Bowtie 1, 2 substitutions); both include the target | genes | template (U-Probe choice; the test protocol allowed <= 4) |
 | Circle fold filter | none; `circle_fold_score` only sorts (ascending) | kcal/mol | template (U-Probe choice; the test protocol's `<= 80` removed nothing, section 7) |
@@ -150,10 +150,10 @@ probes:
     parts:
       part1: {expr: "rc(circle_probe.part2.barcode2)"}
       part2: {expr: "rc(target_region[-13:])"}
-hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10}   # from MiP-seq
+hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10, probe_nM: 30, dntp_mM: 0}   # from MiP-seq
 attributes:
   tm1: {target: "circle_probe:part1", type: annealing_temperature,
-        hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0.6, probe_nM: 50, formamide_pct: 0}}
+        hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0, probe_nM: 50, formamide_pct: 0}}
   n_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
   arm_mapped_genes: {target: target_parts.arm_site, type: mapped_genes,
                      aligner: bowtie, max_mismatches: 2, strand: sense}

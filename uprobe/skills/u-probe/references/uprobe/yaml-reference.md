@@ -207,7 +207,9 @@ hybridization:          # all optional; units below
 ```
 
 Unset fields keep the legacy PCR-like defaults (`na_mM` 50, `mg_mM` 0, `dntp_mM` 0.6, `probe_nM` 50,
-`formamide_pct` 0; fold at 37 °C). An `annealing_temperature` or `fold_score` attribute can carry its own
+`formamide_pct` 0; fold at 37 °C). Every template sets `dntp_mM: 0`, since FISH buffers hold no dNTPs
+(without Mg2+ they change no Tm), and `probe_nM` per oligo where its protocol states it (smFISH: 125 nM
+for the 48-oligo set, so 2.6). An `annealing_temperature` or `fold_score` attribute can carry its own
 `hybridization:` mapping, merged over the block (used to reproduce a published Tm window computed under
 other conditions). Values >= 0; `na_mM`, `probe_nM` > 0; `temperature_c`, `formamide_pct` <= 100.
 

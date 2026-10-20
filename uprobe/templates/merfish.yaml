@@ -103,7 +103,7 @@ meta:
     value: [66, 76]
     target: encoding_probe.binding
     attribute: binding_tm
-    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, method: SantaLucia nearest-neighbour}
+    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0, method: SantaLucia nearest-neighbour}
     source: Moffitt 2016, SI Methods ("assuming a monovalent salt concentration of 300 mM ... and a probe concentration of 5 nM")
     note: >-
       Applied: attributes.binding_tm.hybridization sets these design
@@ -172,6 +172,7 @@ hybridization:
   temperature_c: 37
   na_mM: 390
   formamide_pct: 30
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   target_gc:
@@ -181,7 +182,7 @@ attributes:
     target: encoding_probe.binding
     type: annealing_temperature
     # Design conditions of the 66-76 C window (meta.tm_window), not the hybridization block.
-    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}
+    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}
   target_mapped_genes:
     target: target_region
     type: mapped_genes
