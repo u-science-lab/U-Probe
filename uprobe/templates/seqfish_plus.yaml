@@ -6,18 +6,27 @@ meta:
   technology: seqFISH+ primary probes
   description: >-
     Each primary probe has a 28-nt region complementary to the coding sequence
-    and four 15-nt overhangs (I-IV), one per barcoding round; in each round a
+    and four 15-nt overhangs, one per barcoding round; in each round a
     dye-labelled 15-nt readout probe binds the overhang assigned to that gene's
-    pseudocolor. Following the Eng et al. 2019 Fig. 1a schematic, two overhangs
-    sit on each side of the target region: 5'-[I][II][target 28 nt][III][IV]-3'.
-    24 primary probes are used per gene. The amplification primers (forward
-    primer removed with USER enzyme, reverse primer = reverse complement of
-    T7) are not part of this template.
+    pseudocolor. Two overhangs sit on each side of the target region (Eng et
+    al. 2019 Fig. 1a), separated by 1-nt T spacers, and the oligo is ordered
+    with the forward primer at its 5' end and the reverse complement of the T7
+    promoter at its 3' end: 5'-[primer 21][R][T][R][T][target 28][T][R][T][R]
+    [rc(T7) 20]-3', 133 nt. This is the layout of the only public probe
+    sequences that reuse the seqFISH+ readouts and primer (Lohoff et al. 2022),
+    which also rotate which round sits in which slot from probe to probe.
+    After amplification (USER removes the forward primer; T7 transcription and
+    reverse transcription) about 95 nt remain. 24 primary probes are used per
+    gene.
   citations:
     - short: Eng et al. 2019, Nature
       title: Transcriptome-scale super-resolved imaging in tissues by RNA seqFISH+
       doi: 10.1038/s41586-019-1049-y
       url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6544023/
+    - short: Lohoff et al. 2022, Nature Biotechnology (seqFISH probe sequences)
+      title: Integration of spatial and single-cell transcriptomic data elucidates mouse organogenesis
+      doi: 10.1038/s41587-021-01006-2
+      url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8763645/
   parameter_sources:
     - parameter: extracts.target_region.length and source
       value: 28 nt from CDS exons
@@ -43,6 +52,24 @@ meta:
       value: 4 x 15 nt (I-IV), two on each side of the target region
       source: Eng 2019, Methods and Fig. 1a schematic
       quote: Overhang sequences (I-IV) on the primary probes correspond to 4 barcoding rounds ... 15-nt readout probes were designed
+    - parameter: primary_probe.template (1-nt T spacers, forward primer, rc(T7) tail)
+      value: "GTCTTATCATGTGCCTTTCCT [R] T [R] T [binding] T [R] T [R] CCCTATAGTGAGTCGTATTA"
+      source: >-
+        Lohoff 2022, Supplementary Table 1A: all 15,177 barcoded probes (351
+        genes, 135 nt with a 30-nt target region) are this 21-nt primer, two
+        readouts, the target region and two readouts with a T between every
+        two of them, and the reverse complement of the T7 promoter. The
+        Methods text says "2-nucleotide spacer", but the sequences have 1 T.
+        Eng 2019 publishes no probe sequences; its ~93-nt final probes fit 88
+        nt of readouts and target plus spacers and the CCC that T7
+        transcription leaves at the 3' end.
+      quote: We used validated primer and 84 readout sequences, previously used in seqFISH+ (Lohoff 2022, Methods)
+    - parameter: readout slot rotation (probe_index)
+      value: "the rounds shift by one slot per probe (probe_index 0, 1, 2, 3): 12|34, 23|41, 34|12, 41|23"
+      source: >-
+        Lohoff 2022, Supplementary Table 1A: every gene's probes cycle through
+        these four slot orders (in table row order). The template numbers a
+        gene's probes along the RNA (probe_index) and rotates the same way.
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
@@ -64,14 +91,16 @@ meta:
       Readout probes are hybridized at room temperature in 10% ethylene
       carbonate, 10% dextran sulfate, 4x SSC.
   limitations:
+    - Lohoff 2022 rotates the slot order in the row order of its probe table, which is not the order along the transcript; the template rotates along the RNA.
     - Eng 2019 added UTR exons for genes whose CDS gave too few probes; the template uses the CDS only (source mRNA adds the UTRs, for every gene).
     - Eng 2019 dropped genes with fewer than 24 probes and used 24 per gene; equal_space keeps 24, spread evenly along the CDS, and all passing regions of a gene with fewer (summary.json reports the shortfall; drop such genes as Eng 2019 did).
-    - "TODO: verify the 5'/3' order of the overhangs (Fig. 1a is unlabelled), any spacers, and the primer handles; the final probe was ~93 nt, more than 28 + 4 x 15."
+    - "The 5'/3' order of the overhangs, the spacers and the primers follow Lohoff 2022, which reuses the seqFISH+ readouts and primer; the Eng 2019 library sequences themselves are not public."
     - "TODO: verify the minimum spacing between primary probes; regions are only required not to overlap here."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
-    - "encoding: per gene, the readout PROBE sequences for rounds I-IV (placeholders N here; seqFISH+ readout sequences are not published in the paper's tables); the template inserts their reverse complements"
+    - "encoding: per gene, readouts: the readout PROBE sequences of rounds I-IV, in round order (placeholders N here; the seqFISH+ readouts are not in Eng 2019's tables); the template inserts their reverse complements"
+    - "primary_probe.primer_fwd: the forward primer of your library (here the seqFISH+ primer of Lohoff 2022); keep CCCTATAGTGAGTCGTATTA (rc of T7) if you amplify by T7 transcription"
 
 name: seqfish_plus
 description: seqFISH+ primary probes, 28-nt target region with four 15-nt readout overhangs (Eng et al. 2019)
@@ -83,10 +112,11 @@ targets:
 
 encoding:
   GAPDH:
-    I: NNNNNNNNNNNNNNN    # PLACEHOLDER: 15-nt readout probe, round I
-    II: NNNNNNNNNNNNNNN   # PLACEHOLDER: 15-nt readout probe, round II
-    III: NNNNNNNNNNNNNNN  # PLACEHOLDER: 15-nt readout probe, round III
-    IV: NNNNNNNNNNNNNNN   # PLACEHOLDER: 15-nt readout probe, round IV
+    readouts:  # the gene's readout probes, rounds I-IV in order
+      - NNNNNNNNNNNNNNN  # PLACEHOLDER: 15-nt readout probe, round I
+      - NNNNNNNNNNNNNNN  # PLACEHOLDER: 15-nt readout probe, round II
+      - NNNNNNNNNNNNNNN  # PLACEHOLDER: 15-nt readout probe, round III
+      - NNNNNNNNNNNNNNN  # PLACEHOLDER: 15-nt readout probe, round IV
 
 extracts:
   target_region:
@@ -97,18 +127,28 @@ extracts:
 
 probes:
   primary_probe:
-    template: "{overhang_1}{overhang_2}{binding}{overhang_3}{overhang_4}"
+    # Pool oligo (Lohoff 2022 layout): primer, overhangs and target region with
+    # 1-nt T spacers, then the reverse complement of the T7 promoter.
+    template: "{primer_fwd}{overhang_1}T{overhang_2}T{binding}T{overhang_3}T{overhang_4}{t7_rc}"
     parts:
+      primer_fwd:
+        template: "GTCTTATCATGTGCCTTTCCT"  # seqFISH+ forward primer (Lohoff 2022); replace with yours
+        parts: {}
+      # The rounds shift by one slot per probe (probe_index, numbered along the
+      # RNA): 12|34, 23|41, 34|12, 41|23, so every round takes every slot in turn.
       overhang_1:
-        expr: "rc(encoding[target]['I'])"
+        expr: "rc(encoding[target]['readouts'][probe_index % 4])"
       overhang_2:
-        expr: "rc(encoding[target]['II'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 1) % 4])"
       binding:
         expr: "rc(target_region)"
       overhang_3:
-        expr: "rc(encoding[target]['III'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 2) % 4])"
       overhang_4:
-        expr: "rc(encoding[target]['IV'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 3) % 4])"
+      t7_rc:
+        template: "CCCTATAGTGAGTCGTATTA"  # reverse complement of the T7 promoter
+        parts: {}
 
 # Hybridization conditions of the source protocol (sources: meta.hybridization).
 # annealing_temperature and fold_score attributes are computed under them.

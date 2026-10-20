@@ -277,6 +277,26 @@ def test_starmap_reproduces_published_pair():
             'ACCCTTGTCAACCTTGATGCTATTTTTATCTT') in pairs
 
 
+def test_seqfish_plus_reproduces_lohoff_probes():
+    # Lohoff et al. 2022, Supplementary Table 1A: the first two mouse Abcc4 probes (30-nt target
+    # regions; seqFISH+ readouts and primer). The table lists the readout sites as they appear in
+    # the probes, so the readout probes are their reverse complements.
+    sites = ['TAATCAAAGGCCGCA', 'GGGCCAGCGCAATAA', 'GGCTAGCAGTCCGTC', 'TATCATACGACGTGG']
+    primary = ['CGAGGGCTGTCCATTGGAGGTGTTCATAAC', 'TGTTTCGGTGAGGGCAGCGGCTTCGCCCTT']
+    published = [
+        'GTCTTATCATGTGCCTTTCCTTAATCAAAGGCCGCATGGGCCAGCGCAATAATCGAGGGCTGTCCATTGGAGGTGTTCATAACTGGCTAGCAGTCCGTCT'
+        'TATCATACGACGTGGCCCTATAGTGAGTCGTATTA',
+        'GTCTTATCATGTGCCTTTCCTGGGCCAGCGCAATAATGGCTAGCAGTCCGTCTTGTTTCGGTGAGGGCAGCGGCTTCGCCCTTTTATCATACGACGTGGT'
+        'TAATCAAAGGCCGCACCCTATAGTGAGTCGTATTA',
+    ]
+    protocol = load_template('seqfish_plus')
+    protocol['extracts']['target_region'].update(length=30, step=30)
+    api = offline_api(_validate_and_normalize_protocol(protocol), ''.join(reverse_complement(p) for p in primary),
+                      {'readouts': [reverse_complement(s) for s in sites]})
+    probes = api.construct_probes(api.generate_target_seqs())
+    assert probes['primary_probe'].tolist() == published  # probe_index 0 and 1: slots 12|34, then 23|41
+
+
 def test_hcr_matches_insitu_probe_generator():
     # maker37cb.py reverse complements the mRNA (W) and prints
     # up + upspc + W[27:52] and W[0:25] + dnspc + dn for each 52-nt window.
