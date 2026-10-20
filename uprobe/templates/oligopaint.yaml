@@ -138,10 +138,10 @@ description: Oligopaint DNA FISH library oligos with OligoMiner Balance homology
 genome: hg38
 
 targets:
-  - chr19:10000000-10050000
+  - chr19:10000001-10050000
 
 encoding:
-  chr19:10000000-10050000: {}
+  chr19:10000001-10050000: {}
 
 extracts:
   target_region:

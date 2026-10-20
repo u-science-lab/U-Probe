@@ -20,6 +20,7 @@ failures: `references/uprobe/troubleshooting.md`. Paths are relative to the skil
 uprobe genome search mouse                     # Ensembl species names, assemblies, taxids
 uprobe genome fetch --species mus_musculus --release latest --out ./genomes --genomes genomes.yaml
 uprobe genome fetch --species homo_sapiens --release 113 --dry-run   # URLs and entry, no download
+uprobe genome fetch --species homo_sapiens --soft-masked   # repeats in lowercase (oligopaint: masked: drop)
 uprobe genome list -g genomes.yaml [--json]    # files present? indexes built?
 ```
 
@@ -42,7 +43,7 @@ ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` or `genom
 | `bowtie` | `bowtie_transcript/` (transcriptome only) | `mapped_genes` with `aligner: bowtie` |
 | `bowtie2` | `bowtie2_genome/` and `bowtie2_transcript/` | `mapped_sites`; `mapped_genes` with `aligner: bowtie2` |
 | `blast`, `mmseqs` | genome (and BLAST transcript) databases | nothing in the current attributes |
-| `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length, at the first `kmer_count` with it | `kmer_count` |
+| `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length (`.stranded.jf` for `strand: sense`/`antisense`), at the first `kmer_count` with it | `kmer_count` |
 
 - The transcriptome is `transcript.fa` (every GTF transcript, spliced, records `<gene_id>_<transcript_id>`),
   extracted next to the FASTA once.
