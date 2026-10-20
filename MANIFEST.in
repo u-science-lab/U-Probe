@@ -1,5 +1,9 @@
 include requirements.txt
 include requirements-dev.txt
 recursive-include uprobe *.ini *.yaml *.json *.html *.css *.js *.md
-graft uprobe/skills/u-probe
+# The Agent Skill ships SKILL.md, references/ and scripts/ only (tests/test_skill.py guards the folder).
+prune uprobe/skills/u-probe
+include uprobe/skills/u-probe/SKILL.md
+recursive-include uprobe/skills/u-probe/references *.md
+recursive-include uprobe/skills/u-probe/scripts *.py
 global-exclude *.py[cod]
