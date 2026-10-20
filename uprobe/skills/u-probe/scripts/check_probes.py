@@ -190,7 +190,8 @@ def check(args):
         window = row['target_region'].upper()
         for c in seq_columns:
             if row[c] and not ACGT.match(row[c]):
-                fail(row, f'{c} is not pure ACGT ({row[c][:30]})')
+                at = next(i for i, letter in enumerate(row[c]) if letter not in 'ACGT')
+                fail(row, f'{c} is not pure ACGT: {row[c][at]!r} at position {at + 1} of {len(row[c])}')
         for c, orientation in parts:
             seq = row[c].upper()
             expected = rc(seq) if orientation == 'rc' else seq

@@ -206,6 +206,8 @@ def test_check_fails_sense_probes_and_placeholders(tmp_path):
     assert not result['ok']
     assert any('G_0' in f and 'it is the sense sequence' in f for f in result['failures'])
     assert any(f.startswith('G_1: probe is not pure ACGT') for f in result['failures'])
+    # Where the letter is: the first 30 nt of a long probe need not contain it.
+    assert "G_1: probe is not pure ACGT: 'N' at position 18 of 20" in result['failures']
 
 
 def test_check_limits_and_off_targets(tmp_path):
