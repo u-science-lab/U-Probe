@@ -84,8 +84,8 @@ amp_probe (template order "{part2}N{part1}"), 31 nt:
 | Unbound nt between sites | 1 (nt 27) | nt | test protocol (primer site = window[-13:]) |
 | Arm / primer-site Tm | 35-45 under 50 mM Na+, 0.6 mM dNTP, 50 nM, 0% formamide | C | test protocol (legacy U-Probe Tm conditions); criterion (unverified) |
 | Same window, MiP-seq conditions | about +1.5 to +2.3 C vs legacy, i.e. ~37-47 | C | primer3 estimate (2x SSC, 10% FA, 30 nM) |
-| Off-target genes | <= 4 (`n_mapped_genes`, includes the target) | genes | test protocol |
-| Circle fold filter | `circle_fold_score <= 80` | kcal/mol | test protocol; effectively no filter (section 7) |
+| Off-target genes | <= 1 on the 40-nt window (`n_mapped_genes`, Bowtie2) and <= 1 on the 26-nt arm site (`arm_mapped_genes`, Bowtie 1, 2 substitutions); both include the target | genes | template (U-Probe choice; the test protocol allowed <= 4) |
+| Circle fold filter | none; `circle_fold_score` only sorts (ascending) | kcal/mol | template (U-Probe choice; the test protocol's `<= 80` removed nothing, section 7) |
 | Hybridization | 2x SSC, 10% formamide, 37 C | - | borrowed from MiP-seq (Wu 2023); (unverified) for this design |
 | Ligation / RCA | SplintR 37 C; Phi29 30 C | - | borrowed from MiP-seq; (unverified) for this design |
 | Region | CDS of MANE/canonical transcript | - | U-Probe choice; no published source |
@@ -101,22 +101,22 @@ amp_probe (template order "{part2}N{part1}"), 31 nt:
 
 ## 5. Specificity
 
-- One ligated circle plus a primer gives one RCP, which is counted as a molecule: keep each unit
-  free of expressed off-targets (`n_mapped_genes <= 1`), not `<= 4`.
+- One ligated circle plus a primer gives one RCP, which is counted as a molecule: each unit must be
+  free of expressed off-targets. The template filters `n_mapped_genes <= 1` and `arm_mapped_genes <= 1`
+  (the test protocol's `<= 4` left up to 3 off-target genes per unit).
 - An off-target needs the circle's 26-nt arm site ligated on one molecule; the primer must then
   reach the circle. In MiP-seq the 11-nt tail alone (Tm ~30 C under the hybridization conditions,
   primer3 estimate) needs the primer's RNA part, so the AND gate covers the whole 40-nt window. Here
   the 17-nt barcode2 duplex (Tm ~44-50 C for typical 17-mers, same estimate) may hold the primer on
   any ligated circle by itself, so specificity rests mostly on the **26-nt arm site and the junction**.
-  Bowtie2 local alignment of the 40-nt `target_region` also reports partial hits of about 25 nt or
-  more, which covers an arm-site-only match; Bowtie 1 (exhaustive, end-to-end) does not.
+  The template therefore searches the arm site separately: a `layout` splits `target_region` into
+  `arm_site` (26 nt), `gap` (1) and `primer_site` (13), and `arm_mapped_genes` searches `arm_site`
+  with Bowtie 1 (exhaustive within 2 substitutions; no helper oligo, so nothing extra is ordered).
 - Bowtie2 on 40-nt windows flagged 97% of random windows with a site within 2 substitutions in
-  another gene and listed 87% of those genes; for an exhaustive search within 2 substitutions use
-  `aligner: bowtie`, `max_mismatches: 2` (needs `bowtie` in `align_index`). Because the arm site
-  carries most of the specificity here, consider a second `mapped_genes` attribute on it through a
-  helper probe (passes `uprobe validate`; drop its column before ordering):
-  `arm_site: {template: "{a}", parts: {a: {expr: "target_region[0:26]"}}}` with
-  `arm_mapped_genes: {target: arm_site, type: mapped_genes, aligner: bowtie, max_mismatches: 2, strand: sense}`.
+  another gene and listed 87% of those genes; its local alignment also reports partial hits of about
+  25 nt or more, which covers an arm-site-only match. For an exhaustive search of the whole window
+  set `n_mapped_genes` to `aligner: bowtie`, `max_mismatches: 2` (needs `bowtie` in `align_index`,
+  which `arm_mapped_genes` needs anyway).
 - Add `gene_expression` (unexpressed off-targets not counted) and `exempt_copies` if needed.
 
 ## 6. U-Probe template
@@ -133,7 +133,11 @@ Key lines (uprobe/templates/double_hyb_rca.yaml):
 encoding:
   GAPDH: {barcode1: NNNNNNNNNNNNNNNNN, barcode2: NNNNNNNNNNNNNNNNN}   # 17-nt placeholders
 extracts:
-  target_region: {source: CDS, transcripts: mane, length: 40, step: 20}
+  target_region:
+    {source: CDS, transcripts: mane, length: 40, step: 20}
+    layout:                                 # only for the arm-site off-target search
+      template: "{arm_site}{gap}{primer_site}"
+      parts: {arm_site: {length: 26}, gap: {length: 1}, primer_site: {length: 13}}
 probes:
   circle_probe:
     template: "{part1}{part2}{part3}"
@@ -150,12 +154,15 @@ hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10}   # from MiP-s
 attributes:
   tm1: {target: "circle_probe:part1", type: annealing_temperature,
         hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0.6, probe_nM: 50, formamide_pct: 0}}
+  n_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
+  arm_mapped_genes: {target: target_parts.arm_site, type: mapped_genes,
+                     aligner: bowtie, max_mismatches: 2, strand: sense}
 post_process:
   filters:
     tm1: {condition: tm1 >= 35 & tm1 <= 45}          # tm2 (part3), tm3 (amp part2) alike
-    circle_fold_score: {condition: circle_fold_score <= 80}
-    n_mapped_genes: {condition: n_mapped_genes <= 4}  # Bowtie2, strand: sense, on target_region
-  sorts: {is_descending: [circle_fold_score, amp_fold_score], is_ascending: [tm1]}
+    n_mapped_genes: {condition: n_mapped_genes <= 1}
+    arm_mapped_genes: {condition: arm_mapped_genes <= 1}
+  sorts: {is_ascending: [circle_fold_score, amp_fold_score, tm1]}   # least structured first
   remove_overlap: {location_interval: 0}
 ```
 
@@ -163,16 +170,18 @@ What to edit:
 1. `encoding`: real barcode1/barcode2 per gene (17 nt each, or your readout lengths).
 2. Replace the literal `N` spacers in `part2` and `amp_probe` with defined bases (a synthesized N is
    a degenerate mix).
-3. `n_mapped_genes <= 1`, `aligner: bowtie`, optional `gene_expression`.
+3. Optional `gene_expression`; `aligner: bowtie`, `max_mismatches: 2` on `n_mapped_genes` too for an
+   exhaustive search of the whole window.
 4. `step: 1` for more candidates (the `mipseq` template uses 1); keep `remove_overlap`.
 5. Decide sites per gene (`equal_space: {number_desired: N}`) and region (`source: mRNA` if UTRs
    are allowed).
-6. Replace the fold filter with a meaningful one, or drop it (section 7).
+6. Once the barcodes are final, add a `circle_fold_score` threshold if you want one (section 7).
 
 **U-Probe departs** (template vs its own test protocol): primer order reversed (the fix above);
 `step: 20` instead of `overlap: 20` (same windows); `source: CDS` with `transcripts: mane` instead
 of `exon` on all transcripts; Bowtie2 with `strand: sense` (the test used
-`similarity_threshold_ratio: 0.75`); top-level hybridization conditions borrowed from MiP-seq while
+`similarity_threshold_ratio: 0.75`) plus the Bowtie 1 search of the arm site; `n_mapped_genes <= 1`
+instead of `<= 4`; no fold filter; top-level hybridization conditions borrowed from MiP-seq while
 tm1-tm3 keep the legacy conditions under which the 35-45 C window was set.
 **U-Probe departs** (template vs MiP-seq): 17-nt gene-specific primer tail on barcode2 instead of
 the constant 11-nt TAGTGGAGCCT site; a fixed 13-nt primer site; Tm and fold filters MiP-seq does not
@@ -181,17 +190,20 @@ state; `step: 20` (the `mipseq` template scans every position).
 ## 7. Pitfalls
 
 - `fold_score` in U-Probe is **-MFE** (ViennaRNA, RNA parameters, kcal/mol, at `temperature_c`), so
-  it is >= 0 and higher means more structure (the README's "lower is more stable" describes the raw
-  MFE). `circle_fold_score <= 80` therefore removes nothing for a 61-nt oligo, and
-  `is_descending: [circle_fold_score, ...]` lists the most structured units first. Sorting runs last,
-  so it changes only the output order, not which units are kept.
+  it is >= 0 and higher means more structure, and the sorts list it ascending: least structured first.
+  The old `circle_fold_score <= 80` removed nothing: on 4,375 circle probes (875 human CDS windows x 5
+  random 17-nt barcode pairs) the score was 14.3 (median), 21.0 (p90) and 37.2 at most. The template
+  now filters nothing on it, because a threshold depends on the barcodes you choose; `<= 21` would
+  keep 90% of those probes. Sorting runs last, so it changes only the output order, not which units
+  are kept.
 - Fold scores replace non-ACGU characters with A: with placeholder barcodes (all N) or literal N
   spacers, `circle_fold_score` and `amp_fold_score` describe poly-A, not your probe.
 - `fold_score` (unsuffixed) targets `circle_probe:part1`, a 13-nt arm; it is computed but unused.
 - Tm windows are on the legacy conditions; do not compare them with Tm computed under the
   top-level `hybridization` block (they differ by ~2 C here, more for other buffers).
 - The circle needs a 5'-phosphate (order it or use T4 PNK); U-Probe does not annotate it.
-- `n_mapped_genes <= 4` keeps units with up to 3 off-target genes: too loose for RCA.
+- Do not loosen `n_mapped_genes` or `arm_mapped_genes` beyond 1: one unit makes one spot, so every
+  off-target unit is a false molecule (the test protocol's `<= 4` kept units with 3 off-target genes).
 - A gene-specific primer tail means one primer sequence per gene and barcode; barcode2 must also be
   unique enough that one gene's primer does not prime another gene's circle.
 
@@ -201,7 +213,7 @@ state; `step: 20` (the `mipseq` template scans every position).
 - [ ] rc(part1) + rc(part3) = RNA nt 1-26, contiguous; junction 13|14; circle 5'-phosphorylated.
 - [ ] barcode2 in the circle is immediately 5' of part3; primer tail = its exact reverse complement.
 - [ ] No literal N left; barcodes are the intended readout sequences, not placeholders.
-- [ ] `n_mapped_genes` (or your attribute) = 1 per unit with the intended aligner/expression table.
+- [ ] `n_mapped_genes` and `arm_mapped_genes` = 1 per unit with the intended aligner/expression table.
 - [ ] Fold/Tm filters recomputed after barcodes are final; arm Tm near the hybridization temperature.
 - [ ] Ligase (RNA-templated), hybridization and RCA conditions stated, and marked as borrowed.
 

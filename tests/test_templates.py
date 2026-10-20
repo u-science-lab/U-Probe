@@ -374,6 +374,19 @@ def test_hcr_pairs_are_two_nt_apart_as_in_choi_2018():
     assert kept['start'].tolist() == [1, 55, 109, 163, 217]
 
 
+def test_double_hyb_rca_keeps_units_without_off_target_genes():
+    # One unit makes one RCA product, so no off-target gene is allowed on the window or the arm site;
+    # fold_score only sorts, because a threshold would depend on the barcodes.
+    protocol = load_template('double_hyb_rca')
+    filters = protocol['post_process']['filters']
+    assert filters['n_mapped_genes']['condition'] == 'n_mapped_genes <= 1'
+    assert filters['arm_mapped_genes']['condition'] == 'arm_mapped_genes <= 1'
+    assert protocol['attributes']['arm_mapped_genes']['target'] == 'target_parts.arm_site'
+    assert protocol['extracts']['target_region']['layout']['parts']['arm_site']['length'] == 26
+    assert not [name for name in filters if 'fold' in name]
+    assert protocol['post_process']['sorts']['is_ascending'][:2] == ['circle_fold_score', 'amp_fold_score']
+
+
 def test_double_hyb_rca_primer_binds_rna_at_5_prime_and_circle_at_3_prime():
     encoding = {'barcode1': 'A' * 17, 'barcode2': 'ACGTTGCAACGTTGCAA'}
     targets, probes = design('double_hyb_rca', SEQ[:40], encoding)
