@@ -9,12 +9,14 @@ meta:
     [target-binding region, 30 nt][A][readout 2, 20 nt][readout 3, 20 nt]
     [reverse complement of PCR primer 2, 20 nt]-3'. The 30-nt region is the
     reverse complement of the RNA; the readouts are the reverse complements of
-    the dye-labelled readout probes assigned to the gene's code word; single A
-    spacers avoid terminal G triplets. This is the design of Moffitt et al. 2016
-    (PNAS), as written by the official ZhuangLab library_design_example.m
-    script (readout placement "configuration A"). Target regions are tiled
-    without overlap from the 5' end. The earlier Chen et al. 2015 design used
-    two 30-nt readouts instead (one on each side of the target region).
+    3 of the 4 dye-labelled readout probes of the gene's code word (its 4 "on"
+    bits), rotating from probe to probe so that all 4 appear, each on 3 of
+    every 4 probes; single A spacers avoid terminal G triplets. This is the
+    design of Moffitt et al. 2016 (PNAS), as written by the official ZhuangLab
+    library_design_example.m script (readout placement "configuration A").
+    Target regions are tiled without overlap from the 5' end. The earlier Chen
+    et al. 2015 design used two 30-nt readouts instead (one on each side of
+    the target region).
   citations:
     - short: Moffitt et al. 2016, PNAS
       title: >-
@@ -52,6 +54,14 @@ meta:
       value: 3 x 20 nt; one or two 5' of the target region, the rest 3'
       source: Moffitt 2016, SI Methods
       quote: with one or two readout sequences at the 5' end of the target region and with the remaining sequences at the 3' end of the target region
+    - parameter: encoding_probe readouts (3 of the gene's 4, by probe_index)
+      value: "probe k carries readouts k+1, k+2 and k+3 (mod 4) of encoding[target]['readouts'], so the 4 combinations of 3 rotate along the RNA"
+      source: >-
+        Moffitt 2016, SI Methods (3 of the 4 readouts chosen at random per
+        probe). U-Probe rotates them deterministically: probe_index numbers the
+        final probes of a gene along the RNA, so each readout is on 3 of every
+        4 probes and every bit of the code word lights up.
+      quote: three readout sequences that were randomly selected from the four readout sequences associated with the gene
     - parameter: encoding_probe.template (order and A spacers)
       value: "A rc(R1) rc(target) A rc(R2) rc(R3), primers on either side"
       source: ZhuangLab library_design_example.m
@@ -102,14 +112,14 @@ meta:
   limitations:
     - >-
       Moffitt 2016 picks 3 of the gene's 4 code-word readouts at random for each
-      encoding probe and randomly uses 1 or 2 readouts on the 5' side. U-Probe
-      expressions are deterministic, so every probe here carries R1, R2 and R3 in
-      configuration A. Permute readouts across probes after design if needed.
+      encoding probe and randomly puts 1 or 2 of them on the 5' side. The template
+      rotates the 4 combinations of 3 deterministically along the RNA (probe_index)
+      and always uses configuration A (1 readout 5', 2 readouts 3').
     - Moffitt 2016 used 92 encoding probes per gene; equal_space keeps 92, spread evenly along the RNA rather than taken from the 5' end, and all passing regions of a gene with fewer.
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
-    - "encoding: per gene, the readout PROBE sequences (R1-R3) of its code word; the template inserts their reverse complements. The values here are three published readout probes from Moffitt 2016 Table S1 (RS0015, RS0083, RS0095) used as an example assignment only."
+    - "encoding: per gene, readouts: the 4 readout PROBE sequences of its code word (one per on-bit); the template inserts their reverse complements. The values here are four published readout probes from Moffitt 2016 Table S1 (RS0015, RS0083, RS0095, RS0109; bits 1-4) used as an example assignment only."
     - "encoding_probe.primer_1 / primer_2_rc: 20-nt PCR primer placeholders (N)"
 
 name: merfish_encoding
@@ -122,9 +132,11 @@ targets:
 
 encoding:
   GAPDH:
-    R1: ATCCTCCTTCAATACATCCC  # RS0015 (Moffitt 2016 Table S1); example assignment
-    R2: ACACTACCACCATTTCCTAT  # RS0083 (Moffitt 2016 Table S1); example assignment
-    R3: ACTCCACTACTACTCACTCT  # RS0095 (Moffitt 2016 Table S1); example assignment
+    readouts:  # the readout probes of the gene's 4 on-bits (Moffitt 2016 Table S1); example assignment
+      - ATCCTCCTTCAATACATCCC  # RS0015
+      - ACACTACCACCATTTCCTAT  # RS0083
+      - ACTCCACTACTACTCACTCT  # RS0095
+      - ACCCTCTAACTTCCATCACA  # RS0109
 
 extracts:
   target_region:
@@ -140,14 +152,16 @@ probes:
       primer_1:
         template: "NNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 20-nt forward PCR primer
         parts: {}
+      # Probe k (probe_index, numbered along the RNA) leaves out readout k % 4,
+      # so the 4 combinations of 3 readouts rotate and each is on 3 of 4 probes.
       readout_1:
-        expr: "rc(encoding[target]['R1'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 1) % 4])"
       binding:
         expr: "rc(target_region)"
       readout_2:
-        expr: "rc(encoding[target]['R2'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 2) % 4])"
       readout_3:
-        expr: "rc(encoding[target]['R3'])"
+        expr: "rc(encoding[target]['readouts'][(probe_index + 3) % 4])"
       primer_2_rc:
         template: "NNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: reverse complement of the 20-nt reverse PCR primer
         parts: {}

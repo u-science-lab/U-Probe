@@ -28,7 +28,7 @@ from types import SimpleNamespace
 
 import yaml
 
-from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
+from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
 from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
@@ -733,18 +733,27 @@ class _Validator:
                     hint = _did_you_mean(barcode, entry, 'barcodes')
                     self.error(('encoding', key), f'target {key!r} has no barcode {barcode!r} (used by {used_by})',
                                (hint + '; or ' if hint else '') + f'add {barcode}: <sequence>')
-                elif not isinstance(entry[barcode], str) or not entry[barcode].strip():
-                    self.error(('encoding', key, barcode), f'barcode {barcode!r} of {key!r} is empty',
-                               f'set {barcode} to a nucleotide sequence')
-                elif set(entry[barcode].upper()) - IUPAC:
-                    self.warning(('encoding', key, barcode),
-                                 f'barcode {barcode!r} of {key!r} is not a nucleotide sequence: {entry[barcode]!r}',
-                                 'use only A, C, G, T/U and IUPAC codes such as N')
+                elif isinstance(entry[barcode], list):
+                    # A list of sequences, indexed by the expression (e.g. with probe_index).
+                    for i, value in enumerate(entry[barcode]):
+                        self._check_barcode_sequence(('encoding', key, barcode, i), f'{barcode}[{i}]', key, value)
+                    if not entry[barcode]:
+                        self.error(('encoding', key, barcode), f'barcode list {barcode!r} of {key!r} is empty',
+                                   f'list the sequences, e.g. {barcode}: [<sequence>, <sequence>]')
+                else:
+                    self._check_barcode_sequence(('encoding', key, barcode), barcode, key, entry[barcode])
         if any(keys is None for _, keys, _ in self.lookups):
             for key in encoding:
                 if key not in self.target_names:
                     self.warning(('encoding', key), f'encoding entry {key!r} is not a target and is never used',
                                  _did_you_mean(key, self.target_names, 'targets'))
+
+    def _check_barcode_sequence(self, path, barcode, key, value):
+        if not isinstance(value, str) or not value.strip():
+            self.error(path, f'barcode {barcode!r} of {key!r} is empty', f'set {barcode} to a nucleotide sequence')
+        elif set(value.upper()) - IUPAC:
+            self.warning(path, f'barcode {barcode!r} of {key!r} is not a nucleotide sequence: {value!r}',
+                         'use only A, C, G, T/U and IUPAC codes such as N')
 
     # -- hybridization conditions ----------------------------------------
     def check_hybridization(self):
@@ -820,6 +829,7 @@ class _Validator:
         if auto or not self.attributes:
             return  # generated attributes are only checked against the genome config
         columns = self.sequence_columns()
+        index_nodes = probe_index_nodes(protocol.get('probes'))
         for name, attr in self.attributes.items():
             path = ('attributes', name)
             if not isinstance(attr, dict):
@@ -857,6 +867,11 @@ class _Validator:
                 self.error(path + ('target',), f'target {target!r} is not target_region, a probe/part or a layout '
                            'part; the attribute would be skipped',
                            _did_you_mean(str(target).replace(':', '.'), columns, 'valid targets'))
+            elif target.replace(':', '.') in index_nodes:
+                self.warning(path + ('target',), f'{target!r} depends on probe_index, which numbers the final '
+                             'probes after post-processing: filters and sorts on this attribute see each candidate '
+                             'numbered in extraction order; the final table recomputes it',
+                             'compute it on the parts that do not read probe_index, or accept the approximation')
             if name in columns or name in TARGET_COLUMNS:
                 self.warning(path, f'attribute name {name!r} overwrites the column of the same name',
                              f'rename it, e.g. {name}_{kind or "value"}')
@@ -1419,6 +1434,8 @@ class _Validator:
         from .gen.probe import DAG
         targets = self.target_names[:DRY_RUN_TARGETS]
         sizes = sorted(set(self.lengths))
+        # Probes that read probe_index are built for several probe numbers.
+        indexes = range(8) if probe_index_nodes(self.protocol['probes']) else (0,)
         failures, empties, odd, lengths = {}, {}, {}, {}
         logger = logging.getLogger('uprobe.core.gen.probe')
         level = logger.level
@@ -1435,9 +1452,9 @@ class _Validator:
                     for name, part_size in zip(self.layout[0], self.layout[1][size][0]):
                         target_parts[name] = region[offset:offset + part_size]
                         offset += part_size
-                for target in targets:
+                for target, probe_index in ((t, i) for t in targets for i in indexes):
                     context = {'target_region': region, 'target': target, 'encoding': self.protocol['encoding'],
-                               'target_parts': target_parts}
+                               'target_parts': target_parts, PROBE_INDEX: probe_index}
                     for node in order:
                         node.done, node.result = False, None
                     for node in order:
@@ -1464,7 +1481,7 @@ class _Validator:
             return
         finally:
             logger.setLevel(level)
-        total = len(targets) * len(sizes)
+        total = len(targets) * len(sizes) * len(indexes)
         for (name, message), cases in failures.items():
             target, size = cases[0]
             self.error(self.nodes[name][0], f'fails when probes are built ({len(cases)}/{total} test cases, e.g. '

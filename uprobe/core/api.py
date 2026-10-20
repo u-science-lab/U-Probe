@@ -3,6 +3,7 @@ import typing as T
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -12,8 +13,10 @@ from .attributes import add_attributes
 from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
 from .gen.fun import TranscriptSelectionError, generate_target_seqs, validate_targets
+from .gen.expression import PROBE_INDEX, probe_index_nodes
 from .gen.probe import construct_probes
 from .process import post_process
+from .process.equal_space import positions_along_target
 from .report import generate_plot_report
 from .report.html import save_html_report
 from .report.formatting import prepare_result_table
@@ -238,19 +241,27 @@ class UProbeAPI:
         log.info(f"Total generated target sequences: {len(df_final)}")
         return df_final
 
-    def construct_probes(self, df_targets: pd.DataFrame) -> pd.DataFrame:
-        log.info("Constructing probes...")
-        contexts = [
+    def _probe_contexts(self, df: pd.DataFrame, probe_index) -> list:
+        """The expression context of each row; ``probe_index`` gives each row's number."""
+        parts = self.protocol.get('extracts', {}).get('target_region', {}).get('layout', {}).get('parts', {})
+        return [
             {
                 "target_region": row['target_region'],
                 "target": row.get('target') or row.get('gene'),
                 "encoding": self.protocol['encoding'],
-                "target_parts": {name: row[f'target_parts.{name}'] for name in
-                                 self.protocol.get('extracts', {}).get('target_region', {}).get('layout', {}).get('parts', {})},
+                "target_parts": {name: row[f'target_parts.{name}'] for name in parts},
+                PROBE_INDEX: int(index),
             }
-            for _, row in df_targets.iterrows()
+            for index, (_, row) in zip(probe_index, df.iterrows())
         ]
-        probe_df = construct_probes(self.protocol, contexts)
+
+    def construct_probes(self, df_targets: pd.DataFrame) -> pd.DataFrame:
+        log.info("Constructing probes...")
+        # Candidates are numbered per target in extraction order; the final
+        # probes are renumbered along the target after post-processing.
+        target = df_targets['target'] if 'target' in df_targets.columns else pd.Series('', index=df_targets.index)
+        candidate_index = target.astype(str).groupby(target.astype(str).to_numpy()).cumcount().to_numpy()
+        probe_df = construct_probes(self.protocol, self._probe_contexts(df_targets, candidate_index))
         if probe_df.empty:
             log.error("No probes were constructed. Check probe construction parameters.")
         else:
@@ -313,6 +324,7 @@ class UProbeAPI:
                 tsv_path.unlink(missing_ok=True)
                 return df_processed
             else:
+                df_processed = self._number_final_probes(df_processed, threads)
                 output_path = self.output_dir / f"{name}_{time_str}.xlsx"
                 log.info(f"Saving {df_processed.shape[0]} processed probes to {output_path}")
                 xlsx, tsv = self._save_table(df_processed, output_path, tsv_path, 'final')
@@ -320,11 +332,46 @@ class UProbeAPI:
                 return df_processed
         else:
             log.info("No post-processing steps configured, using raw data as final result")
+            df_final = self._number_final_probes(df_final, threads)
             output_path = self.output_dir / f"{name}_{time_str}.xlsx"
             log.info(f"Saving {df_final.shape[0]} probes to {output_path}")
             xlsx, tsv = self._save_table(df_final, output_path, tsv_path, 'final')
             self.output_files.update(xlsx=xlsx, tsv=tsv)
             return df_final
+
+    def _number_final_probes(self, df: pd.DataFrame, threads: int = 10) -> pd.DataFrame:
+        """Rebuild the probes that read probe_index with the final probe numbers.
+
+        The final probes of each target are numbered 0, 1, 2, ... along the
+        target (by position, as equal_space orders them), written to the
+        ``probe_index`` column, and every probe or part whose expression
+        depends on it is rebuilt, so e.g. readouts rotated by
+        ``probe_index % 4`` are balanced over the final set. Attributes of
+        those probes and parts are recomputed; filters and sorts saw the
+        candidates' provisional numbers.
+        """
+        nodes = probe_index_nodes(self.protocol.get('probes'))
+        if not nodes or df.empty:
+            return df
+        target = df['target'].astype(str) if 'target' in df.columns else pd.Series('', index=df.index)
+        work = pd.DataFrame({'target': target.to_numpy(), 'position': positions_along_target(df).to_numpy(),
+                             'row': np.arange(len(df))})
+        work = work.sort_values(['target', 'position', 'row'], kind='stable')
+        work['rank'] = work.groupby('target', sort=False).cumcount()
+        ranks = work.sort_values('row')['rank'].to_numpy()
+        probes = construct_probes(self.protocol, self._probe_contexts(df, ranks))
+        df = df.copy()
+        df[PROBE_INDEX] = ranks
+        rebuilt = [name for name in probes.columns if name in nodes]
+        for name in rebuilt:
+            df[name] = probes[name].to_numpy()
+        affected = {name: attr for name, attr in (self.protocol.get('attributes') or {}).items()
+                    if isinstance(attr, dict) and str(attr.get('target', '')).replace(':', '.') in nodes}
+        log.info(f"Numbered the final probes of each target along the target ({PROBE_INDEX} 0, 1, ...) and rebuilt "
+                 f"{', '.join(rebuilt)}" + (f"; recomputed {', '.join(affected)}" if affected else ""))
+        if affected:
+            df = add_attributes(df, {**self.protocol, 'attributes': affected}, self.genome, {}, threads)
+        return df
 
     def _save_table(self, df: pd.DataFrame, xlsx_path: Path, tsv_path: Path, kind: str):
         """Write a result table as .xlsx and, when needed, .tsv; return the names written (or None).

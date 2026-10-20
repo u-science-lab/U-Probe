@@ -121,11 +121,18 @@ probes:
 - Parts are `expr`, or `template` + `parts` (nested). Names must not contain `.` or `:`; a part is
   addressed as `probe.part` (or `probe:part`), nested `probe.part.sub`.
 - Allowed in `expr`: string literals (`"'ACGT'"`, note the inner quotes) and integers; names
-  `target_region`, `target` (the target's name), `encoding`, `target_parts`, and any probe/part name
-  (including dotted, e.g. `circle_probe.part2.barcode2`); indexing and slicing (`target_region[0:20]`,
-  `[-13:]`, `[::-1]`); `+` (concatenate strings or add integers); unary `-` on integers; `rc(x)`
-  (reverse complement, one argument). Nothing else: no other functions, methods, attributes,
+  `target_region`, `target` (the target's name), `encoding`, `target_parts`, `probe_index`, and any
+  probe/part name (including dotted, e.g. `circle_probe.part2.barcode2`); indexing and slicing
+  (`target_region[0:20]`, `[-13:]`, `[::-1]`, a list in `encoding`: `encoding[target]['readouts'][2]`);
+  `+` (concatenate strings or add integers); `%` (remainder of two integers); unary `-` on integers;
+  `rc(x)` (reverse complement, one argument). Nothing else: no other functions, methods, attributes,
   comparisons, conditionals, f-strings or comprehensions. Expressions are parsed, never `eval`ed.
+- `probe_index`: the probe's number within its target, 0, 1, 2, ... along the target, for parts that
+  vary from probe to probe, e.g. readout rotation: `rc(encoding[target]['readouts'][(probe_index + 1) % 4])`
+  with `encoding: {GAPDH: {readouts: [R_a, R_b, R_c, R_d]}}`. The final probes are numbered after
+  `post_process` (column `probe_index`) and the parts that read it are rebuilt, with their attributes;
+  filters and sorts see the candidates numbered in extraction order (`validate` warns about attributes
+  on such parts). The raw table keeps the candidates' numbering.
 - An expression can read other probes/parts (a DAG); cycles are errors.
 - A candidate whose expression fails (e.g. a missing encoding key) gets an empty probe; if all do,
   status `no_probes_constructed`.
