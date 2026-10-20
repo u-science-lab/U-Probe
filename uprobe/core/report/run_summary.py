@@ -177,7 +177,8 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
     error, requested_targets, target_validation ({'valid', 'invalid'}),
     targets (extracted windows), combined (targets + constructed probes),
     raw (after attributes), final (after post-processing), files
-    ({'xlsx', 'raw_xlsx', 'tsv', 'html'}), no_filtered_probes, raw_file,
+    ({'xlsx', 'raw_xlsx', 'tsv', 'raw_tsv', 'html'}), no_filtered_probes, raw_file,
+    excel_limits (result tables that did not fit Excel: written as TSV, or cells cut),
     genome_source (the genome entry's ``source``, as written by ``uprobe genome fetch``),
     off_targets (the off-target statistics add_attributes recorded),
     transcripts (per gene target, the transcripts its windows came from, as
@@ -253,7 +254,7 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         status = "ok"
 
     files = run.get("files") or {}
-    output_files = {key: _relative(files.get(key), output_dir) for key in ("xlsx", "raw_xlsx", "tsv", "html")}
+    output_files = {key: _relative(files.get(key), output_dir) for key in ("xlsx", "raw_xlsx", "tsv", "raw_tsv", "html")}
     output_files["summary"] = SUMMARY_FILENAME
     raw_file = run.get("raw_file")
 
@@ -270,6 +271,12 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
             warnings.append({"code": "no_candidate_windows", "targets": no_windows,
                              "message": f"{len(no_windows)} target(s) yielded no candidate windows "
                                         "(sequence missing or shorter than extracts.target_region.length)."})
+    excel = run.get("excel_limits")
+    if excel:
+        # A table too long for a worksheet is only in its TSV; over-long cells are cut in the .xlsx.
+        warnings.append({"code": "excel_limits", "tables": excel,
+                         "message": "Some result data did not fit Excel (1,048,576 rows, 32,767 characters per "
+                                    "cell); the TSV files listed keep every row and the full values."})
     if built_rows is not None and len(built_rows) < len(run["combined"]):
         failed = len(run["combined"]) - len(built_rows)
         warnings.append({"code": "probe_construction_failed", "count": failed,

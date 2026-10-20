@@ -76,3 +76,62 @@ def test_xlsx_values_styles_and_navigation():
         for cell in cells.values():
             border_id = int(formats[int(cell.attrib["s"])].attrib["borderId"])
             assert all(borders[border_id].find("s:" + edge, ns).attrib.get("style") == "thin" for edge in ("left", "right", "top", "bottom"))
+
+
+# -- Excel limits: never fail the run or lose data -----------------------------------------------
+
+def excel_api(tmp_path, monkeypatch, table, report_name=''):
+    """A UProbeAPI whose attributes step returns ``table``; post-processing keeps every row."""
+    from uprobe.core import api as module
+    api = object.__new__(module.UProbeAPI)
+    api.protocol = {"name": "big", "probes": {}, "post_process": {"sorts": {"is_ascending": ["score"]}},
+                    "summary": {"report_name": report_name}}
+    api.output_dir = tmp_path
+    api.genome = {}
+    api._generate_html, api._include_plots, api._embed_plots = True, False, False
+    monkeypatch.setattr(module, "add_attributes", lambda *args: table.copy())
+    return api
+
+
+def read_cell(path, cell):
+    import openpyxl
+    return openpyxl.load_workbook(path, read_only=True)["Probes"][cell].value
+
+
+def test_long_cells_are_cut_in_xlsx_and_kept_in_tsv(tmp_path, monkeypatch):
+    from uprobe.core.report.excel import EXCEL_MAX_CELL_CHARS
+    from uprobe.core.report.run_summary import build_run_summary
+    hits = ", ".join(f"GENE{i}:2" for i in range(6000))  # a repeat window's off-target list
+    assert len(hits) > EXCEL_MAX_CELL_CHARS
+    table = pd.DataFrame({"probe_id": ["p1", "p2"], "target": ["G", "G"], "score": [1, 2],
+                          "hits_off_targets": [hits, "ACTG1:0"]})
+    api = excel_api(tmp_path, monkeypatch, table, report_name="rna_report")
+    result = api.post_process_probes(table, raw_csv=True)
+    files = api.output_files
+    assert len(result) == 2 and files["raw_xlsx"] and files["xlsx"] and files["tsv"] and files["raw_tsv"]
+    for xlsx, tsv in ((files["raw_xlsx"], files["raw_tsv"]), (files["xlsx"], files["tsv"])):
+        value = read_cell(tmp_path / xlsx, "D2")
+        assert len(value) == EXCEL_MAX_CELL_CHARS and value.startswith(hits[:1000])
+        assert value.endswith(f"...[truncated: {len(hits):,} characters; full value in {tsv}]")
+        full = pd.read_csv(tmp_path / tsv, sep="\t")
+        assert full.loc[full.probe_id == "p1", "hits_off_targets"].item() == hits
+    assert [entry["truncated_cells"] for entry in api.excel_limits] == [{"hits_off_targets": 1}] * 2
+    # The HTML report embeds the tables as workbooks too.
+    assert api.generate_report(result)["html_reports"]
+    summary = build_run_summary({}, {"final": result, "files": files, "excel_limits": api.excel_limits}, tmp_path)
+    warning = next(w for w in summary["warnings"] if w["code"] == "excel_limits")
+    assert warning["tables"][0]["tsv"] == files["raw_tsv"] and summary["output_files"]["raw_tsv"] == files["raw_tsv"]
+
+
+def test_tables_longer_than_a_worksheet_fall_back_to_tsv(tmp_path, monkeypatch):
+    from uprobe.core.report import excel
+    monkeypatch.setattr(excel, "EXCEL_MAX_ROWS", 4)  # a header and 3 data rows
+    table = pd.DataFrame({"probe_id": [f"p{i}" for i in range(5)], "target": ["G"] * 5, "score": range(5)})
+    api = excel_api(tmp_path, monkeypatch, table, report_name="rna_report")
+    result = api.post_process_probes(table, raw_csv=True)
+    files = api.output_files
+    assert files["raw_xlsx"] is None and files["xlsx"] is None and not list(tmp_path.glob("*.xlsx"))
+    for name in (files["raw_tsv"], files["tsv"]):
+        assert pd.read_csv(tmp_path / name, sep="\t")["probe_id"].tolist() == [f"p{i}" for i in range(5)]
+    assert [(e["table"], e["rows"], e["xlsx"]) for e in api.excel_limits] == [("raw", 5, None), ("final", 5, None)]
+    assert len(result) == 5 and api.generate_report(result)["html_reports"]

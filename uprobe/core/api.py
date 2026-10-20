@@ -17,7 +17,7 @@ from .process import post_process
 from .report import generate_plot_report
 from .report.html import save_html_report
 from .report.formatting import prepare_result_table
-from .report.excel import save_xlsx
+from .report.excel import EXCEL_MAX_CELL_CHARS, EXCEL_MAX_ROWS, exceeds_excel_rows, save_xlsx
 from .report.run_summary import SUMMARY_FILENAME, build_run_summary, save_tsv, write_run_summary
 
 from .tools import build_genome
@@ -266,7 +266,9 @@ class UProbeAPI:
         """
         self.no_filtered_probes = False
         self.raw_file = None
-        self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None}
+        self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None, 'raw_tsv': None}
+        # Tables that did not fit Excel (see _save_table), for summary.json.
+        self.excel_limits = []
         log.info("Adding attributes to probes...")
         for line in describe_conditions(self.protocol):
             log.info(f"Hybridization conditions: {line}")
@@ -279,11 +281,12 @@ class UProbeAPI:
         self._csv_filename = f"{name}_{time_str}.xlsx"
         # Plain-text copy of the final table for scripts and agents.
         tsv_path = self.output_dir / f"{name}_{time_str}_probes.tsv"
+        raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
+        raw_tsv_path = self.output_dir / f"{name}_{time_str}_raw.tsv"
         if raw_csv:
-            raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
             log.info(f"Saving raw results to {raw_path}")
-            save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
-            self.output_files['raw_xlsx'] = raw_path.name
+            raw_xlsx, raw_tsv = self._save_table(df_final, raw_path, raw_tsv_path, 'raw')
+            self.output_files.update(raw_xlsx=raw_xlsx, raw_tsv=raw_tsv)
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
@@ -295,11 +298,11 @@ class UProbeAPI:
             
             if df_processed.empty:
                 log.warning("No probes passed post-processing. Raw candidates are available for inspection only.")
-                raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
-                save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
+                if self.output_files['raw_xlsx'] is None and self.output_files['raw_tsv'] is None:
+                    raw_xlsx, raw_tsv = self._save_table(df_final, raw_path, raw_tsv_path, 'raw')
+                    self.output_files.update(raw_xlsx=raw_xlsx, raw_tsv=raw_tsv)
                 self.no_filtered_probes = True
-                self.raw_file = raw_path.name
-                self.output_files['raw_xlsx'] = raw_path.name
+                self.raw_file = self.output_files['raw_xlsx'] or self.output_files['raw_tsv']
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
                 attrs = dict(df_processed.attrs)  # stages and off-target pool report
@@ -312,18 +315,45 @@ class UProbeAPI:
             else:
                 output_path = self.output_dir / f"{name}_{time_str}.xlsx"
                 log.info(f"Saving {df_processed.shape[0]} processed probes to {output_path}")
-                save_xlsx(df_processed, self.protocol, (output_path).with_suffix(".xlsx"))
-                save_tsv(df_processed, tsv_path)
-                self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
+                xlsx, tsv = self._save_table(df_processed, output_path, tsv_path, 'final')
+                self.output_files.update(xlsx=xlsx, tsv=tsv)
                 return df_processed
         else:
             log.info("No post-processing steps configured, using raw data as final result")
             output_path = self.output_dir / f"{name}_{time_str}.xlsx"
             log.info(f"Saving {df_final.shape[0]} probes to {output_path}")
-            save_xlsx(df_final, self.protocol, (output_path).with_suffix(".xlsx"))
-            save_tsv(df_final, tsv_path)
-            self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
+            xlsx, tsv = self._save_table(df_final, output_path, tsv_path, 'final')
+            self.output_files.update(xlsx=xlsx, tsv=tsv)
             return df_final
+
+    def _save_table(self, df: pd.DataFrame, xlsx_path: Path, tsv_path: Path, kind: str):
+        """Write a result table as .xlsx and, when needed, .tsv; return the names written (or None).
+
+        ``kind`` is 'final' (its TSV is always written) or 'raw'. Excel never
+        fails the run or loses data: a table longer than a worksheet is written
+        as TSV only, and a cell longer than Excel allows is cut in the .xlsx with
+        a marker naming the TSV, which keeps the full value.
+        """
+        with_tsv = kind == 'final'
+        xlsx_name = None
+        if exceeds_excel_rows(df):
+            log.warning(f"The {kind} table has {len(df):,} rows, more than an Excel worksheet holds "
+                        f"({EXCEL_MAX_ROWS - 1:,}); writing {tsv_path.name} instead of {xlsx_path.name}.")
+            self.excel_limits.append({'table': kind, 'rows': len(df), 'xlsx': None, 'tsv': tsv_path.name})
+            with_tsv = True
+        else:
+            truncated = save_xlsx(df, self.protocol, xlsx_path, full_table=tsv_path.name)
+            xlsx_name = xlsx_path.name
+            if truncated:
+                log.warning(f"{sum(truncated.values())} cell(s) of {xlsx_name} hold more than Excel's "
+                            f"{EXCEL_MAX_CELL_CHARS:,} characters ({', '.join(truncated)}); they are cut there and "
+                            f"marked, and {tsv_path.name} keeps the full values.")
+                self.excel_limits.append({'table': kind, 'rows': len(df), 'xlsx': xlsx_name, 'tsv': tsv_path.name,
+                                          'truncated_cells': truncated})
+                with_tsv = True
+        if with_tsv:
+            save_tsv(df, tsv_path)
+        return xlsx_name, tsv_path.name if with_tsv else None
 
     def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False,
                      threads: int = 10) -> pd.DataFrame:
@@ -394,7 +424,7 @@ class UProbeAPI:
         df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv, threads=threads)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
                    no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file,
-                   off_targets=self.off_target_report)
+                   off_targets=self.off_target_report, excel_limits=self.excel_limits)
         # 6. Generate Report (if configured)
         run['step'] = 'report'
         summary_config = self.protocol.get('summary', {})

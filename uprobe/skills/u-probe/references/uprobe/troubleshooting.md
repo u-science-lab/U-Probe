@@ -13,7 +13,7 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 | 1 `error`, `stopped_at: load_inputs` or `normalize_protocol` | `error` | protocol rejected (run `uprobe validate`), genome name not in `genomes.yaml`, FASTA/GTF path missing |
 | 1 `error`, `stopped_at: validate_targets` | `error`, `inputs.invalid_targets` | a target is not a GTF `gene_name` and `--continue-invalid` was not given |
 | 1 `error`, `stopped_at: build_index` | stderr log | aligner not installed, unreadable FASTA, disk space |
-| 1 `error`, later steps | `error` | aligner missing at alignment time, transcript selection, expression table, Excel limit |
+| 1 `error`, later steps | `error` | aligner missing at alignment time, transcript selection, expression table |
 | 3 `no_valid_targets` | `inputs.invalid_targets` | no target name is a GTF `gene_name` (with `--continue-invalid`) |
 | 3 `no_target_sequences` | `warnings: no_candidate_windows`, log | no window fits any target's segments (below) |
 | 3 `no_probes_constructed` | `warnings: probe_construction_failed` | an expression fails for every candidate |
@@ -156,11 +156,13 @@ condition separately per target.
 
 ## Output files
 
-- **Symptom:** run fails with `Excel cell exceeds 32767 characters: <column>`. **Cause:** an Excel cell
-  holds at most 32,767 characters; with `--raw` (or when no probe passes, which also writes the raw
-  table) repeat windows can carry off-target lists or site lists longer than that. **Fix:** drop
-  `--raw`; add a `sequence_pattern` or off-target filter so such windows never reach the final table.
-- **Symptom:** raw `.xlsx` has fewer rows than `candidate_windows`. **Cause:** Excel's 1,048,576-row
-  limit; extra rows are silently not written. **Fix:** fewer targets per run, larger `step`, or read
-  the candidates through the Python API (`UProbeAPI` step methods return DataFrames).
+- **Symptom:** warning `excel_limits` in `summary.json`; an `.xlsx` cell ends with
+  `...[truncated: N characters; full value in <name>.tsv]`. **Cause:** an Excel cell holds at most
+  32,767 characters; repeat windows can carry longer off-target or site lists (mostly in the raw table
+  of `--raw`, or of a run where no probe passes). **Fix:** none needed: read the full value from the
+  TSV named in the cell (`_probes.tsv` for the final table, `_raw.tsv` for the raw one; also in
+  `output_files`). A `sequence_pattern` or off-target filter keeps such windows out of the final table.
+- **Symptom:** no `.xlsx` for a table, warning `excel_limits` with `xlsx: null`. **Cause:** the table
+  has more rows than an Excel worksheet holds (1,048,576 with the header). **Fix:** read the TSV
+  (`output_files.raw_tsv` / `tsv`), which has every row; or use fewer targets per run or a larger `step`.
 - Several result tables in one directory: tables are timestamped; trust `summary.json -> output_files`.

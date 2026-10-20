@@ -9,7 +9,7 @@ import pandas as pd
 from uprobe.core.process import filter_table
 from uprobe.core.process.sequence_filter import sequence_filter_description
 from .formatting import prepare_result_table
-from .excel import column_styles, workbook_bytes
+from .excel import column_styles, exceeds_excel_rows, workbook_bytes
 from ..hybridization import declares_hybridization, describe_conditions
 
 
@@ -83,8 +83,11 @@ def build_report_data(df, protocol, raw_df=None, csv_filename=None):
 def save_compact_report(df, protocol, output_path, raw_df=None, csv_filename=None):
     data = build_report_data(df, protocol, raw_df, csv_filename)
     data["xlsxFilename"] = Path(data["csvFilename"]).with_suffix(".xlsx").name
-    data["xlsxData"] = base64.b64encode(workbook_bytes(df, protocol)).decode("ascii")
-    data["rawXlsxData"] = base64.b64encode(workbook_bytes(raw_df, protocol)).decode("ascii") if raw_df is not None else None
+    # A table longer than an Excel worksheet is not embedded (its TSV is next to the report).
+    embed = lambda table: (base64.b64encode(workbook_bytes(table, protocol)).decode("ascii")
+                           if table is not None and not exceeds_excel_rows(table) else None)
+    data["xlsxData"] = embed(df)
+    data["rawXlsxData"] = embed(raw_df)
     # Escape HTML-sensitive characters even inside the non-executable JSON block.
     payload = json.dumps(data, ensure_ascii=True, default=str, allow_nan=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     path = Path(output_path)
@@ -128,8 +131,8 @@ el('quality').innerHTML=data.metrics.map(m=>data.statistics.find(s=>s.name===m))
 el('targets').innerHTML=data.targets.length?table(['target','raw_candidates','final_probes','status'],data.targets.map(t=>({target:t.target,raw_candidates:t.raw,final_probes:t.final,status:t.final===null?'Unavailable':t.final>0?'Covered':'No result'}))):'<p class="muted">Target information unavailable.</p>';
 if(data.state!=='complete'){el('notice').classList.remove('hidden');text('noticeTitle',data.state==='empty'?'No final probes':'Some targets have no final probes');text('noticeText',data.state==='empty'?'No candidates remain after selection. Review filter diagnostics and raw candidates.':'Review targets with no result before using this design.');el('diagnostics').open=data.state==='empty'}
 if(data.rawRows.length)el('viewRaw').classList.remove('hidden');
-el('viewRaw').onclick=()=>{el('rawTable').innerHTML=table(data.rawColumns,data.rawRows.slice(0,100));el('rawDialog').showModal()};el('closeRaw').onclick=()=>el('rawDialog').close();el('downloadRaw').onclick=()=>downloadWorkbook(data.rawXlsxData,data.xlsxFilename.replace(/\.xlsx$/,'_raw.xlsx'));
-el('download').disabled=!data.rows.length;el('download').onclick=()=>downloadWorkbook(data.xlsxData,data.xlsxFilename);el('print').onclick=()=>window.print();
+el('viewRaw').onclick=()=>{el('rawTable').innerHTML=table(data.rawColumns,data.rawRows.slice(0,100));el('rawDialog').showModal()};el('closeRaw').onclick=()=>el('rawDialog').close();el('downloadRaw').onclick=()=>downloadWorkbook(data.rawXlsxData,data.xlsxFilename.replace(/\.xlsx$/,'_raw.xlsx'));el('downloadRaw').disabled=!data.rawXlsxData;
+el('download').disabled=!data.rows.length||!data.xlsxData;el('download').onclick=()=>downloadWorkbook(data.xlsxData,data.xlsxFilename);el('print').onclick=()=>window.print();
 el('filterTable').innerHTML=(data.diagnostics.length?table(['metric','condition','passed','rejected'],data.diagnostics):'<p class="muted">No filter conditions configured.</p>')+(data.postProcessStages?.length?'<h3>Post-processing steps</h3><p class="muted">Sequential counts from raw candidates to final probes.</p>'+table(['stage','before','after','removed'],data.postProcessStages):'');
 let page=0,sortColumn=null,ascending=true;function renderRows(){const query=el('search').value.toLowerCase();let rows=data.rows.filter(r=>data.columns.some(c=>String(r[c]??'').toLowerCase().includes(query)));if(sortColumn)rows.sort((a,b)=>{const av=a[sortColumn],bv=b[sortColumn];return (typeof av==='number'&&typeof bv==='number'?av-bv:String(av??'').localeCompare(String(bv??'')))*(ascending?1:-1)});const pages=Math.max(1,Math.ceil(rows.length/20));page=Math.min(page,pages-1);const visible=rows.slice(page*20,page*20+20);el('results').innerHTML='<table><thead><tr>'+data.tableColumns.map(c=>'<th data-column="'+esc(c)+'">'+esc(label(c))+'</th>').join('')+'</tr></thead><tbody>'+visible.map(r=>'<tr>'+data.tableColumns.map(c=>'<td'+cellClass(c)+'>'+esc(typeof r[c]==='object'&&r[c]!==null?JSON.stringify(r[c]):r[c]??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(rows.length?'':'<p class="muted">No probes to display.</p>');text('pageInfo',num(rows.length)+' probes · Page '+(page+1)+' / '+pages);el('prev').disabled=page===0;el('next').disabled=page>=pages-1;el('results').querySelectorAll('[data-column]').forEach(th=>th.onclick=()=>{const c=th.dataset.column;ascending=sortColumn===c?!ascending:true;sortColumn=c;page=0;renderRows()})}
 el('search').oninput=()=>{page=0;renderRows()};el('prev').onclick=()=>{page--;renderRows()};el('next').onclick=()=>{page++;renderRows()};renderRows();

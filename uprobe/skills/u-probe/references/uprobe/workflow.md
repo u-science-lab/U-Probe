@@ -118,7 +118,9 @@ echo $?
   exit 3 when no target is left). Run `validate --check-targets` first to catch them.
 - `--json` prints `summary.json` on stdout; logs and tool output go to stderr.
 - `--raw` also writes all candidates with their attributes before filtering (`*_raw.xlsx`); a run that
-  ends with no probes writes it anyway. Large raw tables can fail (see `references/uprobe/troubleshooting.md`).
+  ends with no probes writes it anyway. Excel limits never fail a run: a table longer than a worksheet
+  is written as `*_raw.tsv` / `*_probes.tsv` only, and cells over 32,767 characters are cut in the
+  `.xlsx` with a marker naming the TSV that keeps them (warning `excel_limits`).
 - Use a fresh `-o` directory per run: tables are timestamped and accumulate, `summary.json` is overwritten.
 
 ## 6. Read the outputs

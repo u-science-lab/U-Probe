@@ -602,7 +602,7 @@ async def list_task_files(
     
     files = []
     for file_path in task_results_dir.iterdir():
-        if file_path.is_file() and file_path.suffix in {'.xlsx', '.html'}:
+        if file_path.is_file() and file_path.suffix in {'.xlsx', '.tsv', '.html'}:
             file_info = {
                 "name": file_path.name,
                 "size": file_path.stat().st_size,
@@ -640,7 +640,7 @@ async def download_single_file(
     if not str(file_path.resolve()).startswith(str(task_results_dir.resolve())):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/tab-separated-values" if filename.endswith('.tsv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
     
     return FileResponse(
         path=str(file_path),

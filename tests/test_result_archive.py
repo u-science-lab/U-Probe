@@ -59,6 +59,18 @@ class ResultArchiveTests(unittest.TestCase):
             self.assertEqual(archive.read_bytes(), original)
             self.assertEqual(list(Path(directory).iterdir()), [archive])
 
+    def test_tsv_tables_are_kept(self):
+        # A table too long for Excel, or with cells cut in the .xlsx, is complete only in its TSV.
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "results.zip"
+            with zipfile.ZipFile(archive, "w") as output:
+                output.writestr("probes_raw.tsv", "probe_id\np1\n")
+                output.writestr("probes_probes.tsv", "probe_id\np1\n")
+                output.writestr("run.log", "excluded")
+            module.restrict_result_archive(archive)
+            with zipfile.ZipFile(archive) as output:
+                self.assertEqual(set(output.namelist()), {"probes_raw.tsv", "probes_probes.tsv"})
+
     def test_invalid_archive_is_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "results.zip"

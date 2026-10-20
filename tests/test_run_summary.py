@@ -133,7 +133,7 @@ def test_summary_when_nothing_passes_post_processing(tmp_path):
     assert summary['status'] == 'no_probes'
     assert summary['flags'] == {'no_filtered_probes': True, 'raw_file': api.raw_file}
     assert (tmp_path / api.raw_file).is_file()
-    assert summary['output_files'] == {'xlsx': None, 'raw_xlsx': api.raw_file, 'tsv': None,
+    assert summary['output_files'] == {'xlsx': None, 'raw_xlsx': api.raw_file, 'tsv': None, 'raw_tsv': None,
                                        'html': None, 'summary': 'summary.json'}
     assert not list(tmp_path.glob('*.tsv'))
     assert summary['counts']['final_probes'] == 0 and summary['counts']['candidate_windows'] > 0
