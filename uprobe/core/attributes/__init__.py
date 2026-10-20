@@ -86,14 +86,10 @@ def _add_attributes(
         elif attr_type == "kmer_count":
             if attr.get('aligner') == "jellyfish":
                 assert genome.get('jellyfish', False) is True, "Jellyfish must be enabled in genome configuration" 
-                fasta_path = Path(genome['fasta'])
-                index_prefix = fasta_path.parent / 'jf_genome' / fasta_path.stem
                 kmer_len = attr.get("kmer_len", 35)
-                if_path = str(index_prefix) + '.jf'
-                if not os.path.exists(if_path):
-                    os.makedirs(str(index_prefix.parent), exist_ok=True)
-                    from uprobe.core.tools.aligner import build_jf_index
-                    build_jf_index(str(fasta_path), kmer_len, str(if_path), attr_threads, attr.get("size", "1G"))
+                # One index per k-mer length, built when first needed.
+                from uprobe.core.tools import jellyfish_index
+                if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"))
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}

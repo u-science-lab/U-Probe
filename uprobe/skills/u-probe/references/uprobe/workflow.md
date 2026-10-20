@@ -42,7 +42,7 @@ ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` or `genom
 | `bowtie` | `bowtie_transcript/` (transcriptome only) | `mapped_genes` with `aligner: bowtie` |
 | `bowtie2` | `bowtie2_genome/` and `bowtie2_transcript/` | `mapped_sites`; `mapped_genes` with `aligner: bowtie2` |
 | `blast`, `mmseqs` | genome (and BLAST transcript) databases | nothing in the current attributes |
-| `jellyfish: true` | `jf_genome/<stem>.jf`, at the first `kmer_count` | `kmer_count` |
+| `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length, at the first `kmer_count` with it | `kmer_count` |
 
 - The transcriptome is `transcript.fa` (every GTF transcript, spliced, records `<gene_id>_<transcript_id>`),
   extracted next to the FASTA once.

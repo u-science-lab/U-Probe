@@ -1,6 +1,8 @@
+import json
+import os
 from pathlib import Path
 from .aligner import (
-    build_bowtie2_index, build_bowtie_index, build_blast_db, build_mmseqs_index
+    build_bowtie2_index, build_bowtie_index, build_blast_db, build_jf_index, build_mmseqs_index
 )
 from uprobe.core.gen.fun import extract_trans_seqs
 from uprobe.core.utils import get_logger
@@ -66,6 +68,45 @@ _TRANSCRIPT_INDEX_EXISTS = {
 # Bowtie 1 only serves mapped_genes (aligner: bowtie), which searches the
 # transcriptome, so it gets no genome index.
 _TRANSCRIPT_ONLY = ("bowtie",)
+
+
+def jellyfish_index(fasta: Path, kmer_len: int, threads: int = 10, size: str = '1G') -> Path:
+    """The Jellyfish index of the genome's k-mers of length ``kmer_len``, built if missing.
+
+    One index per k, jf_genome/<stem>.k<kmer_len>.jf next to the FASTA, so a
+    kmer_count attribute with another kmer_len builds (or reuses) the index of
+    its own k. The jf_genome/<stem>.jf of older versions, which was used for
+    every k, is reused only when its header records the same k.
+    """
+    directory = fasta.parent / 'jf_genome'
+    path = directory / f'{fasta.stem}.k{kmer_len}.jf'
+    if path.is_file() and path.stat().st_size > 0:
+        return path
+    legacy = directory / f'{fasta.stem}.jf'
+    if legacy.is_file() and jellyfish_kmer_len(legacy) == kmer_len:
+        log.info(f"Using the Jellyfish index {legacy} ({kmer_len}-mers)")
+        return legacy
+    directory.mkdir(parents=True, exist_ok=True)
+    log.info(f"Building the Jellyfish index of {kmer_len}-mers: {path}")
+    # Build under a temporary name: an interrupted build must not leave an index to reuse.
+    temporary = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
+    try:
+        build_jf_index(str(fasta), kmer_len, str(temporary), threads, size)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
+
+
+def jellyfish_kmer_len(path: Path):
+    """The k of a Jellyfish file, from the JSON header it starts with (key_len = 2k bits); None if unknown."""
+    try:
+        with open(path, 'rb') as handle:
+            head = handle.read(1 << 20).decode('latin-1')
+        header, _ = json.JSONDecoder().raw_decode(head[head.index('{'):])
+        return int(header['key_len']) // 2
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def transcript_fasta(fasta: Path, outdir: Path) -> Path:

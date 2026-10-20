@@ -145,7 +145,7 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` | `aligner: bowtie2` (required), `threads` |
-| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
 | `blocks` | legacy; do not use | - |
 
 `threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute

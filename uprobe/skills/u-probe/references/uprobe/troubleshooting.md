@@ -57,8 +57,10 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 - **Symptom:** index build fails immediately / "does not contain a valid sequence". **Cause:**
   gzipped or truncated FASTA, a Git LFS pointer file, or a broken aligner binary. **Fix:** `head` the
   FASTA (must start with `>`); run `bowtie-build`/`bowtie2-build` by hand on a small FASTA.
-- **Symptom:** `kmer_count` values look wrong after changing `kmer_len`. **Cause:** the Jellyfish index
-  `jf_genome/<stem>.jf` is built once and not rebuilt for a new k. **Fix:** delete `jf_genome/` and rerun.
+- **Symptom:** a run spends long at the first `kmer_count` after a new `kmer_len`. **Cause:** each k-mer
+  length has its own Jellyfish index, `jf_genome/<stem>.k<kmer_len>.jf`, built when first needed (an
+  index left by older versions, `jf_genome/<stem>.jf`, is reused only if its header has the same k).
+  **Fix:** expected; keep one `kmer_len` per genome to build once, and delete indexes you no longer use.
 
 ## Targets and transcripts
 

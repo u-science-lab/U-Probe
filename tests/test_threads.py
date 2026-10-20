@@ -34,12 +34,12 @@ def test_attributes_use_the_run_threads_unless_they_set_their_own(monkeypatch, t
 
 def test_jellyfish_index_is_built_with_the_run_threads(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    from uprobe.core.tools import aligner
+    from uprobe.core import tools
     built = []
     def build(fasta, k, out, threads, size):
         built.append(threads)
-        open(out, 'w').close()
-    monkeypatch.setattr(aligner, 'build_jf_index', build)
+        open(out, 'w').write('index')
+    monkeypatch.setattr(tools, 'build_jf_index', build)
     monkeypatch.setattr(attributes, 'cal_kmer_count', lambda outdir, name, records, index, k, threads: {
         key: 0 for key in records})
     protocol = {'attributes': {'kmers': {'target': 's', 'type': 'kmer_count', 'aligner': 'jellyfish'}}}
