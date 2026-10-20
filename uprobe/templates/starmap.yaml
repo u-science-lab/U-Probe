@@ -7,7 +7,8 @@ meta:
   description: >-
     SNAIL (specific amplification of nucleic acids via intramolecular
     ligation) uses two oligos on a 40-46-nt RNA region split into two 19-25-nt
-    sites with a 0-2-nt gap. Reading the RNA 5'->3', the padlock binds the
+    sites with a gap of 1-2 nt (the paper allows 0, no published pair uses
+    it). Reading the RNA 5'->3', the padlock binds the
     upstream site and the primer the downstream site. The primer's 12-nt tail
     pairs 6 nt with each end of the padlock, so the padlock can be circularized
     by ligation and rolling-circle-amplified only when both oligos hybridize to
@@ -30,8 +31,16 @@ meta:
       url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11332722/
   parameter_sources:
     - parameter: extracts.target_region.length and layout
-      value: "40-46 nt = padlock site 19-25 + gap 0-2 + primer site 19-25"
-      source: Wang 2018, Supplementary Materials (probe design) and Fig. S1A legend
+      value: "40-46 nt = padlock site 19-25 + gap 1-2 + primer site 19-25"
+      source: >-
+        Wang 2018, Supplementary Materials (probe design) and Fig. S1A legend.
+        The gap excludes 0, which the text allows but no published pair uses:
+        of the 4,222 pairs of the 2018 (36 sampled), 64-gene, 2,766-gene
+        (36 sampled) and Shi 2023 1,022-gene sets, the 4,178 whose two sites
+        were located on a mouse Ensembl 113 transcript are 1 nt apart (1,286)
+        or 2 nt apart (2,892). Abutting sites would also leave the ligated
+        ends of the padlock and the primer's 3' end with no room between the
+        two duplexes.
       quote: >-
         with length restriction of 40-46 nucleotide ... split into halves of
         20-25 nt, with an 0-2 nt gap in between ... each primer or padlock probe
@@ -66,7 +75,13 @@ meta:
       overnight); STARmap PLUS used 1 nM per oligo for 36 h
     notes: >-
       [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate).
-      Ligation: T4 DNA ligase at room temperature for 2 h.
+      Ligation: T4 DNA ligase at room temperature for 2 h. probe_nM is the
+      100 nM of Wang 2018, although the backbone is the PLUS 64-gene one:
+      the protocols disagree (100 nM overnight in Wang 2018, 1 nM for 36 h in
+      STARmap PLUS, 5 nM for 24-36 h in Shi 2023), and only Tm is affected.
+      On the 8,444 published halves U-Probe's Tm is 6.4 C lower at 1 nM and
+      4.2 C lower at 5 nM than at 100 nM (medians 51.6, 53.8 and 58.0 C);
+      set probe_nM to the concentration you will hybridize at.
   tm_window:
     applied: false
     value: 60
@@ -76,10 +91,18 @@ meta:
     note: >-
       The design conditions are not stated, so the Tm target is recorded and
       not used as a filter. Both half Tms are reported under the
-      hybridization block's conditions.
+      hybridization block's conditions. Under them (2x SSC, 10% formamide,
+      100 nM) the 8,444 halves of the published 2018, 64-gene, 2,766-gene and
+      Shi 2023 sets have a median Tm of 58.0 C (5th-95th percentile 53.4-63.9,
+      min 45.2, max 71.9), close to the designed 60 C; 96% lie within
+      50-65 C, the commented-out filters in post_process. Their two halves
+      differ by a median of 1.0 C (90th percentile 3.1), the Tm matching
+      Picky did and U-Probe cannot filter on.
   limitations:
     - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); equal_space keeps 4 pairs, spread evenly along the RNA.
-    - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference.
+    - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference (filters compare one attribute with a number). Windows on padlock_tm and primer_tm are the closest approximation; see meta.tm_window for the published distribution.
+    - The 3-nt code of this backbone is read in 4 SEDAL rounds and caps the panel at 64 genes (4^3; the published 64-gene set uses every code, AAA included). Larger panels need another backbone: the 1,022-gene one (5-nt code read in 6 rounds plus a separate 3-nt splint code) or the 2,766-gene one (two 3-nt blocks, 8 + 6 splint, 8 rounds).
+    - The same 3-nt code is the splint here, as in the 1,022- and 2,766-gene sets, so each gene's primer circularizes only its own padlock. Wang 2018 used one splint for every gene (padlock 5' ACATTA, primer tail TAATGT TATCTT), where the primer of one gene can circularize the padlock of another on a neighbouring molecule and give a wrong code.
     - "TODO: verify the minimum spacing between probe pairs; regions are only required not to overlap here."
     - "TODO: verify the 2018 backbone (Table S1 was not accessible); Wang 2018 used a 5-nt barcode within a 35-nt coding space, whereas the 64-gene STARmap PLUS set used here repeats a 3-nt code. The 2,766-gene STARmap PLUS set uses a different backbone with an 8 + 6 split."
   replace:
@@ -111,7 +134,7 @@ extracts:
         padlock_site:
           length: [19, 25]
         gap:
-          length: [0, 2]
+          length: [1, 2]   # the paper allows 0; no published pair uses it (meta)
         primer_site:
           length: [19, 25]
 
@@ -172,6 +195,14 @@ post_process:
   filters:
     target_mapped_genes:
       condition: target_mapped_genes <= 1
+    # Wang 2018 designed the halves for a Tm of 60 C under conditions it does
+    # not state, so no window is applied. Under the conditions above the
+    # published halves are 53.4-63.9 C (5th-95th percentile); 50-65 C keeps
+    # 96% of them. Adjust them with probe_nM if you hybridize at 1 or 5 nM.
+    # padlock_tm:
+    #   condition: padlock_tm >= 50 & padlock_tm <= 65
+    # primer_tm:
+    #   condition: primer_tm >= 50 & primer_tm <= 65
   sorts:
     is_ascending:
       - target_mapped_genes

@@ -11,11 +11,13 @@ meta:
     5'-[rc of 5' arm site][CC][B1, 3 nt][TGCGTCTATTT][GT][B2, 3 nt]
     [TAGTGGAGCCT][rc of 3' arm site]-3'; SplintR ligase joins its ends on the
     RNA. The RCA initiator primer is 5'-[rc of primer site][spacer]
-    [AGGCTCCACTA]-3': its 5' part binds the RNA next to the padlock and its 3'
-    end binds the padlock's TAGTGGAGCCT, so Phi29 amplifies only circles that
-    sit on the target together with the primer. The two barcodes B1 and B2 are
-    read pairwise by sequencing by ligation from the TGCGTCTATTT and
-    TAGTGGAGCCT anchor sites. Backbones are the published 217-gene probe set.
+    [AGGCTCCACTA]-3' (25 nt): its 5' part binds the RNA next to the padlock
+    and its 3' end binds the padlock's TAGTGGAGCCT, so Phi29 amplifies only
+    circles that sit on the target together with the primer. The two barcodes
+    B1 and B2 are read pairwise by sequencing by ligation from the
+    TGCGTCTATTT and TAGTGGAGCCT anchor sites. Backbones are the published
+    217-gene probe set, which has 2 sites per gene in an exon near the 5' end;
+    the template keeps 2 sites within the first 1,000 nt of the RNA.
   citations:
     - short: Wu et al. 2024, Nature Biomedical Engineering
       title: Spatial multi-omics at subcellular resolution via high-throughput in situ pairwise sequencing
@@ -49,14 +51,36 @@ meta:
       value: "5' rc(primer site, 13 nt) ... AGGCTCCACTA 3' (rc of the padlock's TAGTGGAGCCT)"
       source: Preprint Methods; 217-gene set, e.g. Th-1-RCA-2 GCCTCTGGGCAGG C AGGCTCCACTA
       quote: The 5' end of the RCA initiator primer is complementary to the 3' end of the targeting sequence (12-16 bp), and the 3' end is complementary to the padlock probe
-    - parameter: layout gap (1 nt) and primer spacer (sense gap base + C)
-      value: "primer = rc(primer_site) + gap base + C + AGGCTCCACTA"
+    - parameter: layout gap (1 nt), primer spacer (sense gap base) and primer length
+      value: "primer = rc(primer_site) + gap base + AGGCTCCACTA = 25 nt"
       source: >-
-        Derived from the published 217-gene sequences mapped to mouse RefSeq
-        mRNAs (116 pairs from 60 genes): the primer site starts 1 nt after the
-        3' arm site, and the spacer is the (sense) skipped base followed by C
-        in 91 pairs, a single C in 14 and another 2-nt spacer in 11. TODO:
-        verify the spacer rule with the authors.
+        Derived from the published 217-gene sequences mapped to the mouse
+        Ensembl 113 transcriptome (430 of 432 units; 367 on the canonical
+        transcript): the primer site starts 1 nt after the 3' arm site in 417
+        units, and the 25-nt primers (247 of 432, the majority) end the RNA
+        part with the skipped (sense) base and then the tail, 234 of them
+        exactly as written here. The 185 26-nt primers insert a C after that
+        base (163) or use another 2-nt spacer; to build them instead, write
+        the template as "{binding}{gap_base}CAGGCTCCACTA". The paper states
+        12-16 nt for the RNA part and no spacer rule.
+      quote: >-
+        The 5' end of the RCA initiator primer is complementary to the 3' end
+        of the targeting sequence (12-16 bp), and the 3' end is complementary
+        to the padlock probe (Wu 2023 Methods)
+    - parameter: post_process.filters.near_5p (target_start) and post_process.equal_space
+      value: "2 sites per gene, starting within the first 1,000 nt of the RNA"
+      source: >-
+        Preprint Methods (2 sites per gene, in an exon close to the 5' end;
+        the paper gives no distance). The 1,000-nt cap is U-Probe's reading of
+        "close to the 5' end": of the 367 published sites that map to the
+        mouse canonical transcript, the median starts at nt 885 (quartiles
+        455 and 1,650) and 54% start within 1,000 nt, 71% within 1,500; both
+        sites of 88 of the 202 genes (44%) and at least one site of 128 (63%)
+        start within 1,000. Raise or drop the filter for long transcripts (a
+        target with no passing window below the cap gets no probes and the run
+        is `partial`); Supplementary Fig. 7 shows 8 pairs per gene detecting
+        more, which needs number_desired: 8 and usually a larger cap.
+      quote: Try to choose the exon close to the 5' end, and select 2 target sites for each gene
   hybridization:
     ssc: 2x
     source: >-
@@ -66,7 +90,8 @@ meta:
       [Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate).
       Ligation: SplintR ligase 1 U/uL, 37 C for 2 h; RCA: Phi29, 30 C for 2 h.
   limitations:
-    - MiP-seq selects 2 target sites per gene in an exon close to the 5' end; U-Probe keeps every passing non-overlapping window. equal_space (number_desired: 2) would spread the 2 sites along the whole RNA instead; a filter on target_start (position along the RNA) keeps sites near the 5' end.
+    - MiP-seq selects 2 target sites per gene in an exon close to the 5' end. U-Probe has no "near the 5' end" option, so the template filters target_start (the window's position along the RNA, 1-based) and then spreads the 2 sites evenly over what is left; the cap of 1,000 nt is U-Probe's, not the paper's (see parameter_sources).
+    - The published primers are 25 nt (247 of 432) or 26 nt (185); the template builds the 25-nt majority form, and the 26-nt one differs by one C (see parameter_sources).
     - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) is applied."
   replace:
     - "genome: a genome name from your genomes.yaml (mm10 here)"
@@ -117,7 +142,9 @@ probes:
       arm_3:
         expr: "rc(target_parts['arm3_site'])"
   rca_primer:
-    template: "{binding}{gap_base}CAGGCTCCACTA"
+    # 13 + 1 + 11 = 25 nt, the majority of the published primers; the 26-nt
+    # ones add a C before the tail: "{binding}{gap_base}CAGGCTCCACTA".
+    template: "{binding}{gap_base}AGGCTCCACTA"
     parts:
       binding:
         expr: "rc(target_parts['primer_site'])"
@@ -163,11 +190,18 @@ post_process:
   filters:
     target_mapped_genes:
       condition: target_mapped_genes <= 1
+    # "An exon close to the 5' end": windows starting in the first 1,000 nt of
+    # the RNA (meta.parameter_sources). Raise the cap when a long transcript
+    # gives too few sites.
+    near_5p:
+      condition: target_start <= 1000
   sorts:
     is_ascending:
       - target_mapped_genes
   remove_overlap:
     location_interval: 0
+  equal_space:
+    number_desired: 2   # 2 sites per gene (8 raised detection in Supp. Fig. 7)
 
 summary:
   report_name: rna_report

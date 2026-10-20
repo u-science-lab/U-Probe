@@ -145,7 +145,9 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     for spec in pp.get('filters', {}).values():
         if 'condition' in spec:
             columns = set(re.findall(r'([A-Za-z_]\w*)\s*[<>=]', spec['condition']))
-            assert columns <= columns_of_attributes, spec
+            # Attributes, or a position column of the extracted windows (direct sequences have none,
+            # and a condition on a missing column is skipped).
+            assert columns <= columns_of_attributes | {'target_start', 'target_end', 'start', 'end'}, spec
         else:
             assert spec['target'] in combined, spec
     sorts = pp.get('sorts', {})
@@ -167,14 +169,22 @@ def test_off_target_search_sees_the_template_sequences(name):
     # Bowtie2's local mode aligns nothing shorter than 22 nt and misses many
     # sites of 25-30-mers, so windows up to 30 nt are searched with Bowtie 1.
     protocol = load_template(name)
-    shortest = normalize_sampling(protocol['extracts']['target_region']['length'])[0]
+    region = protocol['extracts']['target_region']
     for attr in protocol['attributes'].values():
         if attr['type'] != 'mapped_genes':
             continue
-        # target_region is the RNA sequence; the probes bind where it occurs.
-        assert attr['target'] == 'target_region' and attr['strand'] == 'sense'
+        # target_region, or a layout part of it, is the RNA sequence; the probes bind where it occurs.
+        assert attr['strand'] == 'sense'
+        if attr['target'] == 'target_region':
+            shortest = normalize_sampling(region['length'])[0]
+        else:
+            part = attr['target'].removeprefix('target_parts.')
+            assert attr['target'] == f'target_parts.{part}' and part in region['layout']['parts']
+            shortest = normalize_sampling(region['layout']['parts'][part]['length'])[0]
         if shortest <= 30:
-            assert attr['aligner'] == 'bowtie' and attr['max_mismatches'] == 2
+            assert attr['aligner'] == 'bowtie'
+            # A whole window within 2 substitutions; a part may set its own limit (meta.parameter_sources).
+            assert attr['max_mismatches'] == 2 or attr['target'] != 'target_region'
         else:
             assert attr['aligner'] == 'bowtie2'
 
@@ -268,26 +278,62 @@ def test_padlock_iss_reproduces_hybiss_pvalb():
     targets, probes = design('padlock_iss', 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG', {'ID': 'TAGACGTAGTGAGCATGACT'})
     assert probes['padlock'].tolist() == [
         'CTCGCGGCCCTCCTGTAGACGTAGTGAGCATGACTTCTACGAGTTTGCAGTCACGCCCATCTCAGTCCTT']
-    # The published target passes the applied Tm window under its design conditions.
+    # The published target passes the applied Tm window under the formula and conditions of the
+    # HybISS design code (multi_padlock_design lib/screenseq.py gives 70.50 C; primer3 67.2 C).
     protocol = load_template('padlock_iss')
     combined = pd.concat([targets.reset_index(drop=True), probes], axis=1)
     tm = add_attributes(combined, {**protocol, 'attributes': {'target_tm': protocol['attributes']['target_tm']}}, {})
-    assert 65 <= tm['target_tm'][0] <= 75
+    assert tm['target_tm'][0] == pytest.approx(70.50057357343485)
+    assert protocol['post_process']['filters']['target_tm']['condition'] == 'target_tm >= 65 & target_tm <= 75'
+    # The junction search covers the 20 nt around the ligation junction (mRNA nt 15|16).
+    junction = targets['target_parts.junction'][0]
+    assert junction == 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG'[5:25]
+    assert probes['padlock'][0].endswith(junction[:10]) and probes['padlock'][0].startswith(junction[10:])
 
 
 def test_mipseq_reproduces_published_pair():
-    # Wu et al. 2024 Gad2-2 probes on mouse Gad2 mRNA (NM_008078.2).
-    _, probes = design('mipseq', 'AGCGTGTGATGGAGAAAGGCCCACTCTGGCATTTCTACAA', {'B1': 'GCA', 'B2': 'GCA'})
-    assert probes['padlock'].tolist() == ['TCCATCACACGCTCCGCATGCGTCTATTTGTGCATAGTGGAGCCTGAGTGGGCCTTTC']
-    assert probes['rca_primer'].tolist() == ['TTGTAGAAATGCCTCAGGCTCCACTA']
+    # Wu et al. 2024, 217-gene set (sheet "Fig 3"): Fig3_463_C1qb on the window at nt 24-63 of
+    # mouse C1qb (ENSMUST00000031132). Its primer is 25 nt, as 247 of the 432 published ones are.
+    _, probes = design('mipseq', 'GTTCTTCCTGCCTCTAGGGACCCAGACTTCCGCTTTCTGA', {'B1': 'AGA', 'B2': 'TTT'})
+    assert probes['padlock'].tolist() == ['AGGCAGGAAGAACCCAGATGCGTCTATTTGTTTTTAGTGGAGCCTTCTGGGTCCCTAG']
+    assert probes['rca_primer'].tolist() == ['TCAGAAAGCGGAACAGGCTCCACTA']
+
+
+def test_mipseq_keeps_two_sites_near_the_5_prime_end():
+    # Wu 2023 Methods: 2 sites per gene, in an exon close to the 5' end (the 1,000-nt cap is U-Probe's).
+    protocol = _validate_and_normalize_protocol(load_template('mipseq'))
+    pp = protocol['post_process']
+    assert pp['equal_space'] == {'number_desired': 2}
+    assert pp['filters']['near_5p']['condition'] == 'target_start <= 1000'
+    # A direct sequence has no target_start, so number the windows as an mRNA target's are numbered.
+    api = offline_api(protocol, SEQ * 4)
+    windows = api.generate_target_seqs()
+    windows['target_start'], windows['target_end'] = windows['start'], windows['end']
+    assert windows['target_start'].max() > 1000  # the filter has something to remove
+    kept = post_process(windows, {'post_process': {k: pp[k] for k in ('filters', 'remove_overlap', 'equal_space')}})
+    assert len(kept) == 2 and kept['target_start'].max() <= 1000
 
 
 def test_starmap_reproduces_published_pair():
-    # Zeng et al. 2023 ALDOC_01/ALDOC_11 (64-gene set) on mouse Aldoc mRNA (NM_009657.4).
-    _, probes = design('starmap', 'CCAGGATAAGGGCATTCTCGTAGGCATCAAGGTTGACAAGGGT', {'code': 'AAA'})
+    # Zeng et al. 2023 ALDOC_01/ALDOC_11 (64-gene set) on mouse Aldoc mRNA (NM_009657.4);
+    # its two sites are 1 nt apart, as every published pair's are.
+    targets, probes = design('starmap', 'CCAGGATAAGGGCATTCTCGTAGGCATCAAGGTTGACAAGGGT', {'code': 'AAA'})
     pairs = set(zip(probes['padlock'], probes['primer']))
     assert ('AAAATAACGAGAATGCCCTTATCCTGGAATTATTACAAACATACACTAAAGATA',
             'ACCCTTGTCAACCTTGATGCTATTTTTATCTT') in pairs
+
+
+def test_starmap_forbids_abutting_sites():
+    # Wang 2018 allows a 0-nt gap, but none of the 4,178 located published pairs has one.
+    protocol = load_template('starmap')
+    parts = protocol['extracts']['target_region']['layout']['parts']
+    assert parts['gap']['length'] == [1, 2]
+    targets, _ = design('starmap', SEQ[:60], {'code': 'AAA'})
+    assert set(targets['target_parts.gap.length']) == {1, 2}
+    # The designed 60 °C of the halves is recorded, not filtered (the paper's conditions are unknown).
+    window = protocol['meta']['tm_window']
+    assert (window['applied'], window['value']) == (False, 60)
+    assert not [name for name in protocol['post_process']['filters'] if name.endswith('_tm')]
 
 
 def test_seqfish_plus_reproduces_lohoff_probes():
@@ -329,6 +375,19 @@ def test_hcr_pairs_are_two_nt_apart_as_in_choi_2018():
     windows = api.generate_target_seqs()
     kept = post_process(windows, {'post_process': {'remove_overlap': protocol['post_process']['remove_overlap']}})
     assert kept['start'].tolist() == [1, 55, 109, 163, 217]
+
+
+def test_double_hyb_rca_keeps_units_without_off_target_genes():
+    # One unit makes one RCA product, so no off-target gene is allowed on the window or the arm site;
+    # fold_score only sorts, because a threshold would depend on the barcodes.
+    protocol = load_template('double_hyb_rca')
+    filters = protocol['post_process']['filters']
+    assert filters['n_mapped_genes']['condition'] == 'n_mapped_genes <= 1'
+    assert filters['arm_mapped_genes']['condition'] == 'arm_mapped_genes <= 1'
+    assert protocol['attributes']['arm_mapped_genes']['target'] == 'target_parts.arm_site'
+    assert protocol['extracts']['target_region']['layout']['parts']['arm_site']['length'] == 26
+    assert not [name for name in filters if 'fold' in name]
+    assert protocol['post_process']['sorts']['is_ascending'][:2] == ['circle_fold_score', 'amp_fold_score']
 
 
 def test_double_hyb_rca_primer_binds_rna_at_5_prime_and_circle_at_3_prime():

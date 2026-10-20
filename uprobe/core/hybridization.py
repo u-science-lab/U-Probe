@@ -15,6 +15,10 @@ An ``annealing_temperature`` or ``fold_score`` attribute may carry its own
 Fields left unset keep the legacy values (the fisheye-compatible primer3
 arguments and ViennaRNA's 37 °C), so protocols without the block produce
 unchanged results.
+
+An ``annealing_temperature`` attribute computes Tm with primer3 unless it sets
+``tm_method: multi_padlock_design``, the formula of the HybISS padlock design
+code (see cal_temp_multi_padlock_design), under the same conditions.
 """
 import math
 
@@ -24,6 +28,8 @@ ATTRIBUTE_TYPES = ('annealing_temperature', 'fold_score')
 # Legacy conditions: the defaults of cal_temp and of ViennaRNA's model.
 TM_DEFAULTS = {'na_mM': 50.0, 'mg_mM': 0.0, 'dntp_mM': 0.6, 'probe_nM': 50.0, 'formamide_pct': 0.0}
 FOLD_DEFAULTS = {'temperature_c': 37.0}
+# Tm formulas of annealing_temperature attributes (option tm_method); the first is the default.
+TM_METHODS = ('primer3', 'multi_padlock_design')
 PRIMER3_ARGUMENTS = {'na_mM': 'mv_conc', 'mg_mM': 'dv_conc', 'dntp_mM': 'dntp_conc', 'probe_nM': 'dna_conc'}
 # primer3 lowers Tm by (2.88 - 0.453 * GC fraction) °C per mol/l formamide
 # (Blake & Delcourt 1996, Nucleic Acids Res 24:2095-2103,
@@ -93,6 +99,29 @@ def validate_protocol_hybridization(protocol):
             raise ValueError(f'attributes.{name}.hybridization is only supported for '
                              f'{" and ".join(ATTRIBUTE_TYPES)} attributes')
         resolve_conditions(protocol, name)
+    for name, attr in (protocol.get('attributes') or {}).items():
+        if isinstance(attr, dict) and 'tm_method' in attr:
+            tm_method(attr, f'attributes.{name}')
+
+
+def tm_method(attr, where='attribute'):
+    """The Tm formula of an annealing_temperature attribute: primer3 (default) or multi_padlock_design."""
+    if not isinstance(attr, dict) or 'tm_method' not in attr:
+        return TM_METHODS[0]
+    if str(attr.get('type', '')).lower() != 'annealing_temperature':
+        raise ValueError(f'{where}.tm_method is only supported for annealing_temperature attributes')
+    method = attr['tm_method']
+    if method not in TM_METHODS:
+        raise ValueError(f'{where}.tm_method must be one of {", ".join(TM_METHODS)}, got {method!r}')
+    return method
+
+
+def multi_padlock_design_arguments(conditions):
+    """cal_temp_multi_padlock_design keyword arguments: declared conditions, legacy defaults for the rest.
+
+    The formula has no dNTP term, so dntp_mM is not used.
+    """
+    return {key: conditions.get(key, TM_DEFAULTS[key]) for key in ('na_mM', 'mg_mM', 'probe_nM', 'formamide_pct')}
 
 
 def declares_hybridization(protocol):
@@ -149,8 +178,13 @@ def describe_conditions(protocol):
     units = {'temperature_c': '{:g} °C', 'na_mM': '{:g} mM Na+', 'mg_mM': '{:g} mM Mg2+',
              'dntp_mM': '{:g} mM dNTP', 'probe_nM': '{:g} nM probe', 'formamide_pct': '{:g}% formamide'}
     groups = {}
+    attributes = protocol.get('attributes') or {}
     for name, conditions in effective_conditions(protocol).items():
         kind = 'Tm' if 'na_mM' in conditions else 'fold'
+        method = tm_method(attributes.get(name), f'attributes.{name}') if kind == 'Tm' else TM_METHODS[0]
+        if method != TM_METHODS[0]:
+            kind = f'Tm [{method}]'
+            conditions = {key: value for key, value in conditions.items() if key != 'dntp_mM'}
         text = ', '.join(units[key].format(value) for key, value in conditions.items())
         groups.setdefault((kind, text), []).append(name)
     return [f'{kind} ({", ".join(names)}): {text}' for (kind, text), names in groups.items()]

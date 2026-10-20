@@ -29,7 +29,8 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
-from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
+from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, tm_method,
+                            validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
                         MAX_MISMATCHES_LIMIT, STRANDS, mapped_genes_settings)
@@ -60,7 +61,7 @@ ATTRIBUTE_TYPES = {
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -780,6 +781,14 @@ class _Validator:
             blocks.append((('hybridization',), {'hybridization': self.protocol['hybridization']}))
         attributes = self.protocol.get('attributes')
         for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
+            if isinstance(attr, dict) and 'tm_method' in attr:
+                try:
+                    tm_method(attr, f'attributes.{name}')
+                except ValueError as exc:
+                    hint = (f'tm_method: {TM_METHODS[1]}   # or {TM_METHODS[0]} (the default)'
+                            if 'must be one of' in str(exc) else 'remove it')
+                    self.error(('attributes', name, 'tm_method'), str(exc), hint)
+                attr = {key: value for key, value in attr.items() if key != 'tm_method'}
             if isinstance(attr, dict) and 'hybridization' in attr:
                 blocks.append((('attributes', name, 'hybridization'), {'attributes': {name: attr}}))
         for path, protocol in blocks:

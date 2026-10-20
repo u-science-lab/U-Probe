@@ -156,7 +156,7 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | --- | --- | --- |
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
-| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override |
+| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method: multi_padlock_design` = the HybISS design code's formula (Sugimoto 1996 NN, `16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide; no dNTP term), for windows published under it |
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |

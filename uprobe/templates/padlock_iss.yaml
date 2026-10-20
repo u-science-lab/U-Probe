@@ -12,9 +12,12 @@ meta:
     5'-[mRNA nt 16-30][ID, 20 nt][anchor, 20 nt][mRNA nt 1-15]-3', and its 5'
     phosphate is added with T4 PNK. The gene-specific ID is read by bridge
     probes and fluorescent detection oligos (hybridization-based readout);
-    the anchor is shared. Targets are 15 nt apart, 5 per gene. This is the
-    HybISS design of Gyllborg et al. 2020, an evolution of the padlock ISS of
-    Ke et al. 2013 (4-nt barcode read by sequencing by ligation).
+    the anchor is shared. Targets have a Tm of 65-75 C by the Tm formula of
+    the HybISS design code; no other gene carries the 30-nt site, or the 20
+    nt around the ligation junction alone; targets are 15 nt apart, 5 per
+    gene. This is the HybISS design of Gyllborg et al. 2020, an evolution of
+    the padlock ISS of Ke et al. 2013 (4-nt barcode read by sequencing by
+    ligation).
   citations:
     - short: Gyllborg et al. 2020, Nucleic Acids Research (HybISS)
       title: >-
@@ -43,9 +46,22 @@ meta:
       value: 30
       source: Gyllborg 2020, Methods
       quote: arm length, 15; Tm, low 65, high 75; space between targets, 15 ... five targets were selected randomly per gene
-    - parameter: post_process.filters.target_tm (with attributes.target_tm.hybridization)
-      value: 65-75 C at 75 mM monovalent, 10 mM divalent salt, 100 nM probe, 20% formamide
-      source: Gyllborg 2020, Methods (quoted above); conditions from multi_padlock_design (see meta.tm_window)
+    - parameter: post_process.filters.target_tm (with attributes.target_tm.tm_method and hybridization)
+      value: >-
+        65-75 C by the multi_padlock_design Tm formula at 75 mM monovalent,
+        10 mM divalent salt, 100 nM probe, 20% formamide
+      source: >-
+        Gyllborg 2020, Methods (quoted above); formula and conditions from
+        multi_padlock_design lib/screenseq.py (calculatetm: Sugimoto 1996
+        nearest-neighbor parameters, + 16.6 log10([Na+] + 3.795 sqrt[Mg2+]),
+        - 0.72 C per % formamide), which tm_method: multi_padlock_design
+        reproduces to 1e-12 C. All 1,195 published targets of Supplementary
+        Table 1 (mouse and human) lie within 65-75 C by this formula. Under
+        U-Probe's default primer3 Tm and the same conditions only 327 (27%)
+        do: primer3 gives 3.4 +- 1.5 C less (-3.2 to +7.5 C, more for AT-rich
+        targets; correlation with GC -0.71), so no primer3 window is
+        equivalent (the best 10-C one, 59.1-69.1 C, keeps 1,110).
+      quote: Tm, low 65, high 75 (Gyllborg 2020); Tm -= 0.72 * 20  # formamide correction (lib/screenseq.py)
     - parameter: padlock template (arm order, ID and anchor)
       value: "target_region[15:30] + ID (20) + anchor (20) + target_region[0:15]"
       source: >-
@@ -65,9 +81,33 @@ meta:
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1, no other gene with a site within 2 substitutions of the 30-nt arm pair (Bowtie 1, exhaustive)"
       source: >-
-        U-Probe approximation. multi_padlock_design rejects targets with any
-        database hit above 50% coverage and 80% homology around the ligation
-        site, which U-Probe does not model.
+        U-Probe approximation of the multi_padlock_design rule below (a hit
+        of 30 nt with up to 2 substitutions meets it).
+    - parameter: >-
+        extracts.target_region.layout and post_process.filters.junction_mapped_genes
+      value: >-
+        <= 1, no other gene with a site within 1 substitution of target nt
+        6-25, the 20 nt around the ligation junction (nt 15|16; Bowtie 1,
+        exhaustive)
+      source: >-
+        multi_padlock_design lib/readblast.py: blastn (-word_size 7 -strand
+        plus, RefSeq mRNAs, predicted XM/XR ignored) rejects a target when a
+        hit in another gene is longer than one arm, more than 80% identical
+        and starts at or before target nt 10 and ends at or after nt 21, i.e.
+        covers the junction +-5 nt. The 20-nt search is U-Probe's judgement,
+        not the repository's: a 20-nt hit with at most 1 substitution meets
+        every condition, and by an estimate with blastn's default scoring
+        (1/-2) on a database the size of the mouse RefSeq mRNAs it has an
+        e-value below BLAST's default cutoff of 10, so the repository would
+        reject it too (a 20-nt hit with 2 substitutions would not be
+        reported). Shorter, gapped or more divergent hits that the repository
+        also rejects are not searched. On the Ensembl 113 transcriptomes
+        1,155 of the 1,195 published targets pass the 30-nt search and 1,138
+        pass both; searching the 20 nt with 2 substitutions would leave 863.
+      quote: >-
+        it cannot have any sequence in the database with more than 50% of
+        sequence coverage, covering ligation site +- 5 nucleotides, and 80% of
+        homology (readme.txt)
   hybridization:
     source: >-
       Gyllborg 2020, Methods (10 nM per PLP, hybridized and ligated with Tth
@@ -82,18 +122,22 @@ meta:
     value: [65, 75]
     target: target_region (the whole 30-nt arm pair)
     attribute: target_tm
+    tm_method: multi_padlock_design
     conditions: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
     source: Gyllborg 2020, Methods; multi_padlock_design readme.txt and lib/screenseq.py
     note: >-
-      Applied: attributes.target_tm.hybridization sets these design conditions
-      and post_process.filters.target_tm keeps 65-75 C. The published Pvalb
-      target (Supplementary Table 1) computes to about 67 C under them.
+      Applied: attributes.target_tm computes the design code's own Tm
+      (tm_method: multi_padlock_design) under these design conditions and
+      post_process.filters.target_tm keeps 65-75 C, which all 1,195 published
+      targets pass (primer3: 327). The published Pvalb target
+      (Supplementary Table 1) computes to 70.5 C (primer3: 67.2 C).
   limitations:
     - Gyllborg 2020 picked 5 targets per gene at random; equal_space keeps 5 sites at least 15 nt apart, spread evenly along the RNA instead.
+    - Specificity is searched with Bowtie 1 (the 30-nt site within 2 substitutions, the 20 nt around the junction within 1) against the transcriptome of the genome in use, not with the repository's BLAST rule against RefSeq mRNAs; see parameter_sources.
     - The padlock binds cDNA, so in situ reverse transcription is required; for direct RNA padlocks (e.g. SplintR ligase) the arms would be the reverse complements instead.
     - "TODO: verify GC criteria for HybISS padlock arms (none stated)."
   replace:
-    - "genome: a genome name from your genomes.yaml (mm10 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
+    - "genome: a genome name from your genomes.yaml (mm10 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes and junction_mapped_genes"
     - "targets: your gene names (Pvalb here)"
     - "encoding: per gene, the 20-nt ID (bridge-probe site); TAGACGTAGTGAGCATGACT is the published mouse Pvalb ID from Gyllborg 2020 Supplementary Table 1, an example only"
 
@@ -115,6 +159,17 @@ extracts:
     transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 30
     step: 1
+    # Only for the junction search below: nt 6-25 of the window, around the
+    # ligation junction between nt 15 (arm_3 end) and 16 (arm_5 start).
+    layout:
+      template: "{arm_3_end}{junction}{arm_5_end}"
+      parts:
+        arm_3_end:
+          length: 5
+        junction:
+          length: 20
+        arm_5_end:
+          length: 5
 
 probes:
   padlock:
@@ -152,7 +207,9 @@ attributes:
   target_tm:
     target: target_region
     type: annealing_temperature
-    # Design conditions of the 65-75 C window (meta.tm_window).
+    # The formula and design conditions of the 65-75 C window (meta.tm_window);
+    # primer3 would give 3.4 C less on average.
+    tm_method: multi_padlock_design
     hybridization: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}
   arm_5_tm:
     target: padlock.arm_5
@@ -171,6 +228,15 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense    # mRNA sites like target_region; the padlock binds their cDNA
+  junction_mapped_genes:
+    target: target_parts.junction
+    type: mapped_genes
+    # Ligation needs base-paired ends: another gene matching the 20 nt around
+    # the junction (within 1 substitution) is rejected even when the rest of
+    # the 30-nt site differs, as in the HybISS design code (meta.parameter_sources).
+    aligner: bowtie
+    max_mismatches: 1
+    strand: sense
 
 post_process:
   filters:
@@ -178,9 +244,12 @@ post_process:
       condition: target_tm >= 65 & target_tm <= 75
     target_mapped_genes:
       condition: target_mapped_genes <= 1
+    junction_mapped_genes:
+      condition: junction_mapped_genes <= 1
   sorts:
     is_ascending:
       - target_mapped_genes
+      - junction_mapped_genes
   remove_overlap:
     location_interval: 15
   equal_space:
@@ -194,3 +263,4 @@ summary:
     - arm_5_tm
     - arm_3_tm
     - target_mapped_genes
+    - junction_mapped_genes

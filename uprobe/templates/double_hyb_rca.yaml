@@ -15,8 +15,11 @@ meta:
     U-Probe preprint and shipped as tests/data/double_hyb_rca.yaml, ported to
     the current protocol syntax (step instead of overlap, mapped_genes instead
     of n_mapped_genes, encoding[target] instead of encoding[gene_id]) with
-    unchanged lengths and filters. The two-oligo layout (13-nt padlock arms,
-    one skipped nucleotide, 13-nt primer site) is the one of MiP-seq.
+    unchanged lengths. One unit gives one rolling-circle product and thus one
+    spot, so the off-target filters are the strict per-unit rule: no other
+    gene on the 40-nt window or on the 26-nt arm site. The two-oligo layout
+    (13-nt padlock arms, one skipped nucleotide, 13-nt primer site) is the one
+    of MiP-seq.
   citations:
     - short: Zhang et al. 2026, bioRxiv (U-Probe)
       title: Universal agentic probe design for imaging-based spatial-omics
@@ -28,10 +31,36 @@ meta:
       title: Development of Multiomics in situ Pairwise Sequencing (MiP-Seq)
       doi: 10.1101/2023.01.07.523058
   parameter_sources:
-    - parameter: probe layout, lengths, attributes and filters
-      value: "circle arms target_region[0:13] and [13:26]; primer site target_region[-13:]; Tm 35-45 C; circle fold <= 80; mapped genes <= 4"
+    - parameter: probe layout, lengths and Tm filters
+      value: "circle arms target_region[0:13] and [13:26]; primer site target_region[-13:]; Tm 35-45 C"
       source: U-Probe example protocol tests/data/double_hyb_rca.yaml (design described in the U-Probe preprint)
       quote: an RCA probe configuration specifies a circle probe with target-complementary arms flanking barcodes, plus an amplification probe referencing both the circle probe and target region (U-Probe preprint)
+    - parameter: post_process.filters.n_mapped_genes and arm_mapped_genes
+      value: "both <= 1: no other gene on the 40-nt window, nor on the 26-nt arm site"
+      source: >-
+        U-Probe choice, replacing the test protocol's n_mapped_genes <= 4 (up
+        to 3 off-target genes per unit). One ligated circle with its primer
+        gives one rolling-circle product, which is counted as one molecule,
+        so a unit that also sits on another transcript produces false spots;
+        there is no multi-probe averaging as in smFISH. The same rule is used
+        by the other padlock templates (padlock_iss, mipseq, starmap).
+        Specificity rests mostly on the arm site and its ligation junction:
+        the 17-nt barcode-2 duplex alone can hold the primer on any ligated
+        circle. The 26-nt arm site is therefore searched on its own, with
+        Bowtie 1 (exhaustive within 2 substitutions; Bowtie2's local mode
+        misses many sites of 25-30-nt sequences), and the 40-nt window with
+        Bowtie2, as in mipseq and starmap.
+    - parameter: post_process.sorts (circle_fold_score, amp_fold_score) without a fold filter
+      value: "ascending fold sorts, no threshold"
+      source: >-
+        U-Probe choice, replacing the test protocol's circle_fold_score <= 80.
+        fold_score is -MFE (kcal/mol, >= 0), so the filter removed nothing:
+        on 4,375 circle probes built from 875 human CDS windows and 5 random
+        17-nt barcode pairs the score is 14.3 (median), 21.0 (90th
+        percentile) and 37.2 at most. A threshold is also barcode-dependent
+        (with the N placeholders below, which fold as poly-A, the median is
+        1.9), so the template only ranks the least structured units first and
+        leaves the threshold to the user: <= 21 kept 90% of those probes.
     - parameter: amp_probe orientation (target-binding 5', circle-binding 3')
       value: "{part2}N{part1}"
       source: >-
@@ -58,9 +87,10 @@ meta:
     notes: "[Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate)."
   limitations:
     - The Tm filters (35-45 C) were set for U-Probe's legacy annealing_temperature conditions (50 mM Na+, 50 nM oligo, no formamide); tm1-tm3 keep those conditions through their own hybridization setting, while the top-level hybridization block holds the (unverified) experimental conditions.
-    - circle_fold_score and amp_fold_score include the barcodes, so they are only meaningful after the placeholder barcodes are replaced.
+    - circle_fold_score and amp_fold_score include the barcodes, so they are only meaningful after the placeholder barcodes are replaced; they sort the units and filter none (see parameter_sources).
+    - Bowtie2 on the 40-nt window is a local heuristic that reports at most 100 alignments; the exhaustive search within 2 substitutions covers the 26-nt arm site only. Set n_mapped_genes to aligner bowtie, max_mismatches 2 to search the whole window exhaustively as well.
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for arm_mapped_genes and bowtie2 for n_mapped_genes"
     - "targets: your gene names (GAPDH here)"
     - "encoding: per gene, barcode1 and barcode2 (17-nt N placeholders, the lengths of the test protocol's barcodes)"
 
@@ -83,6 +113,17 @@ extracts:
     transcripts: mane   # the MANE Select transcript (Ensembl canonical without one)
     length: 40
     step: 20
+    # Only for the off-target search: the 26 nt both circle arms bind, which
+    # carry most of the specificity (meta.parameter_sources).
+    layout:
+      template: "{arm_site}{gap}{primer_site}"
+      parts:
+        arm_site:
+          length: 26
+        gap:
+          length: 1
+        primer_site:
+          length: 13
 
 probes:
   circle_probe:
@@ -134,6 +175,16 @@ attributes:
     # the genome's align_index and set aligner: bowtie, max_mismatches: 2.
     aligner: bowtie2
     strand: sense   # sites where target_region occurs, which the probes bind
+  arm_mapped_genes:
+    target: target_parts.arm_site
+    type: mapped_genes
+    # The 26 nt the circle's two arms bind and ligate on. Bowtie 1 finds every
+    # site within 2 substitutions; Bowtie2's local mode misses many sites of
+    # sequences this short, and the primer's 17-nt tail can hold it on any
+    # ligated circle, so this site carries most of the specificity.
+    aligner: bowtie
+    max_mismatches: 2
+    strand: sense
   target_gc_content:
     target: target_region
     type: gc_content
@@ -165,12 +216,15 @@ post_process:
       condition: tm2 <= 45 & tm2 >= 35
     tm3:
       condition: tm3 <= 45 & tm3 >= 35
-    circle_fold_score:
-      condition: circle_fold_score <= 80
+    # One unit makes one spot, so no other gene may carry the window or the
+    # arm site (meta.parameter_sources).
     n_mapped_genes:
-      condition: n_mapped_genes <= 4
+      condition: n_mapped_genes <= 1
+    arm_mapped_genes:
+      condition: arm_mapped_genes <= 1
   sorts:
-    # Least structured first: fold_score is -MFE, so lower means less structure.
+    # Least structured first: fold_score is -MFE, so lower means less
+    # structure. No threshold: it would depend on your barcodes (meta).
     is_ascending:
       - circle_fold_score
       - amp_fold_score
@@ -186,4 +240,5 @@ summary:
     - tm3
     - target_gc_content
     - n_mapped_genes
+    - arm_mapped_genes
     - circle_fold_score

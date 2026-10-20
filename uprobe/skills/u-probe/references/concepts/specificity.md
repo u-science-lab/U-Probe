@@ -159,7 +159,11 @@ within 2 substitutions, `target_mapped_genes <= 1`; never exempt paralogs.
 - Per-probe rule, padlock/RCA: a single circularized padlock is amplified into one bright, countable
   product (Larsson et al. 2004; Ke R et al. 2013 Nat Methods 10:857, doi:10.1038/nmeth.2563), so one
   off-target ligation is one false spot. Keep `target_mapped_genes <= 1` (with expression) on the whole
-  site both arms (and the primer) bind; no pool.
+  site both arms (and the primer) bind; no pool. A second `mapped_genes` attribute on part of the site
+  catches what the whole-window search cannot: the padlock templates give it a `layout` part and filter
+  it `<= 1` too (`padlock_iss`: the 20 nt around the ligation junction, within 1 substitution, after
+  the HybISS design code's BLAST rule; `double_hyb_rca`: the 26-nt arm site, within 2, because Bowtie2
+  searches the 40-nt window only locally).
 - Per-pair rule, HCR v3: the initiator is split between two probes and amplification needs both bound
   next to each other (Choi HMT et al. 2018 Development 145:dev165753, doi:10.1242/dev.165753). A lone
   probe is suppressed, but a pair that binds an off-target site grows an amplified polymer. Search the
@@ -191,7 +195,7 @@ ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in 
 | smFISH 18-22 nt | `target_region`, `sense` | bowtie, 2 | `<= 1` | recommended (+ fraction 0.05) | `exempt_copies` | optional |
 | MERFISH / seqFISH+ 28-30 nt | `target_region`, `sense` | bowtie, 2 (3 defensible) | `<= 1` | recommended | `exempt_copies` | optional |
 | HCR v3 pair 52 nt | whole pair window, `sense` | Bowtie2 (+ a Bowtie 1 attribute, 2, for the exhaustive substitution search) | `<= 1` | recommended | report copies | no |
-| Padlock / SNAIL 30-46 nt | whole site, `sense` | bowtie (<= 30 nt) / Bowtie2 | `<= 1` | recommended | report copies | no |
+| Padlock / SNAIL 30-46 nt | whole site, `sense`; plus the junction (`padlock_iss`) or the arm site (`double_hyb_rca`) | bowtie (<= 30 nt) / Bowtie2 | `<= 1` on each | recommended | report copies | no |
 | Oligopaint 35-41 nt | homology, windows from a soft-masked genome (`masked: drop`) | `kmer_count` (k 18, `strand: sense`) + `mapped_sites` | `kmer_count <= 4`, `<attr>_num == 1` | n/a | n/a | `avoid_otp` |
 
 "Report copies": with single-unit methods every probe of a copied target also detects an expressed
