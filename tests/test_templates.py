@@ -56,6 +56,24 @@ def test_meta_documents_sources(name):
         assert row['parameter'] and row['source']
 
 
+def _parts_with_literal_n(parts, prefix=''):
+    """Paths of probes and parts whose own template text holds a literal N."""
+    for name, part in (parts or {}).items():
+        if 'N' in re.sub(r'\{[^}]*\}', '', part.get('template') or ''):
+            yield prefix + name
+        yield from _parts_with_literal_n(part.get('parts'), f'{prefix}{name}.')
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_meta_replace_names_every_literal_n(name):
+    # A synthesized N is a mix of all four bases: meta.replace must tell users to replace
+    # each one (double_hyb_rca's 1-nt spacers were missing, so its probes kept an N).
+    template = load_template(name)
+    replace = ' '.join(template['meta']['replace'])
+    for path in _parts_with_literal_n(template['probes']):
+        assert path in replace or path.rsplit('.', 1)[-1] in replace, path
+
+
 @pytest.mark.parametrize('name', NAMES)
 def test_template_passes_uprobe_validate(name, tmp_path):
     path = tmp_path / f'{name}.yaml'

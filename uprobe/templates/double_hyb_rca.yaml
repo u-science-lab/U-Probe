@@ -93,6 +93,7 @@ meta:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for arm_mapped_genes and bowtie2 for n_mapped_genes"
     - "targets: your gene names (GAPDH here)"
     - "encoding: per gene, barcode1 and barcode2 (17-nt N placeholders, the lengths of the test protocol's barcodes)"
+    - "circle_probe.part2 and amp_probe: each template holds a literal N, a 1-nt spacer (between the two barcodes; between the primer's RNA part and its barcode-2 part). Replace both with defined bases: an N is synthesized as a mix of all four"
 
 name: double_hyb_rca
 description: Double-hybridization RCA probes, circle probe with two barcodes plus amplification primer
@@ -133,7 +134,7 @@ probes:
         length: 13
         expr: "rc(target_region[0:13])"
       part2:
-        template: "{barcode1}N{barcode2}"
+        template: "{barcode1}N{barcode2}"   # PLACEHOLDER N: a 1-nt spacer, replace with a defined base
         parts:
           barcode1:
             expr: "encoding[target]['barcode1']"
@@ -144,7 +145,7 @@ probes:
         expr: "rc(target_region[13:26])"
 
   amp_probe:
-    template: "{part2}N{part1}"
+    template: "{part2}N{part1}"   # PLACEHOLDER N: a 1-nt spacer, replace with a defined base
     parts:
       part1:
         expr: "rc(circle_probe.part2.barcode2)"
