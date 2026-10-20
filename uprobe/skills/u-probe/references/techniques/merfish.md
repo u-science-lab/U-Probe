@@ -118,6 +118,11 @@ Published readout probes: Moffitt 2016 Table S1 (16 x 20 nt, RS0015 ... RS0548);
   probes add background in every round that uses those readouts.
 - Readout orthogonality is critical: a readout with homology to the transcriptome, to another readout
   or to a target region lights wrong bits for every gene. Keep cross-homology <= 11 nt.
+- Copies of the target (processed pseudogenes, retrocopies, readthrough genes) hold most of its sequence,
+  so no probe set avoids them; the template exempts them (`exempt_copies: {kmer: 30, min_shared: 0.5}`,
+  as `smfish_stellaris`): a gene whose transcript holds half the target's 30-mers is listed in
+  `target_mapped_genes_copies` instead of counted. Name the copies in the report; a copy that is
+  expressed contributes signal.
 
 ## 8. U-Probe template: `merfish`
 
@@ -142,7 +147,8 @@ post_process:
   filters:
     target_gc: {condition: target_gc >= 0.43 & target_gc <= 0.63}
     binding_tm: {condition: binding_tm >= 66 & binding_tm <= 76}
-    target_mapped_genes: {condition: target_mapped_genes <= 1}   # Bowtie 1, <= 2 mismatches
+    target_mapped_genes: {condition: target_mapped_genes <= 1}   # Bowtie 1, <= 2 mismatches;
+                                                                 # exempt_copies: {kmer: 30, min_shared: 0.5}
   remove_overlap: {location_interval: 0}
   equal_space: {number_desired: 92}
 ```

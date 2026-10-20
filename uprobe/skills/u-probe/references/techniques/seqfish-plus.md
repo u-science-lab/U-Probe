@@ -99,6 +99,10 @@ Published seqFISH-family designs disagree; do not mix their numbers:
 - Readout orthogonality matters more than in smFISH: a readout that binds another gene's overhang or
   the transcriptome corrupts every barcode using it.
 - Probe-probe complementarity (>= 17 nt) between genes would bridge barcodes; Eng 2019 removed it.
+- Copies of the target: the template exempts genes whose transcript holds half the target's 30-mers
+  (`exempt_copies: {kmer: 30, min_shared: 0.5}`, as `smfish_stellaris`); they are listed in
+  `target_mapped_genes_copies`. Mouse Gapdh, whose retrocopies (Gm13394 and others) are expressed in
+  NIH/3T3, kept 2 of 24 probes without it and 24 with it.
 
 ## 6. U-Probe template: `seqfish_plus`
 

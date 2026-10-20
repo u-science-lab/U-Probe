@@ -181,6 +181,17 @@ def test_tm_floors_from_the_published_probe_sets(name, floors, weak):
         assert cal_temp(seq, **tm_arguments(conditions[attr])) < floors[attr]
 
 
+@pytest.mark.parametrize('name', ['smfish_stellaris', 'merfish', 'seqfish_plus'])
+def test_many_probe_templates_exempt_copies_of_the_target(name):
+    # A false spot needs many probes of the set on one RNA, so a copy of the target (a processed
+    # pseudogene, a retrocopy) is not counted: without it mouse Gapdh kept 2 of 24 seqFISH+ probes,
+    # with it 24 (Gm13394 and 43 other copies, NIH/3T3 expression).
+    protocol = load_template(name)
+    assert protocol['attributes']['target_mapped_genes']['exempt_copies'] == {'kmer': 30, 'min_shared': 0.5}
+    rows = [row for row in protocol['meta']['parameter_sources'] if 'exempt_copies' in row['parameter']]
+    assert rows and rows[0]['value'] == '{kmer: 30, min_shared: 0.5}'
+
+
 def test_smfish_tm_uses_the_stellaris_concentration_per_oligo():
     # Stellaris hybridizes the 48-oligo set at 125 nM in total, about 2.6 nM per oligo.
     assert load_template('smfish_stellaris')['hybridization']['probe_nM'] == 2.6

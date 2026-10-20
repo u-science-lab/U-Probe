@@ -70,6 +70,16 @@ meta:
         Lohoff 2022, Supplementary Table 1A: every gene's probes cycle through
         these four slot orders (in table row order). The template numbers a
         gene's probes along the RNA (probe_index) and rotates the same way.
+    - parameter: attributes.target_mapped_genes.exempt_copies
+      value: "{kmer: 30, min_shared: 0.5}"
+      source: >-
+        U-Probe, as in smfish_stellaris. A false spot needs many probes of the
+        set on one RNA; a gene with a transcript holding at least half of the
+        target's 30-mers (a processed pseudogene, a retrocopy, a readthrough
+        gene) is hit by any probe set, so it is listed in
+        target_mapped_genes_copies instead of counted, whatever its
+        expression. Mouse Gapdh (seqFISH+ template, NIH/3T3 expression): 2 of
+        24 probes without it, 24 with it (44 copies, Gm13394 among them).
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
@@ -176,6 +186,9 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
+    # Copies of the target (processed pseudogenes, retrocopies) are listed in
+    # target_mapped_genes_copies instead of counted (meta.parameter_sources).
+    exempt_copies: {kmer: 30, min_shared: 0.5}
 
 post_process:
   filters:
