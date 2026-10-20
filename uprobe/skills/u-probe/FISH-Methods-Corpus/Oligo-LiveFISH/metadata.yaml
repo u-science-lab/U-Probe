@@ -1,0 +1,46 @@
+method:
+  official_name: "Oligo-LiveFISH"
+  full_name: "Oligo pool-based LiveFISH"
+  aliases: []
+classification:
+  categories: ["CRISPR-based live-cell DNA imaging"]
+  applications: ["Chromatin locus tracking", "Enhancer-promoter dynamics"]
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: crispr
+  readout_strategy:
+  - fluorescent_barcode
+  - live_imaging
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: dCas9 programmed by crRNA:tracrRNA or sgRNA confers genomic DNA specificity (no target-binding arms on an oligo). Direct multicolor fluorescence imaging of fluorescently labeled guides, without sequential combinatorial readout rounds, on live cells.
+publication:
+  original_year: 2025
+  original_reference: "S01"
+  doi: "10.1016/j.cell.2025.03.032"
+  pmid: "40239646"
+versions:
+  - version_id: "V01"
+    version_name: "Original Oligo-LiveFISH"
+    year: 2025
+    reference: "S01"
+    status: original
+probe:
+  architecture_type: "dCas9 with crRNA:tracrRNA duplex or sgRNA"
+  target_binding: "Guide spacer complementary to genomic DNA"
+  barcode_system: null
+  readout_system: "Fluorophore-labeled guide RNA complexes"
+  amplification: "DNA-template PCR and in vitro transcription during reagent manufacture"
+  sequencing_or_imaging: "Live-cell fluorescence and super-localization microscopy"
+  modifications: ["5-prime dye-labeled tracrRNA", "Alternative terminal dye labeling of crRNA or sgRNA"]
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids: ["S01", "S02", "S03", "S04", "S05"]
+validation:
+  status: research_complete
+field_states:
+  probe.barcode_system: not_applicable

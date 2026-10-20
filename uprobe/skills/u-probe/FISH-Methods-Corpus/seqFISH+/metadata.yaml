@@ -1,0 +1,46 @@
+method:
+  official_name: "seqFISH+"
+  full_name: null
+  aliases: ["RNA seqFISH+"]
+classification:
+  categories: ["multiplexed RNA FISH", "sequential hybridization imaging", "spatial transcriptomics"]
+  applications: ["spatial mRNA profiling", "subcellular RNA localization", "spatial cell-type mapping"]
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: linear
+  readout_strategy:
+  - sequential_fish
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: Linear ssDNA primary probes with a 28-nt target-binding region and four readout-binding overhangs. Sequential fluorescent readout hybridization across 80 cycles with formamide stripping.
+publication:
+  original_year: 2019
+  original_reference: "S01"
+  doi: "10.1038/s41586-019-1049-y"
+  pmid: "30911168"
+versions:
+  - version_id: "V01"
+    version_name: "Original RNA seqFISH+"
+    year: 2019
+    reference: "S01"
+    status: original
+probe:
+  architecture_type: "Linear ssDNA primary probe with RNA-binding region and four readout-binding overhang sites; exact order unresolved"
+  target_binding: "28-nt RNA-complementary region; 24 primary probes per gene in V01"
+  barcode_system: "Four-unit base-20 pseudocolour codeword within one of three fluorescence channels"
+  readout_system: "15-nt fluorescent DNA readouts complementary to primary-probe overhangs"
+  amplification: "No in situ enzymatic amplification; PCR, IVT and RT used in probe manufacture"
+  sequencing_or_imaging: "Sequential fluorescence hybridization imaging, not nucleotide sequencing"
+  modifications: ["5'-amine readout precursors for dye coupling", "LNA polyT anchoring probes", "post-hybridization Label-IT or label-X stabilization"]
+design:
+  official_design_software_available: null
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids: ["S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08"]
+validation:
+  status: validated_with_warnings
+field_states:
+  method.full_name: unavailable
+  design.official_design_software_available: unknown

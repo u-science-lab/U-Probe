@@ -1,0 +1,61 @@
+# Unknown values stay null; [] means no entries recorded, not proven absence.
+# See corpus_schema.md for types, evidence requirements, and field_states.
+method:
+  official_name: null
+  full_name: null
+  aliases: []
+classification:
+  # Free-form author terminology (legacy). Preserve author wording; do not normalize.
+  categories: []
+  applications: []
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  # probe_architecture: null | linear | padlock | crispr | nanostructure.
+  # readout_strategy: subset of sequential_fish, in_situ_sequencing, fluorescent_barcode, live_imaging.
+  # Plain-language rationale lives in description.md ("Classification" section).
+  probe_architecture: null
+  readout_strategy: []
+  classification_evidence_status: unknown
+  classification_source: null
+  classification_notes: null
+publication:
+  original_year: null
+  original_reference: null
+  doi: null
+  pmid: null
+# Records: version_id, version_name, year, reference, status.
+# Version status: null | original | variant | superseded | unclear.
+versions: []
+probe:
+  architecture_type: null
+  target_binding: null
+  barcode_system: null
+  readout_system: null
+  amplification: null
+  sequencing_or_imaging: null
+  modifications: []
+design:
+  # Boolean semantics (controlled):
+  #   null     = not yet examined (default; do not change without research)
+  #   true     = requires positive evidence in Markdown
+  #   false    = requires examined-source documentation of absence (do not assign before research)
+  official_design_software_available: null
+  public_probe_sets_available: null
+benchmark:
+  # null = not yet examined or no candidates assessed (default).
+  # true  = a public candidate resource is evidenced (not that it is reproducible).
+  # false = requires examined-source documentation that no candidate resource exists.
+  benchmark_available: null
+  # null | A | B | C | D
+  # null is the default until at least one candidate is assessed.
+  # "Insufficient information" is a PER-CANDIDATE assessment in benchmarks.md, not a default here.
+  # Do not assign D before research. Per-candidate grade and grade justification live in benchmarks.md.
+  grade: null
+references:
+  primary_source_ids: []
+validation:
+  # not_researched | research_complete | review_failed | review_passed | fixing | validated | validated_with_warnings
+  status: not_researched
+# Optional dotted field paths -> unknown | unavailable | not_applicable.
+# Values must remain null and explanations must be in Markdown.
+field_states: {}
+

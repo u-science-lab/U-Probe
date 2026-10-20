@@ -1,0 +1,86 @@
+method:
+  official_name: MERFISH
+  full_name: Multiplexed error-robust fluorescence in situ hybridization
+  aliases:
+  - MERFISH
+classification:
+  categories:
+  - multiplexed_smfish
+  - spatial_transcriptomics
+  applications:
+  - rna_copy_number
+  - subcellular_rna_localization
+  - spatial_gene_expression
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: linear
+  readout_strategy:
+  - sequential_fish
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: Linear ssDNA encoding probes with 30-nt target-binding regions; readout relies on iterative fluorescent-oligo hybridization, imaging, and photobleaching/chemical cleavage. V02-V06 are variants on the same linear/sequential architecture; V05 adds bDNA signal amplification but the readout mechanism remains sequential.
+publication:
+  original_year: 2015
+  original_reference: S01
+  doi: 10.1126/science.aaa6090
+  pmid: '25858977'
+versions:
+- version_id: V01
+  version_name: 'Original MERFISH: MHD4 and MHD2 implementations'
+  year: 2015
+  reference: S01
+  status: original
+- version_id: V02
+  version_name: High-throughput MERFISH with chemical cleavage and multicolor readout
+  year: 2016
+  reference: S04
+  status: variant
+- version_id: V03
+  version_name: Matrix imprinting and clearing
+  year: 2016
+  reference: S05
+  status: variant
+- version_id: V04
+  version_name: MERFISH with expansion microscopy
+  year: 2018
+  reference: S10
+  status: variant
+- version_id: V05
+  version_name: MERFISH with branched DNA amplification
+  year: 2019
+  reference: S08
+  status: variant
+- version_id: V06
+  version_name: 10,050-gene MERFISH
+  year: 2019
+  reference: S09
+  status: variant
+probe:
+  architecture_type: Linear ssDNA encoding probes with complementary readout layers
+  target_binding: Antisense targeting regions hybridize directly to RNA
+  barcode_system: Experiment-specific binary codewords; not a contiguous nucleotide
+    barcode
+  readout_system: Sequential fluorescent oligonucleotide hybridization
+  amplification: null
+  sequencing_or_imaging: Fluorescence imaging; not nucleotide sequencing
+  modifications:
+  - Version-specific fluorescent labels and cleavable linkages
+  - Version-specific acrydite/LNA RNA anchoring
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: B
+references:
+  primary_source_ids:
+  - S01
+  - S03
+  - S04
+  - S05
+  - S08
+  - S09
+  - S10
+  - S11
+validation:
+  status: research_complete
+field_states: {}

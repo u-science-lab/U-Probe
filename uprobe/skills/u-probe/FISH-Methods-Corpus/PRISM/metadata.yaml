@@ -1,0 +1,65 @@
+method:
+  official_name: PRISM
+  full_name: profiling of RNA in situ through single-round imaging
+  aliases:
+  - PRISM
+classification:
+  categories:
+  - multiplex RNA FISH
+  - padlock-probe imaging
+  applications:
+  - spatial RNA imaging
+  - targeted spatial transcriptomics
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+  - fluorescent_barcode
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: |
+    RNA-targeted padlock with four physical barcode segments, circularized on RNA, RCA-amplified, and decoded in a single imaging round via intensity/color combinations of labeled and unlabeled imaging probes. No sequential base-by-base readout chemistry.
+publication:
+  original_year: 2025
+  original_reference: S01
+  doi: 10.1038/s41587-025-02883-7
+  pmid: '41168495'
+versions:
+- version_id: V01
+  version_name: 30/31-plex configuration (corpus label)
+  year: 2025
+  reference: S01
+  status: original
+- version_id: V02
+  version_name: 64-plex configuration (corpus label)
+  year: 2025
+  reference: S01
+  status: variant
+probe:
+  architecture_type: RNA-targeted padlock with four barcode segments
+  target_binding: Terminal complementary arms; see scoped exceptions in probes.md
+  barcode_system: Four-channel color-intensity codewords
+  readout_system: Competitive labeled/unlabeled imaging-probe binding to RCA products
+  amplification: Rolling circle amplification
+  sequencing_or_imaging: Single-round multichannel fluorescence imaging
+  modifications:
+  - 5-prime padlock phosphorylation
+  - Phosphorothioate RCA-primer linkages
+  - Fluorophore-labeled imaging probes
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids:
+  - S01
+  - S02
+  - S03
+  - S04
+  - S05
+  - S06
+  - S07
+validation:
+  status: research_complete
+field_states: {}

@@ -1,0 +1,60 @@
+# Detailed evidence and experiment scopes are in the Markdown records.
+method:
+  official_name: "ExSeq"
+  full_name: "Expansion Sequencing"
+  aliases: ["ExSeq", "Expansion Sequencing", "Untargeted ExSeq", "Targeted ExSeq"]
+classification:
+  categories: ["in situ RNA sequencing (ISS)", "expansion microscopy", "padlock probe / rolling-circle amplification"]
+  applications: ["spatial RNA mapping", "subcellular RNA localization", "cell-type mapping"]
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+  - in_situ_sequencing
+  classification_evidence_status: reported
+  classification_source: S02
+  classification_notes: Targeted versions (V02-V04) circularize SplintR padlocks on RNA and amplify with Phi29 RCA; untargeted V01 generates cDNA circles. SOLiD ligation (V01/V03) and Illumina SBS (V02) constitute in situ sequencing readouts.
+publication:
+  original_year: 2021
+  original_reference: "S01"
+  doi: "10.1126/science.aax2656"
+  pmid: "33509999"
+versions:
+  - version_id: "V01"
+    version_name: "Untargeted ExSeq (original experiments)"
+    year: 2021
+    reference: "S02"
+    status: original
+  - version_id: "V02"
+    version_name: "Targeted ExSeq (original brain experiments)"
+    year: 2021
+    reference: "S02"
+    status: variant
+  - version_id: "V03"
+    version_name: "Targeted ExSeq (original metastatic breast cancer experiment)"
+    year: 2021
+    reference: "S02"
+    status: variant
+  - version_id: "V04"
+    version_name: "Targeted ExSeq (generalized protocol and public design code)"
+    year: 2021
+    reference: "S12"
+    status: variant
+probe:
+  architecture_type: "Untargeted cDNA circles or targeted barcoded DNA padlocks; see version scopes."
+  target_binding: "Random-octamer RT (V01); adjacent terminal padlock arms, 16 nt each by default (V02-V04)."
+  barcode_system: null
+  readout_system: "SOLiD ligation (V01/V03); Illumina SBS (V02); configurable targeted readout (V04)."
+  amplification: "Phi29 rolling-circle amplification."
+  sequencing_or_imaging: "Multiround fluorescence imaging of expanded specimens."
+  modifications: ["Padlock 5'-phosphate", "RCA-primer phosphorothioate bonds", "Aminoallyl-dUTP and amplicon cross-linking"]
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: "C"
+references:
+  primary_source_ids: ["S01", "S02", "S04", "S11", "S12", "S13", "S14"]
+validation:
+  status: validated_with_warnings
+field_states: {}
