@@ -465,7 +465,8 @@ def cli(ctx, verbose, quiet):
 @click.option('--raw', is_flag=True,
               help='Save unfiltered raw probe data.')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue execution even if some targets are invalid.')
+              help='Skip targets that are not in the genome annotation and design the others. '
+                   'Without it, any such target stops the run before designing.')
 @click.option('--threads', '-t', default=10, type=int,
               help='Number of threads for computation. [default: 10]')
 @click.option('--json', 'json_output', is_flag=True,
@@ -476,11 +477,13 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     
     This command runs the entire pipeline from genome index building to final probe generation.
     Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
+    A gene target missing from the GTF stops the run before designing (status error),
+    unless --continue-invalid skips it.
 
     \b
     Exit status (with 0, 1 and 3, summary.json and the --json output are written first):
       0  probes were designed (status ok or partial)
-      1  the run failed (status error)
+      1  the run failed (status error), e.g. a target not in the GTF without --continue-invalid
       2  invalid command-line usage (missing or bad options)
       3  the run finished without any probe (status no_probes,
          no_probes_constructed, no_target_sequences or no_valid_targets)
@@ -658,11 +661,11 @@ def build_index(protocol, genomes, threads):
 @click.option('--genomes', '-g', required=True, type=click.Path(exists=True),
               help='Path to genome configuration file (YAML).')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue with valid targets even if some are invalid.')
+              help='Exit with 0 when some targets are invalid but others are valid.')
 def validate_targets(protocol, genomes, continue_invalid):
     """
     Validate target genes against the genome annotation.
-    
+
     Checks if all target genes specified in the protocol exist in the GTF file.
     """
     try:
@@ -670,16 +673,16 @@ def validate_targets(protocol, genomes, continue_invalid):
         uprobe = UProbeAPI(
             protocol_config=Path(protocol),
             genomes_config=Path(genomes),
-            output_dir=Path('./temp')  
+            output_dir=Path('./temp')
         )
-        valid = uprobe.validate_targets(continue_on_invalid=continue_invalid)       
-        if valid:
-            log.info("All target genes are valid!")
-        elif continue_invalid:
-            log.warning("Some targets are invalid but continuing as requested.")
+        valid = uprobe.validate_targets(continue_on_invalid=continue_invalid)
+        if not valid:
+            log.error("Target validation failed: no valid targets.")
+            sys.exit(1)
+        if uprobe.target_validation['invalid']:
+            log.warning("Some targets are invalid; the others are valid (--continue-invalid).")
         else:
-            log.error("Target validation failed!")
-            sys.exit(1)          
+            log.info("All target genes are valid!")
     except Exception as e:
         log.error(f"Target validation failed: {e}")
         sys.exit(1)
@@ -693,7 +696,7 @@ def validate_targets(protocol, genomes, continue_invalid):
 @click.option('--output', '-o', default='./results', type=click.Path(),
               help='Output directory. [default: ./results]')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue with valid targets even if some are invalid.')
+              help='Skip targets that are not in the genome annotation; without it, any such target stops.')
 def generate_targets(protocol, genomes, output, continue_invalid):
     """
     Generate target region sequences from the genome.

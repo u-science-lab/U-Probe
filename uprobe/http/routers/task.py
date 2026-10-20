@@ -449,7 +449,9 @@ async def _run_uprobe_task(username: str, task_id: str):
             from uprobe.http.utils.uprobe_runner import run_uprobe_workflow
             loop = asyncio.get_running_loop()
             pool = get_process_pool()
-            job = functools.partial(run_uprobe_workflow, protocol_yaml=task.yaml_content, username=username, task_id=task_id, output_dir=str(task_results_dir), threads=TASK_THREADS, raw_csv=True, continue_invalid_targets=False, log_path=str(log_path))
+            # Web tasks skip targets missing from the GTF (logged and listed in summary.json):
+            # the web form has no --continue-invalid switch to retry with.
+            job = functools.partial(run_uprobe_workflow, protocol_yaml=task.yaml_content, username=username, task_id=task_id, output_dir=str(task_results_dir), threads=TASK_THREADS, raw_csv=True, continue_invalid_targets=True, log_path=str(log_path))
             fut = loop.run_in_executor(pool, job)
             tail_buf = deque(maxlen=2000)
             last_progress = [task.progress]

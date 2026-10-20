@@ -26,6 +26,18 @@ from .utils import get_logger
 log = get_logger(__name__)
 
 
+class InvalidTargetsError(ValueError):
+    """Gene targets missing from the genome annotation, in a run that does not skip them."""
+
+    def __init__(self, targets):
+        self.targets = list(targets)
+        super().__init__(
+            f"{len(self.targets)} target(s) not found in the genome annotation: {', '.join(self.targets)}. "
+            "Targets are matched against the GTF gene_name, case-sensitively (uprobe validate --check-targets "
+            "suggests the closest names). Fix them, or pass --continue-invalid (Python API: "
+            "continue_on_invalid_targets=True) to skip them and design the other targets.")
+
+
 class UProbeAPI:
     def __init__(
         self,
@@ -105,36 +117,42 @@ class UProbeAPI:
         log.info(f"Generated {len(barcodes)} barcodes.")
         return barcodes
 
-    def validate_targets(self, continue_on_invalid: bool = True) -> bool:
+    def validate_targets(self, continue_on_invalid: bool = False) -> bool:
+        """Look the gene targets up in the GTF; keep only the valid ones in the protocol.
+
+        A target that is not a GTF gene_name stops the run with InvalidTargetsError,
+        unless ``continue_on_invalid`` (``uprobe run --continue-invalid``): then
+        invalid targets are skipped and recorded in ``target_validation``.
+        Returns False when no target remains.
+        """
         genome_targets, direct_targets = self._parse_targets()
-        
+
         if not genome_targets and not direct_targets:
             raise ValueError("No targets specified in the protocol.")
-            
+
         log.info("Validating targets...")
-        
+
         valid_genome_targets = []
         invalid_list = []
         if genome_targets:
             gtf_path = Path(self.genome['gtf'])
             _, valid_list, invalid_list = validate_targets(genome_targets, gtf_path, DTF_NAME_FIX=True)
-
-            if invalid_list:
-                log.warning(f"Invalid targets found (not in genome): {invalid_list}")
-                
             valid_genome_targets = valid_list
-        
+        self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
+        if invalid_list and not continue_on_invalid:
+            raise InvalidTargetsError(invalid_list)
+        if invalid_list:
+            log.warning(f"Skipping {len(invalid_list)} target(s) not found in the genome annotation "
+                        f"(--continue-invalid): {', '.join(invalid_list)}")
+
         # Reconstruct targets for protocol
         new_targets = []
         new_targets.extend(valid_genome_targets)
         for name, seq in direct_targets.items():
             new_targets.append({name: seq})
         self.protocol["targets"] = new_targets
-        self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
         if not new_targets:
             log.error("No valid targets remaining after validation.")
-            if not continue_on_invalid:
-                raise ValueError("No valid targets remaining.")
             return False
         log.info(f"Target validation successful. Valid: {len(valid_genome_targets)} genome targets, {len(direct_targets)} custom sequences.")
         return True
@@ -325,10 +343,8 @@ class UProbeAPI:
         from uprobe.core.cli import _validate_and_normalize_protocol
         self.protocol = _validate_and_normalize_protocol(self.protocol, self.genome)
     
-        # 1. Build Genome Index (if needed)
-        run['step'] = 'build_index'
-        self.build_genome_index(threads=threads)
-        # 2. Validate Targets(RNA)
+        # 1. Validate Targets (RNA), before the indexes are built: a misspelled
+        # target stops the run at once, unless continue_on_invalid_targets skips it.
         run['step'] = 'validate_targets'
         source = self.protocol['extracts']['target_region']['source']
         if source != 'genome':
@@ -336,6 +352,9 @@ class UProbeAPI:
                 log.error("Workflow halted due to target validation failure.")
                 run['status'] = 'no_valid_targets'
                 return pd.DataFrame()
+        # 2. Build Genome Index (if needed)
+        run['step'] = 'build_index'
+        self.build_genome_index(threads=threads)
         # 3. Generate Target Region Sequences
         run['step'] = 'extract_target_regions'
         df_targets = self.generate_target_seqs()

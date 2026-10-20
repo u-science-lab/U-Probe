@@ -104,16 +104,18 @@ echo $?
 
 | Exit | Meaning | `status` in `summary.json` |
 | --- | --- | --- |
-| 0 | probes designed | `ok`, or `partial` (a target has no probes or fewer than `equal_space` asked, or targets were invalid) |
+| 0 | probes designed | `ok`, or `partial` (a target has no probes or fewer than `equal_space` asked, or invalid targets were skipped with `--continue-invalid`) |
 | 1 | the run failed | `error` (`stopped_at`, `error` say where and why) |
 | 2 | bad command-line usage | no summary written |
 | 3 | finished without any probe | `no_probes`, `no_probes_constructed`, `no_target_sequences`, `no_valid_targets` |
 
-- Order of steps: normalize protocol -> build indexes -> validate targets (RNA) -> extract windows ->
+- Order of steps: normalize protocol -> validate targets (RNA) -> build indexes -> extract windows ->
   construct probes -> attributes -> post_process (`filters`, `avoid_otp`, `remove_overlap`,
   `off_target_pool`, `equal_space`, `sorts`) -> report.
-- Targets missing from the GTF are dropped with a warning and the run continues (`partial`);
-  `--continue-invalid` only matters when *no* target is valid (then status `no_valid_targets`, exit 3, instead of exit 1).
+- A target missing from the GTF stops the run before indexes are built (status `error`, exit 1; the
+  error lists the targets). `--continue-invalid` skips them instead and lists them in `summary.json`
+  (`inputs.invalid_targets`, warning `invalid_targets`; status `partial`, or `no_valid_targets` with
+  exit 3 when no target is left). Run `validate --check-targets` first to catch them.
 - `--json` prints `summary.json` on stdout; logs and tool output go to stderr.
 - `--raw` also writes all candidates with their attributes before filtering (`*_raw.xlsx`); a run that
   ends with no probes writes it anyway. Large raw tables can fail (see `references/uprobe/troubleshooting.md`).

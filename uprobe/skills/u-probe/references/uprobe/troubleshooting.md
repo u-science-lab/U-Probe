@@ -11,9 +11,10 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 | --- | --- | --- |
 | 2, no summary | the command line | missing `-p`/`-g`, a path that does not exist |
 | 1 `error`, `stopped_at: load_inputs` or `normalize_protocol` | `error` | protocol rejected (run `uprobe validate`), genome name not in `genomes.yaml`, FASTA/GTF path missing |
+| 1 `error`, `stopped_at: validate_targets` | `error`, `inputs.invalid_targets` | a target is not a GTF `gene_name` and `--continue-invalid` was not given |
 | 1 `error`, `stopped_at: build_index` | stderr log | aligner not installed, unreadable FASTA, disk space |
 | 1 `error`, later steps | `error` | aligner missing at alignment time, transcript selection, expression table, Excel limit |
-| 3 `no_valid_targets` | `inputs.invalid_targets` | no target name is a GTF `gene_name` |
+| 3 `no_valid_targets` | `inputs.invalid_targets` | no target name is a GTF `gene_name` (with `--continue-invalid`) |
 | 3 `no_target_sequences` | log line `Failed to generate sequences` | no window fits a segment (below) |
 | 3 `no_probes_constructed` | `warnings: probe_construction_failed` | an expression fails for every candidate |
 | 3 `no_probes` | `stages`, raw table | filters removed everything |
@@ -61,12 +62,14 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 
 ## Targets and transcripts
 
-- **Symptom:** `invalid_targets` warning or `no_valid_targets`. **Cause:** names are matched against
+- **Symptom:** run stops at `validate_targets` with `N target(s) not found in the genome annotation`,
+  or an `invalid_targets` warning or `no_valid_targets`. **Cause:** names are matched against
   GTF `gene_name`, case-sensitively (`GAPDH` human, `Gapdh` mouse); gene ids and old aliases do not
   match; genes without a `gene_name` cannot be named. **Fix:** `validate --check-targets` suggests the
   closest name; look the gene up in the GTF; for an unnamed gene use a literal sequence target named
-  after its gene id. Invalid targets are skipped and the run continues (`partial`) even without
-  `--continue-invalid`; that flag only changes the all-invalid case (exit 3 instead of exit 1).
+  after its gene id. Without `--continue-invalid`, any invalid target stops the run (exit 1) before
+  indexes are built or anything is designed; with it, invalid targets are skipped and listed
+  (`partial`, or `no_valid_targets` with exit 3 when none is left). Web-server tasks always skip them.
 - **Symptom:** `no transcript of X is tagged MANE_Select or Ensembl_canonical`. **Cause:** non-Ensembl
   GTF (RefSeq, custom), or an old release without tags. **Fix:** list transcript ids
   (`transcripts: [ENST...]`), or `transcripts: all`; MANE exists only for human.

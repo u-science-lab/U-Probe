@@ -259,8 +259,11 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
 
     warnings = []
     if invalid:
+        # Without --continue-invalid, invalid targets stop the run (status error) instead.
+        outcome = ("stopped the run; fix them or pass --continue-invalid to skip them" if status == "error"
+                   else "skipped")
         warnings.append({"code": "invalid_targets", "targets": invalid,
-                         "message": f"{len(invalid)} target(s) not found in the genome annotation and skipped."})
+                         "message": f"{len(invalid)} target(s) not found in the genome annotation and {outcome}."})
     if windows is not None:
         no_windows = [name for name in names if not windows.get(name)]
         if no_windows:

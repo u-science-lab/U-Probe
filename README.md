@@ -161,6 +161,9 @@ Useful flags:
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --continue-invalid --raw --threads 10
 ```
 
+- `--continue-invalid`: a gene target that is not a `gene_name` of the GTF stops the run before anything is designed (status `error`, exit 1), with an error that lists those targets. With `--continue-invalid`, they are skipped and reported instead: logged, listed in `summary.json` (`inputs.invalid_targets` and an `invalid_targets` warning), and the run ends `partial` (or `no_valid_targets` if no target is left). `uprobe validate --check-targets` finds them before a run. Tasks submitted through the web server skip invalid targets.
+- `--raw`: also write every candidate with its attributes, before filtering (`<name>_<time>_raw.xlsx`).
+
 Every run writes `summary.json` to the output directory, also when it stops early or fails. It gives the outcome (`status`: `ok`, `partial`, `no_probes`, `no_valid_targets`, `no_target_sequences`, `no_probes_constructed` or `error`, with a `message`; `partial` means some targets have no probes, or fewer than `equal_space` requested), how many candidates each target kept after every post-processing stage and which stage removed the most, statistics of the summary attributes, the off-target genes found by `mapped_genes` attributes (`off_targets`), the transcripts each gene target's windows came from (`targets.<name>.transcripts`, see `transcripts` below), the output file names, warnings, and the inputs, including the Tm/fold conditions in effect and the genome's Ensembl `source` when it is recorded. The final probe table is written as `<name>_<time>.xlsx` and as plain tab-separated `<name>_<time>_probes.tsv`. With `--json`, `uprobe run` prints the summary to stdout and sends logs and tool output to stderr.
 
 Exit status of `uprobe run` (`summary.json` and the `--json` output are written before it exits):
@@ -229,7 +232,7 @@ df_final = api.run_workflow(threads=10)
 
 # --- Method 2: Step-by-Step Execution ---
 api.build_genome_index(threads=10)
-api.validate_targets()
+api.validate_targets()  # raises on a target not in the GTF; continue_on_invalid=True skips it
 df_targets = api.generate_target_seqs()
 df_probes = api.construct_probes(df_targets)
 
