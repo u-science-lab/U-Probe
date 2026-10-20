@@ -20,7 +20,7 @@ keywords = [
 ]
 
 
-URL = "https://github.com/UFISH-Team/U-Probe"
+URL = "https://github.com/u-science-lab/U-Probe"
 
 
 def get_version():
