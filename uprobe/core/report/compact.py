@@ -12,8 +12,8 @@ from .formatting import prepare_result_table
 from .excel import column_styles, exceeds_excel_rows, workbook_bytes
 from ..hybridization import declares_hybridization, describe_conditions
 
-# Raw candidates embedded as rows: the raw dialog previews this many. The raw workbook embedded
-# for download holds them all; every row as JSON as well made reports of large designs huge.
+# Raw candidates embedded as rows: the raw dialog previews this many. The whole raw table is the
+# run's raw TSV/XLSX (--raw), or a workbook embedded with summary.report.embed_raw: true.
 RAW_PREVIEW_ROWS = 100
 
 
@@ -84,14 +84,26 @@ def build_report_data(df, protocol, raw_df=None, csv_filename=None):
     }
 
 
-def save_compact_report(df, protocol, output_path, raw_df=None, csv_filename=None):
+def embeds_raw(protocol) -> bool:
+    """summary.report.embed_raw: embed every raw candidate in the report as a workbook."""
+    settings = (protocol.get("summary") or {}).get("report") or {}
+    return isinstance(settings, dict) and settings.get("embed_raw") is True
+
+
+def save_compact_report(df, protocol, output_path, raw_df=None, csv_filename=None, raw_files=None):
+    """Write the report; ``raw_files`` names the run's raw tables next to it (written with --raw).
+
+    The raw candidates are embedded as a 100-row preview; the whole raw table only with
+    summary.report.embed_raw: true (it made the report of a 200-kb Oligopaint design 66 MB).
+    """
     data = build_report_data(df, protocol, raw_df, csv_filename)
     data["xlsxFilename"] = Path(data["csvFilename"]).with_suffix(".xlsx").name
     # A table longer than an Excel worksheet is not embedded (its TSV is next to the report).
     embed = lambda table: (base64.b64encode(workbook_bytes(table, protocol)).decode("ascii")
                            if table is not None and not exceeds_excel_rows(table) else None)
     data["xlsxData"] = embed(df)
-    data["rawXlsxData"] = embed(raw_df)
+    data["rawXlsxData"] = embed(raw_df) if embeds_raw(protocol) else None
+    data["rawFiles"] = [Path(name).name for name in raw_files or [] if name]
     # Escape HTML-sensitive characters even inside the non-executable JSON block.
     payload = json.dumps(data, ensure_ascii=True, default=str, allow_nan=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     path = Path(output_path)
@@ -114,7 +126,7 @@ HTML = r'''<!doctype html>
 <details class="section" id="diagnostics"><summary>Filter diagnostics <span class="muted">Conditions and independent pass counts</span></summary><div class="body"><p class="muted">Each condition is checked independently on raw candidates. Rejection counts can overlap and must not be added together. Conditions for missing columns are skipped by the pipeline.</p><div class="scroll" id="filterTable"></div></div></details>
 <details class="section"><summary>Quality statistics <span class="muted">One metric at a time</span></summary><div class="body"><select id="metric" aria-label="Quality metric"></select><p class="muted" id="statSummary"></p><div class="chart" id="chart"></div><div class="axis"><span id="low"></span><span id="high"></span></div><p class="muted">Final probes only. Hover over a bar for its interval and count.</p></div></details>
 <footer>U-Probe · Final results and unfiltered candidates are reported separately. Identifiers and protocol values are retained as supplied.</footer>
-</main><dialog id="rawDialog"><button class="close" id="closeRaw">Close</button><h2>Raw candidates</h2><p class="notice">Unfiltered candidates for troubleshooting. They are not passing probes. Preview shows up to 100 rows.</p><button id="downloadRaw">Download raw XLSX</button><div class="scroll" id="rawTable" style="max-height:55vh;margin-top:16px"></div></dialog>
+</main><dialog id="rawDialog"><button class="close" id="closeRaw">Close</button><h2>Raw candidates</h2><p class="notice">Unfiltered candidates for troubleshooting. They are not passing probes. Preview shows up to 100 rows.</p><button id="downloadRaw">Download raw XLSX</button><p class="muted" id="rawSource"></p><div class="scroll" id="rawTable" style="max-height:55vh;margin-top:16px"></div></dialog>
 <script type="application/json" id="report-data">$payload</script>
 <script>
 const data=JSON.parse(document.getElementById('report-data').textContent);
@@ -135,7 +147,8 @@ el('quality').innerHTML=data.metrics.map(m=>data.statistics.find(s=>s.name===m))
 el('targets').innerHTML=data.targets.length?table(['target','raw_candidates','final_probes','status'],data.targets.map(t=>({target:t.target,raw_candidates:t.raw,final_probes:t.final,status:t.final===null?'Unavailable':t.final>0?'Covered':'No result'}))):'<p class="muted">Target information unavailable.</p>';
 if(data.state!=='complete'){el('notice').classList.remove('hidden');text('noticeTitle',data.state==='empty'?'No final probes':'Some targets have no final probes');text('noticeText',data.state==='empty'?'No candidates remain after selection. Review filter diagnostics and raw candidates.':'Review targets with no result before using this design.');el('diagnostics').open=data.state==='empty'}
 if(data.rawRows.length)el('viewRaw').classList.remove('hidden');
-el('viewRaw').onclick=()=>{el('rawTable').innerHTML=table(data.rawColumns,data.rawRows.slice(0,100));el('rawDialog').showModal()};el('closeRaw').onclick=()=>el('rawDialog').close();el('downloadRaw').onclick=()=>downloadWorkbook(data.rawXlsxData,data.xlsxFilename.replace(/\.xlsx$/,'_raw.xlsx'));el('downloadRaw').disabled=!data.rawXlsxData;
+el('viewRaw').onclick=()=>{el('rawTable').innerHTML=table(data.rawColumns,data.rawRows.slice(0,100));el('rawDialog').showModal()};el('closeRaw').onclick=()=>el('rawDialog').close();el('downloadRaw').onclick=()=>downloadWorkbook(data.rawXlsxData,data.xlsxFilename.replace(/\.xlsx$/,'_raw.xlsx'));el('downloadRaw').disabled=!data.rawXlsxData;el('downloadRaw').classList.toggle('hidden',!data.rawXlsxData);
+el('rawSource').innerHTML=data.rawXlsxData?'':data.rawFiles.length?'All '+num(data.rawCount)+' candidates: '+data.rawFiles.map(f=>'<a href="'+encodeURI(f)+'">'+esc(f)+'</a>').join(', ')+', next to this report.':'The '+num(data.rawCount)+' raw candidates were not saved: run uprobe with --raw to write them next to this report, or set summary.report.embed_raw: true to embed them in it.';
 el('download').disabled=!data.rows.length||!data.xlsxData;el('download').onclick=()=>downloadWorkbook(data.xlsxData,data.xlsxFilename);el('print').onclick=()=>window.print();
 el('filterTable').innerHTML=(data.diagnostics.length?table(['metric','condition','passed','rejected'],data.diagnostics):'<p class="muted">No filter conditions configured.</p>')+(data.postProcessStages?.length?'<h3>Post-processing steps</h3><p class="muted">Sequential counts from raw candidates to final probes.</p>'+table(['stage','before','after','removed'],data.postProcessStages):'');
 let page=0,sortColumn=null,ascending=true;function renderRows(){const query=el('search').value.toLowerCase();let rows=data.rows.filter(r=>data.columns.some(c=>String(r[c]??'').toLowerCase().includes(query)));if(sortColumn)rows.sort((a,b)=>{const av=a[sortColumn],bv=b[sortColumn];return (typeof av==='number'&&typeof bv==='number'?av-bv:String(av??'').localeCompare(String(bv??'')))*(ascending?1:-1)});const pages=Math.max(1,Math.ceil(rows.length/20));page=Math.min(page,pages-1);const visible=rows.slice(page*20,page*20+20);el('results').innerHTML='<table><thead><tr>'+data.tableColumns.map(c=>'<th data-column="'+esc(c)+'">'+esc(label(c))+'</th>').join('')+'</tr></thead><tbody>'+visible.map(r=>'<tr>'+data.tableColumns.map(c=>'<td'+cellClass(c)+'>'+esc(typeof r[c]==='object'&&r[c]!==null?JSON.stringify(r[c]):r[c]??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(rows.length?'':'<p class="muted">No probes to display.</p>');text('pageInfo',num(rows.length)+' probes · Page '+(page+1)+' / '+pages);el('prev').disabled=page===0;el('next').disabled=page>=pages-1;el('results').querySelectorAll('[data-column]').forEach(th=>th.onclick=()=>{const c=th.dataset.column;ascending=sortColumn===c?!ascending:true;sortColumn=c;page=0;renderRows()})}

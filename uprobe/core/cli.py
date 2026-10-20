@@ -646,12 +646,18 @@ def validate(protocol, genomes, as_json, check_targets):
               help='Path to genome configuration file (YAML).')
 @click.option('--threads', '-t', default=10, type=int,
               help='Number of threads for index building. [default: 10]')
-def build_index(protocol, genomes, threads):
+@click.option('--all', 'all_indexes', is_flag=True,
+              help="Build every index of the genome's align_index, not only those the protocol's "
+                   "attributes search.")
+def build_index(protocol, genomes, threads, all_indexes):
     """
-    Build genome index for alignment tools.
-    
-    Creates necessary indices for tools like Bowtie2 and BLAST as specified
-    in the genome configuration.
+    Build the aligner indexes a protocol needs.
+
+    Builds the indexes of the genome's align_index that the protocol's
+    attributes search (mapped_genes: its aligner's transcriptome index;
+    mapped_sites: the genome index), as `uprobe run` does; --all builds every
+    index of align_index. A Jellyfish index is built by the first run that
+    counts k-mers of its length.
     """
     try:
         log.info("Building genome index...")
@@ -661,7 +667,7 @@ def build_index(protocol, genomes, threads):
             output_dir=Path('./temp') 
         )
         
-        uprobe.build_genome_index(threads=threads)
+        uprobe.build_genome_index(threads=threads, all_indexes=all_indexes)
         log.info("Genome index building completed successfully!")
     except Exception as e:
         log.error(f"Index building failed: {e}")

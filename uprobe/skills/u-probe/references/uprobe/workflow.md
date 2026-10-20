@@ -35,21 +35,22 @@ uprobe genome list -g genomes.yaml [--json]    # files present? indexes built?
 
 ### Indexes
 
-`uprobe run` builds every index in `align_index` that is missing before it designs anything; build them
-ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` or `genome fetch --build-index`.
+`uprobe run` builds the missing indexes of `align_index` that the protocol's attributes search before it
+designs anything; build them ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` (the
+same indexes; `--all`: every index of `align_index`) or `genome fetch --build-index` (every one).
 
 | `align_index` entry | Builds (next to the FASTA) | Needed by |
 | --- | --- | --- |
 | `bowtie` | `bowtie_transcript/` (transcriptome only) | `mapped_genes` with `aligner: bowtie` |
-| `bowtie2` | `bowtie2_genome/` and `bowtie2_transcript/` | `mapped_sites`; `mapped_genes` with `aligner: bowtie2` |
+| `bowtie2` | `bowtie2_genome/` (for `mapped_sites`) and `bowtie2_transcript/` (for `mapped_genes`), each only when an attribute searches it | `mapped_sites`; `mapped_genes` with `aligner: bowtie2` |
 | `blast`, `mmseqs` | genome (and BLAST transcript) databases | nothing in the current attributes |
 | `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length (`.stranded.jf` for `strand: sense`/`antisense`), at the first `kmer_count` with it | `kmer_count` |
 
 - The transcriptome is `transcript.fa` (every GTF transcript, spliced, records `<gene_id>_<transcript_id>`),
   extracted next to the FASTA once.
 - Bowtie 1 transcriptome index of human Ensembl 113: about 5 min and 650 MB (README). A Bowtie2 *genome*
-  index of a mammalian genome takes much longer; for RNA designs that only use `aligner: bowtie`,
-  `align_index: [bowtie]` avoids it.
+  index of a mammalian genome takes much longer (mouse GRCm39: 13.5 min, 3.5 GB); RNA designs, which
+  only search the transcriptome, never build it.
 - `uprobe run --threads/-t` (default 10) sets the threads of index building and of every aligner and
   Jellyfish step of an attribute without its own `threads:` option; an attribute's `threads:` wins.
 
@@ -127,7 +128,8 @@ echo $?
 ## 6. Read the outputs
 
 Files in `-o` (names in `summary.json -> output_files`): `<name>_<time>_probes.tsv` (final table, read
-this one), `<name>_<time>.xlsx` (same, formatted), `<name>_report_<time>.html`, `summary.json`.
+this one), `<name>_<time>.xlsx` (same, formatted), `<name>_report_<time>.html` (final table, filter
+counts, a 100-row preview of the raw candidates and a link to the `--raw` table), `summary.json`.
 
 `summary.json` keys to read first:
 - `status`, `message`, `warnings[].code` (`invalid_targets`, `no_candidate_windows`,

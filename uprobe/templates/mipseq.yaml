@@ -81,6 +81,18 @@ meta:
         is `partial`); Supplementary Fig. 7 shows 8 pairs per gene detecting
         more, which needs number_desired: 8 and usually a larger cap.
       quote: Try to choose the exon close to the 5' end, and select 2 target sites for each gene
+    - parameter: post_process.filters.arm_5_tm, filters.arm_3_tm and filters.primer_tm
+      value: ">= 28 C for both 13-nt arms and the 13-nt primer site, under the hybridization block (2x SSC, 10% formamide, 30 nM)"
+      source: >-
+        The published 217-gene set (Nat Biomed Eng Supplementary Table,
+        sheet "Fig 3"; 434 units). Under these conditions its arms and primer
+        sites have a Tm of 25.1-49.6 C (median 39.6); 21% of each lie below
+        the 37 C hybridization, so the units bind as a whole (26-nt padlock
+        duplex plus primer) rather than part by part, and the floor follows
+        the low tail of the published parts instead of the hybridization
+        temperature: 28 C is the 2.5th percentile of each unit's weakest
+        part and rejects 9 of the 434 units (2%). The paper states no Tm
+        criterion.
   hybridization:
     ssc: 2x
     source: >-
@@ -92,7 +104,7 @@ meta:
   limitations:
     - MiP-seq selects 2 target sites per gene in an exon close to the 5' end. U-Probe has no "near the 5' end" option, so the template filters target_start (the window's position along the RNA, 1-based) and then spreads the 2 sites evenly over what is left; the cap of 1,000 nt is U-Probe's, not the paper's (see parameter_sources).
     - The published primers are 25 nt (247 of 432) or 26 nt (185); the template builds the 25-nt majority form, and the 26-nt one differs by one C (see parameter_sources).
-    - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) is applied."
+    - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) and a Tm floor taken from the published units (parameter_sources) are applied."
   replace:
     - "genome: a genome name from your genomes.yaml (mm10 here)"
     - "targets: your gene names (Th here)"
@@ -158,6 +170,7 @@ hybridization:
   na_mM: 390
   probe_nM: 30
   formamide_pct: 10
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   target_gc:
@@ -195,6 +208,14 @@ post_process:
     # gives too few sites.
     near_5p:
       condition: target_start <= 1000
+    # Tm floor of the arms and the primer site: the low tail of the published
+    # units (meta.parameter_sources; it rejects 2% of them).
+    arm_5_tm:
+      condition: arm_5_tm >= 28
+    arm_3_tm:
+      condition: arm_3_tm >= 28
+    primer_tm:
+      condition: primer_tm >= 28
   sorts:
     is_ascending:
       - target_mapped_genes

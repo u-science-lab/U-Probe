@@ -40,6 +40,24 @@ def test_raw_preview_embeds_only_the_rows_it_shows():
     assert data["diagnostics"][0]["passed"] == 5
 
 
+def report_payload(path):
+    html = path.read_text()
+    return json.loads(re.search(r'<script type="application/json" id="report-data">(.*?)</script>', html, re.S).group(1))
+
+
+def test_raw_workbook_is_embedded_only_on_request(tmp_path):
+    # The embedded raw workbook made 63 of the 66 MB of a 200-kb Oligopaint report. The report
+    # now names the raw table files of the run; summary.report.embed_raw: true embeds the workbook.
+    raw, protocol = fixture_data()
+    data = report_payload(save_compact_report(raw.iloc[:1], protocol, tmp_path / "r.html", raw,
+                                              raw_files=["run_raw.tsv", "run_raw.xlsx"]))
+    assert data["rawXlsxData"] is None and data["rawFiles"] == ["run_raw.tsv", "run_raw.xlsx"]
+    assert len(data["rawRows"]) == 3 and data["xlsxData"]
+    protocol["summary"]["report"]["embed_raw"] = True
+    data = report_payload(save_compact_report(raw.iloc[:1], protocol, tmp_path / "e.html", raw))
+    assert data["rawXlsxData"] and data["rawFiles"] == []
+
+
 def test_standalone_counts_are_unknown():
     raw, protocol = fixture_data()
     data = build_report_data(raw, protocol)

@@ -58,10 +58,11 @@ ATTRIBUTE_TYPES = {
     'gc_content': None, 'annealing_temperature': None, 'length': None,
     'fold_score': None, 'self_match': None, 'blocks': None,
     'mapped_sites': ('bowtie2',), 'mapped_genes': MAPPED_GENES_ALIGNERS, 'kmer_count': ('jellyfish',),
+    'difference': None,
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -888,6 +889,9 @@ class _Validator:
                 if kind == 'blocks' and self.source == 'genome' and not self.direct_targets:
                     self.warning(path + ('type',), 'blocks needs a start column, which source: genome does not '
                                  'produce; the attribute is skipped', 'remove it, or use source mRNA, exon, CDS or UTR')
+            if kind == 'difference':
+                self._check_difference(path, attr, list(self.attributes)[:list(self.attributes).index(name)])
+                continue
             target = attr.get('target')
             if target is None:
                 self.error(path + ('target',), 'missing attribute `target`',
@@ -904,6 +908,17 @@ class _Validator:
             if name in columns or name in TARGET_COLUMNS:
                 self.warning(path, f'attribute name {name!r} overwrites the column of the same name',
                              f'rename it, e.g. {name}_{kind or "value"}')
+
+    def _check_difference(self, path, attr, earlier):
+        of = attr.get('of')
+        if not (isinstance(of, list) and len(of) == 2 and all(isinstance(name, str) for name in of)):
+            self.error(path + ('of',), f'difference needs `of`: two attribute names, got {of!r}',
+                       'of: [padlock_tm, primer_tm]   # |padlock_tm - primer_tm|')
+            return
+        for name in of:
+            if name not in earlier:
+                self.error(path + ('of',), f'{name!r} is not an attribute defined before this one',
+                           _did_you_mean(name, earlier, 'attributes defined before it'))
 
     def _check_mapped_genes(self, path, attr):
         hints = {'strand': 'strand: sense   # both, sense (for target_region) or antisense (for a probe binding part)',
@@ -1121,9 +1136,13 @@ class _Validator:
                        'remove_overlap:\n  location_interval: 0')
             return
         for key in config:
-            if key != 'location_interval':
+            if key not in ('location_interval', 'prefer'):
                 self.warning(path + (key,), f'unknown option {key!r} is ignored',
-                             'the only option is location_interval')
+                             'the options are location_interval and prefer')
+        prefer = config.get('prefer')
+        if prefer is not None and (not isinstance(prefer, str) or prefer not in self.attributes):
+            self.error(path + ('prefer',), f'prefer must name an attribute (lower is better), got {prefer!r}',
+                       _did_you_mean(str(prefer), list(self.attributes), 'attributes'))
         interval = config.get('location_interval', 0)
         if type(interval) is not int:
             self.error(path + ('location_interval',), f'location_interval must be an integer, got {interval!r}',

@@ -162,6 +162,7 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` (Bowtie2 `--very-sensitive-local -k 100`, both strands: at most 100; `<attr>_num == 1` is OligoMiner's Unique Mode) | `aligner: bowtie2` (required), `threads` |
 | `kmer_count` | highest genome count among the sequence's k-mers (Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `strand` (`both`, the default: canonical k-mers, both strands; `sense`: the k-mers as written, counted on the FASTA's forward strand, as OligoMiner's dictionary; `antisense`: their reverse complements; `sense` and `antisense` read `jf_genome/<stem>.k<k>.stranded.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `difference` | `|a - b|` of two attributes defined before it, e.g. the Tm of two probe halves; no `target` | `of: [a, b]` (required) |
 | `blocks` | legacy; do not use | - |
 
 `threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute
@@ -207,7 +208,9 @@ hybridization:          # all optional; units below
 ```
 
 Unset fields keep the legacy PCR-like defaults (`na_mM` 50, `mg_mM` 0, `dntp_mM` 0.6, `probe_nM` 50,
-`formamide_pct` 0; fold at 37 °C). An `annealing_temperature` or `fold_score` attribute can carry its own
+`formamide_pct` 0; fold at 37 °C). Every template sets `dntp_mM: 0`, since FISH buffers hold no dNTPs
+(without Mg2+ they change no Tm), and `probe_nM` per oligo where its protocol states it (smFISH: 125 nM
+for the 48-oligo set, so 2.6). An `annealing_temperature` or `fold_score` attribute can carry its own
 `hybridization:` mapping, merged over the block (used to reproduce a published Tm window computed under
 other conditions). Values >= 0; `na_mM`, `probe_nM` > 0; `temperature_c`, `formamide_pct` <= 100.
 
@@ -268,7 +271,9 @@ post_process:
   does not exist is **silently skipped** at run time (`validate` reports it).
 - `remove_overlap`: per target, visits candidates by position (`target_start` in RNA mode) and keeps
   one when it starts more than `location_interval` nt after the end of the last kept one. It packs from
-  the 5' end; it does not choose the best of overlapping candidates, so put quality into `filters`.
+  the 5' end; of the candidates of one start (a `length` range or a `layout` with ranges) it keeps the
+  shortest, or with `prefer: <attribute>` the one with the lowest value (the STARmap template: the split
+  whose halves' Tm match best). It does not choose between different starts, so put quality into `filters`.
 - `off_target_pool`: per target, walks probes in `sorts` order and drops a probe whose off-target gene
   (from `<attr>_off_targets`) is already hit by `max_probes_per_gene` kept probes. `attribute` may be a
   list. Combine with a per-probe filter (e.g. `<= 2`); `<= 1` makes it a no-op (`validate` warns).
@@ -288,7 +293,13 @@ post_process:
 summary:
   report_name: rna_report      # rna_report | dna_report; empty = no HTML report
   attributes: [target_gc, probe_tm, target_mapped_genes]   # columns summarized in summary.json and the report
+  report:
+    embed_raw: false           # true: embed every raw candidate as a workbook (large for big designs)
 ```
+
+The HTML report embeds the final table and a 100-row preview of the raw candidates, and links the raw
+table that `--raw` writes next to it. With `embed_raw: true` it also embeds the whole raw table for
+download; for a 200-kb Oligopaint design (581,793 candidates) that is 63 MB of a 66 MB report.
 
 ## Defaults when `attributes` / `post_process` / `summary` are missing or empty
 

@@ -40,7 +40,10 @@ meta:
         were located on a mouse Ensembl 113 transcript are 1 nt apart (1,286)
         or 2 nt apart (2,892). Abutting sites would also leave the ligated
         ends of the padlock and the primer's 3' end with no room between the
-        two duplexes.
+        two duplexes. The lengths vary site by site: in the 9,910 published
+        pairs of these sets (full 64- and 2,766-gene sets) each site has
+        19-25 nt (19-21 in 69%), the window 40-46 nt (40 in 18%, 46 in
+        25%) and the gap 2 nt in 72%, chosen so that the halves' Tm match.
       quote: >-
         with length restriction of 40-46 nucleotide ... split into halves of
         20-25 nt, with an 0-2 nt gap in between ... each primer or padlock probe
@@ -67,6 +70,19 @@ meta:
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: U-Probe approximation of target specificity; Wang 2018 names Picky 2.2 without further criteria.
+    - parameter: post_process.filters.padlock_tm and primer_tm, attributes.tm_balance, remove_overlap.prefer
+      value: "both halves 50-65 C under the hybridization block; at each start the layout with the smallest |padlock_tm - primer_tm|"
+      source: >-
+        Wang 2018 (Fig. S1A) splits each region into halves of a designed
+        Tm of 60 C with the best Tm match (Picky 2.2), under conditions it
+        does not state. Under this template's conditions (2x SSC, 10%
+        formamide, 100 nM) the 19,820 halves of the 9,910 published pairs
+        have 58.0 C (median; 5th-95th percentile 53.5-63.3) and the two
+        halves of a pair differ by 0.9 C (median; 90th percentile 2.5).
+        Both halves of 96.8% of the pairs lie within 50-65 C. Without a
+        preference remove_overlap kept the shortest layout at each start,
+        so every unit was 19 + 1 + 20 nt.
+      quote: The two probes were designed with a designed Tm of 60oC (Wang 2018, Fig. S1A legend, paraphrased)
   hybridization:
     ssc: 2x
     source: >-
@@ -89,18 +105,18 @@ meta:
     conditions: "unknown (Picky 2.2 defaults; TODO: verify)"
     source: Wang 2018, Fig. S1A legend ("with a designed Tm of 60oC"); halves are chosen with the best Tm match
     note: >-
-      The design conditions are not stated, so the Tm target is recorded and
-      not used as a filter. Both half Tms are reported under the
-      hybridization block's conditions. Under them (2x SSC, 10% formamide,
-      100 nM) the 8,444 halves of the published 2018, 64-gene, 2,766-gene and
-      Shi 2023 sets have a median Tm of 58.0 C (5th-95th percentile 53.4-63.9,
-      min 45.2, max 71.9), close to the designed 60 C; 96% lie within
-      50-65 C, the commented-out filters in post_process. Their two halves
-      differ by a median of 1.0 C (90th percentile 3.1), the Tm matching
-      Picky did and U-Probe cannot filter on.
+      The design conditions are not stated, so the 60 C target is recorded
+      and not used. Both half Tms are computed under the hybridization
+      block's conditions (2x SSC, 10% formamide, 100 nM), under which the
+      19,820 halves of the 9,910 published pairs (2018 sample, full 64- and
+      2,766-gene sets, Shi 2023) have a median Tm of 58.0 C (5th-95th
+      percentile 53.5-63.3, min 45.2, max 71.9). The template keeps halves
+      within 50-65 C, where both halves of 96.8% of the published pairs lie,
+      and at each start the layout whose halves match best (tm_balance), as
+      Picky did; the published halves differ by a median of 0.9 C.
   limitations:
     - Wang 2018 designed 4 probe pairs per gene (STARmap PLUS 2 or 4); equal_space keeps 4 pairs, spread evenly along the RNA.
-    - Picky 2.2 picks the split with the best Tm match between the halves; U-Probe enumerates all splits and cannot filter on the Tm difference (filters compare one attribute with a number). Windows on padlock_tm and primer_tm are the closest approximation; see meta.tm_window for the published distribution.
+    - Picky 2.2 picks the split with the best Tm match between the halves around a designed 60 C. The template enumerates every split of 19-25 + 1-2 + 19-25 nt, keeps halves of 50-65 C under its own conditions and, at each start, the split with the smallest Tm difference (tm_balance, remove_overlap.prefer); it does not aim at a Tm value within the window.
     - The 3-nt code of this backbone is read in 4 SEDAL rounds and caps the panel at 64 genes (4^3; the published 64-gene set uses every code, AAA included). Larger panels need another backbone: the 1,022-gene one (5-nt code read in 6 rounds plus a separate 3-nt splint code) or the 2,766-gene one (two 3-nt blocks, 8 + 6 splint, 8 rounds).
     - The same 3-nt code is the splint here, as in the 1,022- and 2,766-gene sets, so each gene's primer circularizes only its own padlock. Wang 2018 used one splint for every gene (padlock 5' ACATTA, primer tail TAATGT TATCTT), where the primer of one gene can circularize the padlock of another on a neighbouring molecule and give a wrong code.
     - "TODO: verify the minimum spacing between probe pairs; regions are only required not to overlap here."
@@ -163,6 +179,7 @@ hybridization:
   na_mM: 390
   probe_nM: 100
   formamide_pct: 10
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   padlock_tm:
@@ -177,6 +194,11 @@ attributes:
   primer_gc:
     target: primer.binding
     type: gc_content
+  # |padlock_tm - primer_tm|: remove_overlap keeps the split of each start whose
+  # halves match best, as Picky 2.2 did (meta.parameter_sources).
+  tm_balance:
+    type: difference
+    of: [padlock_tm, primer_tm]
   target_mapped_genes:
     target: target_region
     type: mapped_genes
@@ -196,18 +218,20 @@ post_process:
     target_mapped_genes:
       condition: target_mapped_genes <= 1
     # Wang 2018 designed the halves for a Tm of 60 C under conditions it does
-    # not state, so no window is applied. Under the conditions above the
-    # published halves are 53.4-63.9 C (5th-95th percentile); 50-65 C keeps
-    # 96% of them. Adjust them with probe_nM if you hybridize at 1 or 5 nM.
-    # padlock_tm:
-    #   condition: padlock_tm >= 50 & padlock_tm <= 65
-    # primer_tm:
-    #   condition: primer_tm >= 50 & primer_tm <= 65
+    # not state. Under the conditions above the published halves are
+    # 53.5-63.3 C (5th-95th percentile), and both halves of 96.8% of the
+    # published pairs lie within 50-65 C. Adjust the window with probe_nM if
+    # you hybridize at 1 or 5 nM (the Tm drops by 4-6 C).
+    padlock_tm:
+      condition: padlock_tm >= 50 & padlock_tm <= 65
+    primer_tm:
+      condition: primer_tm >= 50 & primer_tm <= 65
   sorts:
     is_ascending:
       - target_mapped_genes
   remove_overlap:
     location_interval: 0
+    prefer: tm_balance   # of the splits of a start, the one whose halves' Tm match best
   equal_space:
     number_desired: 4
 
@@ -218,4 +242,5 @@ summary:
     - primer_tm
     - padlock_gc
     - primer_gc
+    - tm_balance
     - target_mapped_genes

@@ -117,7 +117,7 @@ meta:
     value: [42, 47]
     target: oligopaint_oligo.homology
     attribute: homology_tm
-    conditions: {na_mM: 390, formamide_pct: 50, probe_nM: 25, method: "Biopython Tm_NN, DNA_NN3, saltcorr 5, 0.65 C per % formamide"}
+    conditions: {na_mM: 390, formamide_pct: 50, probe_nM: 25, dntp_mM: 0, method: "Biopython Tm_NN, DNA_NN3, saltcorr 5, 0.65 C per % formamide"}
     source: OligoMiner blockParse.py -t/-T defaults ("The minimum allowed Tm, default is 42" / "default is 47")
     note: >-
       Applied: attributes.homology_tm.hybridization sets these design
@@ -174,6 +174,7 @@ hybridization:
   temperature_c: 42
   na_mM: 390
   formamide_pct: 50
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   homology_gc:
@@ -183,7 +184,7 @@ attributes:
     target: oligopaint_oligo.homology
     type: annealing_temperature
     # Design conditions of the 42-47 C window (meta.tm_window).
-    hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25}
+    hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25, dntp_mM: 0}
   homology_kmer_count:
     target: oligopaint_oligo.homology
     type: kmer_count

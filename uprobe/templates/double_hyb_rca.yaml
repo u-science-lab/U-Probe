@@ -86,7 +86,7 @@ meta:
       overnight at 37 C; SplintR ligation at 37 C; Phi29 RCA at 30 C).
     notes: "[Na+] computed from 2x SSC (0.3 M NaCl + 0.03 M trisodium citrate)."
   limitations:
-    - The Tm filters (35-45 C) were set for U-Probe's legacy annealing_temperature conditions (50 mM Na+, 50 nM oligo, no formamide); tm1-tm3 keep those conditions through their own hybridization setting, while the top-level hybridization block holds the (unverified) experimental conditions.
+    - The Tm filters (35-45 C) were set for U-Probe's legacy annealing_temperature conditions (50 mM Na+, 50 nM oligo, no formamide; their 0.6 mM dNTP changes no Tm without Mg2+, so tm1-tm3 set 0); tm1-tm3 keep those conditions through their own hybridization setting, while the top-level hybridization block holds the (unverified) experimental conditions.
     - circle_fold_score and amp_fold_score include the barcodes, so they are only meaningful after the placeholder barcodes are replaced; they sort the units and filter none (see parameter_sources).
     - Bowtie2 on the 40-nt window is a local heuristic that reports at most 100 alignments; the exhaustive search within 2 substitutions covers the 26-nt arm site only. Set n_mapped_genes to aligner bowtie, max_mismatches 2 to search the whole window exhaustively as well.
   replace:
@@ -158,6 +158,8 @@ hybridization:
   temperature_c: 37
   na_mM: 390
   formamide_pct: 10
+  probe_nM: 30   # MiP-seq, 30 nM per probe
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   fold_score:
@@ -193,15 +195,15 @@ attributes:
     target: circle_probe:part1
     type: annealing_temperature
     # Legacy conditions, under which the 35-45 C filters were set (meta.limitations).
-    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0.6, probe_nM: 50, formamide_pct: 0}
+    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0, probe_nM: 50, formamide_pct: 0}
   tm2:
     target: circle_probe:part3
     type: annealing_temperature
-    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0.6, probe_nM: 50, formamide_pct: 0}
+    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0, probe_nM: 50, formamide_pct: 0}
   tm3:
     target: amp_probe:part2
     type: annealing_temperature
-    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0.6, probe_nM: 50, formamide_pct: 0}
+    hybridization: {na_mM: 50, mg_mM: 0, dntp_mM: 0, probe_nM: 50, formamide_pct: 0}
   circle_fold_score:
     target: circle_probe
     type: fold_score

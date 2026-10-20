@@ -118,6 +118,11 @@ Published readout probes: Moffitt 2016 Table S1 (16 x 20 nt, RS0015 ... RS0548);
   probes add background in every round that uses those readouts.
 - Readout orthogonality is critical: a readout with homology to the transcriptome, to another readout
   or to a target region lights wrong bits for every gene. Keep cross-homology <= 11 nt.
+- Copies of the target (processed pseudogenes, retrocopies, readthrough genes) hold most of its sequence,
+  so no probe set avoids them; the template exempts them (`exempt_copies: {kmer: 30, min_shared: 0.5}`,
+  as `smfish_stellaris`): a gene whose transcript holds half the target's 30-mers is listed in
+  `target_mapped_genes_copies` instead of counted. Name the copies in the report; a copy that is
+  expressed contributes signal.
 
 ## 8. U-Probe template: `merfish`
 
@@ -134,15 +139,16 @@ probes:
   encoding_probe:
     template: "{primer_1}A{readout_1}{binding}A{readout_2}{readout_3}{primer_2_rc}"
     # readout_i: rc(encoding[target]['readouts'][(probe_index + i) % 4]), i = 1, 2, 3
-hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30}
+hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30, dntp_mM: 0}
 attributes:
   binding_tm: {target: encoding_probe.binding, type: annealing_temperature,
-               hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}}   # design conditions of 66-76 C
+               hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}}   # design conditions of 66-76 C
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.43 & target_gc <= 0.63}
     binding_tm: {condition: binding_tm >= 66 & binding_tm <= 76}
-    target_mapped_genes: {condition: target_mapped_genes <= 1}   # Bowtie 1, <= 2 mismatches
+    target_mapped_genes: {condition: target_mapped_genes <= 1}   # Bowtie 1, <= 2 mismatches;
+                                                                 # exempt_copies: {kmer: 30, min_shared: 0.5}
   remove_overlap: {location_interval: 0}
   equal_space: {number_desired: 92}
 ```

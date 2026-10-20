@@ -285,7 +285,10 @@ def test_mane_canonical_and_fallback(annotation, caplog):
         'P': {'selection': 'mane', 'chosen_by': 'MANE_Select', 'ids': ['ENSTP1']},
         'M': {'selection': 'mane', 'chosen_by': 'Ensembl_canonical', 'ids': ['ENSTM3']},
         'N': {'selection': 'mane', 'chosen_by': 'Ensembl_canonical', 'ids': ['ENSTN5.2']}}
-    assert 'M has no MANE_Select transcript; using its Ensembl_canonical transcript ENSTM3' in caplog.text
+    # One line for all targets without MANE (every target of a non-human genome), not one per target.
+    fallback = [r.getMessage() for r in caplog.records if 'no MANE_Select transcript' in r.getMessage()]
+    assert fallback == ['2 of 3 target(s) have no MANE_Select transcript (MANE covers human genes only); '
+                        'using their Ensembl_canonical transcript: M ENSTM3, N ENSTN5.2']
     for gene, transcript in (('P', 'ENSTP1'), ('M', 'ENSTM3'), ('N', 'ENSTN5.2')):
         rows = df[df.target == gene]
         assert set(rows.transcript_names.map(tuple)) == {(transcript,)}
@@ -427,6 +430,25 @@ def test_summary_reports_the_transcripts_of_each_target(annotation, tmp_path):
         'M': {'selection': 'mane', 'chosen_by': 'Ensembl_canonical', 'ids': ['ENSTM3']}}
     table = pd.read_csv(tmp_path / 'out' / summary['output_files']['tsv'], sep='\t')
     assert set(table.transcript_names) == {'ENSTP1', 'ENSTM3'}
+
+
+def test_a_run_parses_the_gtf_once(annotation, tmp_path, monkeypatch):
+    # Target validation and extraction each parsed the GTF: about 23 s each, 45 s of a
+    # 55-75 s run, on the human Ensembl 113 GTF.
+    from uprobe.core import api
+    from uprobe.core.gen import fun
+    calls = []
+    original = fun.read_gtf
+
+    def counting(*args, **kwargs):
+        calls.append(args[0] if args else kwargs['gtf'])
+        return original(*args, **kwargs)
+    monkeypatch.setattr(fun, 'read_gtf', counting)
+    monkeypatch.setattr(api, 'read_gtf', counting, raising=False)
+    result, summary = run(annotation, tmp_path, transcripts='mane')
+    assert result.exit_code == 0, result.output
+    assert summary['targets']['M']['final'] > 0
+    assert len(calls) == 1
 
 
 def test_wrong_transcripts_fail_the_run(annotation, tmp_path):

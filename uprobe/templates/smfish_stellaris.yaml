@@ -73,6 +73,16 @@ meta:
         U-Probe approximation. The Stellaris designer excludes 20-mers with
         more than 16 nt matching other RNAs, which U-Probe does not model.
       quote: exclude 20-mer oligonucleotides with >16 nucleotide matches to other RNA(s) (Stellaris Getting Started Guide)
+    - parameter: post_process.filters.probe_tm
+      value: ">= 37 C, the hybridization temperature, under the hybridization block (2x SSC, 10% formamide, 2.6 nM per oligo)"
+      source: >-
+        U-Probe floor: a probe whose Tm is below the hybridization
+        temperature cannot hold its site. Neither Raj 2008 nor Stellaris
+        states a Tm window. The 480 probes of Raj 2008 (Supplementary probe
+        list: Actb, d2EGFP, dpp, elt-2, FAM105A, FKBP5, Mtap2, PTGS2, STL1)
+        have a Tm of 31.8-67.8 C under these conditions (5th percentile 37.5,
+        median 49.5), so the data do not support a higher floor; 37 C rejects
+        20 of them (4%), mostly 17-mers of FAM105A (10) and FKBP5 (6).
   hybridization:
     ssc: 2x
     source: >-
@@ -89,7 +99,7 @@ meta:
     - target_mapped_genes uses Bowtie 1 (aligner bowtie), so the genome's align_index must include bowtie; Bowtie2 cannot align 20-mers (its local mode needs at least 22 nt) and would count no off-target gene.
     - Without gene_expression every annotated gene counts as an off-target, including genes and pseudogenes the sample does not express, so target_mapped_genes <= 1 drops more probes than needed; add your expression table (see gene_expression below).
     - Genes with many paralogs or pseudogenes keep few probes under target_mapped_genes <= 1 (ACTB 16, GAPDH 6, RPL13A 1 from the Ensembl 113 human MANE mRNAs, no expression table). The commented-out off_target_pool option (with target_mapped_genes <= 2) adds only a few probes, and 34-47% of the final probes then carry an off-target gene, because equal_space picks the 48 by position, not by cleanliness; see the numbers at off_target_pool below. The pool would pay off only with an equal_space that prefers probes free of off-targets. The recommended gene_expression settings (commented out below) do more: with a HeLa table, min_fraction_of_target 0.05 and exempt_copies, ACTB, EEF1A1, GAPDH, HSPA8, RPL13A and TUBB kept 193 probes, and 264 with gene_expression.absent set to ignore, which trusts the table to list every expressed gene (README, Copies of the target).
-    - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered."
+    - "TODO: verify the Stellaris Probe Designer GC/Tm window (the designer requires a login). Raj 2008 only asks for GC 'as close to 45% as possible', so GC is reported and not filtered; probe_tm has a floor at the hybridization temperature (parameter_sources)."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
@@ -126,6 +136,8 @@ hybridization:
   temperature_c: 37
   na_mM: 390
   formamide_pct: 10
+  probe_nM: 2.6   # 125 nM of the 48-oligo set (Stellaris), per oligo
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 # Recommended: genes not expressed in your sample are not counted as
 # off-targets (they stay listed in target_mapped_genes_unexpressed), so only
@@ -171,6 +183,10 @@ post_process:
     # No other gene with a site within 2 substitutions (the count includes the target).
     target_mapped_genes:
       condition: target_mapped_genes <= 1
+    # Tm floor: the hybridization temperature (meta.parameter_sources; 4% of the
+    # published Raj 2008 probes are below it under these conditions).
+    probe_tm:
+      condition: probe_tm >= 37
   sorts:
     is_ascending:
       - target_mapped_genes

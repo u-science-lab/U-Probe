@@ -74,6 +74,15 @@ meta:
     - parameter: post_process.equal_space.number_desired
       value: 20
       source: Choi 2018 (20 probe pairs per target for quantitative imaging; see meta.limitations)
+    - parameter: post_process.filters.odd_tm and post_process.filters.even_tm
+      value: ">= 37 C, the hybridization temperature, for each 25-nt half under the hybridization block (5x SSC, 30% formamide, 4 nM)"
+      source: >-
+        U-Probe floor: a half that cannot hold its site at 37 C leaves its
+        initiator half unpaired. Choi 2018 states no Tm criterion. The 224
+        halves of its human sets (SI probe tables: ACTB, GAPDH, PGK1, BRAF;
+        112 pairs) have a Tm of 29.7-73.0 C under these conditions (5th
+        percentile 37.8, median 48.3), so the data do not support a higher
+        floor; 37 C rejects 10 halves, i.e. 9 of the 112 pairs (8%).
   hybridization:
     ssc: 5x
     source: >-
@@ -91,7 +100,7 @@ meta:
       and at least 25 for single-molecule imaging; equal_space keeps 20 pairs,
       spread evenly along the RNA (raise number_desired for single-molecule
       imaging).
-    - "TODO: verify GC, Tm and homopolymer criteria for HCR v3 probes; none are given in Choi 2018, so no GC or Tm filter is applied."
+    - "TODO: verify GC, Tm and homopolymer criteria for HCR v3 probes; none are given in Choi 2018, so no GC filter is applied and Tm has only a floor at the hybridization temperature (parameter_sources)."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here)"
     - "targets: your gene names (GAPDH, ACTB here)"
@@ -163,6 +172,7 @@ hybridization:
   na_mM: 975
   probe_nM: 4
   formamide_pct: 30
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   odd_gc:
@@ -196,6 +206,12 @@ post_process:
   filters:
     target_mapped_genes:
       condition: target_mapped_genes <= 1
+    # Tm floor for each half: the hybridization temperature (meta.parameter_sources;
+    # 9 of the 112 published Choi 2018 pairs have a half below it).
+    odd_tm:
+      condition: odd_tm >= 37
+    even_tm:
+      condition: even_tm >= 37
   sorts:
     is_ascending:
       - target_mapped_genes

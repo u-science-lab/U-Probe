@@ -139,7 +139,7 @@ probes:
     parts: {homology: {expr: "target_region"}}
 attributes:
   homology_tm: {target: oligopaint_oligo.homology, type: annealing_temperature,
-                hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25}}
+                hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25, dntp_mM: 0}}
   homology_kmer_count: {target: oligopaint_oligo.homology, type: kmer_count, kmer_len: 18, aligner: jellyfish,
                         strand: sense}    # forward-strand counts, as OligoMiner's dictionary
   homology_sites: {target: oligopaint_oligo.homology, type: mapped_sites, aligner: bowtie2}

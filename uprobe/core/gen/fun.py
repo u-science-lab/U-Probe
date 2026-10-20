@@ -15,6 +15,8 @@ log = get_logger(__name__)
 GTF_FIELDS = [
     'chr', 'source', 'type', 'start', 'end', 'score', 'strand', 'score', 'info'
 ]
+# The attributes a run reads from the GTF: target validation and transcript selection.
+GTF_RUN_FIELDS = ['gene_name', 'transcript_id']
 
 
 def read_gtf(
@@ -229,6 +231,7 @@ def select_transcripts(df_gtf: pd.DataFrame, targets, setting) -> t.Dict[str, di
                 problems.append(f'no listed transcript belongs to target {target}; list one of its transcripts '
                                 f'(e.g. {example}) or use canonical, mane or all')
     else:
+        fallback = []  # targets of transcripts: mane that use their canonical transcript
         for target in targets:
             if target not in rows_of:
                 continue  # not in the GTF: reported by target validation
@@ -238,14 +241,17 @@ def select_transcripts(df_gtf: pd.DataFrame, targets, setting) -> t.Dict[str, di
             if not ids:
                 ids, chosen_by = _tagged(rows_of[target], CANONICAL_TAG), CANONICAL_TAG
                 if ids and setting == 'mane':
-                    log.info(f'{target} has no {MANE_TAG} transcript; using its {CANONICAL_TAG} transcript '
-                             f'{", ".join(ids)}')
+                    fallback.append(f'{target} {", ".join(ids)}')
             if not ids:
                 wanted = f'{MANE_TAG} or {CANONICAL_TAG}' if setting == 'mane' else CANONICAL_TAG
                 problems.append(f'no transcript of {target} is tagged {wanted} in the GTF; list its transcript '
                                 'ids or use transcripts: all')
                 continue
             result[target] = {'selection': setting, 'chosen_by': chosen_by, 'ids': ids}
+        if fallback:
+            # One line: with a non-human genome every target falls back.
+            log.info(f'{len(fallback)} of {len(targets)} target(s) have no {MANE_TAG} transcript (MANE covers '
+                     f'human genes only); using their {CANONICAL_TAG} transcript: {", ".join(fallback)}')
     if problems:
         raise TranscriptSelectionError(problems)
     for target, entry in result.items():
@@ -584,6 +590,7 @@ def generate_target_seqs(
                         step: t.Optional[int] = None,
                         transcripts='all',
                         masked='keep',
+                        df_gtf: t.Optional[pd.DataFrame] = None,
                          ):
     """Candidate windows of the targets; RNA_SOURCES describes what each RNA source extracts.
 
@@ -593,10 +600,13 @@ def generate_target_seqs(
     transcripts that have such features for 'all'). A target with one
     selected transcript is tiled along its spliced sequence (SPLICED_SOURCES).
     For source genome, ``masked`` ('keep' or 'drop') is passed to extract_fasta.
+    ``df_gtf`` is the GTF as read_gtf parses it with gene_name and transcript_id,
+    if the caller has it already; it is not modified.
     """
     lower, _, step = normalize_sampling(min_length, step, overlap)
     if source in RNA_SOURCES:
-        df_gtf = read_gtf(gtf_path, extract_fields=['gene_name', 'transcript_id'])
+        if df_gtf is None:
+            df_gtf = read_gtf(gtf_path, extract_fields=GTF_RUN_FIELDS)
         selection = select_transcripts(df_gtf, targets, transcripts)
         df_gtf = restrict_to_transcripts(df_gtf, selection)
         single = [target for target, entry in selection.items() if tiles_spliced(source, entry)]
@@ -695,9 +705,14 @@ def _rna_windows(source, info, min_length, step, spliced=None, order=None) -> pd
                                                 'end', 'target_start', 'target_end', 'target_region', 'n_trans'])
         return data
 
-def validate_targets(targets, gtf_path, DTF_NAME_FIX=False):
+def validate_targets(targets, gtf_path, DTF_NAME_FIX=False, df_gtf=None):
+    """(all valid, valid targets, invalid targets): targets matched against the GTF gene_name.
+
+    ``df_gtf`` is the GTF as read_gtf parses it, if the caller has it already.
+    """
     log.info(f"validating targets in gtf file: {targets}")
-    df_gtf = read_gtf(gtf_path)
+    if df_gtf is None:
+        df_gtf = read_gtf(gtf_path)
     # DTF_NAME_FIX is retained for caller compatibility; normalization now
     # happens in read_gtf without rewriting the input annotation.
     genome_genes = set(df_gtf["gene_name"].dropna().unique())

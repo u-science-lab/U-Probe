@@ -289,9 +289,11 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         warnings.append({"code": "targets_without_probes", "targets": without_probes,
                          "eliminated_by": {name: eliminated.get(name) for name in without_probes},
                          "message": f"{len(without_probes)} target(s) have no final probes."})
-    if shortfall:
-        warnings.append({"code": "fewer_probes_than_requested", "targets": list(shortfall), "counts": shortfall,
-                         "message": f"{len(shortfall)} target(s) have fewer probes than requested "
+    # Targets with no probe at all are reported above (targets_without_probes).
+    short = {name: counts for name, counts in shortfall.items() if counts["final"] > 0}
+    if short:
+        warnings.append({"code": "fewer_probes_than_requested", "targets": list(short), "counts": short,
+                         "message": f"{len(short)} target(s) have fewer probes than requested "
                                     "(post_process.equal_space.number_desired); all their passing probes were kept."})
     off_targets = _off_target_summary(run.get("off_targets"), final)
     missing = {name: entry["missing_from_table"] for name, entry in (off_targets or {}).get("attributes", {}).items()

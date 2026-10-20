@@ -84,6 +84,16 @@ meta:
     - parameter: post_process.equal_space.number_desired
       value: 92
       source: Moffitt 2016 (92 encoding probes per gene; see meta.limitations)
+    - parameter: attributes.target_mapped_genes.exempt_copies
+      value: "{kmer: 30, min_shared: 0.5}"
+      source: >-
+        U-Probe, as in smfish_stellaris. A false spot needs many probes of the
+        set on one RNA; a gene with a transcript holding at least half of the
+        target's 30-mers (a processed pseudogene, a retrocopy, a readthrough
+        gene) is hit by any probe set, so it is listed in
+        target_mapped_genes_copies instead of counted, whatever its
+        expression. Mouse Gapdh (seqFISH+ template, NIH/3T3 expression): 2 of
+        24 probes without it, 24 with it (44 copies, Gm13394 among them).
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
       source: >-
@@ -103,7 +113,7 @@ meta:
     value: [66, 76]
     target: encoding_probe.binding
     attribute: binding_tm
-    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, method: SantaLucia nearest-neighbour}
+    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0, method: SantaLucia nearest-neighbour}
     source: Moffitt 2016, SI Methods ("assuming a monovalent salt concentration of 300 mM ... and a probe concentration of 5 nM")
     note: >-
       Applied: attributes.binding_tm.hybridization sets these design
@@ -172,6 +182,7 @@ hybridization:
   temperature_c: 37
   na_mM: 390
   formamide_pct: 30
+  dntp_mM: 0   # FISH buffers hold no dNTPs (unset, the legacy 0.6 mM would apply)
 
 attributes:
   target_gc:
@@ -181,7 +192,7 @@ attributes:
     target: encoding_probe.binding
     type: annealing_temperature
     # Design conditions of the 66-76 C window (meta.tm_window), not the hybridization block.
-    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}
+    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}
   target_mapped_genes:
     target: target_region
     type: mapped_genes
@@ -193,6 +204,9 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
+    # Copies of the target (processed pseudogenes, retrocopies) are listed in
+    # target_mapped_genes_copies instead of counted (meta.parameter_sources).
+    exempt_copies: {kmer: 30, min_shared: 0.5}
 
 post_process:
   filters:

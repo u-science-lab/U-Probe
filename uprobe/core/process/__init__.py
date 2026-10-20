@@ -86,15 +86,21 @@ def _split_names(value) -> list:
 
 
 def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
-                     location_interval: int) -> list:
+                     location_interval: int, prefer: str = None) -> list:
     """Index labels of the rows to keep, group by group.
 
-    Rows are visited by start (ties in table order, where the shorter
-    windows of a start come first), and a row is kept when it starts more
-    than location_interval bases after the end of the last kept row.
+    Rows are visited by start, and a row is kept when it starts more than
+    location_interval bases after the end of the last kept row. Ties at a
+    start (the layouts of a window with length ranges) are visited in table
+    order, where the shorter windows come first, or, with ``prefer``, by
+    that column ascending, so the start keeps its best candidate.
     """
     work = df[group_cols].assign(_start=bounds['start'], _end=bounds['end'])
-    work = work.sort_values(by=group_cols + ['_start'], kind='stable')
+    order = group_cols + ['_start']
+    if prefer:
+        work['_prefer'] = pd.to_numeric(df[prefer], errors='coerce')
+        order.append('_prefer')
+    work = work.sort_values(by=order, kind='stable', na_position='last')
     keep = []
     for _, group in work.groupby(group_cols, dropna=False, sort=False):
         current_end = None
@@ -105,7 +111,8 @@ def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
     return keep
 
 
-def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_interval: int) -> pd.DataFrame:
+def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_interval: int,
+                                  prefer: str = None) -> pd.DataFrame:
     """remove_overlap for mRNA, exon, CDS and UTR windows, on each target's merged exon model.
 
     target_start/target_end place every window on the gene's merged exon
@@ -119,7 +126,7 @@ def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_int
                            'end': pd.to_numeric(df['target_end'], errors='coerce')}, index=df.index)
     if bounds.isna().any().any():  # direct sequences: positions along the sequence itself
         bounds = bounds.fillna(region_bounds(df))
-    keep = _non_overlapping(df, ['target'], bounds, location_interval)
+    keep = _non_overlapping(df, ['target'], bounds, location_interval, prefer)
     result = df.loc[keep].copy()
     if transcript_col:
         sites = list(zip(df['target'], bounds['start'], bounds['end']))
@@ -138,8 +145,13 @@ def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_int
 
 def remove_overlap(df: pd.DataFrame, 
                    config: dict,
-                   location_interval: int
+                   location_interval: int,
+                   prefer: str = None,
                    ) -> pd.DataFrame:
+    """Keep windows that do not overlap, along each target; ``prefer`` (a column, lower is
+    better) picks among the candidates of one start, which keep the shortest otherwise."""
+    if prefer and prefer not in df.columns:
+        raise ValueError(f"post_process.remove_overlap.prefer: no column {prefer!r}")
     df = df.reset_index(drop=True)
     transcript_col = None
     if 'transcript_name' in df.columns:
@@ -150,7 +162,7 @@ def remove_overlap(df: pd.DataFrame,
         df[transcript_col] = df[transcript_col].apply(lambda x: 
                                                      ', '.join(x) if isinstance(x, list) else x)
     if 'target_start' in df.columns and 'target' in df.columns:
-        return _remove_overlap_along_targets(df, transcript_col, location_interval)
+        return _remove_overlap_along_targets(df, transcript_col, location_interval, prefer)
     if transcript_col:
         # Positions are per target and per extracted exon or UTR: exon/UTR
         # windows are numbered within their exon or UTR, and direct-sequence
@@ -164,7 +176,7 @@ def remove_overlap(df: pd.DataFrame,
         return df
     # Numeric bounds: genome windows carry only sub_region ("101-140"), also
     # next to direct sequences, whose start/end columns they leave empty.
-    keep = _non_overlapping(df, group_cols, region_bounds(df), location_interval)
+    keep = _non_overlapping(df, group_cols, region_bounds(df), location_interval, prefer)
     return df.loc[keep].reset_index(drop=True)
 
 # post_process runs its steps in this order, whatever their order in the protocol.
@@ -287,7 +299,7 @@ def post_process(df: pd.DataFrame,
     if "remove_overlap" in processes and processes['remove_overlap']:
         logger.info("Removing overlap")
         location_interval = processes['remove_overlap'].get('location_interval', 0)
-        df = remove_overlap(df, config, location_interval)
+        df = remove_overlap(df, config, location_interval, processes['remove_overlap'].get('prefer'))
         record('Remove overlap')
     if processes.get('off_target_pool'):
         logger.info("Limiting probes per off-target gene")

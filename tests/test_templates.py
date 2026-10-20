@@ -28,7 +28,7 @@ REQUIRED = {
 META_KEYS = ['name', 'technology', 'description', 'citations', 'parameter_sources',
              'hybridization', 'replace']
 # Attribute types that need no genome, aligner index or external tool.
-OFFLINE_TYPES = {'gc_content', 'annealing_temperature', 'fold_score', 'self_match', 'length'}
+OFFLINE_TYPES = {'gc_content', 'annealing_temperature', 'fold_score', 'self_match', 'length', 'difference'}
 SEQ = ''.join(random.Random(0).choice('ACGT') for _ in range(400))
 
 
@@ -115,10 +115,86 @@ def test_templates_rank_lower_scores_first(name, tmp_path):
 
 
 def test_double_hyb_rca_tm_filters_keep_legacy_conditions():
-    # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones.
+    # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones;
+    # without Mg2+ their 0.6 mM dNTP changed no Tm, so the template's 0 keeps the window.
     conditions = effective_conditions(load_template('double_hyb_rca'))
-    assert conditions['tm1'] == conditions['tm2'] == conditions['tm3'] == TM_DEFAULTS
+    assert conditions['tm1'] == conditions['tm2'] == conditions['tm3'] == {**TM_DEFAULTS, 'dntp_mM': 0}
     assert conditions['circle_fold_score'] == {'temperature_c': 37}
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_templates_compute_tm_without_dntps(name):
+    # FISH buffers hold no dNTPs; unset, the legacy PCR default of 0.6 mM applied to every Tm
+    # and, with padlock_iss's 10 mM Mg2+, lowered the free Mg2+ of its arm Tm.
+    protocol = load_template(name)
+    assert protocol['hybridization']['dntp_mM'] == 0
+    conditions = effective_conditions(protocol)
+    for attr, spec in protocol['attributes'].items():
+        if spec['type'] == 'annealing_temperature':
+            assert conditions[attr]['dntp_mM'] == 0, attr
+
+
+@pytest.mark.parametrize('name', NAMES)
+def test_tm_filters_filter_as_under_the_legacy_dntp(name):
+    # dNTPs only bind Mg2+: every filtered Tm has no Mg2+ or a formula without dNTPs, so the
+    # published windows (MERFISH, HybISS, Oligopaint, double_hyb_rca) filter as before.
+    from uprobe.core.attributes._attributes import cal_temp, cal_temp_multi_padlock_design
+    from uprobe.core.hybridization import multi_padlock_design_arguments, tm_arguments
+    protocol = load_template(name)
+    conditions = effective_conditions(protocol)
+    filtered = set(protocol['post_process'].get('filters') or {})
+    rng = random.Random(5)
+    for attr, spec in protocol['attributes'].items():
+        if spec['type'] != 'annealing_temperature' or attr not in filtered:
+            continue
+        legacy = {**conditions[attr], 'dntp_mM': 0.6}
+        for length in (13, 15, 20, 25, 30, 41):
+            seq = ''.join(rng.choice('ACGT') for _ in range(length))
+            if spec.get('tm_method') == 'multi_padlock_design':
+                now = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(conditions[attr]))
+                before = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(legacy))
+            else:
+                now, before = cal_temp(seq, **tm_arguments(conditions[attr])), cal_temp(seq, **tm_arguments(legacy))
+            assert now == pytest.approx(before), (attr, seq)
+
+
+@pytest.mark.parametrize('name, floors, weak', [
+    # The weakest probe each template kept on the e2e genes (GAPDH, TFRC, EEF2; mouse Gad2).
+    ('smfish_stellaris', {'probe_tm': 37}, {'probe_tm': 'ATAATTATATTCTATTAAAA'}),
+    ('hcr_v3', {'odd_tm': 37, 'even_tm': 37}, {}),
+    ('mipseq', {'arm_5_tm': 28, 'arm_3_tm': 28, 'primer_tm': 28},
+     {'arm_5_tm': 'TTAATTGCATATT', 'primer_tm': 'TGATTAAAATATC'}),
+])
+def test_tm_floors_from_the_published_probe_sets(name, floors, weak):
+    # Without a GC or Tm filter these templates kept probes that cannot bind at the hybridization
+    # temperature (TFRC 5% GC, Tm 33.7 C at 37 C; a MiP-seq arm of 23.6 C and primer of 20.4 C).
+    # The floors and the share of published probes they reject are in meta.parameter_sources.
+    from uprobe.core.attributes._attributes import cal_temp
+    from uprobe.core.hybridization import tm_arguments
+    protocol = load_template(name)
+    filters = protocol['post_process']['filters']
+    conditions = effective_conditions(protocol)
+    for attr, floor in floors.items():
+        assert filters[attr]['condition'] == f'{attr} >= {floor}'
+        assert any(f'filters.{attr}' in row['parameter'] for row in protocol['meta']['parameter_sources'])
+    for attr, seq in weak.items():
+        assert cal_temp(seq, **tm_arguments(conditions[attr])) < floors[attr]
+
+
+@pytest.mark.parametrize('name', ['smfish_stellaris', 'merfish', 'seqfish_plus'])
+def test_many_probe_templates_exempt_copies_of_the_target(name):
+    # A false spot needs many probes of the set on one RNA, so a copy of the target (a processed
+    # pseudogene, a retrocopy) is not counted: without it mouse Gapdh kept 2 of 24 seqFISH+ probes,
+    # with it 24 (Gm13394 and 43 other copies, NIH/3T3 expression).
+    protocol = load_template(name)
+    assert protocol['attributes']['target_mapped_genes']['exempt_copies'] == {'kmer': 30, 'min_shared': 0.5}
+    rows = [row for row in protocol['meta']['parameter_sources'] if 'exempt_copies' in row['parameter']]
+    assert rows and rows[0]['value'] == '{kmer: 30, min_shared: 0.5}'
+
+
+def test_smfish_tm_uses_the_stellaris_concentration_per_oligo():
+    # Stellaris hybridizes the 48-oligo set at 125 nM in total, about 2.6 nM per oligo.
+    assert load_template('smfish_stellaris')['hybridization']['probe_nM'] == 2.6
 
 
 def offline_api(protocol, seq=SEQ, encoding=None):
@@ -154,6 +230,9 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     combined = pd.concat([targets.reset_index(drop=True), probes], axis=1)
     attributes = protocol['attributes']
     for attr in attributes.values():
+        if attr['type'] == 'difference':  # of two attributes computed before it
+            assert set(attr['of']) <= set(attributes), attr
+            continue
         target = attr['target']
         assert target in combined or target.replace(':', '.') in combined, target
     pp = protocol['post_process']
@@ -348,10 +427,43 @@ def test_starmap_forbids_abutting_sites():
     assert parts['gap']['length'] == [1, 2]
     targets, _ = design('starmap', SEQ[:60], {'code': 'AAA'})
     assert set(targets['target_parts.gap.length']) == {1, 2}
-    # The designed 60 °C of the halves is recorded, not filtered (the paper's conditions are unknown).
+    # The designed 60 °C of the halves is recorded, not applied (the paper's conditions are unknown).
     window = protocol['meta']['tm_window']
     assert (window['applied'], window['value']) == (False, 60)
-    assert not [name for name in protocol['post_process']['filters'] if name.endswith('_tm')]
+
+
+def test_validate_checks_difference_attributes_and_prefer():
+    from uprobe.core.validate import validate_protocol
+    protocol = load_template('starmap')
+    assert not [f for f in validate_protocol(protocol) if f.severity == 'error']
+    protocol['attributes']['tm_balance']['of'] = ['padlock_tm', 'target_mapped_genes']  # defined after it
+    protocol['post_process']['remove_overlap']['prefer'] = 'tm_balanse'
+    errors = {f.path: f.message for f in validate_protocol(protocol) if f.severity == 'error'}
+    assert "'target_mapped_genes' is not an attribute defined before this one" in errors['attributes.tm_balance.of']
+    assert 'prefer must name an attribute' in errors['post_process.remove_overlap.prefer']
+
+
+def test_starmap_chooses_the_layout_of_each_site_by_tm_balance(tmp_path, monkeypatch):
+    # The published halves are 19-25 nt each, Tm-matched (median difference 0.9 C) around 58 C under
+    # the template's conditions; remove_overlap kept the shortest layout, 19 + 1 + 20 nt, everywhere.
+    monkeypatch.chdir(tmp_path)
+    protocol = _validate_and_normalize_protocol(load_template('starmap'))
+    filters = protocol['post_process']['filters']
+    assert filters['padlock_tm']['condition'] == 'padlock_tm >= 50 & padlock_tm <= 65'
+    assert filters['primer_tm']['condition'] == 'primer_tm >= 50 & primer_tm <= 65'
+    assert protocol['post_process']['remove_overlap']['prefer'] == 'tm_balance'
+    protocol['attributes'] = {k: v for k, v in protocol['attributes'].items() if v['type'] in OFFLINE_TYPES | {'difference'}}
+    protocol['post_process']['filters'] = {k: filters[k] for k in ('padlock_tm', 'primer_tm')}
+    protocol['post_process'].pop('equal_space')
+    rng = random.Random(3)  # SEQ is poly-T: one Random(0) per base
+    api = offline_api(protocol, ''.join(rng.choice('ACGT') for _ in range(400)), {'code': 'AAA'})
+    targets = api.generate_target_seqs()
+    combined = pd.concat([targets.reset_index(drop=True), api.construct_probes(targets).reset_index(drop=True)], axis=1)
+    final = post_process(add_attributes(combined, protocol, None), protocol)
+    assert len(final) >= 4
+    assert final['target_region'].str.len().nunique() > 1   # not one fixed layout
+    assert final['tm_balance'].max() < final['tm_balance'].quantile(0.5) + 5
+    assert final['tm_balance'].median() < 1.5
 
 
 def test_seqfish_plus_reproduces_lohoff_probes():

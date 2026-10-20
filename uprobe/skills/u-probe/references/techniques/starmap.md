@@ -171,13 +171,16 @@ probes:
   primer:
     template: "{binding}TA{code_rc}TTATCTT"
     ...  binding: {expr: "rc(target_parts['primer_site'])"}; code_rc: rc(encoding code)
-hybridization: {temperature_c: 40, na_mM: 390, probe_nM: 100, formamide_pct: 10}
+hybridization: {temperature_c: 40, na_mM: 390, probe_nM: 100, formamide_pct: 10, dntp_mM: 0}
 attributes:
+  padlock_tm: {target: padlock.binding, type: annealing_temperature}   # primer_tm alike
+  tm_balance: {type: difference, of: [padlock_tm, primer_tm]}          # |padlock_tm - primer_tm|
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:
-  filters: {target_mapped_genes: {condition: target_mapped_genes <= 1}}
-  # commented out: padlock_tm and primer_tm windows of 50-65 C (see pitfalls)
-  remove_overlap: {location_interval: 0}
+  filters:
+    target_mapped_genes: {condition: target_mapped_genes <= 1}
+    padlock_tm: {condition: padlock_tm >= 50 & padlock_tm <= 65}      # primer_tm alike
+  remove_overlap: {location_interval: 0, prefer: tm_balance}           # best Tm-matched split per start
   equal_space: {number_desired: 4}
 ```
 
@@ -191,9 +194,10 @@ What to edit:
 - Exhaustive off-target search: add `bowtie` to the genome's `align_index`, then set
   `aligner: bowtie` and `max_mismatches: 2` (Bowtie2 flagged 97-99% of 40-46-nt windows that
   have a <=2-substitution site in another gene; README).
-- Tm-balanced halves: filters only accept `attribute op number`, so the Picky "best Tm match"
-  cannot be written as a difference; uncomment the 50-65 C windows on `padlock_tm` and `primer_tm`
-  (96% of the published halves) and narrow them to your conditions instead.
+- Tm-balanced halves: the template keeps halves of 50-65 C (both halves of 96.8% of the 9,910
+  published pairs lie there under its conditions) and, at each start, the split with the smallest
+  `tm_balance` (`remove_overlap.prefer`), as Picky picked the best Tm match. Narrow the window to your
+  conditions if you change `probe_nM`.
 - Probe concentration: `probe_nM: 100` is Wang 2018's; use 1 or 5 nM for a PLUS-style hybridization,
   which lowers every Tm by 6.4 or 4.2 C.
 
@@ -205,12 +209,13 @@ What to edit:
   breaks either ligation (splint) or decoding (code). Check that `code_rc == rc(code)`.
 - A 3-nt code caps the panel at 64 genes (the published 64-gene set uses every code, AAA
   included); more genes need the 5-nt (1,022-gene) or two-block (2,766-gene) backbone.
-- `remove_overlap` keeps the first candidate at each start (the shortest window, first split);
-  it does not choose the best Tm-matched split. Report `padlock_tm`/`primer_tm` and filter them.
+- Without `prefer`, `remove_overlap` keeps the first candidate at each start: the shortest split,
+  19 + 1 + 20 nt, for every unit. The published pairs vary: each site 19-25 nt (19-21 in 69%), the
+  window 40-46 nt and the gap 2 nt in 72%; the template's `prefer: tm_balance` lets them vary too.
 - The designed 60 C Tm was computed by Picky under unstated conditions, so the template records it and
-  filters nothing. Under the hybridization block (2x SSC, 10% formamide, 100 nM) the published halves
-  sit at 58.0 C (median), which is close but not the same quantity; the commented-out 50-65 C filters in
-  the template keep 96% of them. Do not filter at exactly 60.
+  does not aim at it. Under the hybridization block (2x SSC, 10% formamide, 100 nM) the published halves
+  sit at 58.0 C (median; 5th-95th percentile 53.5-63.3), which is close but not the same quantity; the
+  50-65 C filters keep both halves of 96.8% of the pairs. Do not filter at exactly 60.
 - Probe concentration differs between the protocols: 100 nM per oligo overnight (Wang 2018, the
   template's `probe_nM`), 1 nM for 36 h (STARmap PLUS, whose 64-gene backbone the template uses) and
   5 nM for 24-36 h (Shi 2023). Tm follows: the same halves are 6.4 C lower at 1 nM and 4.2 C lower at
