@@ -56,6 +56,25 @@ pip install -e .
 
 The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use from bioconda, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`. Bowtie 1 (bioconda package `bowtie`) runs the [exhaustive off-target search](#off-target-search), which short probes need: the smFISH, seqFISH+, MERFISH and HybISS templates use it, and so does the generated off-target attribute of a protocol without `attributes` when the genome enables it. `uprobe genome fetch` adds `bowtie` to a new genome's `align_index` when Bowtie 1 is installed.
 
+## Use U-Probe with an AI agent
+
+U-Probe ships an [Agent Skill](https://agentskills.io/specification) in [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/). Its `SKILL.md` gives a coding agent the design workflow (clarify the request, choose the technology and template, fetch the genome, edit, validate, run, verify, deliver) and the rules behind it, and sends the agent to reference notes on each technology, on U-Probe's YAML and on probe-design concepts when it needs them; `scripts/check_probes.py` checks a result table before delivery. Install U-Probe and the aligners, then copy the skill to where your agent looks for skills:
+
+```bash
+pip install uprobe
+conda install -c bioconda bowtie bowtie2 jellyfish
+uprobe skill install --target codex            # ./.agents/skills/u-probe (run it at the repository root)
+uprobe skill install --target claude --user    # ~/.claude/skills/u-probe
+uprobe skill path                              # the copy inside the installed package
+```
+
+| Agent | Project (default, working directory) | `--user` | Source |
+| --- | --- | --- | --- |
+| Codex | `.agents/skills/u-probe` | `~/.agents/skills/u-probe` | [Codex docs: Agent Skills](https://developers.openai.com/codex/skills) |
+| Claude Code | `.claude/skills/u-probe` | `~/.claude/skills/u-probe` | [Claude Code docs: Skills](https://code.claude.com/docs/en/skills) |
+
+Without `--target` the skill is installed for both agents; `--target DIR` installs it as `DIR/u-probe` for any other agent that reads Agent Skills. After upgrading U-Probe, run the install again with `--force` so the skill matches the CLI. Then describe the experiment to the agent in plain language, e.g. "Design smFISH probes against human GAPDH mRNA for HeLa cells".
+
 ## Usage Guide
 
 U-Probe provides three main entry points: **Command Line Interface (CLI)**, **Python API**, and the **HTTP/Web UI**.
@@ -83,7 +102,7 @@ uprobe run -p protocol.yaml -g genomes.yaml -o ./results --json
 ```
 
 #### 🤖 Using U-Probe with an AI Agent
-The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
+The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/); install it with `uprobe skill install` (see [Use U-Probe with an AI agent](#use-u-probe-with-an-ai-agent)). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
 
 #### 🌐 Start Web Server 
 Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. First check `config.ini`: use local Linux paths under `[Paths]` and `frontend_url = http://localhost:5173` under `[Server]`.

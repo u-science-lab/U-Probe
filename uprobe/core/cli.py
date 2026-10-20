@@ -1256,6 +1256,60 @@ def templates_show(name, output, force):
     click.echo(f"Template {name!r} written to {path}", err=True)
 
 
+@cli.group()
+def skill():
+    """
+    The U-Probe Agent Skill for AI coding agents (Codex, Claude Code, ...).
+
+    The skill (SKILL.md, references/, scripts/) teaches an agent the U-Probe
+    workflow and the probe design rules behind it. `uprobe skill install`
+    copies it to where an agent discovers skills.
+    """
+
+
+@skill.command(name='path')
+def skill_path_command():
+    """Print the skill folder shipped with this U-Probe installation."""
+    from uprobe.skills import skill_path
+    click.echo(str(skill_path()))
+
+
+@skill.command(name='install')
+@click.option('--target', 'targets', multiple=True, metavar='codex|claude|DIR',
+              help='Where to install: "codex" (.agents/skills), "claude" (.claude/skills), or a skills '
+                   'directory DIR (the skill goes to DIR/u-probe). Repeatable. [default: codex and claude]')
+@click.option('--project/--user', 'project', default=True,
+              help='For codex and claude: the project directory (the working directory) or the user\'s '
+                   'home directory (~/.agents/skills, ~/.claude/skills). [default: --project]')
+@click.option('--force', is_flag=True, help='Replace an existing u-probe skill folder (e.g. after upgrading U-Probe).')
+def skill_install(targets, project, force):
+    """
+    Copy the U-Probe skill to where coding agents discover skills.
+
+    \b
+    Codex:       .agents/skills/u-probe   (project)   ~/.agents/skills/u-probe   (--user)
+    Claude Code: .claude/skills/u-probe   (project)   ~/.claude/skills/u-probe   (--user)
+
+    Project installs go under the working directory; run it at the repository root.
+    Run again with --force after upgrading U-Probe.
+
+    Example: uprobe skill install --target claude --user
+    """
+    from uprobe.skills import SkillInstallError, install_skill, skills_dir
+    targets = targets or ('codex', 'claude')
+    try:
+        directories = [skills_dir(target, user=not project) for target in targets]
+    except SkillInstallError as e:
+        raise click.UsageError(str(e))
+    for target, directory in zip(targets, directories):
+        try:
+            dest = install_skill(directory, force=force)
+        except (SkillInstallError, OSError) as e:
+            raise click.ClickException(str(e))
+        label = target if target in ('codex', 'claude') else 'directory'
+        click.echo(f"Installed the u-probe skill (U-Probe {__version__}) for {label}: {dest}")
+
+
 @cli.command()
 def version():
     """Show the U-Probe version."""

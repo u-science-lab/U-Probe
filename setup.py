@@ -69,7 +69,12 @@ setup(
     url=URL,
     packages=find_packages(),
     include_package_data=True,
-    package_data={'uprobe.templates': ['*.yaml']},
+    package_data={
+        'uprobe.templates': ['*.yaml'],
+        # The Agent Skill (`uprobe skill path`, `uprobe skill install`).
+        'uprobe.skills': ['u-probe/*.md', 'u-probe/references/*.md', 'u-probe/references/*/*.md',
+                          'u-probe/scripts/*.py'],
+    },
     zip_safe=False,
     classifiers=classifiers,
     install_requires=get_install_requires(),
