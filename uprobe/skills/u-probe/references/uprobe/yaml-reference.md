@@ -275,12 +275,14 @@ summary:
 
 - RNA mode attributes: `target_gc`, `target_tm`, `target_fold`, `target_self_match`, `target_mapped_genes`
   (Bowtie 1, 2 mismatches, `sense` when `bowtie` is in `align_index` and installed; Bowtie2 otherwise), plus
-  `_gc`, `_tm`, `_fold`, `_self_match` for every probe and part. DNA mode: those four for every part,
-  plus `_mapped_sites` (bowtie2) and `_kmer_count` (jellyfish, k 35).
+  `_gc`, `_tm`, `_fold`, `_self_match` for every probe and part. DNA mode: `target_kmer_count` on the
+  genomic window (jellyfish, k 35), and those four for every part plus `_mapped_sites` (bowtie2) and
+  `_kmer_count` (jellyfish, k 35).
 - Filters: Tm [T, T+40] °C at `hybridization.temperature_c` (37 °C if conditions are declared without
   it; 50-90 °C without a block) on **every** Tm attribute, constant parts included; GC 0.2-0.8 on
-  `target_gc` and whole probes; RNA `target_mapped_genes <= 4` (up to 3 off-target genes). DNA mode
-  gets no k-mer or site filter (the generated one names a `target_kmer_count` column that does not exist).
+  `target_gc` and whole probes; RNA `target_mapped_genes <= 4` (up to 3 off-target genes); DNA
+  `target_kmer_count <= 100` (no 35-mer of the window more than 100 times in the genome: a loose repeat
+  filter, far looser than OligoMiner's 18-mers < 5; see `references/concepts/specificity.md`).
 - Sorts: all ascending: GC, Tm, mapped genes, then `_fold`, `_self_match`, `_kmer_count` (least
   structured, least self-complementary, least repetitive first). No `remove_overlap` or `equal_space`.
 Write your own blocks for any real design.

@@ -91,6 +91,10 @@ def _default_mapped_genes(protocol_config: dict, genome) -> dict:
     return {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}
 
 
+# The generated kmer_count attributes of DNA mode (Jellyfish, 35-mers).
+DNA_KMER_COUNT = {'type': 'kmer_count', 'kmer_len': 35, 'size': '1G', 'aligner': 'jellyfish'}
+
+
 def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> dict:
     """
     Generate default attributes based on probes structure and mode (DNA/RNA).
@@ -124,7 +128,14 @@ def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> 
             'type': 'self_match'
         }
         attributes['target_mapped_genes'] = _default_mapped_genes(protocol_config, genome)
-    
+    else:
+        # The genomic window is the sequence that binds the genome, so its k-mer
+        # count is the repeat measure the generated filter target_kmer_count
+        # <= 100 reads. Jellyfish counts canonical k-mers, so it equals that of
+        # a binding part rc(target_region); constant parts (primers, barcodes)
+        # do not bind the genome and must not decide which windows pass.
+        attributes['target_kmer_count'] = dict(DNA_KMER_COUNT, target='target_region')
+
     # Extract probe targets and generate attributes
     probe_targets = _extract_probe_targets(probes_config)
     
@@ -164,13 +175,7 @@ def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> 
                 'type': 'mapped_sites',
                 'aligner': 'bowtie2'
             }
-            attributes[f'{safe_name}_kmer_count'] = {
-                'target': target_name,
-                'type': 'kmer_count',
-                'kmer_len': 35,
-                'size': '1G',
-                'aligner': 'jellyfish'
-            }
+            attributes[f'{safe_name}_kmer_count'] = dict(DNA_KMER_COUNT, target=target_name)
     
     return attributes
 
@@ -192,8 +197,9 @@ def _generate_default_summary(protocol_config: dict, attributes: dict) -> dict:
     # Select attributes for summary based on mode
     for attr_name in attributes.keys():
         if is_dna_mode:
-            # DNA: include part-level attributes (gc, tm, kmer_count)
-            if '_part' in attr_name and any(attr_name.endswith(x) for x in ['_gc', '_tm', '_kmer_count']):
+            # DNA: the window's k-mer count and part-level attributes (gc, tm, kmer_count)
+            if attr_name == 'target_kmer_count' or (
+                    '_part' in attr_name and any(attr_name.endswith(x) for x in ['_gc', '_tm', '_kmer_count'])):
                 summary['attributes'].append(attr_name)
         else:
             # RNA: include target + probe-level attributes (not parts)
@@ -277,7 +283,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
             'condition': _tm_condition(tm_protocol, 'target_tm')  # Tm in Celsius
         }
     
-    # Mode-specific filters
+    # Mode-specific filters: genome repeats (DNA), off-target genes (RNA)
     if is_dna_mode:
         if 'target_kmer_count' in attributes:
             post_process['filters']['target_kmer_count'] = {
