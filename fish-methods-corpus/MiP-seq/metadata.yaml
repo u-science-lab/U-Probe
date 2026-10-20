@@ -1,0 +1,63 @@
+# Unknown values stay null; [] means no entries recorded, not proven absence.
+# See corpus_schema.md for types, evidence requirements, and field_states.
+method:
+  official_name: "MiP-seq"
+  full_name: "Multi-omics in situ Pairwise Sequencing"
+  aliases:
+    - "MIP-seq"
+classification:
+  categories:
+    - "In situ sequencing"
+    - "Spatial multi-omics"
+    - "Targeted in situ sequencing"
+  applications:
+    - "Spatial transcriptomics"
+    - "Spatial proteomics"
+    - "DNA detection"
+    - "Allele-specific expression detection"
+    - "RNA modification detection"
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+    - in_situ_sequencing
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: |
+    Dual-barcode padlock probes circularized by SplintR (RNA) or T4 (DNA) ligase and amplified by Phi29 RCA. Readout is pairwise sequencing-by-ligation with anchor primers and fluorescent query probes across multiple imaging rounds.
+publication:
+  original_year: 2024
+  original_reference: "S01"
+  doi: "10.1038/s41551-024-01205-7"
+  pmid: "38745110"
+# Records: version_id, version_name, year, reference, status.
+versions:
+  - version_id: "V01"
+    version_name: "Original"
+    year: 2024
+    reference: "S01"
+    status: "original"
+probe:
+  architecture_type: "Dual-barcode padlock probe with initiator primer"
+  target_binding: "Padlock arms (12-16 bp each)"
+  barcode_system: "Dual barcode (B1/B2); 10 combinations per round; pairwise sequencing"
+  readout_system: "Sequencing-by-ligation with fluorescent query probes"
+  amplification: "Rolling-circle amplification (RCA)"
+  sequencing_or_imaging: "Sequencing-by-ligation; confocal fluorescence microscopy"
+  modifications:
+    - "5' phosphorylation (padlock probes)"
+    - "NHS-PEG4-Azide conjugation (antibody-oligo)"
+    - "DBCO-modified oligonucleotide (antibody conjugation)"
+design:
+  official_design_software_available: null
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: null
+references:
+  primary_source_ids:
+    - "S01"
+    - "S02"
+    - "S03"
+validation:
+  status: research_complete
+field_states: {}

@@ -78,6 +78,44 @@ def test_skill_md_names_only_existing_commands_and_templates():
         assert command in commands, command
 
 
+# -- What the skill folder holds -------------------------------------------------------------
+# The folder ships in the wheel and `uprobe skill install` copies all of it, so an agent sees every
+# file in it. Notes, corpora and instructions for other agents belong outside the package (e.g.
+# fish-methods-corpus/ at the repository root).
+
+# Left out by the installer (uprobe.skills._IGNORE) and by the wheel.
+NOT_SHIPPED = {'__pycache__', '.DS_Store'}
+AGENT_INSTRUCTIONS = {'agents.md', 'claude.md'}
+BINARY_SUFFIXES = {'.pdf', '.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.gz', '.png', '.jpg',
+                   '.jpeg', '.gif', '.h5', '.npz', '.pkl'}
+
+
+def shipped_files():
+    return sorted(p for p in SKILL.rglob('*') if p.is_file() and not NOT_SHIPPED & set(p.parts)
+                  and p.suffix != '.pyc')
+
+
+def test_skill_folder_holds_only_skill_md_references_and_scripts():
+    top = sorted(p.name for p in SKILL.iterdir() if p.name not in NOT_SHIPPED)
+    assert top == ['SKILL.md', 'references', 'scripts']
+    assert SKILL_MD.is_file() and (SKILL / 'references').is_dir() and (SKILL / 'scripts').is_dir()
+    # MANIFEST.in ships only references/**/*.md and scripts/**/*.py; anything else would be
+    # installed from a checkout but missing from the wheel.
+    stray = [p.relative_to(SKILL).as_posix() for p in shipped_files()
+             if p != SKILL_MD and not (p.parts[len(SKILL.parts)] == 'references' and p.suffix == '.md')
+             and not (p.parts[len(SKILL.parts)] == 'scripts' and p.suffix == '.py')]
+    assert stray == []
+
+
+def test_skill_folder_has_no_agent_instructions_or_binaries():
+    found = []
+    for path in shipped_files():
+        binary = path.suffix.lower() in BINARY_SUFFIXES or b'\0' in path.read_bytes()[:8192]
+        if path.name.lower() in AGENT_INSTRUCTIONS or binary:
+            found.append(path.relative_to(SKILL).as_posix())
+    assert found == []
+
+
 # -- uprobe skill path / install ------------------------------------------------------------
 
 def test_skill_path_prints_the_packaged_folder():

@@ -1,0 +1,62 @@
+method:
+  official_name: RAEFISH
+  full_name: Reverse-padlock Amplicon Encoding Fluorescence In Situ Hybridization
+  aliases:
+  - RAEFISH
+classification:
+  categories:
+  - image-based spatial transcriptomics
+  - multiplexed RNA FISH
+  applications:
+  - endogenous transcript spatial profiling
+  - gRNA readout in CRISPR screens
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+  - sequential_fish
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: Reverse-padlock circularized by a splint on adjacent RNA regions; Phi29 RCA amplifies the circle. Identity is decoded across multiple rounds of fluorescent-oligo hybridization, imaging and stripping (47 dual-color rounds for V01; 7 for V02).
+publication:
+  original_year: 2025
+  original_reference: S01
+  doi: 10.1016/j.cell.2025.09.006
+  pmid: '41038164'
+versions:
+- version_id: V01
+  version_name: Endogenous-transcriptome RAEFISH
+  year: 2025
+  reference: S01
+  status: original
+- version_id: V02
+  version_name: Perturb-RAEFISH
+  year: 2025
+  reference: S01
+  status: variant
+probe:
+  architecture_type: reverse-padlock, linear priming, and encoding probes
+  target_binding: adjacent RNA-binding probes; lengths differ by variant
+  barcode_system: 'V01: 94-bit binary codes, Hamming weight 4, minimum Hamming distance 4 (MHD4), read in 47 dual-color rounds. V02: 14-bit, weight-4, HD2 codes; see probes.md.'
+  readout_system: sequential fluorescent oligo hybridization
+  amplification: rolling circle amplification
+  sequencing_or_imaging: imaging
+  modifications:
+  - 5-prime phosphate on reverse-padlock synthesis primer
+  - phosphorothioate and inverted dT on splint
+  - locked nucleic acids in toehold oligo
+design:
+  official_design_software_available: null
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids:
+  - S01
+  - S02
+  - S03
+  - S04
+  - S05
+validation:
+  status: research_complete
+field_states: {}

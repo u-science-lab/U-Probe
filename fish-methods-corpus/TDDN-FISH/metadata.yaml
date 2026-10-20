@@ -1,0 +1,57 @@
+method:
+  official_name: TDDN-FISH
+  full_name: Tetrahedral DNA Dendritic Nanostructure-Enhanced Fluorescence In Situ Hybridization
+  aliases:
+    - TDDN-FISH
+classification:
+  categories:
+    - image-based spatial transcriptomics
+    - multiplexed FISH
+    - DNA nanostructure-enhanced imaging
+  applications:
+    - RNA spatial profiling
+    - Single-cell transcriptomics
+    - Subcellular RNA localization
+    - Cell type mapping in tissue
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: nanostructure
+  readout_strategy:
+    - sequential_fish
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: |
+    Linear bifunctional primary probe (35-nt target + 30-nt readout) is recognized by a hierarchical tetrahedral DNA dendritic nanostructure (T0-T1-T2) used as a signal amplifier.
+    The F^N cyclic encoding is decoded by sequential imaging rounds with fluorophore assignments, so readout is sequential_fish rather than a single-round fluorescent barcode.
+publication:
+  original_year: 2025
+  original_reference: S01
+  doi: 10.1038/s41467-025-64294-1
+  pmid: null
+versions:
+  - version_id: V01
+    version_name: TDDN-FISH
+    year: 2025
+    reference: S01
+    status: original
+probe:
+  architecture_type: bifunctional primary probe with TDDN amplification nanostructure
+  target_binding: linear primary probe with target-specific and readout sequences
+  barcode_system: cyclic encoding-decoding (F^N); color × round combinatorial barcoding
+  readout_system: fluorophore-labeled detection oligos; sequential imaging rounds
+  amplification: hierarchical TDDN (T0-T1-T2) dendritic nanostructure assembly
+  sequencing_or_imaging: imaging
+  modifications:
+    - disulfide bond (TCEP-cleavable) in primary probe
+design:
+  official_design_software_available: null
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids:
+    - S01
+    - S02
+validation:
+  status: research_complete
+field_states: {}
