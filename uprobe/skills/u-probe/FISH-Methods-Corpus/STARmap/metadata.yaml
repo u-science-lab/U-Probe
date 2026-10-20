@@ -1,0 +1,71 @@
+# Compact summary; scope and evidence locators are in probes.md, protocols.md and sources.md.
+method:
+  official_name: STARmap
+  full_name: spatially-resolved transcript amplicon readout mapping
+  aliases:
+  - Spatially-resolved Transcript Amplicon Readout Mapping
+  - spatially-resolved transcript amplicon readout mapping
+  - 3D STARmap
+  - SNAIL-STARmap
+  - STARmap PLUS
+classification:
+  categories:
+  - in situ sequencing (ISS)
+  - hydrogel-tissue chemistry (HTC)
+  - SNAIL (specific amplification of nucleic acids via intramolecular ligation)
+  - SEDAL sequencing-by-ligation (SBL)
+  - padlock probe / rolling-circle amplification (RCA)
+  applications:
+  - spatially resolved multiplexed RNA profiling in intact tissue at single-cell resolution
+  - 3D volumetric mapping of single-cell transcriptional states in thick tissue (>30,000 cells)
+  - cell-type classification in mouse primary visual cortex (V1)
+  - cell-type and molecular-pathology mapping in Alzheimer disease mouse model (STARmap PLUS)
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+  - in_situ_sequencing
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: SNAIL primer+padlock pair with intramolecular ligation and Phi29 RCA; SEDAL sequencing-by-ligation readout reads a 5-nt barcode in 6 cycles. Classification applies to V01; V02 (STARmap PLUS) shares the same padlock+SEDAL architecture.
+publication:
+  original_year: 2018
+  original_reference: S01
+  doi: 10.1126/science.aat5691
+  pmid: '29930089'
+versions:
+- version_id: V01
+  version_name: STARmap (Wang 2018)
+  year: 2018
+  reference: S01
+  status: original
+- version_id: V02
+  version_name: STARmap PLUS (Zeng 2023)
+  year: 2023
+  reference: S11
+  status: variant
+probe:
+  architecture_type: SNAIL primer/padlock pair; primer splints ligation and primes RCA; circular padlock is RCA template.
+  target_binding: Two RNA-binding regions; S03 recommends 19–25 nt each with 1–2 nt interspace (later design rules).
+  barcode_system: 'V01: 5 nt, 1,024 possible sequences. Later S03 permits longer SeqA/SeqB configurations; see probes.md.'
+  readout_system: SEDAL overlapping dinucleotide readout with cycle-specific reading probes and four-color degenerate decoding library.
+  amplification: Phi29 RCA on circularized padlock; S03 Step 24 includes 20 µM aminoallyl-dUTP and 250 µM dNTP mixture.
+  sequencing_or_imaging: SEDAL; S01 Nissl; S11 PI (2,766 genes/eight rounds); later S03 DAPI/protein imaging.
+  modifications:
+  - Padlock 5′ phosphate (S03 Table 2)
+  - Reading 5′ phosphate and 3′ inverted dT (S03 Table 4)
+  - Decoding 5′ Alexa dye (S03 Table 5)
+  - Aminoallyl-dUTP in RCA (S03 Step 24)
+  - Acrylic-NHS HTC in S01/S11; later S03 MA-NHS coupling (source-specific V02 procedure)
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: null
+references:
+  primary_source_ids:
+  - S01
+  - S03
+validation:
+  status: validated_with_warnings
+field_states: {}
