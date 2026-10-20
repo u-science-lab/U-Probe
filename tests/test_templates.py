@@ -164,14 +164,22 @@ def test_off_target_search_sees_the_template_sequences(name):
     # Bowtie2's local mode aligns nothing shorter than 22 nt and misses many
     # sites of 25-30-mers, so windows up to 30 nt are searched with Bowtie 1.
     protocol = load_template(name)
-    shortest = normalize_sampling(protocol['extracts']['target_region']['length'])[0]
+    region = protocol['extracts']['target_region']
     for attr in protocol['attributes'].values():
         if attr['type'] != 'mapped_genes':
             continue
-        # target_region is the RNA sequence; the probes bind where it occurs.
-        assert attr['target'] == 'target_region' and attr['strand'] == 'sense'
+        # target_region, or a layout part of it, is the RNA sequence; the probes bind where it occurs.
+        assert attr['strand'] == 'sense'
+        if attr['target'] == 'target_region':
+            shortest = normalize_sampling(region['length'])[0]
+        else:
+            part = attr['target'].removeprefix('target_parts.')
+            assert attr['target'] == f'target_parts.{part}' and part in region['layout']['parts']
+            shortest = normalize_sampling(region['layout']['parts'][part]['length'])[0]
         if shortest <= 30:
-            assert attr['aligner'] == 'bowtie' and attr['max_mismatches'] == 2
+            assert attr['aligner'] == 'bowtie'
+            # A whole window within 2 substitutions; a part may set its own limit (meta.parameter_sources).
+            assert attr['max_mismatches'] == 2 or attr['target'] != 'target_region'
         else:
             assert attr['aligner'] == 'bowtie2'
 
@@ -265,11 +273,17 @@ def test_padlock_iss_reproduces_hybiss_pvalb():
     targets, probes = design('padlock_iss', 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG', {'ID': 'TAGACGTAGTGAGCATGACT'})
     assert probes['padlock'].tolist() == [
         'CTCGCGGCCCTCCTGTAGACGTAGTGAGCATGACTTCTACGAGTTTGCAGTCACGCCCATCTCAGTCCTT']
-    # The published target passes the applied Tm window under its design conditions.
+    # The published target passes the applied Tm window under the formula and conditions of the
+    # HybISS design code (multi_padlock_design lib/screenseq.py gives 70.50 C; primer3 67.2 C).
     protocol = load_template('padlock_iss')
     combined = pd.concat([targets.reset_index(drop=True), probes], axis=1)
     tm = add_attributes(combined, {**protocol, 'attributes': {'target_tm': protocol['attributes']['target_tm']}}, {})
-    assert 65 <= tm['target_tm'][0] <= 75
+    assert tm['target_tm'][0] == pytest.approx(70.50057357343485)
+    assert protocol['post_process']['filters']['target_tm']['condition'] == 'target_tm >= 65 & target_tm <= 75'
+    # The junction search covers the 20 nt around the ligation junction (mRNA nt 15|16).
+    junction = targets['target_parts.junction'][0]
+    assert junction == 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG'[5:25]
+    assert probes['padlock'][0].endswith(junction[:10]) and probes['padlock'][0].startswith(junction[10:])
 
 
 def test_mipseq_reproduces_published_pair():

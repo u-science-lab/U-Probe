@@ -86,7 +86,7 @@ RCP = rc(PLP); dye-labelled readout oligos pair with the bridge probe.
 | Gap, gap-fill ISS / oligo gap-fill | 4 / 6 | nt | Ke 2013 Supp. Table 4 (mapped here); Mignardi 2015, doi:10.1093/nar/gkv772 |
 | Target Tm window (30-nt arm pair) | 65-75 | °C | Gyllborg 2020 |
 | Tm conditions | 0.1 µM probe, 75 mM monovalent, 10 mM Mg2+, 20% formamide | - | multi_padlock_design readme.txt |
-| Tm formula (repo) | Sugimoto 1996 NN; +16.6 log10([Na+] + 3.795 sqrt[Mg2+]); -0.72 °C per % formamide | - | multi_padlock_design lib/screenseq.py |
+| Tm formula (repo) | Sugimoto 1996 NN; +16.6 log10([Na+] + 3.795 sqrt[Mg2+]); -0.72 °C per % formamide; in U-Probe `tm_method: multi_padlock_design` (same values to 1e-12 °C) | - | multi_padlock_design lib/screenseq.py |
 | Space between targets | 15 | nt | Gyllborg 2020 |
 | PLPs per gene | 5, chosen at random among passing targets | - | Gyllborg 2020 |
 | ID / anchor | 20 (Affymetrix GenFlex Tag 16K) / 20 (6 shared variants, linker only) | nt | Gyllborg 2020 |
@@ -137,12 +137,17 @@ RCP = rc(PLP); dye-labelled readout oligos pair with the bridge probe.
 - multi_padlock_design rule: BLAST (word size 7, plus strand) of the 30-mer against RefSeq mRNAs, predicted
   XM/XR ignored. A hit in another gene rejects the target when it is longer than one arm (>50% coverage),
   more than 80% identical, and covers the ligation site +-5 nt. The target must also align perfectly to its own gene.
-- U-Probe instead runs Bowtie 1 with at most 2 substitutions over the whole 30-mer, which ignores where the junction
-  is. It flags near-identical sites even when their mismatches sit far from the junction, and misses partial
-  junction-spanning matches and indels. Optional heuristic, not from the paper: add a helper probe
-  `junction: {template: "{site}", parts: {site: {expr: "target_region[5:25]"}}}` with a `mapped_genes`
-  attribute on `junction.site` (`aligner: bowtie`, `max_mismatches: 1`, `strand: sense`) and filter it `<= 1`.
-  Do not order the helper.
+  In BLAST's output columns (lib/readblast.py): length > 15, pident > 80, qstart <= 10 and qend >= 21, so the hit
+  spans nt 10-21 around the junction at nt 15|16. BLAST reports only hits below its default e-value of 10.
+- The template approximates the rule with two Bowtie 1 searches, both filtered `<= 1`: `target_mapped_genes`
+  (the whole 30-mer, within 2 substitutions) and `junction_mapped_genes` (nt 6-25, the 20 nt around the junction,
+  a `layout` part, so no helper oligo; within 1 substitution). Both kinds of hit meet the repo rule, and by an
+  estimate with blastn's default 1/-2 scoring on a RefSeq-sized database BLAST reports them (E < 10). Not
+  searched: hits of 16-19 nt, gapped hits, and more divergent hits that BLAST still reports. With 2 substitutions
+  the 20-nt search would also flag hits BLAST does not report (it keeps 863 of the 1,195 published targets, 1,143
+  with 1). On the Ensembl 113 transcriptomes 1,155 published targets pass the 30-mer search and 1,138 pass both;
+  the 17 more removed hit genes such as Dtnbp1, Lrrc58, NFYC, WDR82, CNTNAP3 and DUSP14, or lncRNAs, retained
+  introns and processed pseudogenes, many of which RefSeq (the repo's database) lacks.
 - Expression: an off-target RNA that is absent cannot ligate. Add `gene_expression` (`min_value`, e.g. TPM >= 1).
   A `min_fraction_of_target` threshold accepts false spots at roughly that fraction. `exempt_copies` means that
   pseudogene or retrocopy signal counts as the target's.
@@ -159,6 +164,9 @@ extracts:
     source: mRNA          # whole mRNA, UTRs included
     transcripts: mane     # MANE Select, else Ensembl canonical
     length: 30            # 2 x 15-nt arms
+    layout:               # only for the junction search: nt 6-25 of the window
+      template: "{arm_3_end}{junction}{arm_5_end}"
+      parts: {arm_3_end: {length: 5}, junction: {length: 20}, arm_5_end: {length: 5}}
 probes:
   padlock:
     template: "{arm_5}{id}TCTACGAGTTTGCAGTCACG{arm_3}"   # ID + anchor
@@ -167,14 +175,18 @@ probes:
       id:    {expr: "encoding[target]['ID']"}
       arm_3: {expr: "target_region[0:15]"}
 attributes:
-  target_tm: {target: target_region, type: annealing_temperature,     # 30-mer, repo design conditions
+  target_tm: {target: target_region, type: annealing_temperature,     # 30-mer, repo formula and conditions
+              tm_method: multi_padlock_design,
               hybridization: {na_mM: 75, mg_mM: 10, probe_nM: 100, formamide_pct: 20}}
   target_mapped_genes: {target: target_region, type: mapped_genes,
                         aligner: bowtie, max_mismatches: 2, strand: sense}
+  junction_mapped_genes: {target: target_parts.junction, type: mapped_genes,
+                          aligner: bowtie, max_mismatches: 1, strand: sense}
 post_process:
   filters:
     target_tm: {condition: target_tm >= 65 & target_tm <= 75}
     target_mapped_genes: {condition: target_mapped_genes <= 1}
+    junction_mapped_genes: {condition: junction_mapped_genes <= 1}
   remove_overlap: {location_interval: 15}
   equal_space: {number_desired: 5}
 ```
@@ -191,17 +203,20 @@ Variants (each validated with `uprobe validate`):
 | Variant | Edit |
 | --- | --- |
 | Direct RNA (SplintR) | `arm_5: rc(target_region[0:15])`, `arm_3: rc(target_region[15:30])`; set `hybridization` to the 37 °C ligation; an RCA primer next to the PLP is needed (see `mip-seq.md` for a padlock + primer layout) |
-| Ke 2013 barcoded | `length: 36`; template `"{arm_5}TCCTCTATGATTACTGACTGCGTCTATTTAGTGGAGCC{bc}CTATCTTCTTT{arm_3}"`, `arm_5: target_region[18:36]`, `arm_3: target_region[0:18]`, 4-nt `bc` in `encoding` |
-| Gap-fill | `length: 44` + `layout: {template: "{arm3_site}{gap}{arm5_site}", parts: {arm3_site: {length: 20}, gap: {length: 4}, arm5_site: {length: 20}}}`; `arm_5: target_parts['arm5_site']`, `arm_3: target_parts['arm3_site']` |
+| Ke 2013 barcoded | `length: 36`; template `"{arm_5}TCCTCTATGATTACTGACTGCGTCTATTTAGTGGAGCC{bc}CTATCTTCTTT{arm_3}"`, `arm_5: target_region[18:36]`, `arm_3: target_region[0:18]`, 4-nt `bc` in `encoding`; layout parts `arm_3_end` and `arm_5_end` 8 nt each, so the junction part stays centred (18\|19) |
+| Gap-fill | `length: 44` + `layout: {template: "{arm3_site}{gap}{arm5_site}", parts: {arm3_site: {length: 20}, gap: {length: 4}, arm5_site: {length: 20}}}`; `arm_5: target_parts['arm5_site']`, `arm_3: target_parts['arm3_site']`; this layout replaces the junction one, so drop `junction_mapped_genes` and its filter |
 
 **U-Probe departs:**
-- Tm model. On the 1,195 published HybISS targets, U-Probe's primer3 Tm under the template conditions is
-  3.4 +- 1.5 °C below the repo formula. All 1,195 lie within 65-75 °C by the repo formula, but only 327 (27%)
-  pass the template's 65-75 °C filter. Mouse Pvalb gives 67.2 vs 70.5 °C, and a second published Pvalb target
-  62.6 vs 67.2 °C. A primer3 window of 60-73 °C keeps 1,121 (94%); this is a calibration, not a published value.
+- Tm model: none left. `target_tm` uses the repo formula (`tm_method: multi_padlock_design`), so all 1,195
+  published HybISS targets pass 65-75 °C; with primer3, the default, 327 (27%) did. Primer3 under the same
+  conditions is 3.4 +- 1.5 °C lower (-3.2 to +7.5 °C, larger for AT-rich targets; correlation with GC -0.71),
+  so no primer3 window is equivalent: the best 10-°C one (59.1-69.1 °C) keeps 1,110, and 60-73 °C keeps 1,121.
+  Mouse Pvalb: 70.5 °C (primer3 67.2). All filters together (Tm, both specificity searches on Ensembl 113) keep
+  1,138 of the 1,195 published targets; the previous template kept 314.
 - Selection. HybISS picked 5 sites at random; the template spreads 5 sites evenly along the mRNA with `equal_space`.
 - Region. The repo uses the region common to all RefSeq variants; the template uses one reference transcript.
-- Specificity. The template uses Bowtie 1 (<= 2 substitutions) instead of the BLAST junction rule above.
+- Specificity. Two Bowtie 1 searches (30-mer, <= 2 substitutions; junction 20-mer, <= 1) approximate the BLAST
+  junction rule (section 5), against the transcriptome of your genome instead of RefSeq mRNAs.
 - Sequence filters. No homopolymer or low-complexity preference; add a `sequence_pattern` filter excluding
   AAAA/CCCC/GGGG/TTTT if wanted.
 - Template. The arms suit a cDNA template only. `arm_5_tm`/`arm_3_tm` are reported, not filtered.
@@ -211,7 +226,8 @@ Variants (each validated with `uprobe validate`):
 - Arm orientation: sense arms for a cDNA template, rc arms for an RNA template; a swapped design binds nothing.
   In cDNA designs the 5' arm is the downstream half of the mRNA window. Without a 5' phosphate nothing ligates.
 - Tm windows: apply 65-75 °C to the 30-nt arm pair under 75 mM K+ / 10 mM Mg2+ / 20% formamide, never to one arm
-  or under 2x SSC. Under primer3 the window rejects most published targets (section 6).
+  or under 2x SSC, and with `tm_method: multi_padlock_design`: under primer3 the window rejects most published
+  targets (section 6).
 - Gene-specific RT: a PLP site 3' of the RT primer on the mRNA lies outside the cDNA and is never detected.
 - Direct RNA without an RCA primer: no target-primed RCA, no signal (Schneider 2017).
 - Reusing IDs or anchors that pair with transcripts or with each other gives background RCPs and false codes.
@@ -225,8 +241,9 @@ Variants (each validated with `uprobe validate`):
 - [ ] arm_3 + arm_5 equals the target window in the reference mRNA (cDNA design), or its reverse complement (RNA design).
 - [ ] The window lies on the intended transcript, in exons shared by the isoforms you want to count.
 - [ ] `target_tm` in the chosen window under the stated conditions; the model (primer3 vs repo formula) is recorded.
-- [ ] `target_mapped_genes == 1` with Bowtie 1 (<= 2 substitutions) and empty `target_mapped_genes_off_targets`;
-      the off-targets of any exempted copies or unexpressed genes were reviewed.
+- [ ] `target_mapped_genes == 1` with Bowtie 1 (<= 2 substitutions) and `junction_mapped_genes == 1` (<= 1 in the
+      20 nt around the junction), with empty `_off_targets` columns; the off-targets of any exempted copies or
+      unexpressed genes were reviewed.
 - [ ] Sites at least 15 nt apart, up to 5 per gene; with gene-specific RT, every site within its primer's cDNA.
 - [ ] IDs unique per gene; bridge probe = ID nt 2-18 + 2-nt linker + rc(readout); codes at Hamming distance >= 2.
 - [ ] Backbone (ID + anchor) has no transcriptome hit and no strong hairpin with the arms.
