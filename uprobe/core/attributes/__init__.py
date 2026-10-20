@@ -169,7 +169,8 @@ def _add_attributes(
             vals = cached(df_probes[actual_target], lambda seq: calculate(seq, **conditions))
             df_probes[attr_name] = vals
         elif attr_type == "gc_content":
-            vals = cached(df_probes[actual_target], cal_gc_content).round(2)
+            # Unrounded: filters compare it with the window bounds (19/30 = 0.633 > 0.63).
+            vals = cached(df_probes[actual_target], cal_gc_content)
             df_probes[attr_name] = vals
         elif attr_type == "length":
             df_probes[attr_name] = df_probes[actual_target].str.len().astype("Int64")

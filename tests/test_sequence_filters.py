@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from uprobe.core.attributes import add_attributes
 from uprobe.core.process import filter_table, post_process
 from uprobe.core.report.compact import build_report_data
 
@@ -41,3 +42,16 @@ def test_post_processing_counts_reach_report():
         {'stage': 'Filters', 'before': 3, 'after': 2, 'removed': 1},
         {'stage': 'Sort', 'before': 2, 'after': 2, 'removed': 0},
     ]
+
+
+def test_gc_window_applies_to_the_exact_fraction(tmp_path, monkeypatch):
+    # 19 of 30 nt G or C is 63.3% GC, outside the 43-63% MERFISH window; rounded
+    # to 0.63 it passed, and 50 of 214 MERFISH probes of GAPDH, TFRC and EEF2 had it.
+    monkeypatch.chdir(tmp_path)
+    raw = pd.DataFrame({'probe_id': ['gc19', 'gc18', 'gc13'],
+                        'target_region': ['G' * 19 + 'A' * 11, 'G' * 18 + 'A' * 12, 'G' * 13 + 'A' * 17]})
+    protocol = {'attributes': {'target_gc': {'target': 'target_region', 'type': 'gc_content'}},
+                'post_process': {'filters': {'target_gc': {'condition': 'target_gc >= 0.43 & target_gc <= 0.63'}}}}
+    df = add_attributes(raw, protocol, genome={})
+    assert df.target_gc.tolist() == [19 / 30, 18 / 30, 13 / 30]
+    assert post_process(df, protocol).probe_id.tolist() == ['gc18', 'gc13']
