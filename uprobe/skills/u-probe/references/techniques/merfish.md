@@ -61,7 +61,7 @@ Other published layouts:
 | Readouts | 20 nt; A/T/G only (G 50 %), GC 40-50 %, no G run > 3, <= 11 nt cross-homology and <= 11 nt homology to the transcriptome | Chen 2015: 30 nt, 4-letter | Moffitt 2016 SI |
 | Primers | 20 nt, Tm 70-72 C, GC 50-65 %, no run >= 4, self-compl. <= 6 nt, cross-homology <= 8 nt | Chen/MIE: Tm 70-80 C, GC clamp | Moffitt 2016; PrimerDesigner.m |
 | Encoding hyb. | 2x SSC, 30 % formamide, 10 % dextran sulfate, 0.1 % yeast tRNA, 1 % murine RNase inhibitor | 37 C, 36-48 h | Moffitt 2016 |
-| Encoding probe conc. | ~100-300 uM total (2015-2018); ~1 nM per probe (Xia 2019, Zhang 2021) | titrate per batch | Moffitt 2016; MIE |
+| Encoding probe conc. | ~50-200 uM total (2015-2018): 100 uM (140 genes) / 200 uM (1,001 genes) (Chen 2015); ~200 uM (Moffitt 2016, PNAS 113:11046); 100 uM (Moffitt 2016, PNAS 113:14456); ~50 uM (Wang 2018, corrected from ~300 uM). Later ~1 nM per probe (Xia 2019, Zhang 2021) | titrate per probe batch (Moffitt 2016); MIE: 10-200 uM by probe-set size, titrate over 5-200 uM. PNAS 113:14456 used 300 uM only as a 3x high-background test | Chen 2015; Moffitt 2016 (both); Wang 2018 Author Correction, doi:10.1038/s41598-018-24844-8; MIE; Xia 2019 SI; Zhang 2021 |
 | Encoding wash | 2x SSC, 30 % formamide | 47 C, 2 x 30 min | Moffitt 2016 |
 | Readout hyb. | 1 nM each, 2x SSC, 1 % ethylene carbonate, 10 % dextran sulfate, 2 mM VRC; wash 2x SSC + 10 % EC | room temperature | Moffitt 2016 |
 | Readout hyb. (later) | 3 nM, 2x SSC, 10 % EC, 0.1 % Triton (Zhang 2021); 5 % EC (Wang 2018); 10 nM in 10 % formamide at 37 C (Chen 2015) | | as cited |
@@ -201,7 +201,7 @@ Template departures:
 - Moffitt JR et al. 2016. High-throughput single-cell gene-expression profiling with multiplexed error-robust FISH. PNAS 113:11046-11051. doi:10.1073/pnas.1612826113
 - Moffitt JR et al. 2016. High-performance multiplexed FISH in culture and tissue with matrix imprinting and clearing. PNAS 113:14456-14461. doi:10.1073/pnas.1617699113
 - Moffitt JR, Zhuang X. 2016. RNA imaging with MERFISH. Methods Enzymol 572:1-49. doi:10.1016/bs.mie.2016.03.020
-- Wang G, Moffitt JR, Zhuang X. 2018. Multiplexed imaging of high-density libraries of RNAs with MERFISH and expansion microscopy. Sci Rep 8:4847. doi:10.1038/s41598-018-22297-7
+- Wang G, Moffitt JR, Zhuang X. 2018. Multiplexed imaging of high-density libraries of RNAs with MERFISH and expansion microscopy. Sci Rep 8:4847. doi:10.1038/s41598-018-22297-7. Author Correction (encoding probes ~50 uM, not ~300 uM): Sci Rep 8:6487. doi:10.1038/s41598-018-24844-8
 - Moffitt JR et al. 2018. Molecular, spatial, and functional single-cell profiling of the hypothalamic preoptic region. Science 362:eaau5324. doi:10.1126/science.aau5324
 - Xia C et al. 2019. Spatial transcriptome profiling by MERFISH reveals subcellular RNA compartmentalization and cell cycle-dependent gene expression. PNAS 116:19490-19499. doi:10.1073/pnas.1912459116
 - Zhang M et al. 2021. Spatially resolved cell atlas of the mouse primary motor cortex by MERFISH. Nature 598:137-143. doi:10.1038/s41586-021-03705-x
