@@ -35,7 +35,7 @@ A published probe sequence list is NOT automatically Grade A. Unassessed is not 
 | Design software | Official S05 pipeline exists; the pinned public commit is not established as the exact generator of this workbook |
 | Design parameters | Paper specifies length, GC, motifs, PAM, off-target and spacing filters (S01); code differences preserved in probes.md |
 | Source | S03 Table S2; S02 Table S1; S01 design methods; S05 pinned code for context |
-| Availability | Actual publisher XLSX downloaded 2026-10-15; retained as resources/Table_S2.xlsx; SHA-256 in sources.md |
+| Availability | Actual publisher XLSX downloaded 2026-10-15; the local copy is not included in this repository (Elsevier supplement; not redistributable); SHA-256 in sources.md |
 | Missing information | Genomic strands; explicit workbook coordinate convention; full synthesized library assemblies/adapter mapping; exact generating software/environment; eight coordinate/string-length discrepancies in short ACAP2 sheet |
 | Benchmark grade | C |
 | Grade justification | Full design-output comparison is not strict ground truth: unresolved reference-strand/coordinate conventions and source discrepancies are material, rather than minor B-level gaps. Usable for architecture study and scoped spacer-list comparisons after independent mapping/QC. |
@@ -82,7 +82,7 @@ No correction or cause is inferred. No independently remapped coordinate table i
 | Design software | Official S05 pipeline exists; the pinned public commit is not established as the exact generator of this workbook |
 | Design parameters | Paper specifies length, GC, motifs, PAM, off-target and spacing filters (S01); code differences preserved in probes.md |
 | Source | S02 Table S1(1–7), PDF pp.2–4 (printed pp.1–3) |
-| Availability | Downloaded 2026-10-15; resources/Supplemental_information.pdf |
+| Availability | Downloaded 2026-10-15; the local copy is not included in this repository (Elsevier supplement; not redistributable); SHA-256 in sources.md |
 | Missing information | Per-copy repeat binding-site map; synthesized pool instantiation; unambiguous library-to-adapter mapping; exact chemical-label occupancy |
 | Benchmark grade | C |
 | Grade justification | Supports explicit molecular architecture and selected exact sequences. Does not reconstruct the full experimental design output for strict comparison. |

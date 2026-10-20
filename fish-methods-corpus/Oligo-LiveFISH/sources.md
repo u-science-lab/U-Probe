@@ -42,7 +42,7 @@ All access dates are 2026-10-15. Source records distinguish actual inspection fr
 | DOI | Parent: 10.1016/j.cell.2025.03.032 |
 | PMID | Parent: 40239646 |
 | Official URL | https://ars.els-cdn.com/content/image/1-s2.0-S0092867425003502-mmc1.pdf |
-| Repository / accession | S0092867425003502-mmc1.pdf; local preserved copy resources/Supplemental_information.pdf |
+| Repository / accession | S0092867425003502-mmc1.pdf; the local copy (resources/Supplemental_information.pdf) is not included in this repository (Elsevier supplement; not redistributable) |
 | Method version | V01 |
 | Relevant figures | Associated with Figures 1–7 and STAR Methods |
 | Relevant tables | Table S1(1–7), PDF pp.2–4; Table S3 p.5; Table S4 p.6; PDF p.1 is cover |
@@ -65,7 +65,7 @@ All access dates are 2026-10-15. Source records distinguish actual inspection fr
 | DOI | Parent: 10.1016/j.cell.2025.03.032 |
 | PMID | Parent: 40239646 |
 | Official URL | https://ars.els-cdn.com/content/image/1-s2.0-S0092867425003502-mmc2.xlsx |
-| Repository / accession | S0092867425003502-mmc2.xlsx; local preserved copy resources/Table_S2.xlsx |
+| Repository / accession | S0092867425003502-mmc2.xlsx; the local copy (resources/Table_S2.xlsx) is not included in this repository (Elsevier supplement; not redistributable) |
 | Method version | V01 |
 | Relevant figures | Figures 1–7 |
 | Relevant tables | Table S2; all 14 sheets inspected; genomic sheets A:E; RNA FISH and qRT-PCR sheets A:B |

@@ -168,7 +168,7 @@ No official probe-design program was established by the examined resources. This
 | D03 | Same workbook | V02 | 1,758 padlock/encoding rows, shared priming oligo, 14-bit assignments and 14 labeled readouts; separate gRNA construction sheet | Retrieved 2026-10-15 | S02 Perturb-RAEFISH sheets |
 | D04 | Mendeley 8kbv637pxh v2; author-linked ZIP | V01/V02; exact snapshot correspondence unresolved | Processed data, codebook file metadata, four human design-associated MAT files and sampled mouse decoder | Metadata, ZIP directory, four MAT files and sampled decoder inspected 2026-10-15 | S03/S04 |
 
-The original workbook is retained at [Table S1](evidence/publisher_mmc1.xlsx); [inventory](evidence/workbook_inventory.json) records sheet headers and sample rows. Row counts are derived, not reported gene counts. “NegativeControl” names are preserved; no assumption is made that their sequences are the excluded high-expression gene's genuine targeting probes. Benchmark limitations are in benchmarks.md.
+The original workbook was retained as Table S1 (evidence/publisher_mmc1.xlsx); an inventory (evidence/workbook_inventory.json) records sheet headers and sample rows. Neither file is included in this repository (see README.md). Row counts are derived, not reported gene counts. “NegativeControl” names are preserved; no assumption is made that their sequences are the excluded high-expression gene's genuine targeting probes. Benchmark limitations are in benchmarks.md.
 
 ## Version Differences
 

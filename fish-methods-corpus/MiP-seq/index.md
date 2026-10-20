@@ -35,10 +35,10 @@ Single documented version (V01). The method was first published as a preprint (b
 
 ## Corpus Files
 
-- [index.md](MiP-seq/index.md) — This file
-- [metadata.yaml](MiP-seq/metadata.yaml) — Machine-readable metadata
-- [description.md](MiP-seq/description.md) — Method overview
-- [protocols.md](MiP-seq/protocols.md) — Experimental protocol details
-- [probes.md](MiP-seq/probes.md) — Probe architecture and design
-- [benchmarks.md](MiP-seq/benchmarks.md) — Benchmark resources
-- [sources.md](MiP-seq/sources.md) — Source documentation
+- [index.md](index.md) — This file
+- [metadata.yaml](metadata.yaml) — Machine-readable metadata
+- [description.md](description.md) — Method overview
+- [protocols.md](protocols.md) — Experimental protocol details
+- [probes.md](probes.md) — Probe architecture and design
+- [benchmarks.md](benchmarks.md) — Benchmark resources
+- [sources.md](sources.md) — Source documentation
