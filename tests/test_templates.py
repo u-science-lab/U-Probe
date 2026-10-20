@@ -312,11 +312,25 @@ def test_mipseq_keeps_two_sites_near_the_5_prime_end():
 
 
 def test_starmap_reproduces_published_pair():
-    # Zeng et al. 2023 ALDOC_01/ALDOC_11 (64-gene set) on mouse Aldoc mRNA (NM_009657.4).
-    _, probes = design('starmap', 'CCAGGATAAGGGCATTCTCGTAGGCATCAAGGTTGACAAGGGT', {'code': 'AAA'})
+    # Zeng et al. 2023 ALDOC_01/ALDOC_11 (64-gene set) on mouse Aldoc mRNA (NM_009657.4);
+    # its two sites are 1 nt apart, as every published pair's are.
+    targets, probes = design('starmap', 'CCAGGATAAGGGCATTCTCGTAGGCATCAAGGTTGACAAGGGT', {'code': 'AAA'})
     pairs = set(zip(probes['padlock'], probes['primer']))
     assert ('AAAATAACGAGAATGCCCTTATCCTGGAATTATTACAAACATACACTAAAGATA',
             'ACCCTTGTCAACCTTGATGCTATTTTTATCTT') in pairs
+
+
+def test_starmap_forbids_abutting_sites():
+    # Wang 2018 allows a 0-nt gap, but none of the 4,178 located published pairs has one.
+    protocol = load_template('starmap')
+    parts = protocol['extracts']['target_region']['layout']['parts']
+    assert parts['gap']['length'] == [1, 2]
+    targets, _ = design('starmap', SEQ[:60], {'code': 'AAA'})
+    assert set(targets['target_parts.gap.length']) == {1, 2}
+    # The designed 60 °C of the halves is recorded, not filtered (the paper's conditions are unknown).
+    window = protocol['meta']['tm_window']
+    assert (window['applied'], window['value']) == (False, 60)
+    assert not [name for name in protocol['post_process']['filters'] if name.endswith('_tm')]
 
 
 def test_seqfish_plus_reproduces_lohoff_probes():
