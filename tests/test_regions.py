@@ -1,4 +1,5 @@
 """Region notation chrom:start-end is 1-based and inclusive everywhere."""
+import logging
 import random
 
 import pytest
@@ -52,3 +53,39 @@ def test_validate_rejects_a_zero_start():
                 'probes': {'p': {'template': '{a}', 'parts': {'a': {'expr': 'target_region'}}}}}
     errors = [f for f in validate_protocol(protocol) if f.severity == 'error']
     assert [(f.path, 'first base is 1' in f.message) for f in errors] == [('targets[0]', True)]
+
+
+@pytest.fixture
+def log(caplog):
+    """Records of uprobe.core.utils, whose logger does not propagate to caplog's root handler."""
+    logger = logging.getLogger('uprobe.core.utils')
+    logger.addHandler(caplog.handler)
+    yield caplog
+    logger.removeHandler(caplog.handler)
+
+
+def test_masked_drop_skips_soft_masked_and_n_windows(tmp_path, log):
+    # A soft-masked FASTA (repeats in lowercase), as UCSC hg38.fa or Ensembl dna_sm; N is hard-masked or a gap.
+    genome = GENOME[:40] + GENOME[40:50].lower() + GENOME[50:80] + 'N' + GENOME[81:120]
+    path = tmp_path / 'sm.fa'
+    path.write_text(f'>chr1\n{genome}\n')
+    kept = generate_target_seqs('genome', ['chr1:1-120'], str(path), None, 20, step=10)
+    everything = generate_target_seqs('genome', ['chr1:1-120'], str(path), None, 20, step=10, masked='keep')
+    dropped = generate_target_seqs('genome', ['chr1:1-120'], str(path), None, 20, step=10, masked='drop')
+    # keep (the default) upper-cases every window, as before.
+    assert kept.equals(everything)
+    assert everything['target_region'].tolist()[2] == GENOME[20:40] and everything['target_region'].str.isupper().all()
+    # drop skips the windows with a lowercase base (41-50) or the N (81); the others keep their probe_id.
+    assert dropped['sub_region'].tolist() == ['1-20', '11-30', '21-40', '51-70', '61-80', '91-110', '101-120']
+    assert dropped['probe_id'].tolist() == [f'chr1:1-120_{n}' for n in (1, 2, 3, 6, 7, 10, 11)]
+    assert dropped['target_region'].tolist() == everything.set_index('probe_id').loc[
+        dropped['probe_id'], 'target_region'].tolist()
+    assert 'skipped 4 of 11 windows' in log.text
+
+
+def test_masked_drop_warns_on_an_unmasked_fasta(fasta, log):
+    windows = generate_target_seqs('genome', ['chr1:1-100'], fasta, None, 20, step=20, masked='drop')
+    assert len(windows) == 5
+    assert 'no soft-masked (lowercase) base' in log.text
+    with pytest.raises(ValueError, match='masked must be one of keep, drop'):
+        generate_target_seqs('genome', ['chr1:1-100'], fasta, None, 20, masked='hard')

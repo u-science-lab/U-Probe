@@ -11,6 +11,14 @@ Supported sources (HTTPS views of the Ensembl FTP sites):
 
 Ensembl Bacteria is not supported.
 
+The unmasked FASTA (``dna``) is the default; ``soft_masked`` fetches the
+soft-masked one (``dna_sm``: the interspersed repeats and low-complexity
+regions RepeatMasker detects are in lowercase). It serves window extraction
+with ``extracts.target_region.masked: drop`` as well as the aligner and
+Jellyfish indexes, which ignore case. The hard-masked FASTA (``dna_rm``,
+repeats replaced by N) is not offered: indexes built from it would not see
+the repeats.
+
 Downloads are verified against the ``CHECKSUMS`` file of their directory.
 Ensembl writes it with the BSD ``sum`` algorithm (16-bit rotating checksum
 and the size in 1 KiB blocks), e.g. ``22450 861294 <file name>``.
@@ -93,6 +101,7 @@ class FetchPlan:
     sequence: str                  # "primary_assembly" or "toplevel"
     fasta: RemoteFile
     gtf: RemoteFile
+    masking: str = "none"          # "none" (dna) or "soft" (dna_sm)
 
     def to_dict(self) -> dict:
         return {
@@ -102,6 +111,7 @@ class FetchPlan:
             "display_name": self.display_name,
             "assembly": self.assembly,
             "sequence": self.sequence,
+            "masking": self.masking,
             "files": {
                 f.kind: {"url": f.url, "checksum": _fmt_checksum(f.checksum),
                          "compressed_mib": round(f.checksum[1] / 1024, 1)}
@@ -325,19 +335,22 @@ def bsd_sum(path: T.Union[str, Path]) -> T.Tuple[int, int]:
 
 
 def select_files(dna_checksums: T.Iterable[str], gtf_checksums: T.Iterable[str],
-                 release: int) -> T.Tuple[str, str, str, str]:
+                 release: int, soft_masked: bool = False) -> T.Tuple[str, str, str, str]:
     """Pick (sequence type, FASTA name, GTF name, assembly) from directory listings.
 
-    The unmasked primary assembly is preferred; species without one (most
-    non-human genomes) only have the toplevel FASTA."""
+    The primary assembly is preferred; species without one (most non-human
+    genomes) only have the toplevel FASTA. ``soft_masked`` picks the
+    soft-masked FASTA (dna_sm) instead of the unmasked one (dna)."""
     dna_checksums, gtf_checksums = list(dna_checksums), list(gtf_checksums)
+    dna = "dna_sm" if soft_masked else "dna"
     for sequence in ("primary_assembly", "toplevel"):
-        suffix = f".dna.{sequence}.fa.gz"
+        suffix = f".{dna}.{sequence}.fa.gz"
         names = sorted(n for n in dna_checksums if n.endswith(suffix))
         if names:
             break
     else:
-        raise GenomeFetchError("No *.dna.primary_assembly.fa.gz or *.dna.toplevel.fa.gz file listed in CHECKSUMS.")
+        raise GenomeFetchError(f"No *.{dna}.primary_assembly.fa.gz or *.{dna}.toplevel.fa.gz file listed in "
+                               "CHECKSUMS.")
     fasta = names[0]
     prefix = fasta[:-len(suffix)]  # <Species>.<Assembly>
     gtf = f"{prefix}.{release}.gtf.gz"
@@ -357,7 +370,8 @@ def select_files(dna_checksums: T.Iterable[str], gtf_checksums: T.Iterable[str],
 # ----------------------------------------------------------------- planning
 
 def plan_fetch(species: str, release: T.Union[int, str, None] = "latest", division: str = "vertebrates",
-               mirror: T.Optional[str] = None, rest_url: T.Optional[str] = ENSEMBL_REST) -> FetchPlan:
+               mirror: T.Optional[str] = None, rest_url: T.Optional[str] = ENSEMBL_REST,
+               soft_masked: bool = False) -> FetchPlan:
     """Resolve release, species and the exact FASTA/GTF URLs without downloading them."""
     release = resolve_release(release, division, mirror, rest_url)
     root = release_root(division, release, mirror)
@@ -376,19 +390,20 @@ def plan_fetch(species: str, release: T.Union[int, str, None] = "latest", divisi
         raise GenomeFetchError(f"No GTF annotation for '{row['species']}' in Ensembl {division} "
                                f"release {release} ({gtf_dir}/CHECKSUMS not found).")
     dna_sums, gtf_sums = parse_checksums(dna_text), parse_checksums(gtf_text)
-    sequence, fasta, gtf, assembly = select_files(dna_sums, gtf_sums, release)
+    sequence, fasta, gtf, assembly = select_files(dna_sums, gtf_sums, release, soft_masked)
     return FetchPlan(
         division=division, release=release, species=row["species"],
         display_name=row.get("name") or row["species"], assembly=assembly, sequence=sequence,
         fasta=RemoteFile("fasta", f"{dna_dir}/{fasta}", fasta, dna_sums[fasta]),
         gtf=RemoteFile("gtf", f"{gtf_dir}/{gtf}", gtf, gtf_sums[gtf]),
+        masking="soft" if soft_masked else "none",
     )
 
 
 def default_genome_name(plan: FetchPlan) -> str:
-    """e.g. homo_sapiens_GRCh38_e116, arabidopsis_thaliana_TAIR10_eg63."""
+    """e.g. homo_sapiens_GRCh38_e116, arabidopsis_thaliana_TAIR10_eg63; soft-masked: homo_sapiens_GRCh38_e116_sm."""
     tag = "e" if plan.division == "vertebrates" else "eg"
-    parts = [plan.species, plan.assembly, f"{tag}{plan.release}"]
+    parts = [plan.species, plan.assembly, f"{tag}{plan.release}", "sm" if plan.masking == "soft" else ""]
     return re.sub(r"[^A-Za-z0-9._-]", "_", "_".join(p for p in parts if p))
 
 
@@ -505,10 +520,13 @@ def _write_atomic(path: Path, text: str) -> None:
 def _needs_replace(directory: Path, manifest: dict, plan: FetchPlan, force: bool) -> bool:
     """True if ``directory`` holds another genome/release that ``--force`` replaces."""
     keys = ("division", "release", "species", "assembly", "sequence")
-    if not manifest or all(manifest.get(k) == getattr(plan, k) for k in keys):
+    # Manifests written before soft-masked downloads hold unmasked genomes.
+    if not manifest or (all(manifest.get(k) == getattr(plan, k) for k in keys)
+                        and manifest.get("masking", "none") == plan.masking):
         return False
-    held = (f"{manifest.get('species')} {manifest.get('assembly')} "
-            f"(Ensembl {manifest.get('division')} release {manifest.get('release')}, {manifest.get('sequence')})")
+    masking = ", soft-masked" if manifest.get("masking") == "soft" else ""
+    held = (f"{manifest.get('species')} {manifest.get('assembly')} (Ensembl {manifest.get('division')} "
+            f"release {manifest.get('release')}, {manifest.get('sequence')}{masking})")
     if not force:
         raise GenomeFetchError(f"{directory} already holds {held}. Choose another --name or --out, "
                                "or pass --force to replace it (its files and indices are deleted).")
@@ -594,9 +612,10 @@ def _make_entry(plan: FetchPlan, directory: Path, existing: T.Optional[dict],
     (align_index, jellyfish, extra keys) of an existing entry are kept."""
     entry = dict(existing) if isinstance(existing, dict) else {}
     division = "" if plan.division == "vertebrates" else f"{plan.division} "
+    masking = ", soft-masked" if plan.masking == "soft" else ""
     entry.update({
         "description": f"{plan.display_name} {plan.assembly} "
-                       f"(Ensembl {division}release {plan.release}, {plan.sequence})",
+                       f"(Ensembl {division}release {plan.release}, {plan.sequence}{masking})",
         "species": plan.species,
         "fasta": str(directory / plan.fasta.local_name),
         "gtf": str(directory / plan.gtf.local_name),
@@ -621,6 +640,8 @@ def _make_entry(plan: FetchPlan, directory: Path, existing: T.Optional[dict],
         "gtf_url": plan.gtf.url,
         "manifest": str(directory / MANIFEST_NAME),
     }
+    if plan.masking != "none":
+        entry["source"]["masking"] = plan.masking
     return entry
 
 
@@ -631,15 +652,17 @@ def fetch_genome(species: str, release: T.Union[int, str, None] = "latest", divi
                  name: T.Optional[str] = None, align_index: T.Optional[T.List[str]] = None,
                  jellyfish: T.Optional[bool] = None, build_index: bool = False, threads: int = 10,
                  keep_compressed: bool = False, force: bool = False, dry_run: bool = False,
-                 mirror: T.Optional[str] = None, rest_url: T.Optional[str] = ENSEMBL_REST) -> dict:
+                 mirror: T.Optional[str] = None, rest_url: T.Optional[str] = ENSEMBL_REST,
+                 soft_masked: bool = False) -> dict:
     """Download an Ensembl genome FASTA + GTF into ``out_dir/<name>/``, verify
-    them, and add/update ``name`` in ``genomes_yaml``.
+    them, and add/update ``name`` in ``genomes_yaml``. ``soft_masked`` fetches
+    the soft-masked FASTA (dna_sm) instead of the unmasked one.
 
     Re-running is cheap: files already present and verified (recorded in
     ``genome_source.json``) are skipped, and interrupted downloads resume.
     Returns ``{"name", "entry", "plan", "directory", "genomes_yaml", "changed"}``.
     """
-    plan = plan_fetch(species, release, division, mirror, rest_url)
+    plan = plan_fetch(species, release, division, mirror, rest_url, soft_masked)
     name = name or default_genome_name(plan)
     if not _NAME_RE.fullmatch(name):
         raise GenomeFetchError(f"Invalid genome name '{name}': use letters, digits, '.', '_' or '-'.")
@@ -671,7 +694,8 @@ def fetch_genome(species: str, release: T.Union[int, str, None] = "latest", divi
     manifest = {
         "provider": "Ensembl", "division": plan.division, "release": plan.release,
         "species": plan.species, "display_name": plan.display_name, "assembly": plan.assembly,
-        "sequence": plan.sequence, "checksum_algorithm": CHECKSUM_ALGORITHM, "files": files,
+        "sequence": plan.sequence, "masking": plan.masking, "checksum_algorithm": CHECKSUM_ALGORITHM,
+        "files": files,
     }
     for remote in (plan.fasta, plan.gtf):
         files[remote.kind] = _fetch_file(remote, directory, files.get(remote.kind), force, keep_compressed)

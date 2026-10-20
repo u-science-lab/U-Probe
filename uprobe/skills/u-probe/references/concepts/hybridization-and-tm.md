@@ -93,7 +93,7 @@ Typical values (U-Probe/Primer3, median of random 45%-GC windows, 50 nM probe):
 | HCR v3 half (Choi et al. 2018) | 25 nt | 5x SSC, 30% FA, 4 nM | 37 | +13 °C |
 | HybISS arm pair (Gyllborg et al. 2020) | 2 x 15 nt | 75 mM monovalent, 10 mM Mg2+, 20% FA (design assumptions; ligation 37 then 45 °C) | 45 | +14 °C (pair); −9 °C (one arm) |
 | seqFISH+ (Eng et al. 2019) | 28 nt | 2x SSC, 40% FA, 1 nM | 37 | +5 °C |
-| Oligopaint (Beliveau et al. 2018) | 36-41 nt | 2x SSC, 50% FA | 42 | +3 °C |
+| Oligopaint (Beliveau et al. 2018) | 35-41 nt | 2x SSC, 50% FA | 42 | +3 °C |
 
    So: RNA oligo sets run ~5-20 °C above T_hyb under the real conditions; DNA Oligopaints run close to
    T_hyb at high formamide. Computed by this skill's authors from the templates' conditions; treat as

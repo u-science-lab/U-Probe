@@ -407,6 +407,37 @@ def test_check_targets_against_gtf_and_fasta(genomes):
     assert not [f for f in findings if f.path == 'targets[0]']
 
 
+def test_kmer_count_strand(dna):
+    attr = next(a for a in dna['attributes'].values() if a['type'] == 'kmer_count')
+    attr['strand'] = 'sense'
+    assert not errors(validate_protocol(dna))
+    attr['strand'] = 'forward'
+    finding = next(f for f in validate_protocol(dna) if f.path.endswith('.strand'))
+    assert finding.severity == 'error' and 'strand: sense' in finding.suggestion
+
+
+def test_masked_option(dna, rna, genomes):
+    dna['extracts']['target_region']['masked'] = 'hard'
+    assert 'masked: drop' in find(validate_protocol(dna), 'extracts.target_region.masked').suggestion
+    rna['extracts']['target_region']['masked'] = 'drop'
+    assert 'source: genome' in find(validate_protocol(rna), 'extracts.target_region.masked', 'warning').message
+    # --check-targets reads the target regions: without a lowercase base the FASTA is not soft-masked.
+    dna['genome'] = 'hg38'
+    dna['targets'] = ['1:1-100']
+    dna['encoding'] = {'1:1-100': {'BC1': 'ACGT', 'BC2': 'ACGT'}}
+    dna['post_process'] = {}
+    dna['extracts']['target_region']['masked'] = 'drop'
+    findings = validate_protocol(dna, genomes, check_targets=True)
+    assert 'looks unmasked' in find(findings, 'extracts.target_region.masked', 'warning').message
+    Path(genomes['hg38']['fasta']).write_text('>1\n' + 'ACGT' * 10 + 'acgt' * 10 + 'ACGT' * 80 + '\n')
+    Path(genomes['hg38']['fasta'] + '.fai').unlink(missing_ok=True)
+    findings = validate_protocol(dna, genomes, check_targets=True)
+    assert not [f for f in findings if f.path == 'extracts.target_region.masked']
+    with pytest.raises(ValueError, match='masked must be one of'):
+        _validate_and_normalize_protocol({**dna, 'extracts': {'target_region': {
+            'source': 'genome', 'length': 20, 'masked': 'yes'}}})
+
+
 # -- probe construction on synthetic targets -----------------------------
 
 def test_dry_run_reports_runtime_problems(rna):

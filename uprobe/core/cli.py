@@ -363,6 +363,13 @@ def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None)
         if region.get('source', 'genome') == 'genome' and region['transcripts'] != 'all':
             log.warning('extracts.target_region.transcripts applies to gene targets (source mRNA, exon, CDS or '
                         'UTR); it is ignored for source: genome')
+    if 'masked' in region:
+        from .utils import MASKED_OPTIONS
+        if region['masked'] not in MASKED_OPTIONS:
+            raise ValueError(f"extracts.target_region.masked must be one of {', '.join(MASKED_OPTIONS)}, "
+                             f"got {region['masked']!r}")
+        if region.get('source', 'genome') != 'genome' and region['masked'] != 'keep':
+            log.warning('extracts.target_region.masked applies to source: genome; it is ignored for gene targets')
     if 'layout' in region:
         from .layout import compile_layout
         compile_layout(region['layout'], region['length'])
@@ -1108,6 +1115,11 @@ def genome():
                                     'bowtie-build (Bowtie 1) is installed]')
 @click.option('--jellyfish/--no-jellyfish', default=None,
               help='Enable kmer_count for the entry. [default: keep the existing value, else on if jellyfish is installed]')
+@click.option('--soft-masked', is_flag=True,
+              help='Download the soft-masked FASTA (Ensembl dna_sm: repeats in lowercase) instead of the unmasked '
+                   'one. Indexes ignore case, so the genome serves every template; source: genome windows with a '
+                   'masked base are skipped with extracts.target_region.masked: drop (oligopaint template). The '
+                   'default name ends in _sm.')
 @click.option('--build-index', is_flag=True, help='Build aligner indices afterwards (same as `uprobe build-index`).')
 @click.option('--threads', '-t', default=10, type=int, help='Threads for --build-index. [default: 10]')
 @click.option('--keep-compressed', is_flag=True, help='Keep the downloaded .gz files.')
@@ -1116,14 +1128,14 @@ def genome():
 @click.option('--dry-run', is_flag=True, help='Resolve release, species and URLs, print the plan, download nothing.')
 @click.option('--mirror', help='Base URL replacing https://ftp.ensembl.org/pub '
                                '(or https://ftp.ensemblgenomes.ebi.ac.uk/pub for other divisions).')
-def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, build_index,
+def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, soft_masked, build_index,
                  threads, keep_compressed, force, dry_run, mirror):
     """
     Download an Ensembl genome FASTA and GTF and register them in genomes.yaml.
 
-    Prefers the primary assembly FASTA and falls back to toplevel. Files are
-    verified against Ensembl's CHECKSUMS, decompressed, and recorded with their
-    release and URLs. Re-running skips verified files and resumes partial
+    Prefers the primary assembly FASTA and falls back to toplevel; the FASTA
+    is unmasked unless --soft-masked is given. Files are verified against
+    Ensembl's CHECKSUMS, decompressed, and recorded with their release and URLs. Re-running skips verified files and resumes partial
     downloads. The resulting entry is printed to stdout as YAML.
 
     Example: uprobe genome fetch --species homo_sapiens --release latest --build-index
@@ -1135,6 +1147,7 @@ def genome_fetch(species, release, division, out, genomes, name, align_index, je
             species, release=release, division=division, out_dir=out, genomes_yaml=genomes, name=name,
             align_index=aligners, jellyfish=jellyfish, build_index=build_index, threads=threads,
             keep_compressed=keep_compressed, force=force, dry_run=dry_run, mirror=mirror,
+            soft_masked=soft_masked,
         )
     except GenomeFetchError as e:
         log.error(str(e))
@@ -1254,6 +1267,60 @@ def templates_show(name, output, force):
         raise click.UsageError(f"{path} exists; use --force to overwrite.")
     path.write_text(text, encoding='utf-8')
     click.echo(f"Template {name!r} written to {path}", err=True)
+
+
+@cli.group()
+def skill():
+    """
+    The U-Probe Agent Skill for AI coding agents (Codex, Claude Code, ...).
+
+    The skill (SKILL.md, references/, scripts/) teaches an agent the U-Probe
+    workflow and the probe design rules behind it. `uprobe skill install`
+    copies it to where an agent discovers skills.
+    """
+
+
+@skill.command(name='path')
+def skill_path_command():
+    """Print the skill folder shipped with this U-Probe installation."""
+    from uprobe.skills import skill_path
+    click.echo(str(skill_path()))
+
+
+@skill.command(name='install')
+@click.option('--target', 'targets', multiple=True, metavar='codex|claude|DIR',
+              help='Where to install: "codex" (.agents/skills), "claude" (.claude/skills), or a skills '
+                   'directory DIR (the skill goes to DIR/u-probe). Repeatable. [default: codex and claude]')
+@click.option('--project/--user', 'project', default=True,
+              help='For codex and claude: the project directory (the working directory) or the user\'s '
+                   'home directory (~/.agents/skills, ~/.claude/skills). [default: --project]')
+@click.option('--force', is_flag=True, help='Replace an existing u-probe skill folder (e.g. after upgrading U-Probe).')
+def skill_install(targets, project, force):
+    """
+    Copy the U-Probe skill to where coding agents discover skills.
+
+    \b
+    Codex:       .agents/skills/u-probe   (project)   ~/.agents/skills/u-probe   (--user)
+    Claude Code: .claude/skills/u-probe   (project)   ~/.claude/skills/u-probe   (--user)
+
+    Project installs go under the working directory; run it at the repository root.
+    Run again with --force after upgrading U-Probe.
+
+    Example: uprobe skill install --target claude --user
+    """
+    from uprobe.skills import SkillInstallError, install_skill, skills_dir
+    targets = targets or ('codex', 'claude')
+    try:
+        directories = [skills_dir(target, user=not project) for target in targets]
+    except SkillInstallError as e:
+        raise click.UsageError(str(e))
+    for target, directory in zip(targets, directories):
+        try:
+            dest = install_skill(directory, force=force)
+        except (SkillInstallError, OSError) as e:
+            raise click.ClickException(str(e))
+        label = target if target in ('codex', 'claude') else 'directory'
+        click.echo(f"Installed the u-probe skill (U-Probe {__version__}) for {label}: {dest}")
 
 
 @cli.command()

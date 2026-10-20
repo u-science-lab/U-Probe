@@ -192,6 +192,11 @@ def test_parse_checksums_and_select_files():
         "toplevel", "B.BDGP6.54.dna.toplevel.fa.gz", "B.BDGP6.54.63.gtf.gz", "BDGP6.54")
     with pytest.raises(GenomeFetchError, match="toplevel"):
         gf.select_files(["B.x.dna_sm.toplevel.fa.gz"], [], 116)
+    # --soft-masked picks the dna_sm FASTA; dna_rm (hard-masked) is never chosen.
+    assert gf.select_files(toplevel_only, ["B.BDGP6.54.63.gtf.gz"], 116, soft_masked=True) == (
+        "toplevel", "B.BDGP6.54.dna_sm.toplevel.fa.gz", "B.BDGP6.54.63.gtf.gz", "BDGP6.54")
+    with pytest.raises(GenomeFetchError, match=r"dna_sm\.primary_assembly"):
+        gf.select_files(sums, gtfs, 116, soft_masked=True)
 
 
 def test_release_resolution(ensembl):
@@ -264,6 +269,29 @@ def test_fetch_registers_primary_assembly(ensembl, fetch, tmp_path, monkeypatch)
     from uprobe.core.api import UProbeAPI
     api = UProbeAPI({"genome": name}, tmp_path / "genomes.yaml", tmp_path / "results")
     assert api.genome["fasta"] == entry["fasta"]
+
+
+def test_fetch_soft_masked_genome(ensembl, fetch, tmp_path):
+    unmasked = fetch()
+    result = fetch(soft_masked=True)
+    # Its own default name and directory, next to the unmasked genome of the same release.
+    assert result["name"] == "homo_sapiens_GRCh38_e116_sm" and unmasked["directory"] != result["directory"]
+    entry = yaml.safe_load((tmp_path / "genomes.yaml").read_text())[result["name"]]
+    assert entry["fasta"].endswith("Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa")
+    assert Path(entry["fasta"]).read_text() == ensembl.human.primary.lower()
+    assert entry["description"] == "Human GRCh38 (Ensembl release 116, primary_assembly, soft-masked)"
+    assert entry["source"]["masking"] == "soft" and "masking" not in unmasked["entry"]["source"]
+    assert json.loads((result["directory"] / gf.MANIFEST_NAME).read_text())["masking"] == "soft"
+    assert result["plan"].to_dict()["masking"] == "soft"
+    # The same directory holding the unmasked genome is another genome (--force replaces it).
+    with pytest.raises(GenomeFetchError, match=r"already holds .*primary_assembly\)"):
+        fetch(soft_masked=True, name=unmasked["name"])
+    # A manifest written before soft-masked downloads holds an unmasked genome.
+    manifest_path = unmasked["directory"] / gf.MANIFEST_NAME
+    manifest = json.loads(manifest_path.read_text())
+    del manifest["masking"]
+    manifest_path.write_text(json.dumps(manifest))
+    assert fetch()["changed"] is False
 
 
 def test_toplevel_fallback(ensembl, fetch):
@@ -381,6 +409,8 @@ def test_cli_fetch_list_and_search(ensembl, tmp_path):
     dry = runner.invoke(cli, ["genome", "fetch", *common, "--dry-run"])
     assert dry.exit_code == 0, dry.output
     assert yaml.safe_load(dry.output)["plan"]["release"] == 116
+    masked = yaml.safe_load(runner.invoke(cli, ["genome", "fetch", *common, "--dry-run", "--soft-masked"]).output)
+    assert masked["plan"]["masking"] == "soft" and list(masked["entry"]) == ["homo_sapiens_GRCh38_e116_sm"]
     assert not genomes.exists() and _downloads(ensembl) == []
 
     done = runner.invoke(cli, ["genome", "fetch", *common, "--no-jellyfish", "--align-index", "bowtie2,blast"])

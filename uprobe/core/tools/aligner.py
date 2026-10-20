@@ -59,7 +59,7 @@ def build_mmseqs_index(fa_path, output_path):
     subp.check_call(cmd, shell=True)
     return output_path
 
-def build_jf_index(fasta, k, out_jf, threads=10, size='64G'):
+def build_jf_index(fasta, k, out_jf, threads=10, size='64G', canonical=True):
     """
     Args:
         fasta (str): input FASTA
@@ -67,13 +67,17 @@ def build_jf_index(fasta, k, out_jf, threads=10, size='64G'):
         out_jf (str): output .jf
         threads (int): threads
         size (str): hash size
+        canonical (bool): count canonical k-mers (-C: a k-mer and its
+            reverse complement together, i.e. both strands); False counts
+            the k-mers as written on the FASTA's forward strand, as
+            OligoMiner's and PaintSHOP's dictionaries do
     """
     cmd = [
         'jellyfish', 'count',
         '-m', str(k),
         '-s', size,
         '-t', str(threads),
-        '-C',
+    ] + (['-C'] if canonical else []) + [
         '-o', out_jf,
         fasta
     ]

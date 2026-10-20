@@ -139,12 +139,15 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
         target = attr['target']
         assert target in combined or target.replace(':', '.') in combined, target
     pp = protocol['post_process']
+    # A mapped_sites attribute adds <attribute>_num, the number of sites.
+    columns_of_attributes = set(attributes) | {f'{name}_num' for name, attr in attributes.items()
+                                               if attr['type'] == 'mapped_sites'}
     for spec in pp.get('filters', {}).values():
         if 'condition' in spec:
             columns = set(re.findall(r'([A-Za-z_]\w*)\s*[<>=]', spec['condition']))
             # Attributes, or a position column of the extracted windows (direct sequences have none,
             # and a condition on a missing column is skipped).
-            assert columns <= set(attributes) | {'target_start', 'target_end', 'start', 'end'}, spec
+            assert columns <= columns_of_attributes | {'target_start', 'target_end', 'start', 'end'}, spec
         else:
             assert spec['target'] in combined, spec
     sorts = pp.get('sorts', {})

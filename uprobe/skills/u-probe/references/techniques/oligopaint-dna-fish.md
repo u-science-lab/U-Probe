@@ -21,7 +21,7 @@ There is no ligation junction and no arm order: each oligo hybridizes on its own
 
 ```text
 Library oligo (U-Probe template layout), 5'->3':
-5'-[primer_1, 21][homology, 36-41][primer_2 site = rc(reverse primer), 21]-3'    78-83 nt
+5'-[primer_1, 21][homology, 35-41][primer_2 site = rc(reverse primer), 21]-3'    77-83 nt
                  |<- copied 5'->3' from the + strand of chrom:start-end ->|
 Beliveau 2012 format: 21 + 32 + 21 = 74 nt.
 
@@ -57,7 +57,7 @@ Homology selection. Tm values compare only under the same conditions.
 | --- | --- | --- | --- |
 | Homology length, Oligopaints 2012 | 32 | nt | Beliveau 2012, doi:10.1073/pnas.1213818110 |
 | OligoMiner Coverage / Balance / Stringent | 26-32 / 36-41 / 40-46 | nt | Beliveau 2018 Fig. 2A, doi:10.1073/pnas.1714530115 |
-| **Protocols disagree:** Balance length | 36-41 (Fig. 2A, Table S1, blockParse default) vs 35-41 (main text; hosted hg38 set in PaintSHOP Table 1) | nt | Beliveau 2018; Hershberg 2021, doi:10.1038/s41592-021-01187-3 |
+| **Protocols disagree:** Balance length | 36-41 (Fig. 2A; Table S1, the imaged sets; blockParse default `-l 36`) vs 35-41 (main text; the genome-wide hg38 Balance set OligoMiner hosts, `hg38b.tar.gz`, whose probes are 35-41 nt with 35 the most common length; PaintSHOP Table 1). The template follows the hosted set | nt | Beliveau 2018; Hershberg 2021, doi:10.1038/s41592-021-01187-3 |
 | PaintSHOP newBalance | 30-37, Tm 42-47 C, may include repeat-masked bases | nt | Hershberg 2021 |
 | ORCA / chromatin tracing | 40 | nt | Mateo 2019, doi:10.1038/s41586-019-1035-4; Mateo 2021, doi:10.1038/s41596-020-00478-x |
 | Tm window, Coverage / Balance / Stringent | 37-42 / 42-47 / 47-52 (390 mM Na+, 50% formamide, 25 nM each strand, Biopython DNA_NN3, 0.65 C per % formamide) | C | Beliveau 2018 Fig. 2A; blockParse.py |
@@ -66,9 +66,10 @@ Homology selection. Tm values compare only under the same conditions.
 | GC | 20-80 (blockParse default, ORCA); 35-80 (2012) | % | Beliveau 2012, 2018; Mateo 2021 |
 | Prohibited runs | AAAAA, TTTTT, CCCCC, GGGGG and any N (blockParse); 2012: >=5 A/T or >=4 G/C | - | blockParse.py; Beliveau 2012 |
 | Spacing between probes | 0 (blockParse -S); >=10 (2012) | nt | blockParse.py; Beliveau 2012 |
-| k-mer filter | 18-mers (Balance, Stringent), 16-mers (Coverage); drop a probe if any k-mer occurs >= 5 times | - | Beliveau 2018 Methods; kmerFilter.py |
-| Alignment filter | Bowtie2 local; Unique Mode keeps probes with one alignment; LDA Mode (models at 32-57 C, 5-C steps; class "binds" = duplex probability >= 0.2; reject at predicted probability >= 0.5) | - | Beliveau 2018; outputClean.py |
-| Secondary structure (optional) | NUPACK structureCheck; keep probes whose probability of being linear is above -t (default 0.1) at -T (default 47 C) | - | structureCheck.py |
+| Repeat masking | candidates are mined from the repeat-masked assembly (UCSC, RepeatMasker; blockParse rejects every window with an N); the Bowtie2 index and Jellyfish dictionary are built from the unmasked one | - | Beliveau 2018 Methods; OligoMiner README; blockParse.py |
+| k-mer filter | 18-mers (Balance, Stringent), 16-mers (Coverage); drop a probe if any k-mer occurs >= 5 times. The dictionary counts each k-mer on the forward strand only (`jellyfish count -s 3300M -m 18 --out-counter-len 1 -L 2`, no `-C`); PaintSHOP builds it the same way | - | Beliveau 2018 Methods; kmerFilter.py; PaintSHOP_pipeline Snakefile |
+| Alignment filter | Bowtie2 `--very-sensitive-local -k 2` (Unique Mode, UM; the README uses `-k 100`) or `--local -D 20 -R 3 -N 1 -L 20 -i C,4 --score-min G,1,4 -k 2` (LDA Mode, LDM). UM keeps probes that aligned with no `XS:i` tag, i.e. without a second alignment; LDM (models at 32-57 C, 5-C steps; class "binds" = duplex probability >= 0.2; reject at predicted probability >= 0.5) | - | Beliveau 2018 Methods; outputClean.py |
+| Secondary structure (optional) | NUPACK structureCheck (dna1998, at -T + 0.65 C per % formamide); keep probes whose probability of being linear is above -t (default 0.1) at -T (default 47 C). Not applied to any Beliveau 2018 set (Table S1) | - | structureCheck.py |
 | Repeat homology (ORCA) | <14 nt to RepBase repeats; <12 nt to any barcode | nt | Mateo 2019, 2021 |
 
 Density, library and wet lab.
@@ -94,9 +95,9 @@ Density, library and wet lab.
 - **Source.** A genomic interval `chrom:start-end`; there is no mRNA/CDS/isoform choice. Probes cover introns, intergenic DNA and both alleles. U-Probe reads the window from the + strand of the FASTA, so the homology is a + strand copy that binds the - strand.
 - **One strand per position.** After denaturation either strand is a target, so probes from one strand suffice. Probes from both strands at the same position are complementary and anneal to each other in solution. OligoMiner's `probeRC` flips a set for strand-specific DNA or RNA FISH.
 - **RNA cross-talk.** Over transcribed regions a DNA probe antisense to the RNA also labels it. Add RNase A (Beliveau 2018 buffer), or design the probe sense to the transcript (ORCA). ORCA images RNA before DNA when doing both.
-- **Masked vs unmasked genome.** OligoMiner mines repeat-masked FASTA (UCSC, RepeatMasker) and builds its Bowtie2 and Jellyfish indexes from the unmasked assembly (Beliveau 2018 Methods; README). U-Probe uses one FASTA for both. `uprobe genome fetch` takes the unmasked primary assembly, and `extract_fasta` upper-cases windows, so soft-masking is lost. Repeat removal therefore rests on the k-mer filter (section 5). Do not hard-mask the U-Probe FASTA: the indexes would no longer see those repeats.
+- **Masked vs unmasked genome.** OligoMiner mines repeat-masked FASTA (UCSC, RepeatMasker) and builds its Bowtie2 and Jellyfish indexes from the unmasked assembly (Beliveau 2018 Methods; README). U-Probe does both with one soft-masked FASTA, repeats in lowercase (`uprobe genome fetch --soft-masked`, Ensembl `dna_sm`; or UCSC `hg38.fa`): Bowtie2 and Jellyfish ignore case, and `extracts.target_region.masked: drop` skips every window with a lowercase or N base. The oligopaint template sets it. `masked: keep`, the default, upper-cases the windows and ignores masking. With an unmasked FASTA `drop` skips only N windows; the run log and `uprobe validate --check-targets` warn when a target has no lowercase base. Do not use a hard-masked FASTA (`dna_rm`) as the genome: the indexes would no longer see the repeats. PaintSHOP's newBalance sets keep soft-masked windows and flag them instead (Hershberg 2021).
 - **Locus vs whole chromosome.** Locus: dense tiling (Balance or Coverage), every passing window, and at least ~200 probes. Chromosome paint: subsample to ~0.5-2 probes/kb (`equal_space`). Use universal primers on all oligos plus nested region-specific primers so one pool yields sub-paints (Nguyen & Joyce 2019). Chromatin tracing: split the region into equal segments and give each segment its own readout and probe count (Wang 2016; Bintu 2018; Mateo 2019). Repeats and assembly gaps leave holes, so check density per bin, not only the mean.
-- **Coordinates.** U-Probe slices `fa[chrom][start:end]` (pyfaidx, 0-based), so `chr19:10000000-10050000` covers 1-based bases 10,000,001-10,050,000. Chromosome names must match the FASTA: Ensembl FASTAs from `uprobe genome fetch` use `19`, not `chr19`.
+- **Coordinates.** Regions are 1-based and inclusive, as genome browsers and Ensembl write them: `chr19:10000001-10050000` is the 50,000 bases from 10,000,001 to 10,050,000. (Older U-Probe versions read regions 0-based, one base off.) Chromosome names must match the FASTA: Ensembl FASTAs from `uprobe genome fetch` use `19`, UCSC FASTAs `chr19`.
 
 Repeat targets need a different design: thousands of tandem copies give the signal, so one or a few short oligos (or a PNA) against the repeat consensus are enough. Specificity is the choice of repeat family or chromosome-specific variant, not genomic uniqueness.
 
@@ -113,82 +114,95 @@ In U-Probe a repeat consensus can be given as a direct-sequence target (`targets
 
 - **Signal logic.** A spot needs many probes on one locus. An off-target site bound by one oligo adds one dye: diffuse background, not a spot. False foci come from: (1) **repeats**, where one oligo has hundreds to millions of sites (Alu, L1, satellites); (2) **off-target peaks**, where many different oligos of the set hit one other region (segmental duplications, paralog clusters, retrocopy loci); (3) oligos that pair with each other or with the readouts.
 - **k-mer counting** (Jellyfish) catches high-copy repeats, including matches too short for an aligner seed. OligoMiner uses 18-mers for its 42 and 47 C presets and 16-mers for the 37 C preset, chosen from simulated k-mer duplexing (Beliveau 2018 Fig. S6); PaintSHOP's "Max K-mer Count" uses 18-mers. It gives no positions, so it cannot see off-target peaks. Copies at 2-4 sites pass a `<= 4` threshold.
+- **Strand of the k-mer count.** A probe binds its k-mers on either strand of the denatured genome. U-Probe's `kmer_count` counts canonical k-mers (both strands) by default; OligoMiner and PaintSHOP count the probe's k-mers on the forward strand only, so a repeat present in both orientations counts about half as often, and their `-k 5` threshold refers to these counts. `strand: sense` reproduces them (index `jf_genome/<stem>.k<k>.stranded.jf`); the template uses it. No canonical cut-off is equivalent: a canonical count is the forward count of the k-mer plus that of its reverse complement.
 - **Alignment** gives positions. Bowtie2 local alignment flags partial matches (OligoMiner Unique Mode keeps probes that align once); LDA Mode keeps probes whose second-best hit is not thermodynamically relevant at the hybridization temperature. PaintSHOP replaces the classifier with an XGBoost duplex-probability score summed over off-target sites.
-- **`mapped_genes` is the wrong measure for DNA FISH.** It searches spliced transcripts and counts genes, so it misses introns, intergenic DNA and most repeats. Use `kmer_count` (genome k-mers) and `mapped_sites` (Bowtie2 `--very-sensitive-local -k 100` against the genome; `<attr>_num` counts the alignments).
+- **`mapped_genes` is the wrong measure for DNA FISH.** It searches spliced transcripts and counts genes, so it misses introns, intergenic DNA and most repeats. Use `kmer_count` (genome k-mers) and `mapped_sites` (Bowtie2 `--very-sensitive-local -k 100` against the genome, both strands; `<attr>_num` counts the alignments). `<attr>_num == 1` is OligoMiner's Unique Mode: Bowtie2 found the probe's own site and no second one (outputClean keeps a probe without an `XS:i` tag). It is local, not end-to-end, alignment, so partial matches count.
 - **`avoid_otp`** (DNA-only `post_process` step; needs a `mapped_sites` attribute) visits probes in order and adds their alignments to an interval tree. It drops a probe when one of its off-target hits lands where the hits already kept reach `density_thresh` per bp within +-1 Mb (`search_range`). It also drops on-target overlaps (`avoid_target_overlap`). It writes `on_target`, `off_target` and `target_ratio`. The thresholds have no published calibration. `tests/data/DNA_format.yaml` uses `1e-5`, i.e. 20 hits per 2 Mb; the code default is `1e-4`.
 
 ## 6. U-Probe template
 
 ```bash
 uprobe templates show oligopaint -o protocol.yaml
-uprobe validate -p protocol.yaml -g genomes.yaml --check-targets   # needs jellyfish: true in genomes.yaml
+uprobe validate -p protocol.yaml -g genomes.yaml --check-targets   # also warns if the FASTA is not soft-masked
 uprobe run -p protocol.yaml -g genomes.yaml -o ./results --threads 10
 ```
 
-Key lines (OligoMiner Balance defaults):
+Key lines (OligoMiner Balance, as in its genome-wide hg38 set):
 
 ```yaml
-targets: [chr19:10000000-10050000]          # chrom:start-end in your FASTA's naming
-extracts: {target_region: {source: genome, length: [36, 41], step: 1}}
+targets: [chr19:10000001-10050000]          # chrom:start-end, 1-based, in your FASTA's naming
+extracts: {target_region: {source: genome, length: [35, 41], step: 1,
+                           masked: drop}}   # skip soft-masked (lowercase) or N windows
 probes:
   oligopaint_oligo:
-    template: "{primer_1}{homology}{primer_2_rc}"   # primers: 21-nt N placeholders
+    template: "{primer_1}{homology}{primer_2_rc}"   # primers: 21-N placeholders to replace
     parts: {homology: {expr: "target_region"}}
 attributes:
   homology_tm: {target: oligopaint_oligo.homology, type: annealing_temperature,
                 hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25}}
-  homology_kmer_count: {target: oligopaint_oligo.homology, type: kmer_count, kmer_len: 18, aligner: jellyfish}
+  homology_kmer_count: {target: oligopaint_oligo.homology, type: kmer_count, kmer_len: 18, aligner: jellyfish,
+                        strand: sense}    # forward-strand counts, as OligoMiner's dictionary
+  homology_sites: {target: oligopaint_oligo.homology, type: mapped_sites, aligner: bowtie2}
 post_process:
   filters:
     homology_gc: {condition: homology_gc >= 0.2 & homology_gc <= 0.8}
     homology_tm: {condition: homology_tm >= 42 & homology_tm <= 47}
     homopolymers: {type: sequence_pattern, target: oligopaint_oligo.homology,
                    exclude_patterns: [AAAAA, TTTTT, CCCCC, GGGGG]}
+    n_bases: {type: sequence_pattern, target: oligopaint_oligo.homology, exclude_patterns: [N]}
     homology_kmer_count: {condition: homology_kmer_count <= 4}
+    homology_sites_num: {condition: homology_sites_num == 1}    # outputClean Unique Mode
   remove_overlap: {location_interval: 0}
 ```
 
+The genome entry needs a soft-masked FASTA, `jellyfish: true` and `bowtie2` in `align_index` (a genome-wide Bowtie2 index; `uprobe build-index`).
+
+Measured on chr19:10,000,001-10,200,000 (200 kb of 19p13.2; hg38 primary assembly with UCSC soft-masking; RepeatMasker covers 54% of it). Repeat fraction = probes overlapping a UCSC RepeatMasker element.
+
+| Set | Probes | Per kb | In repeats | Largest gap |
+| --- | --- | --- | --- | --- |
+| Template before (36-41 nt, unmasked windows, canonical 18-mers, no alignment filter) | 1,881 | 9.4 | 29% | 1.8 kb |
+| Current template | 1,486 | 7.4 | 0% | 5.3 kb |
+| OligoMiner hosted hg38 Balance set (`hg38b`) | 1,313 | 6.6 | 0% | 5.3 kb |
+
+Masking makes the difference (1,881 to 1,388 probes); forward-strand k-mers add 33, the unique-alignment filter removes 10, and 35-mers add 75. 97.5% of the hosted OligoMiner probes overlap a template probe, and 87% of the template probes overlap a hosted one; both sets are mostly 35-mers.
+
 What to edit:
-- `genome`, `targets` and `encoding` keys. Replace both primer placeholders with real primers that are orthogonal to the genome and to each other, e.g. a published set (PaintSHOP offers 13 sets; ORCA-public). Add the T7 promoter if you make probes by IVT/RT, and readout sites if you image indirectly.
+- `genome`, `targets` and `encoding` keys. Replace both primer placeholders: `primer_1` is the forward PCR primer as ordered, `primer_2_rc` the reverse complement of the reverse primer, each 20-22 nt, absent from the genome and unpaired with each other and the homologies, one pair per pool or sub-pool, e.g. a published set (PaintSHOP; ORCA-public; Beliveau 2018 Table S2). The T7 promoter (for IVT/RT), the dye or a nicking site go on the ordered primers; add readout sites as parts if you image indirectly.
 - Presets: Coverage `length: [26, 32]`, Tm 37-42, `kmer_len: 16`; Stringent `[40, 46]`, Tm 47-52, `kmer_len: 18`. Set `hybridization.temperature_c` to the preset's temperature.
-- Add `N` to `exclude_patterns`: blockParse rejects N, the template does not.
 - Optional additions, all supported by the code:
 
 ```yaml
-attributes:
-  homology_sites: {target: oligopaint_oligo.homology, type: mapped_sites, aligner: bowtie2}  # bowtie2 in align_index
 post_process:
-  filters:   # add to the template's filters
-    homology_sites_num: {condition: homology_sites_num <= 1}   # Unique Mode analogue
-  avoid_otp: {chr19:10000000-10050000: {target_regions: [chr19:10000000-10050000], density_thresh: 0.00001}}
+  avoid_otp: {chr19:10000001-10050000: {target_regions: [chr19:10000001-10050000], density_thresh: 0.00001}}
   equal_space: {number_desired: 250}   # cap the count, e.g. for paints; runs after remove_overlap
 ```
 
 **U-Probe departs** from OligoMiner in these ways:
-1. The template takes 36-41 nt, but the paper text and the hosted hg38 Balance set use 35-41.
-2. Tm comes from primer3 (SantaLucia; Blake-Delcourt formamide correction, 0.61-0.72 C per %), not Biopython Tm_NN DNA_NN3 at 0.65 C per %. Oligos near 42 or 47 C can fall on the other side of the window.
-3. Jellyfish counts canonical k-mers (`-C`, both strands). OligoMiner's dictionary counts forward k-mers only (`jellyfish count -m 18 ... -L 2`, no `-C`). The same threshold (drop at >= 5) is therefore stricter in U-Probe for repeats found in both orientations.
-4. There is no outputClean (Unique or LDA Mode) and no structureCheck. The k-mer filter is the only specificity filter.
-5. Windows are cut from the unmasked FASTA, not a repeat-masked one (section 4).
-6. U-Probe filters all windows first and then tiles greedily, shortest window first. OligoMiner tiles first (blockParse) and filters afterwards, which leaves gaps. U-Probe can therefore return denser sets for the same parameters (inferred from the code, not measured).
-7. The 21-nt primer flanks come from the 2012 format, which paired them with a 32-nt homology. `temperature_c: 42` only affects `fold_score`, which the template does not compute.
+1. Tm comes from primer3 (SantaLucia; Blake-Delcourt formamide correction, 0.61-0.72 C per %), not Biopython Tm_NN DNA_NN3 at 0.65 C per %. Oligos near 42 or 47 C can fall on the other side of the window.
+2. Only outputClean's Unique Mode is reproduced, not its LDA Mode, which the 19p13.2 sets of Table S1 used: Unique Mode drops a probe with any second alignment, however weak. There is no structureCheck, which no Beliveau 2018 set used either.
+3. OligoMiner's dictionary records only k-mers seen at least twice and caps counts at 255 (`-L 2 --out-counter-len 1`); neither changes the drop-at->=5 decision.
+4. U-Probe filters all windows first and then tiles greedily, shortest window first. OligoMiner tiles first (blockParse) and filters afterwards, which leaves gaps. U-Probe therefore returns denser sets for the same parameters (1,486 vs 1,313 probes in the locus above).
+5. The 21-nt primer flanks come from the 2012 format, which paired them with a 32-nt homology. `temperature_c: 42` only affects `fold_score`, which the template does not compute.
 
 ## 7. Pitfalls
 
-- **Stale Jellyfish index (confirmed in code).** The index is `<fasta dir>/jf_genome/<fasta stem>.jf`, with no k in the name, and is built by the first `kmer_count` run. Auto-generated DNA protocols and `tests/data/DNA_format.yaml` use `kmer_len: 35`. A later run with `kmer_len: 18` queries the 35-mer index, while `cal_kmer_count` splits the output assuming 18-mers, so counts shift between probes and most probes get 0. The filter then passes nearly everything without an error. Delete `jf_genome/` whenever you change `kmer_len`, and check that a known repeat (an Alu) gets a high count.
-- Every start position yields one window per length (6 per bp for 36-41 nt at `step: 1`). For multi-Mb paints, split the region into targets of a few Mb, or start from a precomputed OligoMiner/PaintSHOP set.
+- **Jellyfish indexes.** Each `kmer_len` has its own index, built by the first `kmer_count` that needs it: `<fasta dir>/jf_genome/<fasta stem>.k<k>.jf` (canonical, `strand: both`) or `<stem>.k<k>.stranded.jf` (`strand: sense` or `antisense`). An index left by older versions, `jf_genome/<stem>.jf`, is reused only for the k in its header. Check that a known repeat gets a high count: the 40-mer of an AluJo at chr19:10,000,001-10,000,040 has a maximal 18-mer count of 706 on both strands and 357 on the forward strand.
+- Every start position yields one window per length (7 per bp for 35-41 nt at `step: 1`), and every attribute is computed on every window before the filters. `masked: drop` skips the repeat windows first (58% of them in the locus above), which also spares Bowtie2 its slowest queries. For multi-Mb paints, split the region into targets of a few Mb, or start from a precomputed OligoMiner/PaintSHOP set.
+- An unmasked FASTA (Ensembl `dna`) with `masked: drop` skips no repeat: only the k-mer and alignment filters remove them. Use a soft-masked one.
 - Templates ship with N primers; ordering them as-is gives an unamplifiable library.
 - Tm windows from OligoArray (75-90 C) or ORCA (>65 C) do not transfer to 50% formamide conditions; recompute the Tm under the declared conditions.
 - Too few probes give dim or missing spots. A 5-kb target at 5 probes/kb has only 25 probes; use Coverage settings, denser tiling or signal amplification, or enlarge the target.
-- RNA labelling by antisense probes (section 4) and segmental duplications (k-mer counts of 2-4) are the usual sources of a second, false spot.
+- RNA labelling by antisense probes (section 4) and segmental duplications (k-mer counts of 2-4; `homology_sites_num` > 1 removes those Bowtie2 finds) are the usual sources of a second, false spot.
 - `avoid_otp` without a `mapped_sites` attribute is skipped (with an error in the log); `uprobe validate` also flags it.
 
 ## 8. Verification checklist
 
 - [ ] Targets resolve in the FASTA (`--check-targets`); chromosome names and the assembly match the coordinates.
 - [ ] Every homology: length within the preset, GC 20-80%, Tm in the window under the declared conditions, no homopolymer runs, no N.
-- [ ] Max 18-mer count <= threshold, with the Jellyfish index built at that k; an Alu control gives a high count.
-- [ ] Optional: `homology_sites_num == 1` for most probes; no cluster of off-target hits (`avoid_otp` or a BLAT/BLAST spot check).
+- [ ] The genome FASTA is soft-masked and `masked: drop` is set; a target without lowercase bases means it is not.
+- [ ] Max 18-mer count <= 4 on the forward strand (`strand: sense`), with the Jellyfish index built at that k; an Alu control gives a high count.
+- [ ] `homology_sites_num == 1` (one Bowtie2 alignment); no cluster of off-target hits (`avoid_otp` or a BLAT/BLAST spot check).
 - [ ] Probes do not overlap. Probes per kb meet the goal (locus >= ~5, paint ~0.5-2); the largest gap is known; total >= ~200 for a >= 10-kb locus.
 - [ ] The homology strand is consistent across the set; over transcribed regions the probe is sense to the RNA, or RNase A is in the protocol.
 - [ ] Primers and readouts are real sequences (no N), unique per sub-pool or segment, absent from the genome, and not complementary to the homologies; T7 promoter present if needed.
@@ -199,8 +213,8 @@ post_process:
 - Beliveau 2012, PNAS. Versatile design and synthesis platform for visualizing genomes with Oligopaint FISH probes. doi:10.1073/pnas.1213818110
 - Beliveau 2014, Curr Protoc Mol Biol. Visualizing genomes with Oligopaint FISH probes. doi:10.1002/0471142727.mb1423s105
 - Beliveau 2015, Nat Commun. Single-molecule super-resolution imaging of chromosomes and in situ haplotype visualization using Oligopaint FISH probes. doi:10.1038/ncomms8147
-- Beliveau 2018, PNAS. OligoMiner provides a rapid, flexible environment for the design of genome-scale oligonucleotide in situ hybridization probes. doi:10.1073/pnas.1714530115 (code: github.com/beliveau-lab/OligoMiner, blockParse.py, outputClean.py, kmerFilter.py, structureCheck.py)
-- Hershberg 2021, Nat Methods. PaintSHOP enables the interactive design of transcriptome- and genome-scale oligonucleotide FISH experiments. doi:10.1038/s41592-021-01187-3
+- Beliveau 2018, PNAS. OligoMiner provides a rapid, flexible environment for the design of genome-scale oligonucleotide in situ hybridization probes. doi:10.1073/pnas.1714530115 (code: github.com/beliveau-lab/OligoMiner, blockParse.py, outputClean.py, kmerFilter.py, structureCheck.py; hosted hg38 Balance set: yin.hms.harvard.edu/oligoMiner/probe_seqs/hg38/hg38b.tar.gz)
+- Hershberg 2021, Nat Methods. PaintSHOP enables the interactive design of transcriptome- and genome-scale oligonucleotide FISH experiments. doi:10.1038/s41592-021-01187-3 (pipeline: github.com/beliveau-lab/PaintSHOP_pipeline)
 - Nguyen & Joyce 2019, Methods Mol Biol. Programmable chromosome painting with Oligopaints. doi:10.1007/978-1-4939-9674-2_11
 - Wang 2016, Science. Spatial organization of chromatin domains and compartments in single chromosomes. doi:10.1126/science.aaf8084
 - Bintu 2018, Science. Super-resolution chromatin tracing reveals domains and cooperative interactions in single cells. doi:10.1126/science.aau1783

@@ -33,10 +33,10 @@ from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_
                             validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
-                        MAX_MISMATCHES_LIMIT, mapped_genes_settings)
+                        MAX_MISMATCHES_LIMIT, STRANDS, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
-from .utils import REGION_PATTERN
+from .utils import MASKED_OPTIONS, REGION_PATTERN
 
 
 # Sections required by _validate_and_normalize_protocol.
@@ -50,7 +50,7 @@ OPTIONAL_KEYS = (
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
 SOURCES = ('genome', 'mRNA', 'exon', 'CDS', 'UTR')
-REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts')
+REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts', 'masked')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
@@ -134,6 +134,11 @@ HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELD
                       '  formamide_pct: 30')
 TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; canonical: Ensembl_canonical; mane: '
                     'MANE_Select, else Ensembl_canonical; or a list of transcript ids, e.g. [ENST00000646664]')
+KMER_STRAND_HINT = ("strand: sense   # both (default): canonical k-mers, both strands; sense: the k-mers as "
+                    "written on the FASTA's forward strand (OligoMiner, PaintSHOP); antisense: their reverse "
+                    "complements")
+MASKED_HINT = ('masked: drop   # skip source: genome windows with a soft-masked (lowercase) or N base; '
+               'keep (default) upper-cases them')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
                   '  kmer: 30          # k-mer length, 12-32\n'
                   '  min_shared: 0.5   # share of the target\'s k-mers that one transcript of a copy contains')
@@ -416,6 +421,7 @@ class _Validator:
         else:
             self.source = source
         self.check_transcripts(region, path)
+        self.check_masked(region, path)
         if region.get('length') is None:
             self.error(path + ('length',), 'missing `length`',
                        'length: 40   # positive integer, or an inclusive range: [38, 42]')
@@ -453,6 +459,17 @@ class _Validator:
         if self.source == 'genome' and setting != 'all':
             self.warning(path + ('transcripts',), 'transcripts applies to gene targets (source mRNA, exon, CDS or '
                          'UTR) and is ignored for source: genome', 'remove transcripts')
+
+    def check_masked(self, region, path):
+        if 'masked' not in region:
+            return
+        value = region['masked']
+        if value not in MASKED_OPTIONS:
+            self.error(path + ('masked',), f'masked must be one of {", ".join(MASKED_OPTIONS)}, got {value!r}',
+                       MASKED_HINT)
+        elif value != 'keep' and self.source is not None and self.source != 'genome':
+            self.warning(path + ('masked',), 'masked applies to source: genome and is ignored for gene targets',
+                         'remove masked')
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -865,6 +882,9 @@ class _Validator:
                                f'aligner: {aligners[0]}')
                 elif kind == 'mapped_genes':
                     self._check_mapped_genes(path, attr)
+                elif kind == 'kmer_count' and attr.get('strand', 'both') not in STRANDS:
+                    self.error(path + ('strand',), f'strand must be one of {", ".join(STRANDS)}, got '
+                               f'{attr["strand"]!r}', KMER_STRAND_HINT)
                 if kind == 'blocks' and self.source == 'genome' and not self.direct_targets:
                     self.warning(path + ('type',), 'blocks needs a start column, which source: genome does not '
                                  'produce; the attribute is skipped', 'remove it, or use source mRNA, exon, CDS or UTR')
@@ -1376,6 +1396,8 @@ class _Validator:
                 elif end > lengths[chrom]:
                     self.error(path, f'target {target!r} ends after the end of {chrom} ({lengths[chrom]} bp)',
                                f'use an end <= {lengths[chrom]}')
+            if self.region().get('masked') == 'drop':
+                self.check_masked_genome(entry['fasta'], lengths)
         elif self.source is not None and self.genome_targets:
             from .gen.fun import read_gtf
             try:
@@ -1397,6 +1419,21 @@ class _Validator:
                                f'target {target!r} is not a gene_name in the GTF',
                                f"did you mean '{close}'?" if close else
                                'check the gene symbol (GTF gene_name/gene attributes are matched, not gene IDs)')
+
+    def check_masked_genome(self, fasta, lengths):
+        """Warn when masked: drop reads targets without a soft-masked base: the FASTA is probably not repeat-masked."""
+        from pyfaidx import Fasta
+        regions = [m for m in (REGION_RE.match(str(t)) for t in self.genome_targets)
+                   if m and m[1] in lengths and int(m[3]) <= lengths[m[1]]]
+        if not regions:
+            return
+        with Fasta(str(fasta)) as fa:
+            if any(not fa[m[1]][int(m[2]) - 1:int(m[3])].seq.isupper() for m in regions):
+                return
+        self.warning(('extracts', 'target_region', 'masked'), 'the targets have no soft-masked (lowercase) base: '
+                     'the FASTA looks unmasked, so masked: drop skips only windows with N, not repeats',
+                     'use a soft-masked FASTA, e.g. `uprobe genome fetch --species homo_sapiens --soft-masked` '
+                     'or UCSC hg38.fa')
 
     def check_transcripts_in_genome(self, gtf, targets):
         """The transcripts option against the GTF: listed ids, and the tags canonical and mane read."""

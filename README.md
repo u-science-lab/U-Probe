@@ -56,6 +56,25 @@ pip install -e .
 
 The conda environment also installs the command-line tools U-Probe calls (Bowtie2, Bowtie 1, BLAST+, MMseqs2, Jellyfish). With a pip install, install the ones you use from bioconda, e.g. `conda install -c bioconda bowtie2 bowtie jellyfish`. Bowtie 1 (bioconda package `bowtie`) runs the [exhaustive off-target search](#off-target-search), which short probes need: the smFISH, seqFISH+, MERFISH and HybISS templates use it, and so does the generated off-target attribute of a protocol without `attributes` when the genome enables it. `uprobe genome fetch` adds `bowtie` to a new genome's `align_index` when Bowtie 1 is installed.
 
+## Use U-Probe with an AI agent
+
+U-Probe ships an [Agent Skill](https://agentskills.io/specification) in [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/). Its `SKILL.md` gives a coding agent the design workflow (clarify the request, choose the technology and template, fetch the genome, edit, validate, run, verify, deliver) and the rules behind it, and sends the agent to reference notes on each technology, on U-Probe's YAML and on probe-design concepts when it needs them; `scripts/check_probes.py` checks a result table before delivery. Install U-Probe and the aligners, then copy the skill to where your agent looks for skills:
+
+```bash
+pip install uprobe
+conda install -c bioconda bowtie bowtie2 jellyfish
+uprobe skill install --target codex            # ./.agents/skills/u-probe (run it at the repository root)
+uprobe skill install --target claude --user    # ~/.claude/skills/u-probe
+uprobe skill path                              # the copy inside the installed package
+```
+
+| Agent | Project (default, working directory) | `--user` | Source |
+| --- | --- | --- | --- |
+| Codex | `.agents/skills/u-probe` | `~/.agents/skills/u-probe` | [Codex docs: Agent Skills](https://developers.openai.com/codex/skills) |
+| Claude Code | `.claude/skills/u-probe` | `~/.claude/skills/u-probe` | [Claude Code docs: Skills](https://code.claude.com/docs/en/skills) |
+
+Without `--target` the skill is installed for both agents; `--target DIR` installs it as `DIR/u-probe` for any other agent that reads Agent Skills. After upgrading U-Probe, run the install again with `--force` so the skill matches the CLI. Then describe the experiment to the agent in plain language, e.g. "Design smFISH probes against human GAPDH mRNA for HeLa cells".
+
 ## Usage Guide
 
 U-Probe provides three main entry points: **Command Line Interface (CLI)**, **Python API**, and the **HTTP/Web UI**.
@@ -83,7 +102,7 @@ uprobe run -p protocol.yaml -g genomes.yaml -o ./results --json
 ```
 
 #### 🤖 Using U-Probe with an AI Agent
-The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
+The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/); install it with `uprobe skill install` (see [Use U-Probe with an AI agent](#use-u-probe-with-an-ai-agent)). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
 
 #### 🌐 Start Web Server 
 Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. First check `config.ini`: use local Linux paths under `[Paths]` and `frontend_url = http://localhost:5173` under `[Server]`.
@@ -125,6 +144,7 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 - `--species` takes an Ensembl name (`homo_sapiens`), display name (`human`) or taxonomy id (`9606`). `--release latest` is resolved to a number, which is recorded in the entry.
 - Sources: Ensembl (vertebrates plus yeast, worm and fly) and the Ensembl Genomes divisions `plants`, `fungi`, `metazoa` and `protists` (`--division`; they have their own release numbers). Ensembl Bacteria is not supported.
 - The unmasked primary assembly FASTA is used when Ensembl provides one, otherwise the toplevel FASTA. Files are decompressed (U-Probe's tools need plain FASTA) into `<out>/<name>/`; the entry name defaults to `<species>_<assembly>_e<release>` (`_eg<release>` for Ensembl Genomes).
+- `--soft-masked` fetches the soft-masked FASTA instead (Ensembl `dna_sm`: repeats in lowercase; the name gets the suffix `_sm`). Every template can use it, since the aligners and Jellyfish ignore case; the Oligopaint template needs it, because its `extracts.target_region.masked: drop` skips the genome windows with a soft-masked or N base, as OligoMiner mines a repeat-masked genome.
 - Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
 - A new entry gets `align_index: [bowtie2]`, plus `bowtie` when Bowtie 1 (`bowtie-build`) is installed, for the [exhaustive off-target search](#off-target-search) (the log says so when it is not), and `jellyfish: true` when Jellyfish is installed. `--align-index` and `--jellyfish/--no-jellyfish` set them; re-fetching keeps the settings of an existing entry.
 - `--build-index` runs the same index build as `uprobe build-index`.
@@ -356,6 +376,7 @@ summary:
 
   With `transcripts: all` (the default), each window lies within one exon (or CDS or UTR segment), so no window spans a splice junction. With `exon`, `CDS` and `UTR`, segments shorter than the window are left out, and a target left with none gets no windows (a log warning and `no_candidate_windows` in `summary.json`) while the other targets are designed as usual; with `mRNA`, short exons give no window but still count in the positions along the RNA (`target_start`, see [Probes per target](#probes-per-target)). When `transcripts` selects one transcript of a target, `mRNA`, `exon` and `CDS` tile its spliced sequence instead, so windows also span its exon junctions; see [Windows across exon junctions](#windows-across-exon-junctions).
   - `transcripts` (RNA sources): which transcripts of each gene the windows come from. `all` (the default) takes the exons of all its transcripts, the merged exon model, so windows can lie on exons that only rare isoforms, or retained-intron transcripts, contain. `canonical` takes the transcript the GTF tags `Ensembl_canonical`; `mane` the one tagged `MANE_Select` (human), and for a gene without one (other species, most non-coding genes) its `Ensembl_canonical` transcript, with a log note; a list of transcript ids, e.g. `transcripts: [ENST00000646664]`, takes those (with or without version), and every target needs at least one of them. Ensembl and GENCODE GTFs carry both tags. An unknown id, an id of a gene that is not a target, a target without a listed id, or a gene without the tag stops the run with an error; `uprobe validate --check-targets` reports them beforehand. With one transcript, the windows tile that spliced transcript (`mRNA`) or its spliced CDS (`exon`, `CDS`), across its exon junctions, `target_start` is the position on it, and `exempt_copies` judges copies against it. `summary.json` lists each target's transcripts: `selection`, `chosen_by` (`all`, `MANE_Select`, `Ensembl_canonical` or `listed`) and `ids`.
+  - `masked` (`source: genome`): `keep` (the default) upper-cases the windows; `drop` skips every window with a soft-masked (lowercase) or N base, as OligoMiner mines a repeat-masked genome. It needs a soft-masked FASTA (`uprobe genome fetch --soft-masked`, or UCSC `hg38.fa`); the run log and `uprobe validate --check-targets` warn when a target has no lowercase base. The Oligopaint template uses `drop`.
 - **`encoding`**: Mapping of specific genes to custom barcodes or identifiers (e.g., assigning `BC1` and `BC2` to `CD4`).
 - **`probes`**: The core of the design, powered by a **Directed Acyclic Graph (DAG)** architecture. This allows for complex, modular probe construction where parts and probes can reference each other.
   - **`template`**: Construct sequences using placeholders (e.g., `{part1}{part2}`).
@@ -367,9 +388,9 @@ summary:
   - `annealing_temperature`: Calculates the melting temperature (Tm) using Primer3, under the protocol's `hybridization` conditions. With `tm_method: multi_padlock_design` it uses the formula of the HybISS padlock design code instead (see [Hybridization conditions](#hybridization-conditions)).
   - `fold_score`: The negated minimum free energy, −MFE in kcal/mol (≥ 0), of the sequence folded alone as RNA by ViennaRNA, at `hybridization.temperature_c` when set. Higher means more stable secondary structure, so lower is better: filter with `<=` and sort it in `is_ascending`.
   - `self_match`: Counts 4-mer matches between the sequence and its reverse complement, a measure of self-dimerization; lower is better.
-  - `mapped_sites`: Aligns the sequence to the genome (via Bowtie2) and counts off-target mapped sites. A window across an exon junction has no contiguous genomic site ([Windows across exon junctions](#windows-across-exon-junctions)).
+  - `mapped_sites`: Aligns the sequence to the genome (Bowtie2 `--very-sensitive-local -k 100`, both strands) and lists the sites, with their number in `<attribute>_num`; `<attribute>_num == 1` keeps sequences with one site, OligoMiner's Unique Mode. A window across an exon junction has no contiguous genomic site ([Windows across exon junctions](#windows-across-exon-junctions)).
   - `mapped_genes`: Counts the number of unique genes the sequence aligns to in the transcriptome, via Bowtie2 or, exhaustively within `max_mismatches` substitutions, via Bowtie 1. See [Off-target search](#off-target-search); with `exempt_copies`, genes that copy most of the target are not counted ([Copies of the target](#copies-of-the-target)).
-  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity: the highest genome count among the sequence's k-mers, so lower is better. Each `kmer_len` (default 35) has its own index, `jf_genome/<fasta stem>.k<kmer_len>.jf` next to the FASTA, built at its first use. For windows across exon junctions see [Windows across exon junctions](#windows-across-exon-junctions).
+  - `kmer_count`: Counts k-mer occurrences in the genome (via Jellyfish) to evaluate specificity: the highest genome count among the sequence's k-mers, so lower is better. Each `kmer_len` (default 35) has its own index, `jf_genome/<fasta stem>.k<kmer_len>.jf` next to the FASTA, built at its first use. `strand: both` (the default) counts canonical k-mers, i.e. on both strands; `strand: sense` counts the sequence's k-mers as written on the FASTA's forward strand, as OligoMiner's and PaintSHOP's dictionaries do (index `<fasta stem>.k<kmer_len>.stranded.jf`), and `antisense` their reverse complements. For windows across exon junctions see [Windows across exon junctions](#windows-across-exon-junctions).
 - **`hybridization`** (optional): The experimental conditions (temperature, salt, probe concentration, formamide) that `annealing_temperature` and `fold_score` are computed under. See [Hybridization conditions](#hybridization-conditions).
 - **`gene_expression`** (optional): An expression table of your sample, by gene or by transcript; `mapped_genes` attributes then ignore off-target genes that are not expressed, or optionally expressed far below the target. See [Expression-aware off-target counting](#expression-aware-off-target-counting).
 - **`post_process`**: Define strict `filters` (e.g., Tm ranges) based on the calculated attributes, and `sorts` to rank the best probes (ascending or descending). Lower is better for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: list them under `is_ascending` (`uprobe validate` warns when they are sorted descending). When `post_process` is generated, every sort is ascending: GC, Tm, mapped genes, then the fold, self-match and k-mer scores. Its specificity filter is `target_mapped_genes <= 4` in RNA mode and, in DNA mode (`source: genome`), `target_kmer_count <= 100` on the generated `target_kmer_count` attribute: the highest genome count of the 35-mers of the genomic window (Jellyfish; the genome needs `jellyfish: true`).
