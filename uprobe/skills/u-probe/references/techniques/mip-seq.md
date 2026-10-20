@@ -36,14 +36,14 @@ Padlock, 58 nt, 5'-phosphate (T4 PNK):
 5'P-[arm_5 13]-CC-[B1 3]-TGCGTCTATTT-GT-[B2 3]-TAGTGGAGCCT-[arm_3 13]-OH 3'
      rc(nt 1-13)  2  code  anchor-L 11  2  code  anchor-R 11   rc(nt 14-26)
                                               (= primer tail site)
-RCA initiator primer, 26 nt in the template (published: 25 or 26):
-5'-[RNA part 13]-[s 1]-C-AGGCTCCACTA-3'
-    rc(nt 28-40)  nt 27   rc(TAGTGGAGCCT), 11 nt: pairs with the padlock backbone
+RCA initiator primer, 25 nt in the template (published: 25 in 247 of 432, 26 in 185):
+5'-[RNA part 13]-[s 1]-AGGCTCCACTA-3'      (26-nt form: one C between s and the tail)
+    rc(nt 28-40)  nt 27  rc(TAGTGGAGCCT), 11 nt: pairs with the padlock backbone
                   (sense base, unpaired spacer)
 
 (b) Bound (RNA written 3'<-5' so the oligos read 5'->3' above it)
       primer                                padlock 3' arm         padlock 5' arm
- 5'-[rc nt 28-40]-s-C-AGGCTCCACTA-3'     5'-[rc nt 14-26]-OH3' ^ 5'P-[rc nt 1-13]-3'
+ 5'-[rc nt 28-40]-s-AGGCTCCACTA-3'       5'-[rc nt 14-26]-OH3' ^ 5'P-[rc nt 1-13]-3'
     |||||||||||||    (to backbone)           |||||||||||||   junction  |||||||||||||
  3'-[nt 40 .. 28]-[27]------------------- [nt 26 ....... 14]---------[nt 13 ..... 1]-5'  RNA
 ```
@@ -74,12 +74,13 @@ RCA initiator primer, 26 nt in the template (published: 25 or 26):
 | Backbone | CC-B1-TGCGTCTATTT-GT-B2-TAGTGGAGCCT (32) | nt | Wu 2024 Supp. Table, e.g. Th-1-PLP-1 |
 | Barcodes B1, B2 | 3 each; 217 genes, 217 distinct per-position colour codes | nt | Wu 2024 Supp. Table |
 | Coding capacity | 10^N for N rounds (3 rounds = 1,000) | codes | Wu 2024 peer-review file |
-| Primer RNA part | 12-16 (Methods); 13-14 in published pairs | nt | Wu 2023 Methods; Th-1-RCA-2 binds nt 27-40 (14), Th-2-RCA-2 nt 28-40 (13) |
-| Gap padlock site -> primer site | 0-1 | nt | Th mapping above; template: 1 |
-| Primer spacer before tail | sense base of nt 27 + C in 91/116 mapped pairs; C alone in 14 | nt | U-Probe template meta (RefSeq mapping); rule (unverified) |
+| Primer RNA part | 12-16 (Methods); 13 in 417 of the 430 mapped pairs, 14 in 13 | nt | Wu 2023 Methods; this KB, 430 units mapped to mouse Ensembl 113 |
+| Gap padlock site -> primer site | 0-1 (1 in 417 of 430) | nt | mapping above; template: 1 |
+| Primer spacer before tail | the sense base of nt 27 alone in 234 pairs (25-nt primers), that base + C in 163 (26-nt), C alone in 14, another 2-nt spacer in 13 | nt | mapping above; template: the sense base alone |
 | Primer tail | AGGCTCCACTA (all 432 primers) | nt | Wu 2024 Supp. Table |
-| Primer length | 25 (247 primers) or 26 (185) | nt | Wu 2024 Supp. Table |
+| Primer length | 25 (247 primers) or 26 (185); the template builds 25 | nt | Wu 2024 Supp. Table |
 | Sites per gene | 2, "in an exon close to the 5' end"; 8 pairs raised detection (Supp. Fig. 7) | pairs | Wu 2023 Methods; Wu 2024 SI |
+| Site position (no number published) | median start nt 885 (quartiles 455, 1,650); 54% within the first 1,000 nt, 71% within 1,500; template cap 1,000 | nt | this KB, 367 sites on the mouse canonical transcript |
 | Tm / GC criteria | none stated ("self-developed" program) | - | Wu 2023 Methods |
 | Arm Tm, estimate | Th-1 arms 37-39 C; primer RNA part 47 C (2x SSC, 10% FA, 30 nM) | C | U-Probe/primer3 estimate, not a published criterion |
 | Hybridization | 30 nM each padlock + equimolar primer, 2x SSC, 10% formamide, 20 mM RVC, 37 C overnight | - | Wu 2023 Methods |
@@ -98,7 +99,10 @@ discriminate a SNV; validate with wild-type/mutant controls.
 - Template: the **RNA itself** (no RT). Arms carry rc(RNA), i.e. antisense sequence.
 - Region: Methods choose "the exon close to the 5' end"; CDS and UTR are not distinguished. Of the
   published padlock sites that map to mouse RefSeq mRNAs, 290/380 lie in the CDS, 64 in a UTR, and
-  343 lie in every RefSeq variant of their gene (template meta).
+  343 lie in every RefSeq variant of their gene (template meta). "Close to the 5' end" is not a
+  number: on the mouse canonical transcripts the 367 mapped sites start at a median of nt 885, 54%
+  within the first 1,000 nt. The template turns it into `target_start <= 1000` (U-Probe's choice);
+  raise the cap for long transcripts, and check `summary.json` for `partial`.
 - Isoforms: choose sites shared by the isoforms you want to count; U-Probe's `transcripts: mane`
   designs on one reference transcript, and with one transcript windows can span exon junctions
   (they then bind only spliced RNA).
@@ -152,27 +156,31 @@ probes:
     template: "{arm_5}CC{b1}TGCGTCTATTTGT{b2}TAGTGGAGCCT{arm_3}"
     parts: {arm_5: {expr: "rc(target_parts['arm5_site'])"}, arm_3: {expr: "rc(target_parts['arm3_site'])"}, ...}
   rca_primer:
-    template: "{binding}{gap_base}CAGGCTCCACTA"
+    template: "{binding}{gap_base}AGGCTCCACTA"     # 25 nt; the 26-nt form adds a C before the tail
     parts: {binding: {expr: "rc(target_parts['primer_site'])"}, gap_base: {expr: "target_parts['gap']"}}
 hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 30, formamide_pct: 10}
 post_process:
-  filters: {target_mapped_genes: {condition: target_mapped_genes <= 1}}
+  filters:
+    target_mapped_genes: {condition: target_mapped_genes <= 1}
+    near_5p: {condition: target_start <= 1000}     # "an exon close to the 5' end"
   remove_overlap: {location_interval: 0}
+  equal_space: {number_desired: 2}                 # 2 sites per gene
 ```
 
 What to edit:
 - `genome`, `targets`, and `encoding` (B1/B2 per gene; see pitfalls for code collisions).
-- Sites per gene: the template keeps every passing non-overlapping window. To mimic the paper add a
-  5'-proximal filter, e.g. `near_5p: {condition: target_start <= 600}`, then
-  `equal_space: {number_desired: 2}`; or keep more pairs (8 raised detection in SI Fig. 7).
+- Sites per gene and region: `near_5p` plus `equal_space` give the paper's 2 sites near the 5' end.
+  Raise the 1,000-nt cap (U-Probe's number, not the paper's) for long transcripts, and raise
+  `number_desired` for more pairs (8 raised detection in SI Fig. 7).
+- Primer length: 25 nt here; for the 26-nt form write `"{binding}{gap_base}CAGGCTCCACTA"`.
 - Optional Tm/GC filters on `arm_5_tm`, `arm_3_tm`, `primer_tm`, `target_gc` (reported, not
   filtered): none are published, so choose them yourself and say so.
 - `aligner: bowtie` + `max_mismatches: 2` for an exhaustive off-target search.
 
-**U-Probe departs:** (1) `source: mRNA` on the MANE/canonical transcript, not "an exon near the 5'
-end"; (2) no `equal_space`, so far more than 2 sites per gene are returned; (3) primer always
-13 + sense gap base + C + tail = 26 nt, whereas 247/432 published primers are 25 nt; (4) the
-specificity filter is U-Probe's approximation, the paper states no criterion.
+**U-Probe departs:** (1) `source: mRNA` on the MANE/canonical transcript with a 1,000-nt cap, not
+"an exon near the 5' end" (no distance is published); (2) `equal_space` spreads the 2 sites evenly
+over the passing windows below the cap, while the paper's two sites are a median 223 nt apart;
+(3) the specificity filter is U-Probe's approximation, the paper states no criterion.
 
 ## 7. Pitfalls
 
@@ -192,13 +200,17 @@ specificity filter is U-Probe's approximation, the paper states no criterion.
   `arm_5_tm`/`arm_3_tm` against the 37 C hybridization temperature.
 - Bowtie2 reports at most 100 alignments; windows in repeats or gene families may be under-counted.
 - The primer's spacer base is the *sense* nt 27, so it cannot pair with nt 27; it is a spacer, not
-  an extra binding base. If you write primers by hand, keep this or use C alone (published variants).
+  an extra binding base. If you write primers by hand, keep this (25 nt, the published majority),
+  add a C after it (26 nt) or use C alone (published variants).
+- A gene whose first 1,000 nt hold no passing window gets no probes with the `near_5p` filter: the
+  run is `partial` (`summary.json`), so raise the cap for that gene's panel rather than ignoring it.
 
 ## 8. Verification checklist
 
 - [ ] Padlock = 58 nt: 13 + CC + 3 + TGCGTCTATTT + GT + 3 + TAGTGGAGCCT + 13; 5' phosphate noted.
 - [ ] rc(arm_5) + rc(arm_3) equals RNA nt 1-26 of the window, contiguous (junction 13|14).
-- [ ] Primer 5' part = rc(RNA nt 28-40) (or 27-40); primer ends with AGGCTCCACTA (3' end on circle).
+- [ ] Primer 5' part = rc(RNA nt 28-40) (or 27-40); primer ends with AGGCTCCACTA (3' end on circle)
+      and is 25 nt (or 26 with the extra C).
 - [ ] Window lies in the intended transcript region/isoforms; MANE/canonical choice logged.
 - [ ] `target_mapped_genes` = 1 for every unit (with the aligner and expression table you intended).
 - [ ] Per-position B1/B2 colour codes are unique across genes; dyes match the SBL scheme.

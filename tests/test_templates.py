@@ -142,7 +142,9 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     for spec in pp.get('filters', {}).values():
         if 'condition' in spec:
             columns = set(re.findall(r'([A-Za-z_]\w*)\s*[<>=]', spec['condition']))
-            assert columns <= set(attributes), spec
+            # Attributes, or a position column of the extracted windows (direct sequences have none,
+            # and a condition on a missing column is skipped).
+            assert columns <= set(attributes) | {'target_start', 'target_end', 'start', 'end'}, spec
         else:
             assert spec['target'] in combined, spec
     sorts = pp.get('sorts', {})
@@ -287,10 +289,26 @@ def test_padlock_iss_reproduces_hybiss_pvalb():
 
 
 def test_mipseq_reproduces_published_pair():
-    # Wu et al. 2024 Gad2-2 probes on mouse Gad2 mRNA (NM_008078.2).
-    _, probes = design('mipseq', 'AGCGTGTGATGGAGAAAGGCCCACTCTGGCATTTCTACAA', {'B1': 'GCA', 'B2': 'GCA'})
-    assert probes['padlock'].tolist() == ['TCCATCACACGCTCCGCATGCGTCTATTTGTGCATAGTGGAGCCTGAGTGGGCCTTTC']
-    assert probes['rca_primer'].tolist() == ['TTGTAGAAATGCCTCAGGCTCCACTA']
+    # Wu et al. 2024, 217-gene set (sheet "Fig 3"): Fig3_463_C1qb on the window at nt 24-63 of
+    # mouse C1qb (ENSMUST00000031132). Its primer is 25 nt, as 247 of the 432 published ones are.
+    _, probes = design('mipseq', 'GTTCTTCCTGCCTCTAGGGACCCAGACTTCCGCTTTCTGA', {'B1': 'AGA', 'B2': 'TTT'})
+    assert probes['padlock'].tolist() == ['AGGCAGGAAGAACCCAGATGCGTCTATTTGTTTTTAGTGGAGCCTTCTGGGTCCCTAG']
+    assert probes['rca_primer'].tolist() == ['TCAGAAAGCGGAACAGGCTCCACTA']
+
+
+def test_mipseq_keeps_two_sites_near_the_5_prime_end():
+    # Wu 2023 Methods: 2 sites per gene, in an exon close to the 5' end (the 1,000-nt cap is U-Probe's).
+    protocol = _validate_and_normalize_protocol(load_template('mipseq'))
+    pp = protocol['post_process']
+    assert pp['equal_space'] == {'number_desired': 2}
+    assert pp['filters']['near_5p']['condition'] == 'target_start <= 1000'
+    # A direct sequence has no target_start, so number the windows as an mRNA target's are numbered.
+    api = offline_api(protocol, SEQ * 4)
+    windows = api.generate_target_seqs()
+    windows['target_start'], windows['target_end'] = windows['start'], windows['end']
+    assert windows['target_start'].max() > 1000  # the filter has something to remove
+    kept = post_process(windows, {'post_process': {k: pp[k] for k in ('filters', 'remove_overlap', 'equal_space')}})
+    assert len(kept) == 2 and kept['target_start'].max() <= 1000
 
 
 def test_starmap_reproduces_published_pair():
