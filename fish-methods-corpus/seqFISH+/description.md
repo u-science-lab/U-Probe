@@ -29,7 +29,7 @@ Each gene is targeted by 24 primary probes. Target-binding sequences are 28 nt a
 
 ## Encoding Strategy
 
-A gene has a four-unit base-20 codeword, read entirely within one fluorescence channel. Three informative units provide 20³ = 8,000 combinations per channel, with a fourth unit for error correction. The authors report a capacity of 24,000 error-correctable barcodes across three channels; the actual experiment uses 10,000 genes. Twenty serial hybridizations per barcoding round give 80 serial hybridizations overall. The three channels are acquired in parallel across that schedule. [S01, Methods, seqFISH+ encoding strategy; reported]
+A gene has a four-unit base-20 codeword, read entirely within one fluorescence channel. Three informative units provide 20³ = 8,000 combinations per channel, with a fourth unit for error correction; in the published codebook the fourth unit is (R1 + R2 − R3) mod 20 (derived from S02; see probes.md, Barcode System). The authors report a capacity of 24,000 error-correctable barcodes across three channels; the actual experiment uses 10,000 genes. Twenty serial hybridizations per barcoding round give 80 serial hybridizations overall. The three channels are acquired in parallel across that schedule. [S01, Methods, seqFISH+ encoding strategy; reported]
 
 The public codebook contains 3,334 genes in the 647-nm channel and 3,333 each in the 561- and 488-nm channels. These sheet-specific counts are obtained by counting gene rows, not by assuming channel order from an unlabelled list. [S02, Codebook-647nm, Codebook-561nm, Codebook-488nm, rows 2 onward; derived]
 

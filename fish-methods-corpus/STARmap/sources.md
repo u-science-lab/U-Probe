@@ -19,7 +19,7 @@
 | Repository / accession | PMC: https://pmc.ncbi.nlm.nih.gov/articles/PMC6339868/ ; data: http://clarityresourcecenter.org (per paper data availability statement) |
 | Method version | V01 (original STARmap, also called "3D STARmap" for thick-tissue variant) |
 | Relevant figures | Fig. 1: SNAIL/SEDAL/HTC; Fig. 2: 160-gene V1 mapping; Fig. 6: 3D experiment; supplementary Fig. S1: SNAIL, S2: HTC, S3: SEDAL (references verified in main text). |
-| Relevant tables | Supplementary Table S1 (aat5691_wang_sm_table-s1.xlsx; 160-gene panel and probe sequences; not directly retrieved for this draft); Supplementary Table S2 (aat5691_wang_sm_table-s2.xlsx; 1020-gene panel; not directly retrieved) |
+| Relevant tables | Supplementary Table S1 (aat5691_wang_sm_table-s1.xlsx; 160-gene panel and probe sequences; not directly retrieved for this draft); Supplementary Table S2 (aat5691_wang_sm_table-s2.xlsx; described in S02 p. 3 as the SEDAL probes; not directly retrieved) |
 | Relevant supplementary files | aat5691-wang-sm.pdf (18.15 MB, supplementary materials); aat5691_wang_sm_table-s1.xlsx (284.46 KB); aat5691_wang_sm_table-s2.xlsx (11.26 KB); all downloadable from the Science article page |
 | Information supported | SNAIL definition ("specific amplification of nucleic acids via intramolecular ligation"); primer + padlock probe pair; five-base barcode on the padlock probe (library size 1024 = 4^5); T4 DNA ligase circularization; Phi29 DNA polymerase rolling-circle amplification; SEDAL ("sequencing with error-reduction by dynamic annealing and ligation") sequencing-by-ligation; two-base (dinucleotide) encoding; 4-color fluorescence; 6 imaging cycles for 160/1020-gene experiments; 7 cycles for linear thick-tissue SEDAL readout; ~1.8% error rate vs. ~29.4% for cPAL; aminoallyl-dUTP incorporation into RCA amplicons; NHS-ester coupling of amplicons to acrylamide hydrogel (HTC); 8-µm imaged volumes and 150-µm tissue thickness; mouse C57BL/6 V1 cortex; >30,000 cells in 3D STARmap volume; 160-gene panel (112 putative cell-type markers + 48 activity-regulated genes); 1020-gene panel (extended from Tasic et al. 2016 scRNA-seq) |
 | Notes / limitations | S01 main text supports schematic architecture and the five-base barcode. It does not enumerate all S03 component lengths. Original supplementary procedures and workbooks were not directly inspected in this Fix round; no claim of their absence is made. |
@@ -44,12 +44,12 @@
 | Official URL | https://www.science.org/doi/10.1126/science.aat5691 (article page with supplementary files) |
 | Repository / accession | Science article page: aat5691-wang-sm.pdf (18.15 MB); aat5691_wang_sm_table-s1.xlsx (284.46 KB); aat5691_wang_sm_table-s2.xlsx (11.26 KB) |
 | Method version | V01 |
-| Relevant figures | figs. S1–S22 in supplementary PDF (specific contents not directly retrieved) |
-| Relevant tables | Table S1: 160-gene panel (probe sequences) — 284.46 KB workbook; Table S2: 1020-gene panel — 11.26 KB workbook |
+| Relevant figures | figs. S1–S22 in supplementary PDF; Fig. S1A legend (p. 10) read |
+| Relevant tables | Table S1: SNAIL probes — 284.46 KB workbook; Table S2: SEDAL probes — 11.26 KB workbook ("All sequences were included in Table S1 (SNAIL probes) and Table S2 (SEDAL probes)", PDF p. 3). Earlier drafts called Table S2 the 1020-gene panel |
 | Relevant supplementary files | aat5691-wang-sm.pdf (full supplementary); aat5691_wang_sm_table-s1.xlsx; aat5691_wang_sm_table-s2.xlsx |
-| Information supported | Existence and scope of 160-gene panel (Table S1, 284 KB) and 1020-gene panel (Table S2, 11 KB); supplementary figures S1–S22 |
-| Notes / limitations | Supplementary file content (probe sequences, exact gene lists, exact probe structures) was not directly retrieved for this draft. The existence, naming, and size metadata are reported from the Science article page. |
-| Access date | 2026-10-15 (existence confirmed) |
+| Information supported | V01 SNAIL probe design (Materials and Methods, "STARmap probe design", p. 3): shortest isoform, coding region, Picky 2.2, 40–46 nt per pair, 4 per gene, 20–25 nt halves with a 0–2 nt gap and matched Tm, probes under 60 nt; Fig. S1A legend (p. 10): 19–25 nt RNA-binding segments with designed Tm 60 °C, 6-nt primer–padlock arms with Tm below room temperature, hybridization at 40 °C, T4 DNA ligation; existence of Tables S1–S2 |
+| Notes / limitations | The supplementary PDF was retrieved on 2026-10-20 from PMC (author manuscript supplement NIHMS1001922-supplement-supplement.pdf, PMC6339868, SHA-256 4ad8429987017a22e5395d0b86bdc866f01e5eba938ed0320f320b75149dbc50; the Science file returned HTTP 403); only the probe-design section and the Fig. S1 legend were read. The Table S1/S2 workbooks (probe sequences, gene lists, barcode assignments) were not retrieved; their existence, naming, and size metadata are reported from the Science article page. |
+| Access date | 2026-10-15 (existence confirmed); 2026-10-20 (PDF probe-design section and Fig. S1 legend read) |
 
 ## Official Protocols
 

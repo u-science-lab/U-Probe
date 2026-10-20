@@ -18,7 +18,7 @@ A published probe sequence list is NOT automatically Grade A. Consider target/re
 | Field | Value |
 |-------|-------|
 | Dataset ID | D01 |
-| Dataset name | Supplementary Table S1: Probe sequences |
+| Dataset name | S01 Supplementary Data 1: Probe sequences (Table S1 in the preprint S02) |
 | Method version | V01 |
 | Species | Mouse (Mus musculus), Rat (Rattus norvegicus), Human (Homo sapiens), Zebrafish (Danio rerio) |
 | Cell / tissue / sample | Brain tissue (hypothalamus, hippocampus, PVN, cerebellum), cultured cells |
@@ -27,16 +27,16 @@ A published probe sequence list is NOT automatically Grade A. Consider target/re
 | Target genes | Multiple genes; examples include Cck, Penk, Crh, Oxt, Avp, Gad1, Npy, Kif5a, Snhg11, Tau, and 100+ genes in HDB experiments |
 | Target regions | Exon regions near 5' end of transcripts |
 | Genomic/transcript coordinates | Not provided in main text; expected in supplementary table |
-| Target-binding sequences | Expected in supplementary table; not directly accessed |
-| Full probe sequences | Expected in supplementary table (padlock probes and initiator primers); not directly accessed |
-| Barcode assignments | Expected in supplementary table; not directly accessed |
+| Target-binding sequences | Padlock arms and primer target parts, in S01 Supplementary Data 1 (41551_2024_1205_MOESM5_ESM.xlsx), sheets 'Fig 1' to 'Fig6'; see probes.md (examined 2026-10-20) |
+| Full probe sequences | Padlock probes and initiator primers, in S01 Supplementary Data 1 (41551_2024_1205_MOESM5_ESM.xlsx), sheets 'Fig 1' to 'Fig6'; see probes.md (examined 2026-10-20) |
+| Barcode assignments | Not listed separately; B1 and B2 (3 nt each) are read from the padlock sequences (derived; see probes.md) |
 | Readout sequences | Fixed; not dataset-specific |
-| Primer/linker sequences | Initiator primer sequences expected in supplementary table; not directly accessed |
+| Primer/linker sequences | Initiator primers in the per-figure sheets; anchors, query and detection probes in sheet 'In Situ Sequencing probe'; see probes.md |
 | Design software | Self-developed probe searching program (specific name not reported) |
 | Design parameters | Arm length: 12-16 bp; 2 target sites per gene; exon-proximal selection |
 | Source | S01, Supplementary Data |
 | Availability | Available as supplementary material with S01 |
-| Missing information | Genome build, annotation version, complete probe sequences (not directly verified), barcode library sequences, codebook mapping |
+| Missing information | Genome build, annotation version, target coordinates, design criteria, codebook mapping |
 | Benchmark grade | Unassessed |
 | Grade justification | Probe sequences are reported as available in supplementary materials (S01), but direct access to the supplementary table was not performed during this research phase. Without verifying the actual probe sequences, codebook assignments, and reference genome/annotation context, formal grade assignment is not possible. |
 | Comparison scope | Probe design algorithm comparison, target region selection validation, barcode assignment verification |

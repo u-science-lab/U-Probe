@@ -23,11 +23,11 @@ Simultaneous detection of DNA, RNA, proteins, and biomolecules at subcellular re
 
 ## Original Publication
 
-Wu X, Xu W, Deng L, Li Y, Wang Z, et al. (2024) Spatial multi-omics at subcellular resolution via high-throughput in situ pairwise sequencing. *Nature Biomedical Engineering* 8:XXX–XXX. DOI: 10.1038/s41551-024-01205-7. PMID: [pending].
+Wu X, Xu W, Deng L, Li Y, Wang Z, et al. (2024) Spatial multi-omics at subcellular resolution via high-throughput in situ pairwise sequencing. *Nature Biomedical Engineering* 8(7):872–889. DOI: 10.1038/s41551-024-01205-7. PMID: 38745110.
 
 ## Brief Summary
 
-MiP-seq is a targeted in situ sequencing method that uses dual-barcode padlock probes and rolling-circle amplification (RCA) for multiplexed detection of DNA, RNA, proteins, and biomolecules. Each padlock probe contains two barcodes (B1 and B2), enabling 10N gene decoding capacity with N rounds of sequencing via pairwise sequencing-by-ligation. The method achieves subcellular resolution, single-nucleotide specificity, and can detect allele-specific expression and RNA modifications (e.g., m6A). An official Python toolkit (InnerEye) handles image processing, decoding, and spatial analysis.
+MiP-seq is a targeted in situ sequencing method that uses dual-barcode padlock probes and rolling-circle amplification (RCA) for multiplexed detection of DNA, RNA, proteins, and biomolecules. Each padlock probe contains two barcodes (B1 and B2), enabling 10^N gene decoding capacity with N rounds of sequencing via pairwise sequencing-by-ligation. The method achieves subcellular resolution, single-nucleotide specificity, and can detect allele-specific expression and RNA modifications (e.g., m6A). An official Python toolkit (InnerEye) handles image processing, decoding, and spatial analysis.
 
 ## Known Versions
 

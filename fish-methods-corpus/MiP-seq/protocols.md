@@ -92,7 +92,9 @@ For RNA detection:
 - Hybridization buffer: 2× SSC, 10% formamide, 20 mM RVC
 - Incubation: overnight at 37°C
 
-For DNA detection:
+For DNA detection (cultured cells), RNA is digested and the DNA denatured before hybridization [reported; S02, Methods, 'MiP-Seq for in situ DNA detection'; V01]:
+- RNA digestion: 100 µg/mL RNase A (Thermo Fisher, EN0531) in 2× SSC, 2 h at 37°C, then three 2-min washes in 2× SSC (after an ethanol series, PBST washes and 5 min in 0.1 M HCl)
+- DNA denaturation: 70% formamide in 2× SSC at 85°C for 10 min, then quickly through 70%, 80%, 90% and 100% ethanol (5 min each) and air-dried for 5 min
 - Padlock probe concentration: 100 nM
 - Initiator primer concentration: 100 nM
 - Hybridization solution: 10% formamide in 2× SSC
@@ -131,7 +133,8 @@ After hybridization:
 - Enzyme: Phi29 polymerase (Vazyme, N106-01)
 - Concentration: 1 U/µL
 - Buffer: 1× RCA buffer
-- dNTPs: 0.25 µM
+- dNTPs: 0.25 µM, as printed in S02 Methods for both the RNA and the DNA RCA mixes. This is probably 0.25 mM (250 µM), the usual dNTP concentration for Phi29 RCA: 0.25 µM is about 1,000-fold lower, and the DNA mix adds 2 µM dUTP, more than the stated dNTP. The published Methods (S01) were not accessible to check.
+- dUTP: 2 µM (DNA detection only) [reported; S02, Methods, 'MiP-Seq for in situ DNA detection']
 - BSA: 0.2 µg/µL
 - Glyceryl: 5%
 - Incubation temperature: 30°C
@@ -157,7 +160,7 @@ Not applicable.
 
 - Buffer: 60% formamide in 2× SSC
 - Duration: 10 min at room temperature
--重复: Two times
+- Repeats: two times (10 min each) [reported; S02, Methods, 'MiP-Seq for in situ RNA detection']
 
 ### Sequential Dilution Strategy (Optional)
 
@@ -220,8 +223,6 @@ No significant version differences were identified for V01. The preprint (2023) 
 - Exact sodium chloride concentrations beyond 2× SSC
 - Detailed washing volumes
 - Specific Cat/Dog/Lamp/Pax/etc. gene selection criteria beyond "exon close to 5' end"
-- Complete barcode library sequences
-- Exact sequence of anchor primers and query probes
 - Minimum number of probes per gene for robust detection
 - Specificity filtering criteria
 - Off-target alignment parameters

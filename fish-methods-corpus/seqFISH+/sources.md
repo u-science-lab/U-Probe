@@ -27,6 +27,29 @@ Source IDs are method-local. Access/inspection date: 2026-10-15. V01 denotes the
 | Access date | 2026-10-15 |
 | Release / commit / checksum | Published-layout 24-page PDF; evidence/paper.pdf: 47d9fe62695a7ca8b7a4d1d24e1d0b1e3a6497ff4369842ff5bcf66e3f2fcb52 |
 
+### S12 — Shah et al. 2016, the error-correction scheme cited by S01
+
+| Field | Value |
+|---|---|
+| Source ID | S12 |
+| Source type | Earlier developer peer-reviewed paper and its supplement (S01 reference 3) |
+| Citation | Shah, S., Lubeck, E., Zhou, W. & Cai, L. Neuron 92, 342–357 (2016) |
+| Title | In situ transcription profiling of single cells reveals spatial organization of cells in the mouse hippocampus |
+| Authors | Sheel Shah; Eric Lubeck; Wen Zhou; Long Cai |
+| Year | 2016 |
+| DOI | 10.1016/j.neuron.2016.10.001 |
+| PMID | 27764670 |
+| Official URL | [Publisher DOI](https://doi.org/10.1016/j.neuron.2016.10.001); [full text](https://pmc.ncbi.nlm.nih.gov/articles/PMC5087994/) |
+| Repository / accession | PMCID PMC5087994; publisher supplement 1-s2.0-S0896627316307024-mmc1.pdf |
+| Method version | Predecessor seqFISH (not a seqFISH+ version); source of the V01 error-correction scheme |
+| Relevant figures | Fig. 1D (error-correction round) |
+| Relevant tables | None used |
+| Relevant supplementary files | mmc1.pdf, Supplementary Text "Error correction barcode design", p. 20 |
+| Information supported | One extra hybridization round makes barcodes tolerant to the loss of one round; published generator (i, (i+j+k) mod 5, j, k) for 5 colours. The base-20 seqFISH+ formula is not stated here |
+| Notes / limitations | Read for the error-correction scheme only |
+| Access date | 2026-10-20 |
+| Release / commit / checksum | mmc1.pdf (22 pages) SHA-256 106e3e3157647ff2fb243abcd0d1b0534fca358c0b86fc0a5e37e544d737d05d |
+
 ## Supplementary Materials
 
 ### S02 — Supplementary Table 1, codebook

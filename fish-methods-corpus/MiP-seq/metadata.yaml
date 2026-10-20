@@ -28,7 +28,7 @@ publication:
   original_year: 2024
   original_reference: "S01"
   doi: "10.1038/s41551-024-01205-7"
-  pmid: null
+  pmid: "38745110"
 # Records: version_id, version_name, year, reference, status.
 versions:
   - version_id: "V01"

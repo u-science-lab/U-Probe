@@ -33,7 +33,7 @@ No provisional grades or file-size-based content predictions are assigned. Later
 | Readout sequences | Not yet examined in the original workbook; do not infer completeness from the file title or size. |
 | Primer/linker sequences | Not yet examined in the original workbook; do not infer completeness from the file title or size. |
 | Design software | Exact implementation for this dataset unverified. Later S03 describes Picky 2.2 + Dedupe/BBMap + NUPACK + BLAST; S05 equivalence and original-panel use are unverified. |
-| Design parameters | Exact parameters for this dataset unverified. Later S03 recommendations are separately scoped in probes.md; they are not original-panel ground truth. |
+| Design parameters | The V01 design rules are reported in S02 ("STARmap probe design", p. 3; Fig. S1A legend, p. 10; see probes.md): shortest isoform, coding region, Picky 2.2, 40–46 nt split into 20–25 nt halves with a 0–2 nt gap, designed Tm 60 °C, 4 pairs per gene. Whether every probe of this dataset followed them is unverified. Later S03 recommendations are separately scoped in probes.md; they are not original-panel ground truth. |
 | Source | S01 supplementary-materials section; S02 workbook reference, Table S1 (V01); workbook contents not inspected. |
 | Availability | Science article page; existence confirmed; content not directly retrieved for this draft |
 | Missing information | Supplementary table content (probe sequences, barcode assignments, coordinates, per-gene target regions); the exact genome build and transcriptome annotation version used for design; the per-step design parameters actually used; the reference build for the BLAST specificity filter |
@@ -63,8 +63,8 @@ No provisional grades or file-size-based content predictions are assigned. Later
 | Readout sequences | Not yet examined in the original workbook; do not infer completeness from the file title or size. |
 | Primer/linker sequences | Not yet examined in the original workbook; do not infer completeness from the file title or size. |
 | Design software | Exact implementation for this dataset unverified. Later S03 describes Picky 2.2 + Dedupe/BBMap + NUPACK + BLAST; S05 equivalence and original-panel use are unverified. |
-| Design parameters | Exact parameters for this dataset unverified. Later S03 recommendations are separately scoped in probes.md; they are not original-panel ground truth. |
-| Source | S01 supplementary-materials section; S02 workbook reference, Table S2 (V01); workbook contents not inspected. |
+| Design parameters | The V01 design rules are reported in S02 ("STARmap probe design", p. 3; Fig. S1A legend, p. 10; see probes.md): shortest isoform, coding region, Picky 2.2, 40–46 nt split into 20–25 nt halves with a 0–2 nt gap, designed Tm 60 °C, 4 pairs per gene. Whether every probe of this dataset followed them is unverified. Later S03 recommendations are separately scoped in probes.md; they are not original-panel ground truth. |
+| Source | S01 supplementary-materials section; S02 workbook reference, Table S2 (V01); workbook contents not inspected. Note: S02 ("STARmap probe design", p. 3) says "All sequences were included in Table S1 (SNAIL probes) and Table S2 (SEDAL probes)", so Table S2 may hold the sequencing probes rather than a 1,020-gene panel; the identification of D02 with a 1,020-gene panel is unverified. |
 | Availability | Science article page; existence confirmed; content not directly retrieved for this draft |
 | Missing information | Same as D01 |
 | Benchmark grade | Unassessed |

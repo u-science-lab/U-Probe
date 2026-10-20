@@ -36,7 +36,7 @@ versions:
 probe:
   architecture_type: reverse-padlock, linear priming, and encoding probes
   target_binding: adjacent RNA-binding probes; lengths differ by variant
-  barcode_system: null
+  barcode_system: 'V01: 94-bit binary codes, Hamming weight 4, minimum Hamming distance 4 (MHD4), read in 47 dual-color rounds. V02: 14-bit, weight-4, HD2 codes; see probes.md.'
   readout_system: sequential fluorescent oligo hybridization
   amplification: rolling circle amplification
   sequencing_or_imaging: imaging

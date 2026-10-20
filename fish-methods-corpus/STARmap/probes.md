@@ -13,9 +13,9 @@ Primer: 5′ — [19–25 nt RNA-targeting region] — [12 nt padlock-pairing re
 Padlock: 5′ phosphate — [6 nt primer-pairing end] — [internal target/barcode/readout regions] — [6 nt primer-pairing end] — 3′ OH
 ```
 
-Reported component inventory: S03, Padlock and primer probe design, pp. 8–9 (V01/V02 architecture). The padlock internal regions include a 19–25 nt target region, 1–5 nt barcode and 12 nt reading-probe-hybridizing region. The prose groups both terminal 6-nt segments together rather than giving an unambiguous continuous sequence map; internal order and the precise relationship between the internal barcode and barcode-containing terminal pairing regions are left unresolved here. S03 explicitly permits a barcode within the paired terminal regions when needed. Do not assert that the primer's 12 nt must complement only the separate internal barcode, or that the terminal arms exclude barcode information. Primer order is consistent with the example oligos in S03 Table 2 (inferred from sequence structure). This is a schematic, not a synthesis sequence.
+Reported component inventory: S03, Padlock and primer probe design, pp. 8–9 (V01/V02 architecture). The padlock internal regions include a 19–25 nt target region, 1–5 nt barcode and 12 nt reading-probe-hybridizing region. The prose groups both terminal 6-nt segments together rather than giving an unambiguous continuous sequence map; internal order and the precise relationship between the internal barcode and barcode-containing terminal pairing regions are left unresolved here. S03 explicitly permits a barcode within the paired terminal regions when needed. Do not assert that the primer's 12 nt must complement only the separate internal barcode, or that the terminal arms exclude barcode information. Primer order is consistent with the example oligos in S03 Table 2 (inferred from sequence structure). For V01, S02 (Fig. S1A legend, p. 10) reports the 19–25 nt RNA-binding segment on each probe and the 6-nt primer–padlock pairing on each arm; it does not give the 12-nt or barcode segment lengths. This is a schematic, not a synthesis sequence.
 
-The two RNA-hybridizing sites have a recommended **1–2 nt interspace** in S03 design. They are distinct from the padlock ends that pair with the primer. Exact target-strand placement requires the selected oligo/reference pair; no assembled RNA/padlock linear diagram is asserted. Ligation closes the padlock's 3′ OH and 5′ phosphate. RCA produces tandem complements of that circle (S03 Overview).
+The two RNA-hybridizing sites have a recommended **1–2 nt interspace** in S03 design (0–2 nt in the V01 design, S02 p. 3). They are distinct from the padlock ends that pair with the primer. Exact target-strand placement requires the selected oligo/reference pair; no assembled RNA/padlock linear diagram is asserted. Ligation closes the padlock's 3′ OH and 5′ phosphate. RCA produces tandem complements of that circle (S03 Overview).
 
 ### SEDAL oligos (5′ → 3′)
 
@@ -52,6 +52,14 @@ Original terms are retained beside functional identifiers. Primer/padlock pairin
 | Field | Reported value / rule | Version / experiment scope | Evidence status | Source / locator |
 |---|---|---|---|---|
 | Target type | RNA recognition without reverse transcription | V01 | reported | S01 Results, SNAIL; V01 |
+| Target region | Coding region of the shortest isoform for genes with several isoforms; non-coding RNAs used whole ("only the shortest isoforms were considered and the coding regions were used except for non-coding RNAs") | V01 | reported | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Probe length | 40–46 nt hybridization sequence per primer/padlock pair, designed with Picky 2.2, split into halves of 20–25 nt; the Fig. S1A legend gives 19–25 nt per probe; "All the probes were under 60 nt" | V01 | reported | S02 Materials and Methods, "STARmap probe design", p. 3; V01; S02 Fig. S1A legend, p. 10; V01 |
+| GC constraints | None stated in the V01 design section | V01 | unavailable | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Tm constraints | Each probe's RNA-binding segment is designed to a Tm of 60 °C; the 40–46 nt sequence is split for "the best match of melting temperature (Tm) between the two halves"; the 6-nt primer–padlock pairing has a Tm below room temperature, negligible during DNA–RNA hybridization at 40 °C | V01 | reported | S02 Fig. S1A legend, p. 10; V01; S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Specificity filtering | No transcriptome off-target, BLAST or secondary-structure screen stated in the V01 design section | V01 | unavailable | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Isoform handling | Shortest isoform only | V01 | reported | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Spacing | 0–2 nt gap between the two halves, i.e. between the primer and padlock target sites | V01 | reported | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
+| Number of probes per target | "4 sequences for each gene were designed" (4 primer/padlock pairs per gene) | V01 | reported | S02 Materials and Methods, "STARmap probe design", p. 3; V01 |
 | Target region | Isoforms extracted from target-species transcriptome and consensus coding sequence databases; no universal ORF/UTR placement asserted | V02 design recommendations | reported | S03 design section, pp. 8–9; V02 design recommendations |
 | Probe length | 40–46 nt candidate hybridization sequence split into two 19–25 nt segments; preserve these source ranges without assuming all endpoint combinations coexist | V02 | reported | S03 design section, pp. 8–9; V02 |
 | GC constraints | Recommended 30–70% | V02 | reported | S03 design section, p. 9; V02 |
@@ -65,7 +73,7 @@ Original terms are retained beside functional identifiers. Primer/padlock pairin
 | Overlap | Dedupe from BBMap removes overlaps and containments from candidate pool | V02 | reported | S03 design section, p. 9; V02 |
 | Number of probes per target | Typically 3–6 primer/padlock pairs per transcript suggested for budget; ideally design >6 pairs before filtering. Two molecular species per pair does not mean only one pair per gene | V02 | reported | S03 design section, p. 9; V02 |
 
-These later recommendations do not identify the reference build, annotation release or exact software settings used for the original 160-/1,020-gene panels.
+V01 rows come from the original supplementary materials (S02 PDF, read 2026-10-20); they name Picky 2.2 but no reference build, annotation release or other software settings. V02 rows are the later S03 recommendations, which do not identify the reference build, annotation release or exact software settings used for the original 160-/1,020-gene panels. The sources differ on the half length (20–25 nt in S02 Methods, 19–25 nt in the S02 Fig. S1A legend and S03) and the gap (0–2 nt in S02, 1–2 nt in S03).
 
 ## Barcode System
 
@@ -96,7 +104,7 @@ S03 Step 24 (V02 protocol) specifies 250 µM dNTP mixture and 20 µM aminoallyl-
 
 ## Chemical Modifications
 
-Reported modifications: padlock 5′ phosphate (S03 Table 2), reading-probe 5′ phosphate and 3′ inverted dT (Table 4), decoding-probe 5′ Alexa dyes (Table 5), and aminoallyl-dUTP incorporation (Step 24). V01 acrylic-NHS chemistry is reported by S01 HTC Results, but numerical V01 conditions are not in the examined main text; S02 remains unexamined. S11 Methods also reports acrylic NHS, at 20 mM in PBST for 1 h (V02 application), distinct from later S03 MA-NHS. S03 Steps 31–32 use MA-NHS at 25 mM in 100 mM bicarbonate, room temperature, 1 h, for the later V02 protocol. Nissl and DAPI are segmentation stains, not covalent oligo modifications. Protein comapping uses antibody incubation before MA-NHS and secondary antibody after sequencing (S03 Steps 28–30, 62–63).
+Reported modifications: padlock 5′ phosphate (S03 Table 2), reading-probe 5′ phosphate and 3′ inverted dT (Table 4), decoding-probe 5′ Alexa dyes (Table 5), and aminoallyl-dUTP incorporation (Step 24). V01 acrylic-NHS chemistry is reported by S01 HTC Results, but numerical V01 conditions are not in the examined main text; S02 was read for probe design only, not for these conditions. S11 Methods also reports acrylic NHS, at 20 mM in PBST for 1 h (V02 application), distinct from later S03 MA-NHS. S03 Steps 31–32 use MA-NHS at 25 mM in 100 mM bicarbonate, room temperature, 1 h, for the later V02 protocol. Nissl and DAPI are segmentation stains, not covalent oligo modifications. Protein comapping uses antibody incubation before MA-NHS and secondary antibody after sequencing (S03 Steps 28–30, 62–63).
 
 ## Probe-Design Workflow
 
@@ -109,7 +117,7 @@ S03 Padlock and primer probe design, pp. 8–9 (reported; later V02 recommendati
 5. Assign gene barcodes and assemble the paired probes; use separate SeqA/SeqB reading parts for >5 nt barcodes as described by S03.
 6. Remove strong secondary structures with NUPACK and probe heterodimers by BLAST against the probe-library minus strand; typically 10–20% of probes are removed.
 
-S03 does not establish that S05 implements this entire stack, or that the later stack generated the original 2018 panels. Exact original panel input/output files and reference releases remain unexamined in S02.
+S03 does not establish that S05 implements this entire stack, or that the later stack generated the original 2018 panels. For V01, S02 ("STARmap probe design", p. 3) reports a shorter procedure: shortest isoform, coding region (non-coding RNAs whole); Picky 2.2 for 40–46 nt hybridization sequences, four per gene; each split into halves of 20–25 nt with a 0–2 nt gap and the best Tm match between halves; all probes under 60 nt, ordered from IDT. Exact original panel input/output files (S02 Tables S1–S2) and reference releases remain unexamined.
 
 ## Official Probe-Design Software
 
@@ -117,7 +125,7 @@ The **developer-described pipeline** is the S03 multi-tool stack below. Use of t
 
 | Software name | Source/repository | Official status | Version | Programming language | Input | Output | Design logic | Dependencies | Availability | Maintenance status | Evidence status | Source / locator |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Picky | S03 cited tool | Developer-used external tool | 2.2 | Not examined | Target isoform sequences | Hybridization candidates | GC/Tm selection | Not examined | Named in protocol | Not examined | reported | S03 design section, p. 9; V02 |
+| Picky | S03 and S02 cited tool | Developer-used external tool | 2.2 | Not examined | Target isoform sequences | Hybridization candidates | GC/Tm selection (V02); 40–46 nt pair sequences, four per gene (V01) | Not examined | Named in protocol | Not examined | reported | S03 design section, p. 9; V02; S02 STARmap probe design, p. 3; V01 |
 | Dedupe / BBMap | S03 cited tool | Developer-used external tool | Not specified in examined section | Not examined | Candidate sequences | Deduplicated pool | Overlap/containment removal | Not examined | Named in protocol | Not examined | reported | S03 design section, p. 9; V02 |
 | NUPACK | S03 cited tool | Developer-used external tool | Not specified in examined section | Not examined | Full probes | Filtered candidates | Strong secondary structures | Not examined | Named in protocol | Not examined | reported | S03 design section, p. 9; V02 |
 | BLAST | S03 cited tool | Developer-used external tool | Not specified in examined section | Not examined | Probes vs probe-library minus strand | Heterodimer-filtered library | Probe–probe interactions | Not examined | Named in protocol | Not examined | reported | S03 design section, p. 9; V02 |
@@ -130,7 +138,7 @@ S04, S06, S07 and S08 are analysis resources, not probe-design implementations. 
 | Dataset ID | Release / accession | Method version | Contents | Availability / access date | Source / locator |
 |---|---|---|---|---|---|
 | D01 | aat5691_wang_sm_table-s1.xlsx | V01 | Original supplementary workbook candidate; exact sheets, sequence completeness and assignments unexamined | Referenced by S01/S02; direct content not retrieved | S02 Table S1; S01 supplementary section |
-| D02 | aat5691_wang_sm_table-s2.xlsx | V01 | Original supplementary workbook candidate; exact contents unexamined; file sizes are not interpreted | Referenced by S01/S02; direct content not retrieved | S02 Table S2; S01 supplementary section |
+| D02 | aat5691_wang_sm_table-s2.xlsx | V01 | Original supplementary workbook candidate; exact contents unexamined; S02 p. 3 describes Table S2 as the SEDAL probes; file sizes are not interpreted | Referenced by S01/S02; direct content not retrieved | S02 Table S2; S01 supplementary section |
 | D03 | ClusterMap/datasets/RawImage | V01-related | Image-resource candidate; full inventory and any accompanying codebooks unexamined | Prior existence record; not re-inventoried in Fix | S08 repository; see benchmarks.md |
 | D04 | SCP1375 | V02 | STARmap PLUS data deposit; complete file inventory unexamined | Reported by S11 Data availability | S09; S11 Data availability |
 | D05 | 10.5281/zenodo.7332091 | V02 | Companion deposit; complete inventory unexamined | Reported by S11 Data availability | S10; S11 Data availability |
@@ -143,4 +151,4 @@ V01 has a five-base identifier and acrylic-NHS HTC (S01 Results). V02 STARmap PL
 
 ## Unresolved Information
 
-Original S02 workbook contents, full original supplementary procedure, reference assemblies/annotation releases, coordinates (including origin, interval convention and strand), original panel software settings, and complete dataset inventories remain unexamined. Exact placement/overlap of the internal barcode and barcode-containing terminal pairing segments is not resolved from the inspected S03 prose. S03 Table 4 and Step 61 differ in the listed SeqB range, and its overview length is not imposed on every listed oligo. Mixed-base chemistry wording in Tables 4–5 requires care. Explicit repeat-masking/exon-selection algorithms and a minimum barcode Hamming distance were not found in the examined S03 design section. Software maintenance and S05 equivalence to the later pipeline remain unverified. These gaps do not license invented sequences or Grade A/B ground truth.
+Original S02 workbook contents (Tables S1–S2), the parts of the S02 supplementary procedure beyond probe design, reference assemblies/annotation releases, coordinates (including origin, interval convention and strand), original panel software settings, and complete dataset inventories remain unexamined. Exact placement/overlap of the internal barcode and barcode-containing terminal pairing segments is not resolved from the inspected S03 prose. S03 Table 4 and Step 61 differ in the listed SeqB range, and its overview length is not imposed on every listed oligo. Mixed-base chemistry wording in Tables 4–5 requires care. Explicit repeat-masking/exon-selection algorithms and a minimum barcode Hamming distance were not found in the examined S03 design section. Software maintenance and S05 equivalence to the later pipeline remain unverified. These gaps do not license invented sequences or Grade A/B ground truth.

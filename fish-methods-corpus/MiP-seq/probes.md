@@ -11,52 +11,55 @@ MiP-seq employs a dual-component probe system comprising: (1) a padlock probe co
 Schematic 5'→3':
 
 ```
-5' — [Target-binding arm 1 (12-16 bp)] — [Anchor primer complementary region] — [Barcode B1] — [Barcode B2] — [Initiator primer complementary region] — [Target-binding arm 2 (12-16 bp)] — 3'
+5'P — [Target-binding arm 1 (13)] — CC — [Barcode B1 (3)] — TGCGTCTATTT — GT — [Barcode B2 (3)] — TAGTGGAGCCT — [Target-binding arm 2 (13)] — 3'
 ```
 
-Note: Exact orientation and component order requires verification from source figures. The above represents the functional architecture as described.
+58 nt; lengths in nt. Example: Th-1-PLP-1 = GGTGGATTTTGGC-CC-GAG-TGCGTCTATTT-GT-CAT-TAGTGGAGCCT-CGGGTCTCTAAGT. All 434 58-nt padlocks in sheet 'Fig 3' follow this order [reported sequences, derived segmentation; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel); V01]. TGCGTCTATTT and TAGTGGAGCCT are the sequences of anchors Anchor-L-1 and Anchor-R-1 (sheet 'In Situ Sequencing probe'), so the anchors hybridize to the rolling-circle product next to B1 and B2; TAGTGGAGCCT is also the site of the initiator primer's 3′ tail. The Methods give 12–16 bp arms (S02, Methods, MiP-Seq probe design (3)); the published panel uses 13 + 13. Arm 1 (5′ end, 5′-phosphate) pairs with the 5′-side RNA segment and arm 2 with the segment immediately 3′ of it, so the ligation junction lies between the two arm sites [derived: Th-1 and Th-2 arms map contiguously to mouse Th RefSeq NM_009377.2, nt 359–384 and 478–503]. Other sheets of Supplementary Data 1 (e.g. 'Fig 1', 'Fig 2', 'Fig 4', 'Fig 5', 'Fig6') also use backbones read by fluorescent detection probes instead of pairwise sequencing.
 
 ### Initiator Primer (IP, DNA oligo)
 
 Schematic 5'→3':
 
 ```
-5' — [Target-binding region (12-16 bp)] — [Padlock probe complementary region] — 3'
+5' — [Target-binding region (12-16 bp)] — [short spacer] — AGGCTCCACTA — 3'
 ```
 
-The initiator primer binds both the target RNA and the padlock probe, forming a three-way junction that increases specificity.
+Example: Th-1-RCA-2 = GCCTCTGGGCAGG-C-AGGCTCCACTA (25 nt); the 432 primers of sheet 'Fig 3' are 25 nt (247) or 26 nt (185) and all end in AGGCTCCACTA [reported sequences, derived counts; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel); V01]. The 3′ tail AGGCTCCACTA is complementary to TAGTGGAGCCT on the padlock, so the primer's 3′ end sits on the circularized padlock and primes rolling-circle amplification ("RCA initiator primer probe for target-dependent RCA"; "the 3' end is complementary to the padlock probe": S02, Methods, MiP-Seq probe design, opening sentence and item 4). Its RNA-binding part binds 1 nt 3′ of the padlock arm sites in Th-1/Th-2 [derived, NM_009377.2]. The initiator primer binds both the target RNA and the padlock probe, forming a three-way junction that increases specificity.
 
 ### Anchor Primers (for sequencing-by-ligation)
 
-Three anchor primers are used: anchor-1, anchor-2, and anchor-3.
+The Methods name three anchor primers (anchor-1, anchor-2, anchor-3; S02, Methods, MiP-Seq probe design (6)); the published list has each as a left (B1) and right (B2) anchor, all 5′-phosphorylated [reported; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise'; V01]:
 
-These primers bind adjacent to the barcode region on the circularized padlock probe and provide binding sites for fluorescent query probes.
+- Anchor-L-1 /5Phos/TGCGTCTATTT; Anchor-L-2 /5Phos/NTGCGTCTATT; Anchor-L-3 /5Phos/NNTGCGTCTAT
+- Anchor-R-1 /5Phos/TAGTGGAGCCT; Anchor-R-2 /5Phos/NTAGTGGAGCC; Anchor-R-3 /5Phos/NNTAGTGGAGC
+
+They carry the padlock's own sequence, so they hybridize to the rolling-circle product (the complement of the circle) next to B1 (L) and B2 (R). Each shift by N moves the read one barcode base further from the anchor: anchors -1, -2 and -3 read barcode bases 3, 2 and 1 [derived from the sequences]. A paired-end variant uses one middle anchor, Anchor-middle-1 /5Phos/GCGUCUAUUUAGUGGAGCCU (as published), with 5′-phosphorylated, 3′-dye queries 2merge2-R-F1–F4 (/5Phos/ANNNNN/3Alex488/, /5Phos/GNNNNN/3Alex546/, /5Phos/CNNNNN/3Alex594/, /5Phos/TNNNNN/3Alex647/) [reported; same sheet, section 'Paired-end'].
 
 ### Query Probes (fluorescent readout oligos)
 
-Four query probes are used, each conjugated to a different fluorophore:
-- seq-1: Alexa Fluor 488
-- seq-2: Alexa Fluor 546
-- seq-3: Alexa Fluor 594
-- seq-4: Alexa Fluor 647
+Four query probes are used, each conjugated to a different fluorophore (seq-1 to seq-4 in S02, Methods, MiP-Seq probe design (6)); the published sequences are 5′-dye 6-mers whose 3′ base is the interrogated base [reported; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise'; V01]:
+- 2merge1-L-F1 /5Alex488/NNNNNA: Alexa Fluor 488 = A
+- 2merge1-L-F2 /5Alex546/NNNNNG: Alexa Fluor 546 = G
+- 2merge1-L-F3 /5Alex594/NNNNNC: Alexa Fluor 594 = C
+- 2merge1-L-F4 /5Alex647/NNNNNT: Alexa Fluor 647 = T
 
-Query probes interrogate paired bases in the dual barcodes during sequencing-by-ligation.
+The query's 3′ end is ligated to the 5′-phosphate of an anchor, so in each round the same query set reads one B1 base (on an L anchor) and one B2 base (on an R anchor) of every RCP [derived from the sequences]. The same sheet lists a swapped set (section 'A-C base fluorophores swap Pairwise Sequencing': /5Alex594/NNNNNA, /5Alex488/NNNNNC).
 
 ## Probe Components
 
 | Component | Original term | Function | Position | Orientation | Length | Sequence | Sequence class | Required | Design rule | Evidence status | Source / locator |
 |-----------|--------------|----------|----------|------------|--------|----------|----------------|----------|-------------|-----------------|------------------|
-| Target-binding arm 1 | Not explicitly named | Hybridize to target sequence | 5' end of padlock | 5'→3' (complimentary to target) | 12-16 bp | Not provided | variable | yes | Complementary to target region | reported | S01, Fig. 1B |
-| Target-binding arm 2 | Not explicitly named | Hybridize to target sequence | 3' end of padlock | 3'→5' (complimentary to target) | 12-16 bp | Not provided | variable | yes | Complementary to target region | reported | S01, Fig. 1B |
-| Barcode B1 | Barcode 1, B1 | Encode gene identity (first position) | Central region of padlock | Not reported | Not reported | Not provided | barcode_library | yes | Fixed per gene; from barcode library | reported | S01, Fig. 1B |
-| Barcode B2 | Barcode 2, B2 | Encode gene identity (second position) | Central region of padlock | Not reported | Not reported | Not provided | barcode_library | yes | Fixed per gene; from barcode library | reported | S01, Fig. 1B |
-| Anchor primer binding region | Not explicitly named | Provide binding site for anchor primers | Adjacent to barcodes | Not reported | Not reported | Not provided | fixed | yes | Constant across all probes | reported | S01, Fig. 1B |
-| Initiator primer binding region | Not explicitly named | Complementary to initiator primer | Central region of padlock | Not reported | Not reported | Not provided | fixed | conditional | Required only when initiator primer is used | reported | S01, Fig. 1B |
-| IP target-binding region | Initiator primer (IP), "target arm" | Hybridize to target RNA | 5' end of IP | 5'→3' (complimentary to target) | 12-16 bp | Not provided | variable | conditional | Complementary to target; 3' end of targeting region | reported | S01, Fig. 1B, Materials and Methods |
-| IP padlock-binding region | Initiator primer (IP) | Complementary to padlock probe | 3' end of IP | 3'→5' (complimentary to padlock) | Not reported | Not provided | fixed | conditional | Constant across all probes | reported | S01, Fig. 1B |
-| Anchor primer | Anchor primer | Sequencing primer for SBL | Adjacent to barcode on RCP | Not reported | Not reported | Not provided | fixed | yes | Three variants: anchor-1, anchor-2, anchor-3 | reported | S01, Materials and Methods |
-| Query probe | Query probe, seq-1/2/3/4 | Fluorescent readout | Binds to anchor-barcode complex | Not reported | Not reported | Not provided | fixed | yes | Four probes with different fluorophores | reported | S01, Materials and Methods |
-| Detection probe | cy3-p4 | RCA efficiency testing | Binds to RCP | Not reported | Not reported | Not provided | fixed | no | Complementary to padlock backbone | reported | S01, Materials and Methods |
+| Target-binding arm 1 | Not explicitly named | Hybridize to target sequence | 5' end of padlock (5'-phosphate), nt 1-13 | Antisense (complementary to target); pairs with the 5'-side RNA segment | 12-16 bp (Methods); 13 nt in sheet 'Fig 3' | Per target; e.g. GGTGGATTTTGGC (Th-1-PLP-1) | variable | yes | Complementary to target region | reported (Methods, sequences); derived (position) | S02, Methods, MiP-Seq probe design (3); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| Target-binding arm 2 | Not explicitly named | Hybridize to target sequence | 3' end of padlock, nt 46-58 | Antisense (complementary to target); pairs with the RNA segment immediately 3' of arm 1's | 12-16 bp (Methods); 13 nt in sheet 'Fig 3' | Per target; e.g. CGGGTCTCTAAGT (Th-1-PLP-1) | variable | yes | Complementary to target region | reported (Methods, sequences); derived (position) | S02, Methods, MiP-Seq probe design (3); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| Barcode B1 | Barcode 1, B1 | Encode gene identity (first position) | nt 16-18, between CC and TGCGTCTATTT | Padlock sense | 3 nt | Per gene; e.g. GAG (Th) | barcode_library | yes | Fixed per gene | derived (from published padlock sequences) | S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| Barcode B2 | Barcode 2, B2 | Encode gene identity (second position) | nt 32-34, between GT and TAGTGGAGCCT | Padlock sense | 3 nt | Per gene; e.g. CAT (Th) | barcode_library | yes | Fixed per gene | derived (from published padlock sequences) | S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| Anchor primer binding region | Not explicitly named | Its sequence is the anchor sequence; anchors hybridize to the RCP copy of it | 3' of B1 (TGCGTCTATTT, nt 19-29) and 3' of B2 (TAGTGGAGCCT, nt 35-45) | Padlock sense | 11 nt each | TGCGTCTATTT; TAGTGGAGCCT | fixed | yes | Constant across the pairwise-sequencing padlocks | derived (from published sequences) | S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise' |
+| Initiator primer binding region | Not explicitly named | Pairs with the initiator primer's 3' tail AGGCTCCACTA | nt 35-45, between B2 and arm 2 (same as the B2 anchor sequence) | Padlock sense | 11 nt | TAGTGGAGCCT | fixed | conditional | Required only when initiator primer is used | derived (from published sequences) | S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| IP target-binding region | Initiator primer (IP), "target arm" | Hybridize to target RNA | 5' end of IP | Antisense (complementary to target) | 12-16 bp | Per target; e.g. GCCTCTGGGCAGG (Th-1-RCA-2) | variable | conditional | Complementary to target; 3' end of targeting region | reported | S02, Methods, MiP-Seq probe design (4); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| IP padlock-binding region | Initiator primer (IP) | Pairs with TAGTGGAGCCT on the padlock; its 3' end primes RCA | 3' end of IP, after a short spacer (1 nt in Th-1-RCA-2) | Complementary to padlock | 11 nt | AGGCTCCACTA | fixed | conditional | Constant across all probes (all 432 primers in sheet 'Fig 3') | reported (Methods, sequences); derived (count) | S02, Methods, MiP-Seq probe design (4); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
+| Anchor primer | Anchor primer; Anchor-L-1/2/3, Anchor-R-1/2/3 | Sequencing primer for SBL | Hybridizes to the RCP next to B1 (L) or B2 (R) | Padlock sense; 5' phosphate | 11 nt (N-shifted forms include 1-2 N) | /5Phos/TGCGTCTATTT, /5Phos/NTGCGTCTATT, /5Phos/NNTGCGTCTAT; /5Phos/TAGTGGAGCCT, /5Phos/NTAGTGGAGCC, /5Phos/NNTAGTGGAGC | fixed | yes | Three positions (anchor-1, -2, -3) for each barcode | reported | S02, Methods, MiP-Seq probe design (6); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise' |
+| Query probe | Query probe, seq-1/2/3/4; 2merge1-L-F1 to F4 | Fluorescent readout | Ligated to the 5' phosphate of an anchor on the RCP | 5'-dye; 3' base is read | 6 nt | /5Alex488/NNNNNA, /5Alex546/NNNNNG, /5Alex594/NNNNNC, /5Alex647/NNNNNT | fixed | yes | Four probes with different fluorophores, one per base | reported | S02, Methods, MiP-Seq probe design (6); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise' |
+| Detection probe | cy3-p4; CY3-P4 | RCA efficiency testing | Binds to RCP | 5'-Cy3 | 20 nt | /5CY3/TGCGTCTATTTAGTGGAGCC | fixed | no | Complementary to the RCP | reported | S02, Methods, MiP-Seq probe design (5); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Fluorescent probe for detection' |
 
 ## Target-Binding Design
 
@@ -80,9 +83,9 @@ Query probes interrogate paired bases in the dual barcodes during sequencing-by-
 
 | Field | Reported value / rule | Version / experiment scope | Evidence status | Source / locator |
 |-------|---------------------|---------------------------|-----------------|-----------------|
-| Barcode length | Not explicitly reported | V01 | unavailable | — |
+| Barcode length | 3 nt each (B1 and B2) | V01, pairwise-sequencing padlocks | derived (from published padlock sequences; three anchor positions read 3 bases) | S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel); S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise' |
 | Number of barcodes | 2 per probe (dual barcode: B1 and B2) | V01 | reported | S01, Fig. 1B |
-| Codebook | 10 dual-base combinations per round; 10N total codes with N rounds | V01 | reported | S01, Fig. 1C |
+| Codebook | 10 dual-base combinations per round; 10^N total codes with N rounds | V01 | reported | S01, Fig. 1C |
 | Hamming distance | Not reported | — | unavailable | — |
 | Error correction | Pairwise sequencing provides base-pairing validation; dual-channel intensity correlation | V01 | inferred | S01, Fig. S2 |
 | Round assignment | Genes assigned to barcode combinations across multiple rounds | V01 | reported | S01, Fig. 1B-VI |
@@ -104,20 +107,20 @@ Query probes interrogate paired bases in the dual barcodes during sequencing-by-
 
 See Probe Components table above. Key sequences:
 
-- **Anchor primers**: Fixed sequences; three variants used for sequencing-by-ligation
-- **Query probes**: Fixed fluorophore conjugations; four variants (seq-1 through seq-4)
-- **Initiator primer binding site**: Fixed region on padlock probe
-- **Detection probe (cy3-p4)**: Fixed sequence for RCA efficiency testing; conjugated to Cy3 fluorophore
+- **Anchor primers**: /5Phos/TGCGTCTATTT, /5Phos/NTGCGTCTATT, /5Phos/NNTGCGTCTAT (L, for B1); /5Phos/TAGTGGAGCCT, /5Phos/NTAGTGGAGCC, /5Phos/NNTAGTGGAGC (R, for B2)
+- **Query probes**: /5Alex488/NNNNNA, /5Alex546/NNNNNG, /5Alex594/NNNNNC, /5Alex647/NNNNNT
+- **Initiator primer binding site**: TAGTGGAGCCT on the padlock; the primer's 3′ tail is AGGCTCCACTA
+- **Detection probe (CY3-P4)**: /5CY3/TGCGTCTATTTAGTGGAGCC, for RCA efficiency testing
 
-Exact sequences for anchor primers, query probes, and detection probes are not provided in the examined sources.
+Sequences as published [reported; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'In Situ Sequencing probe', section 'Pairwise' and section 'Fluorescent probe for detection'; V01]. The same sheet lists detection probes for the other backbones (488-1, CY3-1, CY7-1, CY5-1).
 
 ## Amplification-Related Components
 
 | Component | Original term | Function | Position | Evidence status | Source / locator |
 |-----------|--------------|----------|----------|-----------------|------------------|
 | Rolling-circle product (RCP) | Rolling-circle product, RCP | Contains tandem repeats of padlock sequence for signal amplification | Product of RCA | reported | S01, Fig. 1B-IV |
-| Phi29 polymerase binding site | Not explicitly named | Region enabling Phi29 extension | Padlock backbone | inferred | S01, Fig. 1B |
-| RCA primer | Padlock probe circularized form | Serves as primer for Phi29 extension | 3' end of circularized padlock | inferred | S01, Fig. 1B |
+| RCA template | Circularized padlock probe | Template copied by Phi29 | Ligated padlock circle | reported | S02, Fig. 1B legend (III-IV) |
+| RCA primer | RCA initiator primer (IP) | Its 3′ tail AGGCTCCACTA pairs with TAGTGGAGCCT on the circle; Phi29 extends the primer's 3′ end around the circle | 3′ end of the IP, on the padlock between B2 and arm 2 | reported (Methods); derived (sequence pairing) | S02, Methods, MiP-Seq probe design, opening sentence and item 4; S01 Supplementary Data 1 (probe sequences, 41551_2024_1205_MOESM5_ESM.xlsx), sheet 'Fig 3' (217-gene panel) |
 
 ## Chemical Modifications
 
@@ -135,7 +138,7 @@ Exact sequences for anchor primers, query probes, and detection probes are not p
 4. **Padlock arm design**: Both ends of padlock probe are complementary to target sequence (12-16 bp each).
 5. **Barcode assignment**: Assign unique barcode combination (B1+B2) from barcode library to each gene.
 6. **Initiator primer design**: 5' end of initiator primer is complementary to 3' end of targeting sequence (12-16 bp); 3' end is complementary to padlock probe.
-7. **Quality control**: Probes synthesized and validated (sequences listed in Supplementary Table S1 per S01).
+7. **Quality control**: Probes synthesized and validated (sequences listed in S01 Supplementary Data 1; Table S1 in the preprint S02).
 
 ## Official Probe-Design Software
 
@@ -149,10 +152,10 @@ Not yet examined. The preprint mentions a "self-developed probe searching progra
 
 | Dataset ID | Release / accession | Method version | Contents | Availability / access date | Source / locator |
 |------------|-------------------|---------------|---------|--------------------------|------------------|
-| D01 | S01 Supplementary Table S1 | V01 | Probe sequences (padlock probes and initiator primers) for multiple genes | Available in Supplementary Data of S01 (Nature Biomedical Engineering) | S01, Supplementary Data |
-| D02 | Zenodo 10837475 | V01 | Source image data; not probe sequences | Available at https://zenodo.org/records/10837475 | S01, Data availability |
+| D01 | S01 Supplementary Data 1 (41551_2024_1205_MOESM5_ESM.xlsx) | V01 | Probe sequences: padlock probes, initiator primers, anchors, query and detection probes; sheets 'In Situ Sequencing probe', 'Fig 1', 'Fig 2', 'Fig 3', 'Fig 4', 'Fig 5', 'Fig6' | Downloaded from the publisher's Supplementary information, 2026-10-20 | S01, Supplementary information |
+| D02 | Zenodo record 10837475 (version 4; concept DOI 10.5281/zenodo.8369209) | V01 | Source image data; not probe sequences | Available at https://zenodo.org/records/10837475 (checked 2026-10-20) | S01, Data availability |
 
-Note: Supplementary probe sequence tables were reported as available with the publication. The exact supplementary file number and format requires verification.
+Note: the publisher lists the probe file as "Supplementary Data" (probe sequences), followed by Supplementary Data 2 (efficiency comparison) and 3 (statistics, cluster gene lists); the preprint calls it Table S1.
 
 ## Version Differences
 
@@ -160,14 +163,7 @@ No version differences were identified. Only V01 has been documented.
 
 ## Unresolved Information
 
-- **Exact padlock probe sequence**: Complete nucleotide sequences not provided in main text; Supplementary Table S1 contains sequences but was not directly accessed.
-- **Barcode library sequences**: Fixed barcode sequences not provided.
-- **Anchor primer sequences**: Fixed sequences not provided.
-- **Query probe sequences**: Fixed sequences not provided.
-- **Initiator primer padlock-binding region length**: Specific length not reported.
 - **Complete target sites**: Full list of target coordinates/sequences not provided.
 - **Genome/annotation versions**: Reference genome build not explicitly stated.
 - **Official design software**: Specific software name and parameters not located.
-- **Probe arm orientation**: Exact 5'→3' orientation of padlock probe arms requires verification from figures.
-- **Barcode length**: Exact length of B1 and B2 barcodes not reported.
 - **Probe validation criteria**: Specific filtering parameters not provided.

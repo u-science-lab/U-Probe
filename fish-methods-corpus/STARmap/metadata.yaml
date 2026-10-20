@@ -45,7 +45,7 @@ versions:
   status: variant
 probe:
   architecture_type: SNAIL primer/padlock pair; primer splints ligation and primes RCA; circular padlock is RCA template.
-  target_binding: Two RNA-binding regions; S03 recommends 19–25 nt each with 1–2 nt interspace (later design rules).
+  target_binding: Two RNA-binding regions. V01 (S02) splits a 40–46 nt sequence into 20–25 nt halves (19–25 nt in fig. S1A) with a 0–2 nt gap and designed Tm 60 °C, 4 pairs per gene; later S03 recommends 19–25 nt each with 1–2 nt interspace.
   barcode_system: 'V01: 5 nt, 1,024 possible sequences. Later S03 permits longer SeqA/SeqB configurations; see probes.md.'
   readout_system: SEDAL overlapping dinucleotide readout with cycle-specific reading probes and four-color degenerate decoding library.
   amplification: Phi29 RCA on circularized padlock; S03 Step 24 includes 20 µM aminoallyl-dUTP and 250 µM dNTP mixture.
@@ -65,6 +65,7 @@ benchmark:
 references:
   primary_source_ids:
   - S01
+  - S02
   - S03
 validation:
   status: validated_with_warnings

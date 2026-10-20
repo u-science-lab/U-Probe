@@ -6,7 +6,7 @@ MiP-seq (Multi-omics in situ Pairwise Sequencing) enables simultaneous detection
 
 ## Core Principle
 
-MiP-seq employs targeted padlock probes that hybridize to specific nucleic acid sequences or antibody-conjugated oligonucleotides. Upon target binding, the padlock probe is circularized by a target-dependent ligation step, creating an RCA template. Rolling-circle amplification generates rolling-circle products (RCPs) that contain multiple copies of the barcode sequence. Readout occurs via pairwise sequencing-by-ligation, where fluorescent query probes interrogate paired bases in the dual barcodes, enabling efficient decoding with 10N code capacity from N rounds of sequencing.
+MiP-seq employs targeted padlock probes that hybridize to specific nucleic acid sequences or antibody-conjugated oligonucleotides. Upon target binding, the padlock probe is circularized by a target-dependent ligation step, creating an RCA template. Rolling-circle amplification generates rolling-circle products (RCPs) that contain multiple copies of the barcode sequence. Readout occurs via pairwise sequencing-by-ligation, where fluorescent query probes interrogate paired bases in the dual barcodes, enabling efficient decoding with 10^N code capacity from N rounds of sequencing.
 
 ## Overall Workflow
 
@@ -40,13 +40,13 @@ Structural evidence: each padlock probe has two terminal target-binding arms (12
 MiP-seq uses a **dual-barcode combinatorial encoding system**:
 - Each padlock probe contains two barcode regions (B1 and B2).
 - Pairwise sequencing interrogates paired bases (one from each barcode) in each round.
-- Ten distinct dual-base combinations can be decoded per imaging channel pair.
-- **10N codes** can be interrogated with N rounds of sequencing (versus 4N for conventional single-barcode methods).
+- Ten distinct dual-base combinations (colour pairs) can be decoded per sequencing round (S02, Fig. 1B legend, VI).
+- **10^N codes** can be interrogated with N rounds of sequencing (versus 4^N for conventional single-barcode methods).
 
 ## Amplification Strategy
 
 **Rolling-circle amplification (RCA)** is employed:
-- Phi29 polymerase extends from the circularized padlock probe.
+- Phi29 polymerase extends the 3′ end of the initiator primer (IP) around the circularized padlock probe: the IP's 3′ tail (AGGCTCCACTA) pairs with TAGTGGAGCCT in the padlock backbone, so RCA is primed by the IP, not by the circle itself (S02, Methods, MiP-Seq probe design, opening sentence and item 4; S01 Supplementary Data 1, sheet 'Fig 3'; see probes.md).
 - The amplified RCP contains multiple tandem copies of the barcode sequence.
 - RCPs appear as fluorescent dots that are localized and counted.
 - The initiator primer (IP) provides additional specificity by requiring three-way junction formation between IP, padlock probe, and target RNA.
@@ -77,7 +77,7 @@ The **sequential dilution strategy** is described as a variant within V01 to res
 
 ## Strengths
 
-- **High decoding capacity**: 10N codes achievable with N rounds (vs. 4N for single-barcode methods).
+- **High decoding capacity**: 10^N codes achievable with N rounds (vs. 4^N for single-barcode methods).
 - **Reduced sequencing rounds**: Approximately 50% fewer rounds required compared to conventional in situ sequencing.
 - **Single-nucleotide specificity**: Enables SNP detection, allele-specific expression, and RNA modification discrimination.
 - **Multi-omics capability**: Detects DNA, RNA, proteins, and neurotransmitters in the same workflow.
@@ -97,6 +97,5 @@ The **sequential dilution strategy** is described as a variant within V01 to res
 ## Unresolved or Version-Specific Points
 
 - Whether subsequent publications describe updated probe architectures or workflow modifications.
-- Complete sequence information for the fixed barcode library and readout probes.
 - Detailed primer design rules beyond the brief description (12-16 bp arms, exon-proximal selection).
 - Whether the method has been adapted by other laboratories or commercialized.

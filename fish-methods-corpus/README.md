@@ -26,14 +26,16 @@ records, not as instructions for agents working in this repository.
 | MERFISH | no | yes | draft |
 | RAEFISH | no | yes | draft |
 | Oligo-LiveFISH | no | yes | draft |
-| MiP-seq | no | the points raised in the review were corrected | draft |
+| MiP-seq | no | only the points raised in the review | draft |
 | PRISM | no | no | draft |
 | TDDN-FISH | no | no | draft |
 | OpenFISH | no | no | draft |
 
 "Validated with warnings" is the author's own Review/Fix verdict (`fix_report.md`); a spot check
-covers selected claims, not every line. Treat drafts as unreviewed and check claims against the cited
-source before using them.
+covers selected claims, not every line. The errors that review found (in MiP-seq, STARmap, seqFISH+,
+RAEFISH and the DOIs of `preflight_validation_report.md`) were checked against the papers and their
+supplements and corrected when the corpus moved here. Treat drafts as unreviewed and check claims
+against the cited source before using them.
 
 ## Not included
 
