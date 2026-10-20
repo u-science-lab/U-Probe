@@ -19,7 +19,8 @@ meta:
     Oligopaint library format (32 nt of genomic sequence flanked by 21-nt
     primers); after amplification one primer carries the fluorophore and the
     other a nicking site, so the final probe is the labelled primer plus the
-    homology region.
+    homology region. The primers here are N placeholders that you must
+    replace with a real primer pair (meta.replace).
   citations:
     - short: Beliveau et al. 2018, PNAS
       title: >-
@@ -98,8 +99,8 @@ meta:
         rule build_jellyfish). The -k 5 threshold was set on these counts.
       quote: jellyfish count -s 3300M -m 18 -o hg38_18.jf --out-counter-len 1 -L 2 hg38.fa
     - parameter: oligopaint_oligo primers
-      value: 21 nt on each side of the homology region
-      source: Beliveau 2012
+      value: 21 nt on each side of the homology region (N placeholders)
+      source: Beliveau 2012; Beliveau 2018 Table S2 lists its primer pairs (20-22 nt)
       quote: each oligo contains 32 bases of genomic sequence flanked by 21-base primer sequences
   hybridization:
     ssc: 2x (2x SSCT)
@@ -125,11 +126,11 @@ meta:
     - "OligoMiner's outputClean LDA Mode (each Bowtie2 alignment scored with an LDA model of duplex stability; used for the 19p13.2 sets of Beliveau 2018 Table S1) is not reproduced. The template applies Unique Mode instead: it drops a probe with any second alignment, however weak."
     - "No secondary-structure filter: Beliveau 2018 applied none to its probe sets (Methods; Table S1). OligoMiner's optional structureCheck.py (NUPACK dna1998; keeps probes whose unstructured state has probability > 0.1 at 47 C + 0.65 C per % formamide) has no U-Probe equivalent: fold_score is a ViennaRNA RNA MFE."
     - U-Probe computes Tm with primer3 (SantaLucia 1998 parameters and salt correction; formamide after Blake and Delcourt 1996, about 0.61-0.72 C per %), not with OligoMiner's Biopython Tm_NN (DNA_NN3, 0.65 C per %), so oligos close to 42 or 47 C may be classified differently.
-    - "TODO: verify the Oligopaint primer sequences (Beliveau 2012 SI); the 21-nt primers here are N placeholders."
+    - "No primer sequences are given: primer_1 and primer_2_rc are 21-N placeholders, and a library ordered with them cannot be amplified (meta.replace says what to supply)."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here) whose FASTA is soft-masked (repeats in lowercase): `uprobe genome fetch --species homo_sapiens --soft-masked`, or UCSC hg38.fa. With an unmasked FASTA, masked: drop skips no repeat (uprobe validate --check-targets and the run log warn). It must set `jellyfish: true` for kmer_count and list bowtie2 in align_index for mapped_sites (the genome-wide index is built by `uprobe build-index`)"
     - "targets: genomic intervals chrom:start-end in your FASTA's naming (a 50-kb example interval here)"
-    - "oligopaint_oligo.primer_1 / primer_2_rc: 21-nt amplification primer placeholders (N)"
+    - "oligopaint_oligo.primer_1 and primer_2_rc: replace both 21-N placeholders with a real primer pair. primer_1 is the forward PCR primer, 5'->3' as you order it; primer_2_rc is the reverse complement of the reverse PCR primer (the library oligo carries its binding site). Each primer 20-22 nt (21 in Beliveau 2012; 20-22 in Beliveau 2018 Table S2), with similar Tm; neither may occur in the target genome or pair with the other or with the homologies. Use one pair per pool or sub-pool, e.g. a published set designed to be orthogonal to the genome (PaintSHOP, Hershberg 2021) or a pair from Beliveau 2018 Table S2. Sequences that are not part of the library oligo go on the ordered primers: the dye, a nicking site, or a T7 promoter tail (TAATACGACTCACTATAGGG) for in vitro transcription. Readout or secondary-oligo sites for indirect labelling are extra parts of oligopaint_oligo."
 
 name: oligopaint
 description: Oligopaint DNA FISH library oligos with OligoMiner Balance homology regions (Beliveau et al. 2012, 2018)
@@ -155,13 +156,16 @@ probes:
   oligopaint_oligo:
     template: "{primer_1}{homology}{primer_2_rc}"
     parts:
+      # PLACEHOLDERS: replace both N runs before ordering (meta.replace).
       primer_1:
-        template: "NNNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 21-nt forward primer
+        # Your forward PCR primer, 5'->3' as ordered (20-22 nt).
+        template: "NNNNNNNNNNNNNNNNNNNNN"
         parts: {}
       homology:
         expr: "target_region"
       primer_2_rc:
-        template: "NNNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 21-nt reverse primer site
+        # The reverse complement of your reverse PCR primer (20-22 nt).
+        template: "NNNNNNNNNNNNNNNNNNNNN"
         parts: {}
 
 # Hybridization conditions of the source protocol (sources: meta.hybridization).
