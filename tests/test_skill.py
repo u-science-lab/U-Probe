@@ -99,6 +99,12 @@ def test_skill_folder_holds_only_skill_md_references_and_scripts():
     top = sorted(p.name for p in SKILL.iterdir() if p.name not in NOT_SHIPPED)
     assert top == ['SKILL.md', 'references', 'scripts']
     assert SKILL_MD.is_file() and (SKILL / 'references').is_dir() and (SKILL / 'scripts').is_dir()
+    # MANIFEST.in ships only references/**/*.md and scripts/**/*.py; anything else would be
+    # installed from a checkout but missing from the wheel.
+    stray = [p.relative_to(SKILL).as_posix() for p in shipped_files()
+             if p != SKILL_MD and not (p.parts[len(SKILL.parts)] == 'references' and p.suffix == '.md')
+             and not (p.parts[len(SKILL.parts)] == 'scripts' and p.suffix == '.py')]
+    assert stray == []
 
 
 def test_skill_folder_has_no_agent_instructions_or_binaries():
