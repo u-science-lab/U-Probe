@@ -395,6 +395,18 @@ def test_cli_reports_targets_with_fewer_probes_than_requested(tmp_path, monkeypa
 NOTHING_PASSES = {'filters': {'target_gc': {'condition': 'target_gc >= 2'}}}
 
 
+def test_targets_without_probes_are_not_reported_as_short(tmp_path):
+    # A run where nothing passed also warned that 'all their passing probes were kept' for its
+    # targets; a target with no probe is reported once, as targets_without_probes.
+    result, output = run_toy_cli(tmp_path, {**NOTHING_PASSES, 'equal_space': {'number_desired': 6}})
+    assert result.exit_code == 3, result.output
+    summary = read_summary(output)
+    assert summary['status'] == 'no_probes'
+    codes = [warning['code'] for warning in summary['warnings']]
+    assert 'targets_without_probes' in codes and 'fewer_probes_than_requested' not in codes
+    assert summary['targets']['ToyGeneA']['requested_probes'] == 6
+
+
 @pytest.mark.parametrize('json_flag', [['--json'], []])
 def test_cli_exits_with_3_when_no_probe_passes(tmp_path, json_flag):
     genomes = toy_genome(tmp_path, align_index=[])
