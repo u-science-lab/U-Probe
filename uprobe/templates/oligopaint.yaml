@@ -13,7 +13,8 @@ meta:
     are skipped. The homology settings are the OligoMiner
     blockParse defaults, which equal the paper's "Balance" preset (36-41 nt,
     Tm 42-47 C under 390 mM Na+ and 50% formamide, GC 20-80%, no
-    AAAAA/TTTTT/CCCCC/GGGGG), followed by an 18-mer k-mer filter. The flanking
+    AAAAA/TTTTT/CCCCC/GGGGG), followed by OligoMiner's 18-mer k-mer filter,
+    which counts each k-mer on the genome's forward strand. The flanking
     21-nt primers follow the original Oligopaint library format (32 nt of
     genomic sequence flanked by 21-nt primers); after amplification one primer
     carries the fluorophore and the other a nicking site, so the final probe is
@@ -68,6 +69,14 @@ meta:
         OligoMiner kmerFilter.py (-m 18; drops a probe when a k-mer count is
         >= -k) and Beliveau 2018 genome-wide runs (-k 5)
       quote: Filter probes with kmers occurring => than this many times
+    - parameter: attributes.homology_kmer_count.strand
+      value: sense (the probe's k-mers as written, counted on the FASTA's forward strand)
+      source: >-
+        Beliveau 2018 Methods: the 18-mer dictionary was built without -C
+        (canonical counting), so jellyfish counts each k-mer on the forward
+        strand only; PaintSHOP builds its dictionary the same way (Snakefile,
+        rule build_jellyfish). The -k 5 threshold was set on these counts.
+      quote: jellyfish count -s 3300M -m 18 -o hg38_18.jf --out-counter-len 1 -L 2 hg38.fa
     - parameter: oligopaint_oligo primers
       value: 21 nt on each side of the homology region
       source: Beliveau 2012
@@ -155,6 +164,9 @@ attributes:
     type: kmer_count
     kmer_len: 18
     aligner: jellyfish
+    # OligoMiner's dictionary counts k-mers on the forward strand only (no -C);
+    # its <= 4 threshold refers to these counts (meta.parameter_sources).
+    strand: sense
 
 post_process:
   filters:

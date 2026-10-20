@@ -5,8 +5,9 @@ from pathlib import Path
 import pandas as pd
 from ._attributes import *
 from ..hybridization import resolve_conditions, tm_arguments
-from ..offtarget import BOWTIE2_LOCAL_MIN_LENGTH, OffTargetCounter, mapped_genes_settings, short_for_bowtie2
-from ..utils import get_logger
+from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, mapped_genes_settings,
+                         short_for_bowtie2)
+from ..utils import get_logger, reverse_complement
 
 log = get_logger(__name__)
 
@@ -87,12 +88,21 @@ def _add_attributes(
             if attr.get('aligner') == "jellyfish":
                 assert genome.get('jellyfish', False) is True, "Jellyfish must be enabled in genome configuration" 
                 kmer_len = attr.get("kmer_len", 35)
-                # One index per k-mer length, built when first needed.
+                # both: canonical k-mers (both strands); sense / antisense: the sequence's
+                # k-mers / their reverse complements on the FASTA's forward strand.
+                strand = attr.get("strand", "both")
+                if strand not in STRAND_OPTIONS:
+                    raise ValueError(f"attributes.{attr_name}.strand must be one of "
+                                     f"{', '.join(STRAND_OPTIONS)}, got {strand!r}")
+                # One index per k-mer length (and per strand setting), built when first needed.
                 from uprobe.core.tools import jellyfish_index
-                if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"))
+                if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"),
+                                          canonical=strand == "both")
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}
+                if strand == "antisense":
+                    recname2seq = {key: reverse_complement(seq) for key, seq in recname2seq.items()}
                 kmer_counts = cal_kmer_count(
                     str(tmp_dir), 
                     f"{target}_{task_id}", 

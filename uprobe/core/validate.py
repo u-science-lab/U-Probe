@@ -32,7 +32,7 @@ from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expres
 from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
-                        MAX_MISMATCHES_LIMIT, mapped_genes_settings)
+                        MAX_MISMATCHES_LIMIT, STRANDS, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
 from .utils import MASKED_OPTIONS, REGION_PATTERN
@@ -133,6 +133,9 @@ HYBRIDIZATION_HINT = ('numbers >= 0 for any of ' + ', '.join(HYBRIDIZATION_FIELD
                       '  formamide_pct: 30')
 TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; canonical: Ensembl_canonical; mane: '
                     'MANE_Select, else Ensembl_canonical; or a list of transcript ids, e.g. [ENST00000646664]')
+KMER_STRAND_HINT = ("strand: sense   # both (default): canonical k-mers, both strands; sense: the k-mers as "
+                    "written on the FASTA's forward strand (OligoMiner, PaintSHOP); antisense: their reverse "
+                    "complements")
 MASKED_HINT = ('masked: drop   # skip source: genome windows with a soft-masked (lowercase) or N base; '
                'keep (default) upper-cases them')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
@@ -870,6 +873,9 @@ class _Validator:
                                f'aligner: {aligners[0]}')
                 elif kind == 'mapped_genes':
                     self._check_mapped_genes(path, attr)
+                elif kind == 'kmer_count' and attr.get('strand', 'both') not in STRANDS:
+                    self.error(path + ('strand',), f'strand must be one of {", ".join(STRANDS)}, got '
+                               f'{attr["strand"]!r}', KMER_STRAND_HINT)
                 if kind == 'blocks' and self.source == 'genome' and not self.direct_targets:
                     self.warning(path + ('type',), 'blocks needs a start column, which source: genome does not '
                                  'produce; the attribute is skipped', 'remove it, or use source mRNA, exon, CDS or UTR')
