@@ -288,7 +288,13 @@ post_process:
 summary:
   report_name: rna_report      # rna_report | dna_report; empty = no HTML report
   attributes: [target_gc, probe_tm, target_mapped_genes]   # columns summarized in summary.json and the report
+  report:
+    embed_raw: false           # true: embed every raw candidate as a workbook (large for big designs)
 ```
+
+The HTML report embeds the final table and a 100-row preview of the raw candidates, and links the raw
+table that `--raw` writes next to it. With `embed_raw: true` it also embeds the whole raw table for
+download; for a 200-kb Oligopaint design (581,793 candidates) that is 63 MB of a 66 MB report.
 
 ## Defaults when `attributes` / `post_process` / `summary` are missing or empty
 

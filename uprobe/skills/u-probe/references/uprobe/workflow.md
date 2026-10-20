@@ -128,7 +128,8 @@ echo $?
 ## 6. Read the outputs
 
 Files in `-o` (names in `summary.json -> output_files`): `<name>_<time>_probes.tsv` (final table, read
-this one), `<name>_<time>.xlsx` (same, formatted), `<name>_report_<time>.html`, `summary.json`.
+this one), `<name>_<time>.xlsx` (same, formatted), `<name>_report_<time>.html` (final table, filter
+counts, a 100-row preview of the raw candidates and a link to the `--raw` table), `summary.json`.
 
 `summary.json` keys to read first:
 - `status`, `message`, `warnings[].code` (`invalid_targets`, `no_candidate_windows`,

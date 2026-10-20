@@ -537,5 +537,6 @@ class UProbeAPI:
             df_processed, self.protocol, output_path,
             csv_filename=getattr(self, "_csv_filename", None),
             raw_df=getattr(self, "_report_raw_data", None),
+            raw_files=[(getattr(self, 'output_files', None) or {}).get(key) for key in ('raw_tsv', 'raw_xlsx')],
         )
         return {"html_reports": [path] if path else []}
