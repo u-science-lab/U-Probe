@@ -35,6 +35,7 @@ from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH,
                         MAX_MISMATCHES_LIMIT, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
+from .utils import REGION_PATTERN
 
 
 # Sections required by _validate_and_normalize_protocol.
@@ -81,7 +82,7 @@ TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_st
                   'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
 OTP_COLUMNS = ('on_target', 'off_target', 'target_ratio')
 IUPAC = set('ACGTURYSWKMBDHVN')
-REGION_RE = re.compile(r'^([^:\s]+):(\d+)-(\d+)$')
+REGION_RE = REGION_PATTERN
 DRY_RUN_TARGETS = 200
 
 SNIPPETS = {
@@ -496,8 +497,11 @@ class _Validator:
                 if not match:
                     self.error(path, f'target {name!r} is not a region; source: genome needs chrom:start-end',
                                'e.g. chr1:100000-101000, or use source: mRNA, exon, CDS or UTR for gene names')
-                elif int(match[2]) >= int(match[3]):
-                    self.error(path, f'region {name!r} has start >= end', 'write chrom:start-end with start < end')
+                elif int(match[2]) < 1:
+                    self.error(path, f'region {name!r} starts at {match[2]}; regions are 1-based and inclusive, '
+                               'the first base is 1', f'e.g. {match[1]}:1-{match[3]}')
+                elif int(match[2]) > int(match[3]):
+                    self.error(path, f'region {name!r} ends before it starts', 'write chrom:start-end with start <= end')
             elif self.source is not None and REGION_RE.match(str(name)):
                 self.warning(path, f'target {name!r} looks like a genomic region, but source is {self.source} '
                              '(gene names)', 'use extracts.target_region.source: genome for regions')

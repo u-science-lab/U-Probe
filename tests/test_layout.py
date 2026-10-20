@@ -133,7 +133,7 @@ def test_layout_all_genome_sources(tmp_path, source):
     api=make_api(layout(left=[19,25],gap=[0,2],right=[19,25]))
     api.genome={'fasta':str(fa),'gtf':str(gtf)}
     api.protocol['extracts']['target_region']['source']=source
-    api._parse_targets=lambda: (['1:0-48'] if source=='genome' else ['G'],{})
+    api._parse_targets=lambda: (['1:1-48'] if source=='genome' else ['G'],{})
     result=api.generate_target_seqs()
     assert not result.empty and result.probe_id.is_unique
     for _,row in result.iterrows():

@@ -67,7 +67,7 @@ and `meta.limitations` before editing. The technology-specific choices are in `r
 ## 3. Edit the protocol
 
 Always change: `genome` (a key of `genomes.yaml`), `targets` (GTF `gene_name`s, case-sensitive; or
-`chrom:start-end` with `source: genome`; or `name: SEQUENCE`), `encoding` (one entry per target that the
+`chrom:start-end`, 1-based inclusive as in a genome browser, with `source: genome`; or `name: SEQUENCE`), `encoding` (one entry per target that the
 expressions read; `{}` when none), placeholder `N` sequences (primers, readouts).
 
 Then decide, with the concept files:

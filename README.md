@@ -348,7 +348,7 @@ summary:
 - **`name` & `genome`**: Basic metadata. The `genome` must match a key in your `genomes.yaml`.
 - **`targets`**: A list of target gene names or IDs you want to design probes for.
 - **`extracts`**: Parameters for extracting target sequences: the sliding window `length` and `step` (or `overlap`), and the `source` the windows are taken from:
-  - `genome`: targets are regions such as `chr1:1000-2000`, tiled along the genomic sequence.
+  - `genome`: targets are regions such as `chr1:1000-2000`, tiled along the genomic sequence (the reference, + strand). Regions are 1-based and inclusive, as genome browsers and Ensembl show them: `chr1:1000-2000` is the 1,001 bases from position 1,000 to 2,000, and the first base of a chromosome is 1. `avoid_otp` `target_regions` use the same notation. A window's `sub_region` `s-e` is its position along the region, so it covers the genomic bases `start + s - 1` to `start + e - 1`. Earlier versions read region targets as 0-based (`chr1:1000-2000` was bases 1,001-2,000, while `avoid_otp` already read them 1-based), so a DNA design made from the same protocol now starts one base earlier; a start of 0 is an error.
   - `mRNA`: the whole mature RNA of each target gene, i.e. all its `exon` features: 5' UTR, CDS and 3' UTR of a protein-coding gene, the processed RNA of a non-coding gene. Use it when probes may bind anywhere on the mRNA, as smFISH probe sets do.
   - `exon`: the coding sequence of a protein-coding gene (its `CDS` features, without the UTRs), and all exons only of a gene without CDS. Despite its name it is not the whole mRNA of a protein-coding gene; `uprobe validate` warns and points to `mRNA`.
   - `CDS`: the same as `exon`, under the name that says what it extracts.

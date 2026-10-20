@@ -43,8 +43,11 @@ targets:
 
 - Gene names are matched against GTF `gene_name` (falls back to `gene`), not gene ids. All gene ids
   sharing that name are pooled.
-- Regions are sliced as Python `[start:end)` on the FASTA record: `chr1:1000-2000` gives 1-based
-  bases 1001-2000. Windows come from the reference (+) strand.
+- Regions are 1-based and inclusive, as genome browsers and Ensembl show them: `chr1:1000-2000` is
+  bases 1000-2000 (1,001 nt); a start of 0 is an error. `avoid_otp` `target_regions` read the same way.
+  Windows come from the reference (+) strand; `sub_region` `s-e` is the window along the region, i.e.
+  genomic bases `start+s-1` to `start+e-1`. (U-Probe before this fix read targets 0-based: bases
+  1001-2000; designs from old protocols shift by one base.)
 - A literal sequence named after its Ensembl gene id (as written in the GTF) lets `mapped_genes`
   recognize that gene as the target rather than as an off-target.
 
@@ -258,7 +261,7 @@ post_process:
 - `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped. Lower is better
   for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: put them in `is_ascending` (`validate`
   warns when one is in `is_descending`).
-- `avoid_otp` (DNA, needs a `mapped_sites` attribute): per target `{target_regions: [chr:s-e],
+- `avoid_otp` (DNA, needs a `mapped_sites` attribute): per target `{target_regions: [chr:s-e] (1-based),
   density_thresh: 1e-4, search_range: [-1000000, 1000000], avoid_target_overlap: true}`; removes probes
   whose off-target genome hits cluster (a density of other probes' hits within `search_range`), which
   would form a false focus. Adds `on_target`, `off_target`, `target_ratio`.
