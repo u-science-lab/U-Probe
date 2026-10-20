@@ -285,7 +285,10 @@ def test_mane_canonical_and_fallback(annotation, caplog):
         'P': {'selection': 'mane', 'chosen_by': 'MANE_Select', 'ids': ['ENSTP1']},
         'M': {'selection': 'mane', 'chosen_by': 'Ensembl_canonical', 'ids': ['ENSTM3']},
         'N': {'selection': 'mane', 'chosen_by': 'Ensembl_canonical', 'ids': ['ENSTN5.2']}}
-    assert 'M has no MANE_Select transcript; using its Ensembl_canonical transcript ENSTM3' in caplog.text
+    # One line for all targets without MANE (every target of a non-human genome), not one per target.
+    fallback = [r.getMessage() for r in caplog.records if 'no MANE_Select transcript' in r.getMessage()]
+    assert fallback == ['2 of 3 target(s) have no MANE_Select transcript (MANE covers human genes only); '
+                        'using their Ensembl_canonical transcript: M ENSTM3, N ENSTN5.2']
     for gene, transcript in (('P', 'ENSTP1'), ('M', 'ENSTM3'), ('N', 'ENSTN5.2')):
         rows = df[df.target == gene]
         assert set(rows.transcript_names.map(tuple)) == {(transcript,)}

@@ -231,6 +231,7 @@ def select_transcripts(df_gtf: pd.DataFrame, targets, setting) -> t.Dict[str, di
                 problems.append(f'no listed transcript belongs to target {target}; list one of its transcripts '
                                 f'(e.g. {example}) or use canonical, mane or all')
     else:
+        fallback = []  # targets of transcripts: mane that use their canonical transcript
         for target in targets:
             if target not in rows_of:
                 continue  # not in the GTF: reported by target validation
@@ -240,14 +241,17 @@ def select_transcripts(df_gtf: pd.DataFrame, targets, setting) -> t.Dict[str, di
             if not ids:
                 ids, chosen_by = _tagged(rows_of[target], CANONICAL_TAG), CANONICAL_TAG
                 if ids and setting == 'mane':
-                    log.info(f'{target} has no {MANE_TAG} transcript; using its {CANONICAL_TAG} transcript '
-                             f'{", ".join(ids)}')
+                    fallback.append(f'{target} {", ".join(ids)}')
             if not ids:
                 wanted = f'{MANE_TAG} or {CANONICAL_TAG}' if setting == 'mane' else CANONICAL_TAG
                 problems.append(f'no transcript of {target} is tagged {wanted} in the GTF; list its transcript '
                                 'ids or use transcripts: all')
                 continue
             result[target] = {'selection': setting, 'chosen_by': chosen_by, 'ids': ids}
+        if fallback:
+            # One line: with a non-human genome every target falls back.
+            log.info(f'{len(fallback)} of {len(targets)} target(s) have no {MANE_TAG} transcript (MANE covers '
+                     f'human genes only); using their {CANONICAL_TAG} transcript: {", ".join(fallback)}')
     if problems:
         raise TranscriptSelectionError(problems)
     for target, entry in result.items():
