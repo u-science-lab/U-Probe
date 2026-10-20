@@ -30,7 +30,10 @@ GRCh38_e113:
   jellyfish: false                 # true enables kmer_count
 ```
 
-`uprobe genome fetch` writes such entries plus a `source` record. See `references/uprobe/workflow.md` for what each index builds.
+`uprobe genome fetch` writes such entries plus a `source` record. With `--soft-masked` it fetches Ensembl's
+soft-masked FASTA (`dna_sm`: repeats in lowercase; default name suffix `_sm`). Every template can use it: the
+aligners and Jellyfish ignore case, and only `extracts.target_region.masked: drop` reads the masking. See
+`references/uprobe/workflow.md` for what each index builds.
 
 ## targets
 
@@ -60,7 +63,13 @@ extracts:
     transcripts: mane     # all (default) | canonical | mane | [ENST..., ...]   (RNA sources)
     length: 20            # int, or inclusive range [min, max] (every length per start)
     step: 1               # distance between window starts (default 1); legacy overlap: step = length - overlap
+    masked: keep          # source genome: keep (default) | drop
 ```
+
+`masked: drop` (source `genome` only) skips every window with a soft-masked (lowercase) or N base, as
+OligoMiner mines a repeat-masked genome; the other windows keep their `probe_id`. It needs a soft-masked
+FASTA (`uprobe genome fetch --soft-masked`, UCSC `hg38.fa`); the run log and `validate --check-targets`
+warn when a target has no lowercase base. `keep` upper-cases the windows and ignores masking.
 
 | `source` | Windows come from |
 | --- | --- |
@@ -151,8 +160,8 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
-| `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` | `aligner: bowtie2` (required), `threads` |
-| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` (Bowtie2 `--very-sensitive-local -k 100`, both strands: at most 100; `<attr>_num == 1` is OligoMiner's Unique Mode) | `aligner: bowtie2` (required), `threads` |
+| `kmer_count` | highest genome count among the sequence's k-mers (Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `strand` (`both`, the default: canonical k-mers, both strands; `sense`: the k-mers as written, counted on the FASTA's forward strand, as OligoMiner's dictionary; `antisense`: their reverse complements; `sense` and `antisense` read `jf_genome/<stem>.k<k>.stranded.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
 | `blocks` | legacy; do not use | - |
 
 `threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute

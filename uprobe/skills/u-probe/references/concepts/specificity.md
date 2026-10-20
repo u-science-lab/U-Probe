@@ -65,7 +65,9 @@ hybridization temperature, so `max_mismatches: 3` is defensible (derived, not fr
 `target_region` is the RNA sense sequence. Search it with `strand: sense`: hits are transcripts that
 contain the window, i.e. RNAs the probe (`rc(target_region)`) can bind. `strand: both` (the default)
 also counts transcripts antisense to the window, which the probe cannot bind (it has their sequence).
-For DNA targets both strands are present; `kmer_count` counts canonical k-mers (both strands).
+For DNA targets both strands are present; `kmer_count` counts canonical k-mers (both strands) by
+default. `strand: sense` counts the k-mers as written on the FASTA's forward strand, as OligoMiner's and
+PaintSHOP's dictionaries do; the oligopaint template uses it to keep OligoMiner's threshold.
 
 ## Expression-aware off-target counting
 
@@ -190,7 +192,7 @@ ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in 
 | MERFISH / seqFISH+ 28-30 nt | `target_region`, `sense` | bowtie, 2 (3 defensible) | `<= 1` | recommended | `exempt_copies` | optional |
 | HCR v3 pair 52 nt | whole pair window, `sense` | Bowtie2 (+ a Bowtie 1 attribute, 2, for the exhaustive substitution search) | `<= 1` | recommended | report copies | no |
 | Padlock / SNAIL 30-46 nt | whole site, `sense` | bowtie (<= 30 nt) / Bowtie2 | `<= 1` | recommended | report copies | no |
-| Oligopaint 35-41 nt | homology | `kmer_count` (k 18) / `mapped_sites` | `kmer_count <= 4` | n/a | n/a | `avoid_otp` |
+| Oligopaint 35-41 nt | homology, windows from a soft-masked genome (`masked: drop`) | `kmer_count` (k 18, `strand: sense`) + `mapped_sites` | `kmer_count <= 4`, `<attr>_num == 1` | n/a | n/a | `avoid_otp` |
 
 "Report copies": with single-unit methods every probe of a copied target also detects an expressed
 copy, so each copy molecule makes a real false spot. Exempting it is the only way to get probes at all;

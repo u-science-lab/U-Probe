@@ -36,7 +36,7 @@ def test_jellyfish_index_is_built_with_the_run_threads(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     from uprobe.core import tools
     built = []
-    def build(fasta, k, out, threads, size):
+    def build(fasta, k, out, threads, size, canonical=True):
         built.append(threads)
         open(out, 'w').write('index')
     monkeypatch.setattr(tools, 'build_jf_index', build)

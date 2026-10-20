@@ -70,28 +70,35 @@ _TRANSCRIPT_INDEX_EXISTS = {
 _TRANSCRIPT_ONLY = ("bowtie",)
 
 
-def jellyfish_index(fasta: Path, kmer_len: int, threads: int = 10, size: str = '1G') -> Path:
+def jellyfish_index(fasta: Path, kmer_len: int, threads: int = 10, size: str = '1G',
+                    canonical: bool = True) -> Path:
     """The Jellyfish index of the genome's k-mers of length ``kmer_len``, built if missing.
 
     One index per k, jf_genome/<stem>.k<kmer_len>.jf next to the FASTA, so a
     kmer_count attribute with another kmer_len builds (or reuses) the index of
     its own k. The jf_genome/<stem>.jf of older versions, which was used for
     every k, is reused only when its header records the same k.
+
+    These indexes count canonical k-mers (both strands). ``canonical=False``
+    gives the stranded index jf_genome/<stem>.k<kmer_len>.stranded.jf, which
+    counts the k-mers as written on the FASTA's forward strand (kmer_count
+    with strand: sense or antisense).
     """
     directory = fasta.parent / 'jf_genome'
-    path = directory / f'{fasta.stem}.k{kmer_len}.jf'
+    path = directory / f'{fasta.stem}.k{kmer_len}{"" if canonical else ".stranded"}.jf'
     if path.is_file() and path.stat().st_size > 0:
         return path
     legacy = directory / f'{fasta.stem}.jf'
-    if legacy.is_file() and jellyfish_kmer_len(legacy) == kmer_len:
+    if canonical and legacy.is_file() and jellyfish_kmer_len(legacy) == kmer_len:
         log.info(f"Using the Jellyfish index {legacy} ({kmer_len}-mers)")
         return legacy
     directory.mkdir(parents=True, exist_ok=True)
-    log.info(f"Building the Jellyfish index of {kmer_len}-mers: {path}")
+    kind = "" if canonical else "forward-strand "
+    log.info(f"Building the Jellyfish index of {kind}{kmer_len}-mers: {path}")
     # Build under a temporary name: an interrupted build must not leave an index to reuse.
     temporary = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
     try:
-        build_jf_index(str(fasta), kmer_len, str(temporary), threads, size)
+        build_jf_index(str(fasta), kmer_len, str(temporary), threads, size, canonical=canonical)
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)

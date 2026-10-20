@@ -5,17 +5,22 @@ meta:
   name: oligopaint
   technology: Oligopaint / OligoMiner DNA FISH
   description: >-
-    Each library oligo is 5'-[primer 1, 21 nt][genomic homology, 36-41 nt]
+    Each library oligo is 5'-[primer 1, 21 nt][genomic homology, 35-41 nt]
     [primer 2 site, 21 nt]-3'. Homology regions tile a genomic interval
     without overlap and are taken from the + strand (both strands of the
-    denatured DNA are targets). The homology settings are the OligoMiner
-    blockParse defaults, which equal the paper's "Balance" preset (36-41 nt,
-    Tm 42-47 C under 390 mM Na+ and 50% formamide, GC 20-80%, no
-    AAAAA/TTTTT/CCCCC/GGGGG), followed by an 18-mer k-mer filter. The flanking
-    21-nt primers follow the original Oligopaint library format (32 nt of
-    genomic sequence flanked by 21-nt primers); after amplification one primer
-    carries the fluorophore and the other a nicking site, so the final probe is
-    the labelled primer plus the homology region.
+    denatured DNA are targets). As in OligoMiner, they are mined from a
+    repeat-masked genome: windows with a soft-masked (lowercase) or N base
+    are skipped. The homology settings are OligoMiner's "Balance" preset as
+    in its genome-wide hg38 set (35-41 nt, Tm 42-47 C under 390 mM Na+ and
+    50% formamide, GC 20-80%, no AAAAA/TTTTT/CCCCC/GGGGG or N), followed by
+    OligoMiner's specificity checks: a unique Bowtie2 alignment (outputClean
+    Unique Mode) and the 18-mer k-mer filter, which counts each k-mer on the
+    genome's forward strand. The flanking 21-nt primers follow the original
+    Oligopaint library format (32 nt of genomic sequence flanked by 21-nt
+    primers); after amplification one primer carries the fluorophore and the
+    other a nicking site, so the final probe is the labelled primer plus the
+    homology region. The primers here are N placeholders that you must
+    replace with a real primer pair (meta.replace).
   citations:
     - short: Beliveau et al. 2018, PNAS
       title: >-
@@ -26,14 +31,30 @@ meta:
     - short: Beliveau et al. 2012, PNAS
       title: Versatile design and synthesis platform for visualizing genomes with Oligopaint FISH probes
       doi: 10.1073/pnas.1213818110
-    - short: OligoMiner source code (blockParse.py, kmerFilter.py)
+    - short: OligoMiner source code (blockParse.py, outputClean.py, kmerFilter.py)
       title: beliveau-lab/OligoMiner
       url: https://github.com/beliveau-lab/OligoMiner
   parameter_sources:
+    - parameter: extracts.target_region.masked
+      value: drop (needs a soft-masked FASTA, e.g. Ensembl dna_sm or UCSC hg38.fa)
+      source: >-
+        Beliveau 2018 Methods (Whole-Genome Probe Discovery; assemblies
+        downloaded "with and without repeat masking" from UCSC); OligoMiner
+        README; blockParse.py rejects every window with an N base, so
+        hard-masked (RepeatMasker) repeats yield no candidate
+      quote: >-
+        Genome assemblies in FASTA format without repeat masking were used to
+        build Bowtie2 alignment indices and Jellyfish files. Repeat-masked
+        input files were used for probe discovery.
     - parameter: extracts.target_region.length
-      value: [36, 41]
-      source: OligoMiner blockParse.py -l/-L defaults; Beliveau 2018 Fig. 2A and Table S1 ("Balance")
-      quote: The minimum allowed probe length; default is 36 ... maximum ... default is 41
+      value: [35, 41]
+      source: >-
+        OligoMiner's genome-wide hg38 "Balance" probe set (hg38b.tar.gz, the
+        set PaintSHOP serves; its probes are 35-41 nt, 35 the most common
+        length), Beliveau 2018 Results and Hershberg 2021 Table 1. Beliveau
+        2018 Fig. 2A, Table S1 (the imaged 19p13.2 and Xist sets) and the
+        blockParse.py default (-l 36 -L 41) give 36-41 instead.
+      quote: a "balance" set that seeks to compromise between coverage and binding affinity (35-41 nt, 42 C hybridization; Fig. 2A)
     - parameter: post_process.filters.homology_gc
       value: 0.20-0.80
       source: OligoMiner blockParse.py -g/-G defaults
@@ -45,6 +66,20 @@ meta:
       value: AAAAA, TTTTT, CCCCC, GGGGG excluded
       source: OligoMiner blockParse.py -X default
       quote: default is 'AAAAA,TTTTT,CCCCC,GGGGG'
+    - parameter: post_process.filters.n_bases
+      value: N excluded
+      source: >-
+        OligoMiner blockParse.py (Ncheckopt rejects every window with an N,
+        whatever -X lists); Beliveau 2018 Results
+      quote: screens for prohibited sequences such as homopolymeric runs and "N" bases
+    - parameter: attributes.homology_sites and post_process.filters.homology_sites_num
+      value: exactly 1 Bowtie2 alignment (--very-sensitive-local, both strands)
+      source: >-
+        Beliveau 2018 Methods (Unique Mode, UM); OligoMiner README (UM
+        alignment with -k 100, as mapped_sites runs it); outputClean.py -u
+        keeps a probe that aligned and has no XS:i tag, i.e. for which Bowtie2
+        found no second alignment
+      quote: Bowtie2 was run with "--very-sensitive-local -k 2 -t" in UM
     - parameter: post_process.remove_overlap.location_interval
       value: 0
       source: OligoMiner blockParse.py -S default
@@ -55,9 +90,17 @@ meta:
         OligoMiner kmerFilter.py (-m 18; drops a probe when a k-mer count is
         >= -k) and Beliveau 2018 genome-wide runs (-k 5)
       quote: Filter probes with kmers occurring => than this many times
+    - parameter: attributes.homology_kmer_count.strand
+      value: sense (the probe's k-mers as written, counted on the FASTA's forward strand)
+      source: >-
+        Beliveau 2018 Methods: the 18-mer dictionary was built without -C
+        (canonical counting), so jellyfish counts each k-mer on the forward
+        strand only; PaintSHOP builds its dictionary the same way (Snakefile,
+        rule build_jellyfish). The -k 5 threshold was set on these counts.
+      quote: jellyfish count -s 3300M -m 18 -o hg38_18.jf --out-counter-len 1 -L 2 hg38.fa
     - parameter: oligopaint_oligo primers
-      value: 21 nt on each side of the homology region
-      source: Beliveau 2012
+      value: 21 nt on each side of the homology region (N placeholders)
+      source: Beliveau 2012; Beliveau 2018 Table S2 lists its primer pairs (20-22 nt)
       quote: each oligo contains 32 bases of genomic sequence flanked by 21-base primer sequences
   hybridization:
     ssc: 2x (2x SSCT)
@@ -80,13 +123,14 @@ meta:
       Applied: attributes.homology_tm.hybridization sets these design
       conditions and post_process.filters.homology_tm keeps 42-47 C.
   limitations:
-    - OligoMiner's outputClean step (Bowtie2 alignment scored with an LDA model of duplex stability) is not reproduced; the k-mer filter is the only specificity filter here.
+    - "OligoMiner's outputClean LDA Mode (each Bowtie2 alignment scored with an LDA model of duplex stability; used for the 19p13.2 sets of Beliveau 2018 Table S1) is not reproduced. The template applies Unique Mode instead: it drops a probe with any second alignment, however weak."
+    - "No secondary-structure filter: Beliveau 2018 applied none to its probe sets (Methods; Table S1). OligoMiner's optional structureCheck.py (NUPACK dna1998; keeps probes whose unstructured state has probability > 0.1 at 47 C + 0.65 C per % formamide) has no U-Probe equivalent: fold_score is a ViennaRNA RNA MFE."
     - U-Probe computes Tm with primer3 (SantaLucia 1998 parameters and salt correction; formamide after Blake and Delcourt 1996, about 0.61-0.72 C per %), not with OligoMiner's Biopython Tm_NN (DNA_NN3, 0.65 C per %), so oligos close to 42 or 47 C may be classified differently.
-    - "TODO: verify the Oligopaint primer sequences (Beliveau 2012 SI); the 21-nt primers here are N placeholders."
+    - "No primer sequences are given: primer_1 and primer_2_rc are 21-N placeholders, and a library ordered with them cannot be amplified (meta.replace says what to supply)."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here); it must set `jellyfish: true` for kmer_count"
+    - "genome: a genome name from your genomes.yaml (hg38 here) whose FASTA is soft-masked (repeats in lowercase): `uprobe genome fetch --species homo_sapiens --soft-masked`, or UCSC hg38.fa. With an unmasked FASTA, masked: drop skips no repeat (uprobe validate --check-targets and the run log warn). It must set `jellyfish: true` for kmer_count and list bowtie2 in align_index for mapped_sites (the genome-wide index is built by `uprobe build-index`)"
     - "targets: genomic intervals chrom:start-end in your FASTA's naming (a 50-kb example interval here)"
-    - "oligopaint_oligo.primer_1 / primer_2_rc: 21-nt amplification primer placeholders (N)"
+    - "oligopaint_oligo.primer_1 and primer_2_rc: replace both 21-N placeholders with a real primer pair. primer_1 is the forward PCR primer, 5'->3' as you order it; primer_2_rc is the reverse complement of the reverse PCR primer (the library oligo carries its binding site). Each primer 20-22 nt (21 in Beliveau 2012; 20-22 in Beliveau 2018 Table S2), with similar Tm; neither may occur in the target genome or pair with the other or with the homologies. Use one pair per pool or sub-pool, e.g. a published set designed to be orthogonal to the genome (PaintSHOP, Hershberg 2021) or a pair from Beliveau 2018 Table S2. Sequences that are not part of the library oligo go on the ordered primers: the dye, a nicking site, or a T7 promoter tail (TAATACGACTCACTATAGGG) for in vitro transcription. Readout or secondary-oligo sites for indirect labelling are extra parts of oligopaint_oligo."
 
 name: oligopaint
 description: Oligopaint DNA FISH library oligos with OligoMiner Balance homology regions (Beliveau et al. 2012, 2018)
@@ -94,28 +138,34 @@ description: Oligopaint DNA FISH library oligos with OligoMiner Balance homology
 genome: hg38
 
 targets:
-  - chr19:10000000-10050000
+  - chr19:10000001-10050000
 
 encoding:
-  chr19:10000000-10050000: {}
+  chr19:10000001-10050000: {}
 
 extracts:
   target_region:
     source: genome
-    length: [36, 41]
+    length: [35, 41]
     step: 1
+    # Skip windows with a soft-masked (lowercase) or N base: OligoMiner mines
+    # repeat-masked FASTA (meta.parameter_sources). Needs a soft-masked genome.
+    masked: drop
 
 probes:
   oligopaint_oligo:
     template: "{primer_1}{homology}{primer_2_rc}"
     parts:
+      # PLACEHOLDERS: replace both N runs before ordering (meta.replace).
       primer_1:
-        template: "NNNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 21-nt forward primer
+        # Your forward PCR primer, 5'->3' as ordered (20-22 nt).
+        template: "NNNNNNNNNNNNNNNNNNNNN"
         parts: {}
       homology:
         expr: "target_region"
       primer_2_rc:
-        template: "NNNNNNNNNNNNNNNNNNNNN"  # PLACEHOLDER: 21-nt reverse primer site
+        # The reverse complement of your reverse PCR primer (20-22 nt).
+        template: "NNNNNNNNNNNNNNNNNNNNN"
         parts: {}
 
 # Hybridization conditions of the source protocol (sources: meta.hybridization).
@@ -139,6 +189,15 @@ attributes:
     type: kmer_count
     kmer_len: 18
     aligner: jellyfish
+    # OligoMiner's dictionary counts k-mers on the forward strand only (no -C);
+    # its <= 4 threshold refers to these counts (meta.parameter_sources).
+    strand: sense
+  homology_sites:
+    # Genome alignments, Bowtie2 --very-sensitive-local -k 100 on both strands:
+    # OligoMiner's Unique Mode alignment. homology_sites_num counts them.
+    target: oligopaint_oligo.homology
+    type: mapped_sites
+    aligner: bowtie2
 
 post_process:
   filters:
@@ -150,8 +209,15 @@ post_process:
       type: sequence_pattern
       target: oligopaint_oligo.homology
       exclude_patterns: [AAAAA, TTTTT, CCCCC, GGGGG]
+    n_bases:
+      type: sequence_pattern
+      target: oligopaint_oligo.homology
+      exclude_patterns: [N]
     homology_kmer_count:
       condition: homology_kmer_count <= 4
+    # outputClean Unique Mode: Bowtie2 finds the probe's own site and no other.
+    homology_sites_num:
+      condition: homology_sites_num == 1
   sorts:
     is_ascending:
       - homology_kmer_count
