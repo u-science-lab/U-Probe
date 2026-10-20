@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
-from ..hybridization import resolve_conditions, tm_arguments
+from ..hybridization import multi_padlock_design_arguments, resolve_conditions, tm_arguments, tm_method
 from ..offtarget import BOWTIE2_LOCAL_MIN_LENGTH, OffTargetCounter, mapped_genes_settings, short_for_bowtie2
 from ..utils import get_logger
 
@@ -148,9 +148,15 @@ def _add_attributes(
                     f"Aligner {attr['aligner']} is not implemented."
                 )
         elif attr_type == "annealing_temperature":
-            # Only declared hybridization fields are passed; the rest keep cal_temp's defaults.
-            conditions = tm_arguments(resolve_conditions(protocol, attr_name))
-            vals = cached(df_probes[actual_target], lambda seq: cal_temp(seq, **conditions))
+            # Only declared hybridization fields are passed; the rest keep the defaults.
+            declared = resolve_conditions(protocol, attr_name)
+            if tm_method(attr, f"attributes.{attr_name}") == "multi_padlock_design":
+                conditions = multi_padlock_design_arguments(declared)
+                calculate = cal_temp_multi_padlock_design
+            else:
+                conditions = tm_arguments(declared)
+                calculate = cal_temp
+            vals = cached(df_probes[actual_target], lambda seq: calculate(seq, **conditions))
             df_probes[attr_name] = vals
         elif attr_type == "gc_content":
             vals = cached(df_probes[actual_target], cal_gc_content).round(2)

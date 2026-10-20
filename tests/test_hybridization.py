@@ -1,5 +1,6 @@
 import copy
 import json
+import math
 from io import BytesIO
 from zipfile import ZipFile
 
@@ -250,3 +251,52 @@ def test_validate_warns_when_generated_tm_filters_assume_37_c():
     assert len(warnings) == 1 and '37 °C' in warnings[0].message and 'temperature_c' in warnings[0].suggestion
     protocol['hybridization']['temperature_c'] = 42
     assert not [f for f in validate_protocol(protocol) if f.path == 'hybridization']
+
+
+# Moldia/multi_padlock_design lib/screenseq.py calculatetm (HybISS design code), run on the
+# published mouse Pvalb targets of Gyllborg et al. 2020 (Supplementary Table 1).
+MPD_TM = {'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG': 70.50057357343485,
+          'CTCTATGGCCCTCGGATGACGCCATTCTTC': 67.16298334058791}
+MPD_CONDITIONS = {'na_mM': 75, 'mg_mM': 10, 'probe_nM': 100, 'formamide_pct': 20}
+
+
+def test_multi_padlock_design_tm_reproduces_the_hybiss_code():
+    from uprobe.core.attributes import cal_temp_multi_padlock_design
+    for seq, tm in MPD_TM.items():
+        assert cal_temp_multi_padlock_design(seq, **MPD_CONDITIONS) == pytest.approx(tm, abs=1e-9)
+        assert cal_temp_multi_padlock_design(seq.lower().replace('t', 'u'), **MPD_CONDITIONS) == pytest.approx(tm)
+    assert math.isnan(cal_temp_multi_padlock_design('ACGTNACGT', **MPD_CONDITIONS))
+    # The attribute takes the declared conditions; dNTP is not part of the formula.
+    protocol = tm_protocol({'temperature_c': 45, 'dntp_mM': 1}, tm_method='multi_padlock_design',
+                           hybridization=MPD_CONDITIONS)
+    result = tm_table(protocol, list(MPD_TM))
+    assert result['tm'].tolist() == pytest.approx(list(MPD_TM.values()), abs=1e-9)
+    # primer3 under the same conditions is 3.3-4.7 °C lower for these two targets.
+    primer3_tm = [cal_temp(s, mv_conc=75, dv_conc=10, dntp_conc=1, dna_conc=100,
+                           formamide_conc=20 * FORMAMIDE_MOLAR_PER_PCT) for s in MPD_TM]
+    assert ((result['tm'] - primer3_tm) > 3).all()
+    assert describe_conditions(protocol) == [
+        'Tm [multi_padlock_design] (tm): 75 mM Na+, 10 mM Mg2+, 100 nM probe, 20% formamide']
+    # Unset fields keep the legacy defaults; salt, probe and formamide move Tm as in the repository.
+    legacy = tm_table(tm_protocol(tm_method='multi_padlock_design'), [SEQS[0]])['tm'].iloc[0]
+    for field, value in (('na_mM', 390), ('mg_mM', 10), ('probe_nM', 500)):
+        block = {field: value}
+        assert tm_table(tm_protocol(block, tm_method='multi_padlock_design'), [SEQS[0]])['tm'].iloc[0] > legacy
+    with_formamide = tm_table(tm_protocol({'formamide_pct': 10}, tm_method='multi_padlock_design'), [SEQS[0]])
+    assert with_formamide['tm'].iloc[0] == pytest.approx(legacy - 7.2)
+    assert tm_table(tm_protocol(tm_method='primer3'), SEQS)['tm'].tolist() == [legacy_tm(s) for s in SEQS]
+
+
+@pytest.mark.parametrize('attr, message', [
+    ({'type': 'annealing_temperature', 'tm_method': 'sugimoto'}, 'must be one of primer3, multi_padlock_design'),
+    ({'type': 'gc_content', 'tm_method': 'multi_padlock_design'}, 'is only supported for annealing_temperature'),
+])
+def test_invalid_tm_method_rejected(attr, message):
+    from uprobe.core.validate import validate_protocol
+    protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', **attr}}}
+    with pytest.raises(ValueError, match=r'attributes\.x\.tm_method ' + message):
+        validate_protocol_hybridization(protocol)
+    with pytest.raises(ValueError, match='tm_method'):
+        _validate_and_normalize_protocol(copy.deepcopy(protocol))
+    errors = [f for f in validate_protocol(protocol) if f.severity == 'error']
+    assert [f.path for f in errors] == ['attributes.x.tm_method'] and message in errors[0].message

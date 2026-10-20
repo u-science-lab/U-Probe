@@ -1,3 +1,4 @@
+import math
 import os
 import typing as t
 import primer3
@@ -331,6 +332,39 @@ def cal_temp(seq: str, mv_conc=50, dv_conc=0, dntp_conc=0.6, dna_conc=50,
         dna_conc=dna_conc, formamide_conc=formamide_conc, dmso_conc=0,
         tm_method="santalucia", salt_corrections_method="santalucia",
     )
+
+# Sugimoto et al. 1996 (Nucleic Acids Res 24:4501-4505, doi:10.1093/nar/24.22.4501)
+# DNA/DNA nearest-neighbor enthalpies (kcal/mol) and entropies (cal/K/mol), as
+# tabulated in Moldia/multi_padlock_design lib/screenseq.py.
+SUGIMOTO_1996_NN = {
+    'AA': (-8.0, -21.9), 'AC': (-9.4, -25.5), 'AG': (-6.6, -16.4), 'AT': (-5.6, -15.2),
+    'CA': (-8.2, -21.0), 'CC': (-10.9, -28.4), 'CG': (-11.8, -29.0), 'CT': (-6.6, -16.4),
+    'GA': (-8.8, -23.5), 'GC': (-10.5, -26.4), 'GG': (-10.9, -28.4), 'GT': (-9.4, -25.5),
+    'TA': (-6.6, -18.4), 'TC': (-8.8, -23.5), 'TG': (-8.2, -21.0), 'TT': (-8.0, -21.9),
+}
+SUGIMOTO_1996_INITIATION = (0.6, -9.0)
+
+def cal_temp_multi_padlock_design(seq: str, na_mM=50, mg_mM=0, probe_nM=50, formamide_pct=0):
+    """Tm (°C) by the formula of the HybISS padlock design code (Gyllborg et al. 2020).
+
+    Moldia/multi_padlock_design lib/screenseq.py calculatetm: Sugimoto 1996
+    nearest-neighbor sums plus one initiation term, Tm = 1000 dH / (dS + R ln C)
+    - 273.15 with C the probe concentration (mol/l), + 16.6 log10([Na+] +
+    3.795 sqrt([Mg2+])) (mol/l), - 0.72 °C per % formamide. The repository
+    fixes 75 mM Na+, 10 mM Mg2+, 100 nM probe and 20% formamide; here they are
+    arguments. NaN for a sequence with bases other than A, C, G, T/U.
+    """
+    seq = seq.upper().replace('U', 'T')
+    if not seq or set(seq) - set('ACGT'):
+        return float('nan')
+    enthalpy, entropy = SUGIMOTO_1996_INITIATION
+    for i in range(len(seq) - 1):
+        h, s = SUGIMOTO_1996_NN[seq[i:i + 2]]
+        enthalpy += h
+        entropy += s
+    tm = enthalpy * 1000 / (entropy + 1.9872 * math.log(probe_nM * 1e-9)) - 273.15
+    tm += 16.6 * math.log10(na_mM / 1000 + 3.795 * math.sqrt(mg_mM / 1000))
+    return tm - 0.72 * formamide_pct
 
 def cal_fold(seq: str): # RNA fold
     return -RNA.fold_compound(seq).mfe()[1]

@@ -42,6 +42,12 @@ stability, how U-Probe computes Tm, and how to place a Tm window relative to the
   SantaLucia 1998). In FISH the probe is in large excess over its target, where the term is about the
   probe concentration; by the same equations this raises Tm by about 1.4-2 °C (computed with U-Probe's Primer3 call: +2.0 °C for 20-mers at 50 nM,
   +1.4 °C for 30-mers at 1 nM). Uniform offset; it rarely changes which windows pass.
+- `tm_method: multi_padlock_design` (attribute option) swaps Primer3 for the formula of the HybISS
+  design code (Moldia/multi_padlock_design `lib/screenseq.py`): Sugimoto 1996 DNA/DNA nearest
+  neighbours, one initiation term, C_T = probe concentration, `+16.6 log10([Na+] + 3.795 sqrt[Mg2+])`,
+  -0.72 °C per % formamide, no dNTP term; same `hybridization:` fields. It exists to apply the
+  published 65-75 °C HybISS window: on the 1,195 published HybISS targets Primer3 runs 3.4 ± 1.5 °C
+  lower (range -3.2 to +7.5, more for AT-rich targets), so no Primer3 window is equivalent.
 
 ### Formamide: Blake & Delcourt vs the 0.65 °C/% rule
 
@@ -73,7 +79,9 @@ Typical values (U-Probe/Primer3, median of random 45%-GC windows, 50 nM probe):
    put those conditions in a per-attribute `hybridization:` override and use the published window
    (MERFISH: 66-76 °C at 300 mM Na+, 5 nM probe, no formamide, 30-nt target regions, Moffitt et al.
    2016 PNAS 113:11046, doi:10.1073/pnas.1612826113; OligoMiner: 42-47 °C at 390 mM Na+ and 50%
-   formamide, Beliveau et al. 2018).
+   formamide, Beliveau et al. 2018). When the paper's formula differs from Primer3, also reproduce the
+   formula if U-Probe has it (HybISS: 65-75 °C with `tm_method: multi_padlock_design`, Gyllborg et al.
+   2020); otherwise state the offset.
 3. Otherwise set the window **relative to the hybridization temperature under the real conditions**.
    Published protocols, recomputed with U-Probe under their own conditions (median of random windows
    in their GC range), sit at these margins above the hybridization temperature:
