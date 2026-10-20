@@ -63,6 +63,16 @@ RCA initiator primer, 25 nt in the template (published: 25 in 247 of 432, 26 in 
 - Backbones are modular: the published GAPDH/MTOR sets also use hybridization-readout backbones
   (e.g. ...ACTAGCTCGATTCAA-GT-ACTAGCTCGATTCAA... with a Cy3 detection oligo) and primers whose
   tail pairs that backbone instead of TAGTGGAGCCT.
+- Sequential dilution (Wu 2024 Fig. 6; its legend is paywalled, so read from the preprint's Results
+  and Fig. 6 legend and the Supp. Table sheet "Fig6"): against "optical signal crowding, especially
+  for high-expression level genes", genes are split into sets, each with its own pair of anchor
+  (sequencing-primer) sites in the padlock, and each set is read in its own round; fiducial genes
+  (Gfap, Gad2) carry a third pair whose anchors are added in every round to register the rounds.
+  Published 58-nt padlocks, same layout: fiducial CC-B1-ACACTACCACC-GC-B2-TCCTATTCTCA, set 1
+  CC-B1-ATACACTAAAG-GC-B2-ATCCTCCTTCA, set 2 the standard backbone; each primer tail is rc(the
+  padlock's right anchor site): TGAGAATAGGA, TGAAGGAGGAT, AGGCTCCACTA. Shown with 4 + 4 genes in 2
+  rounds in cultured cortical neurons; the authors estimate 6 diluted rounds for 1,000 genes vs 5
+  conventional (peer-review file).
 
 ## 3. Design parameters
 
@@ -179,6 +189,20 @@ What to edit:
 - Optional Tm/GC filters on `arm_5_tm`, `arm_3_tm`, `primer_tm`, `target_gc` (reported, not
   filtered): none are published, so choose them yourself and say so.
 - `aligner: bowtie` + `max_mismatches: 2` for an exhaustive off-target search.
+- Sequential dilution (section 2): move the anchor sites into `encoding`, the same values for every
+  gene of a set; choosing which (highly expressed) genes go to which set is up to you:
+
+```yaml
+encoding:   # Fig. 6 values: Gfap fiducial set, Cxcl2 set 1
+  Gfap: {B1: AAA, B2: AAA, anchor_L: ACACTACCACC, sp: GC, anchor_R: TCCTATTCTCA}
+  Cxcl2: {B1: ACA, B2: ACC, anchor_L: ATACACTAAAG, sp: GC, anchor_R: ATCCTCCTTCA}
+probes:
+  padlock:
+    template: "{arm_5}CC{b1}{anchor_l}{sp}{b2}{anchor_r}{arm_3}"
+    # parts as before, plus anchor_l: {expr: "encoding[target]['anchor_L']"}; sp, anchor_r alike
+  rca_primer:
+    template: "{binding}{gap_base}{tail}"   # tail: {expr: "rc(encoding[target]['anchor_R'])"}
+```
 
 **U-Probe departs:** (1) `source: mRNA` on the MANE/canonical transcript with a 1,000-nt cap, not
 "an exon near the 5' end" (no distance is published); (2) `equal_space` spreads the 2 sites evenly
@@ -211,10 +235,11 @@ of 28 C on both arms and the primer site comes from the published units, not fro
 
 ## 8. Verification checklist
 
-- [ ] Padlock = 58 nt: 13 + CC + 3 + TGCGTCTATTT + GT + 3 + TAGTGGAGCCT + 13; 5' phosphate noted.
+- [ ] Padlock = 58 nt: 13 + CC + 3 + TGCGTCTATTT + GT + 3 + TAGTGGAGCCT + 13 (dilution sets: their
+      own anchors and spacer); 5' phosphate noted.
 - [ ] rc(arm_5) + rc(arm_3) equals RNA nt 1-26 of the window, contiguous (junction 13|14).
-- [ ] Primer 5' part = rc(RNA nt 28-40) (or 27-40); primer ends with AGGCTCCACTA (3' end on circle)
-      and is 25 nt (or 26 with the extra C).
+- [ ] Primer 5' part = rc(RNA nt 28-40) (or 27-40); primer ends with AGGCTCCACTA, or rc(its set's
+      right anchor) (3' end on circle), and is 25 nt (or 26 with the extra C).
 - [ ] Window lies in the intended transcript region/isoforms; MANE/canonical choice logged.
 - [ ] `target_mapped_genes` = 1 for every unit (with the aligner and expression table you intended).
 - [ ] Per-position B1/B2 colour codes are unique across genes; dyes match the SBL scheme.

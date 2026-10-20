@@ -1,6 +1,6 @@
 ---
 name: u-probe
-description: Design and check FISH and in situ hybridization probes with the U-Probe CLI (smFISH and Stellaris, smiFISH, HCR v3, MERFISH, seqFISH+, padlock probes for in situ sequencing such as ISS and HybISS, STARmap, MiP-seq and other RCA designs, Oligopaint and DNA FISH, oligo pools and libraries for them). Use when a user wants probes against an RNA (gene, transcript, isoform, intron) or a genomic DNA locus or chromosome, asks which binding length, Tm, GC, formamide, spacing, probe count or off-target rule to use, names a FISH or imaging-based spatial transcriptomics method, or mentions uprobe or U-Probe. Not for PCR or qPCR primers or CRISPR guides.
+description: Design and check FISH and in situ hybridization probes with the U-Probe CLI (smFISH and Stellaris, smiFISH, HCR v3, MERFISH, seqFISH+, padlock probes for in situ sequencing such as ISS and HybISS, STARmap, MiP-seq, targeted ExSeq, PRISM, RAEFISH, OpenFISH and other RCA designs, TDDN-FISH, Oligopaint and DNA FISH, oligo pools and libraries for them). Use when a user wants probes against an RNA (gene, transcript, isoform, intron) or a genomic DNA locus or chromosome, asks which binding length, Tm, GC, formamide, spacing, probe count or off-target rule to use, names a FISH or imaging-based spatial transcriptomics method, or mentions uprobe or U-Probe. Not for PCR or qPCR primers or CRISPR guides.
 ---
 
 # U-Probe: FISH and in situ probe design
@@ -221,6 +221,11 @@ add (dyes, 5' phosphate on padlocks); every non-default choice, template departu
 | STARmap SNAIL padlock + primer pairs | `references/techniques/starmap.md` |
 | MiP-seq padlock + RCA primer | `references/techniques/mip-seq.md` |
 | `double_hyb_rca` circle + amplification probe | `references/techniques/double-hyb-rca.md` |
+| Targeted ExSeq padlocks (expanded tissue, SplintR, SBS/SOLiD barcodes) | `references/techniques/exseq.md` |
+| PRISM colour-intensity padlocks (one imaging round) | `references/techniques/prism.md` |
+| RAEFISH reverse padlock + priming probe + encoding probe | `references/techniques/raefish.md` |
+| OpenFISH split probe pairs + reusable padlock | `references/techniques/openfish.md` |
+| TDDN-FISH primary probes (DNA-nanostructure amplifier) | `references/techniques/tddn-fish.md` |
 | Oligopaint, DNA FISH, chromosome paints, chromatin tracing, repeats | `references/techniques/oligopaint-dna-fish.md` |
 | Commands, outputs, pre-delivery checks | `references/uprobe/workflow.md` |
 | Runtimes, probe yields and `check_probes.py` options of each template on real genes | `references/uprobe/template-qa.md` |

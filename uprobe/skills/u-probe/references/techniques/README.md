@@ -18,6 +18,11 @@ a checklist.
 | RT-free in situ sequencing in intact thick tissue (hydrogel), padlock + primer pair (SNAIL) | STARmap | `starmap.md` | `starmap` |
 | RT-free padlock + RCA initiator primer with pairwise barcodes, sequencing-by-ligation readout | MiP-seq | `mip-seq.md` | `mipseq` |
 | RNA-templated circle probe + amplification primer (U-Probe RCA configuration) | Double-hybridization RCA | `double-hyb-rca.md` | `double_hyb_rca` |
+| Subcellular in situ sequencing in expanded tissue (tens to ~300 genes); barcoded padlocks ligated on RNA, read by SBS or SOLiD | Targeted ExSeq | `exseq.md` | `padlock_iss`, direct-RNA edits in `exseq.md` |
+| Up to 64 genes in one staining round on a conventional microscope; padlocks ligated on RNA carry colour-intensity barcodes | PRISM | `prism.md` | `padlock_iss`, direct-RNA edits in `prism.md` |
+| Transcriptome-scale targeted panels by sequential FISH on RCA amplicons; reverse padlock + priming probe + encoding probe, MHD4 codes | RAEFISH | `raefish.md` | `starmap`, edits in `raefish.md` |
+| ~100 genes on a widefield microscope; split probe pair docks a reusable barcoded padlock (RCA), round x colour-pair codes | OpenFISH | `openfish.md` | `hcr_v3`, edits in `openfish.md` |
+| Few probes per RNA (3; 1 for a miRNA), enzyme-free DNA-nanostructure amplification, ~1 h rounds; low plex | TDDN-FISH primary probes | `tddn-fish.md` | `smfish_stellaris`, edits in `tddn-fish.md` |
 | DNA FISH: chromosome paints, loci, chromatin tracing | Oligopaint / OligoMiner | `oligopaint-dna-fish.md` | `oligopaint` |
 
 ## Choosing between the RNA methods
@@ -28,7 +33,7 @@ a checklist.
 | RNA shorter than ~600 nt, or sample too bright/thick for unamplified spots? | HCR v3 (or an RCA method) | Amplified signal; 5-20 pairs suffice. |
 | More than ~10 genes in the same cells? | MERFISH or seqFISH+ | Combinatorial barcodes, readout probes, codebooks. |
 | Genes with very high expression in a multiplex panel? | image them sequentially or drop them | Optical crowding breaks combinatorial decoding (`merfish.md` section 5). |
-| Does one bound probe (or pair) make a spot? | HCR, padlock/RCA: yes | Each probe or pair must be specific; filter per probe. |
+| Does one bound probe (or pair) make a spot? | HCR, padlock/RCA (incl. ExSeq, PRISM, RAEFISH, OpenFISH), TDDN-FISH: yes | Each probe or pair must be specific; filter per probe. |
 | | smFISH, smiFISH, MERFISH, seqFISH+: no | A false spot needs many probes on one off-target RNA; a few promiscuous probes cost background. |
 
 ## Probe-level numbers at a glance (sources in each file)
@@ -40,6 +45,7 @@ a checklist.
 | HCR v3 | 2 x 25 nt per pair, 2-nt gap | 20 pairs (>= 25-30 for single molecules) | 18-nt initiator half + 2-nt spacer | 30 % formamide, 5x SSC, 37 C |
 | MERFISH | 30 nt | 92 (48-92 in later work) | 3 x 20-nt readouts (2 x 30 in Chen 2015) + 2 x 20-nt primers | 30 % formamide, 2x SSC, 37 C |
 | seqFISH+ | 28 nt | 24 | 4 x 15-nt readout sites | 40 % formamide, 2x SSC, 37 C |
+| TDDN-FISH | 35 nt | 3 (1 for miR-21) | one 30-nt readout, 5' end | 30 % formamide, 2x SSC, 37 C |
 
 ## Rules for every RNA design
 

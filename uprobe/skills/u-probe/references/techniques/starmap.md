@@ -89,15 +89,16 @@ SEDAL-read code, "s" the splint code):
 | --- | --- | --- | --- |
 | Window (padlock + gap + primer site) | 40-46 | nt | Wang 2018 SM, doi:10.1126/science.aat5691 |
 | Each half | 19-25 (text says 20-25; Fig. S1A and all published sets 19-25) | nt | Wang 2018 SM; Zeng 2023 Supp Table 1 |
-| Gap between halves | 0-2 stated; 1 (1,286) or 2 (2,892) in every located published pair, never 0 | nt | Wang 2018 SM; this KB, 4,178 pairs |
+| Gap between halves | 0-2 stated (2018), 1-2 (Ren 2025); 1 (1,286) or 2 (2,892) in every located published pair, never 0 | nt | Wang 2018 SM; Ren 2025; this KB, 4,178 pairs |
 | Half Tm | 60 designed, halves Tm-matched (Picky 2.2; salt/oligo conditions not stated). Recomputed at 2x SSC, 10% FA, 100 nM: median 58.0, 5th-95th percentile 53.4-63.9 (8,444 published halves); the two halves of a pair differ by a median 1.0 C (p90 3.1) | C | Wang 2018 Fig. S1A; this KB |
+| Window GC, Tm (2025) | GC 30-70 %, Tm 56-70 C at 5 nM oligo and 300 mM salt (Picky's salt term: [Na+]), set in Picky on the whole 40-46-nt sequence before the split (section 6) | %, C | Ren 2025, "Padlock and primer probe design"; Chou 2010 |
 | Splint overlap | 6 + 6 (2018, 1,022, 64-gene sets); 8 + 6 (2,766-gene set) | nt | Fig. S1A; supp tables |
 | Splint Tm | below room temperature | C | Wang 2018 Fig. S1A |
-| Pairs per gene | 4 (2018, 1,022, 64-gene); 2 (2,766-gene) | pairs | supp tables |
+| Pairs per gene | 4 (2018, 1,022, 64-gene); 2 (2,766-gene); 3-6 kept, > 6 designed as filtering removes 10-20 % (Ren 2025) | pairs | supp tables; Ren 2025 |
 | Oligo length | padlock 54-60, primer 31-37 (2018); "under 60 nt" | nt | Wang 2018 SM, Table S1 |
 | Code length | 5 (2018, 1,022); 3 (64-gene); 2 x 3 (2,766) | nt | tables; Zeng 2023; Shi 2023 doi:10.1038/s41586-023-06569-5 |
 | Hybridization | 2x SSC, 10% formamide, 1% Tween-20, 20 mM RVC, 40 C | - | Wang 2018 SM |
-| Probe concentration / time | 100 nM per oligo, overnight (2018); 1 nM, 36 h (PLUS); 5 nM, 24-36 h (Shi 2023) | nM | papers' Methods |
+| Probe concentration / time | 100 nM per oligo, overnight (2018); 1 nM, 36 h (PLUS); 5 nM, 24-36 h (Shi 2023); 100 nM, or 1-5 nM above 100 genes, 12-36 h (Ren 2025 Steps 16-18) | nM | papers' Methods |
 | Ligation | T4 DNA ligase, room temperature, 2 h | - | Wang 2018; Zeng 2023 doi:10.1038/s41593-022-01251-x |
 | RCA | phi29, 250 uM dNTP + 20 uM aminoallyl-dUTP, 30 C, 2 h | - | Wang 2018; Zeng 2023 |
 | SEDAL | reading probe 11 nt (10 uM) + decoding 8 nt, T4 ligase, RT 3 h; strip 60% formamide | - | Wang 2018 SM |
@@ -118,7 +119,12 @@ the published sequences.
   the isoforms you want to count; of the 136 pairs of the 2018, 64-gene and 2,766-gene samples, 28 lay
   on all Ensembl isoforms of their gene and 103 more on at least half.
 - Spacing: published pairs of one gene are usually hundreds of nt apart but sometimes overlap
-  (by up to 11 nt in the 2018 sample); no minimum spacing is stated.
+  (by up to 11 nt in the 2018 sample); no minimum spacing is stated. Ren 2025 removes "overlaps and
+  containments" (Dedupe, BBMap), yet its preselected windows still overlap by up to 19 nt (this KB).
+- Ren 2025 Supp Tables 1-2: preselected pairs for 25,916 human / 23,519 mouse genes; columns Primer
+  and Padlock are the binding parts, 5'->3' (2,766 sampled mouse rows located: padlock site upstream,
+  gap 1-2 nt; this KB). Cross-check designs against them; their "Tm" columns (51-90 C per half) are
+  on an unstated scale.
 
 **U-Probe departs:** `source: CDS` of the MANE Select (else Ensembl canonical) transcript instead
 of the shortest isoform; `remove_overlap: 0` forbids overlapping pairs (stricter than published).
@@ -200,6 +206,21 @@ What to edit:
   conditions if you change `probe_nM`.
 - Probe concentration: `probe_nM: 100` is Wang 2018's; use 1 or 5 nM for a PLUS-style hybridization,
   which lowers every Tm by 6.4 or 4.2 C.
+- Ren 2025 windows (checked here on the 2,766 located preselected mouse pairs): GC applies to the
+  whole window (all 32.6-70.7 %; 12.5 % of pairs have a half outside 30-70 %). Do not filter a
+  whole-window Tm at 56-70: with an attribute-level `hybridization: {na_mM: 300, probe_nM: 5,
+  formamide_pct: 0}` U-Probe puts these windows at 72-87 C (1st-99th percentile), so Picky's Tm is on
+  another scale. Their halves run hotter: under the template's conditions 50-65 C keeps both halves
+  of 80.5 % of the pairs, 50-70 C 97.3 % (not a published rule):
+
+```yaml
+attributes:
+  target_gc: {target: target_region, type: gc_content}     # the whole 40-46-nt window
+post_process:
+  filters:
+    target_gc: {condition: target_gc >= 0.30 & target_gc <= 0.70}
+    padlock_tm: {condition: padlock_tm >= 50 & padlock_tm <= 70}   # primer_tm alike
+```
 
 ## 7. Pitfalls
 
@@ -225,7 +246,10 @@ What to edit:
 - Bowtie2 is a heuristic with at most 100 alignments: windows in repeats can pass with
   `target_mapped_genes <= 1`; prefer `aligner: bowtie` when the index exists.
 - No fold or self-complementarity filter is applied; a padlock whose binding part pairs with its
-  own backbone or with the primer tail will not hybridize/ligate as intended.
+  own backbone or with the primer tail will not hybridize/ligate as intended. Ren 2025 drops strong
+  NUPACK secondary structures and BLASTs each probe against the minus strand of the whole pool
+  (heterodimers); U-Probe has `fold_score` (ViennaRNA MFE as RNA; no published cutoff) and
+  `self_match`, but no probe-vs-pool screen: check the final pool externally.
 
 ## 8. Verification checklist
 
@@ -238,10 +262,10 @@ What to edit:
       flanked by the known bases of the reading-probe design.
 - [ ] `target_mapped_genes == 1` (after `gene_expression` / `exempt_copies`) for every pair;
       off-target lists empty.
-- [ ] 4 pairs per gene (2 for very large panels), non-overlapping, on the transcript you mean
-      to count; `summary.json` status `ok` and no `fewer_probes_than_requested` warning.
+- [ ] 4 pairs per gene (3-6 in Ren 2025; 2 for very large panels), non-overlapping, on the transcript
+      you mean to count; `summary.json` status `ok` and no `fewer_probes_than_requested` warning.
 - [ ] Half Tms reported at the probe concentration you will use and reasonably balanced (published
-      pairs differ by ~1 C); no strong hairpins in either oligo.
+      pairs differ by ~1 C); no strong hairpins in either oligo, no heterodimers within the pool.
 
 ## 9. References
 
@@ -260,7 +284,13 @@ What to edit:
 - Frei AP, et al. 2016, Nature Methods. Highly multiplexed simultaneous detection of RNAs and
   proteins in single cells (PLAYR; an earlier two-probe ligation assay that shares authors with STARmap).
   doi:10.1038/nmeth.3742
+- Ren J, Zeng H, Huang J, et al. 2025, Nature Protocols. Spatially resolved in situ profiling of
+  mRNA life cycle at transcriptome scale in intact cells and tissues using STARmap PLUS, RIBOmap and
+  TEMPOmap. doi:10.1038/s41596-025-01248-3 (PMC12648639 author manuscript: "Padlock and primer
+  probe design", Steps 16-18, Supp Tables 1-2)
 - Chou HH, et al. 2004, Bioinformatics. Picky: oligo microarray design for large genomes.
   doi:10.1093/bioinformatics/bth347
+- Chou HH. 2010, BMC Bioinformatics. Shared probe design and existing microarray reanalysis using
+  PICKY. doi:10.1186/1471-2105-11-196 (salt correction on [Na+])
 - Nilsson M, et al. 1994, Science. Padlock probes: circularizing oligonucleotides for localized
   DNA detection. doi:10.1126/science.7522346
