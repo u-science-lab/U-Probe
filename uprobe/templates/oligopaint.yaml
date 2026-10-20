@@ -8,7 +8,9 @@ meta:
     Each library oligo is 5'-[primer 1, 21 nt][genomic homology, 36-41 nt]
     [primer 2 site, 21 nt]-3'. Homology regions tile a genomic interval
     without overlap and are taken from the + strand (both strands of the
-    denatured DNA are targets). The homology settings are the OligoMiner
+    denatured DNA are targets). As in OligoMiner, they are mined from a
+    repeat-masked genome: windows with a soft-masked (lowercase) or N base
+    are skipped. The homology settings are the OligoMiner
     blockParse defaults, which equal the paper's "Balance" preset (36-41 nt,
     Tm 42-47 C under 390 mM Na+ and 50% formamide, GC 20-80%, no
     AAAAA/TTTTT/CCCCC/GGGGG), followed by an 18-mer k-mer filter. The flanking
@@ -30,6 +32,17 @@ meta:
       title: beliveau-lab/OligoMiner
       url: https://github.com/beliveau-lab/OligoMiner
   parameter_sources:
+    - parameter: extracts.target_region.masked
+      value: drop (needs a soft-masked FASTA, e.g. Ensembl dna_sm or UCSC hg38.fa)
+      source: >-
+        Beliveau 2018 Methods (Whole-Genome Probe Discovery; assemblies
+        downloaded "with and without repeat masking" from UCSC); OligoMiner
+        README; blockParse.py rejects every window with an N base, so
+        hard-masked (RepeatMasker) repeats yield no candidate
+      quote: >-
+        Genome assemblies in FASTA format without repeat masking were used to
+        build Bowtie2 alignment indices and Jellyfish files. Repeat-masked
+        input files were used for probe discovery.
     - parameter: extracts.target_region.length
       value: [36, 41]
       source: OligoMiner blockParse.py -l/-L defaults; Beliveau 2018 Fig. 2A and Table S1 ("Balance")
@@ -84,7 +97,7 @@ meta:
     - U-Probe computes Tm with primer3 (SantaLucia 1998 parameters and salt correction; formamide after Blake and Delcourt 1996, about 0.61-0.72 C per %), not with OligoMiner's Biopython Tm_NN (DNA_NN3, 0.65 C per %), so oligos close to 42 or 47 C may be classified differently.
     - "TODO: verify the Oligopaint primer sequences (Beliveau 2012 SI); the 21-nt primers here are N placeholders."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here); it must set `jellyfish: true` for kmer_count"
+    - "genome: a genome name from your genomes.yaml (hg38 here) whose FASTA is soft-masked (repeats in lowercase): `uprobe genome fetch --species homo_sapiens --soft-masked`, or UCSC hg38.fa. With an unmasked FASTA, masked: drop skips no repeat (uprobe validate --check-targets and the run log warn). It must set `jellyfish: true` for kmer_count"
     - "targets: genomic intervals chrom:start-end in your FASTA's naming (a 50-kb example interval here)"
     - "oligopaint_oligo.primer_1 / primer_2_rc: 21-nt amplification primer placeholders (N)"
 
@@ -104,6 +117,9 @@ extracts:
     source: genome
     length: [36, 41]
     step: 1
+    # Skip windows with a soft-masked (lowercase) or N base: OligoMiner mines
+    # repeat-masked FASTA (meta.parameter_sources). Needs a soft-masked genome.
+    masked: drop
 
 probes:
   oligopaint_oligo:

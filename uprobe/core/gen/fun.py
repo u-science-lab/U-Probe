@@ -582,6 +582,7 @@ def generate_target_seqs(
                         overlap: t.Optional[int] = None,
                         step: t.Optional[int] = None,
                         transcripts='all',
+                        masked='keep',
                          ):
     """Candidate windows of the targets; RNA_SOURCES describes what each RNA source extracts.
 
@@ -590,6 +591,7 @@ def generate_target_seqs(
     record them per target (select_transcripts, with the ids of all
     transcripts that have such features for 'all'). A target with one
     selected transcript is tiled along its spliced sequence (SPLICED_SOURCES).
+    For source genome, ``masked`` ('keep' or 'drop') is passed to extract_fasta.
     """
     lower, _, step = normalize_sampling(min_length, step, overlap)
     if source in RNA_SOURCES:
@@ -614,7 +616,7 @@ def generate_target_seqs(
     elif source == 'genome':
         data_list = []
         for target in targets:
-            seq_list = extract_fasta(fasta_path, target, min_length, step=step)
+            seq_list = extract_fasta(fasta_path, target, min_length, step=step, masked=masked)
             data_list.extend(seq_list)
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'target_region'])
         return data

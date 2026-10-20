@@ -183,6 +183,7 @@ class UProbeAPI:
                     min_length=extraction_length,
                     step=step,
                     transcripts=extract_params.get('transcripts', 'all'),
+                    masked=extract_params.get('masked', 'keep'),
                 )
                 self.transcripts_used = df_genome.attrs.get('transcripts') or {}
                 if not df_genome.empty:

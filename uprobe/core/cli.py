@@ -363,6 +363,13 @@ def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None)
         if region.get('source', 'genome') == 'genome' and region['transcripts'] != 'all':
             log.warning('extracts.target_region.transcripts applies to gene targets (source mRNA, exon, CDS or '
                         'UTR); it is ignored for source: genome')
+    if 'masked' in region:
+        from .utils import MASKED_OPTIONS
+        if region['masked'] not in MASKED_OPTIONS:
+            raise ValueError(f"extracts.target_region.masked must be one of {', '.join(MASKED_OPTIONS)}, "
+                             f"got {region['masked']!r}")
+        if region.get('source', 'genome') != 'genome' and region['masked'] != 'keep':
+            log.warning('extracts.target_region.masked applies to source: genome; it is ignored for gene targets')
     if 'layout' in region:
         from .layout import compile_layout
         compile_layout(region['layout'], region['length'])
@@ -1108,6 +1115,11 @@ def genome():
                                     'bowtie-build (Bowtie 1) is installed]')
 @click.option('--jellyfish/--no-jellyfish', default=None,
               help='Enable kmer_count for the entry. [default: keep the existing value, else on if jellyfish is installed]')
+@click.option('--soft-masked', is_flag=True,
+              help='Download the soft-masked FASTA (Ensembl dna_sm: repeats in lowercase) instead of the unmasked '
+                   'one. Indexes ignore case, so the genome serves every template; source: genome windows with a '
+                   'masked base are skipped with extracts.target_region.masked: drop (oligopaint template). The '
+                   'default name ends in _sm.')
 @click.option('--build-index', is_flag=True, help='Build aligner indices afterwards (same as `uprobe build-index`).')
 @click.option('--threads', '-t', default=10, type=int, help='Threads for --build-index. [default: 10]')
 @click.option('--keep-compressed', is_flag=True, help='Keep the downloaded .gz files.')
@@ -1116,14 +1128,14 @@ def genome():
 @click.option('--dry-run', is_flag=True, help='Resolve release, species and URLs, print the plan, download nothing.')
 @click.option('--mirror', help='Base URL replacing https://ftp.ensembl.org/pub '
                                '(or https://ftp.ensemblgenomes.ebi.ac.uk/pub for other divisions).')
-def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, build_index,
+def genome_fetch(species, release, division, out, genomes, name, align_index, jellyfish, soft_masked, build_index,
                  threads, keep_compressed, force, dry_run, mirror):
     """
     Download an Ensembl genome FASTA and GTF and register them in genomes.yaml.
 
-    Prefers the primary assembly FASTA and falls back to toplevel. Files are
-    verified against Ensembl's CHECKSUMS, decompressed, and recorded with their
-    release and URLs. Re-running skips verified files and resumes partial
+    Prefers the primary assembly FASTA and falls back to toplevel; the FASTA
+    is unmasked unless --soft-masked is given. Files are verified against
+    Ensembl's CHECKSUMS, decompressed, and recorded with their release and URLs. Re-running skips verified files and resumes partial
     downloads. The resulting entry is printed to stdout as YAML.
 
     Example: uprobe genome fetch --species homo_sapiens --release latest --build-index
@@ -1135,6 +1147,7 @@ def genome_fetch(species, release, division, out, genomes, name, align_index, je
             species, release=release, division=division, out_dir=out, genomes_yaml=genomes, name=name,
             align_index=aligners, jellyfish=jellyfish, build_index=build_index, threads=threads,
             keep_compressed=keep_compressed, force=force, dry_run=dry_run, mirror=mirror,
+            soft_masked=soft_masked,
         )
     except GenomeFetchError as e:
         log.error(str(e))

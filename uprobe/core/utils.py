@@ -102,21 +102,50 @@ def parse_region(region: str) -> t.Tuple[str, int, int]:
     return chrom, start, end
 
 
-def extract_fasta(fasta_path, target, min_length, overlap=None, step=None):
+# extracts.target_region.masked: what source: genome does with repeat-masked windows.
+MASKED_OPTIONS = ('keep', 'drop')
+
+
+def masked_prefix(seq: str):
+    """Cumulative count of masked bases: soft-masked (lowercase) letters and N; element i counts seq[:i]."""
+    import numpy as np
+    codes = np.frombuffer(seq.encode('ascii', 'replace'), dtype=np.uint8)
+    masked = ((codes >= ord('a')) & (codes <= ord('z'))) | (codes == ord('N'))
+    return np.concatenate(([0], np.cumsum(masked)))
+
+
+def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, masked='keep'):
     """Windows of a region target, chrom:start-end (1-based, inclusive; see parse_region).
 
     sub_region numbers each window along the region, 1-based: window s-e
-    covers the genomic bases start + s - 1 to start + e - 1.
+    covers the genomic bases start + s - 1 to start + e - 1. Windows are
+    upper-cased. ``masked='drop'`` skips the windows with a masked base, i.e.
+    a soft-masked (lowercase) base or an N of a repeat-masked FASTA, as
+    OligoMiner mines a repeat-masked genome; the others keep the probe_id
+    they have with ``masked='keep'``.
     """
+    if masked not in MASKED_OPTIONS:
+        raise ValueError(f"masked must be one of {', '.join(MASKED_OPTIONS)}, got {masked!r}")
     chrom, start, end = parse_region(target)
     with Fasta(str(fasta_path)) as fa:
-        seq = fa[chrom][start - 1:end].seq.upper()
-    return [
-        [f"{target}_{n}", target, f"{i + 1}-{stop}", tem]
-        for n, (i, stop, tem) in enumerate(
-            iter_target_windows(seq, min_length, step, overlap), start=1
-        )
-    ]
+        raw = fa[chrom][start - 1:end].seq
+    seq = raw.upper()
+    prefix = masked_prefix(raw) if masked == 'drop' else None
+    windows, skipped = [], 0
+    for n, (i, stop, tem) in enumerate(iter_target_windows(seq, min_length, step, overlap), start=1):
+        if prefix is not None and prefix[stop] != prefix[i]:
+            skipped += 1
+            continue
+        windows.append([f"{target}_{n}", target, f"{i + 1}-{stop}", tem])
+    if prefix is not None:
+        log = get_logger(__name__)
+        if raw == seq:
+            log.warning(f"{target} has no soft-masked (lowercase) base: if the FASTA is not repeat-masked, "
+                        "masked: drop only skips windows with N (use a soft-masked genome, e.g. "
+                        "`uprobe genome fetch --soft-masked`)")
+        log.info(f"{target}: masked: drop skipped {skipped} of {skipped + len(windows)} windows "
+                 "with a soft-masked or N base")
+    return windows
 
 def gene_barcode(config: dict) -> dict:
     """
