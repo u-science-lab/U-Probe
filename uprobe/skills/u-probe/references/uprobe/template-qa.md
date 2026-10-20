@@ -59,9 +59,10 @@ one) is parsing the GTF, once for target validation and extraction; the design i
 
 ## Expected limits of the templates
 
-- `smfish_stellaris`, `hcr_v3` and `mipseq` filter neither GC nor Tm: AT-rich sites give probes whose
-  Tm under the template's own conditions is at or below the hybridization temperature. Read the Tm
-  columns and drop or replace such probes if the method allows.
+- `smfish_stellaris`, `hcr_v3` and `mipseq` filter no GC and only a Tm floor taken from the published
+  probe sets: smFISH and each HCR half at least the 37 C hybridization temperature (4% of the Raj
+  2008 probes and 8% of the Choi 2018 pairs are below it), MiP-seq arms and primer site at least 28 C
+  (2% of the published units are below it). AT-rich regions therefore give fewer probes.
 - `starmap`: `remove_overlap` keeps the shortest window at each start, so the 40-46-nt layout always
   ends as 19 + 1 + 20 nt (padlock 52 nt, primer 32 nt); the published halves are 19-25 nt, balanced
   by Tm.

@@ -158,6 +158,29 @@ def test_tm_filters_filter_as_under_the_legacy_dntp(name):
             assert now == pytest.approx(before), (attr, seq)
 
 
+@pytest.mark.parametrize('name, floors, weak', [
+    # The weakest probe each template kept on the e2e genes (GAPDH, TFRC, EEF2; mouse Gad2).
+    ('smfish_stellaris', {'probe_tm': 37}, {'probe_tm': 'ATAATTATATTCTATTAAAA'}),
+    ('hcr_v3', {'odd_tm': 37, 'even_tm': 37}, {}),
+    ('mipseq', {'arm_5_tm': 28, 'arm_3_tm': 28, 'primer_tm': 28},
+     {'arm_5_tm': 'TTAATTGCATATT', 'primer_tm': 'TGATTAAAATATC'}),
+])
+def test_tm_floors_from_the_published_probe_sets(name, floors, weak):
+    # Without a GC or Tm filter these templates kept probes that cannot bind at the hybridization
+    # temperature (TFRC 5% GC, Tm 33.7 C at 37 C; a MiP-seq arm of 23.6 C and primer of 20.4 C).
+    # The floors and the share of published probes they reject are in meta.parameter_sources.
+    from uprobe.core.attributes._attributes import cal_temp
+    from uprobe.core.hybridization import tm_arguments
+    protocol = load_template(name)
+    filters = protocol['post_process']['filters']
+    conditions = effective_conditions(protocol)
+    for attr, floor in floors.items():
+        assert filters[attr]['condition'] == f'{attr} >= {floor}'
+        assert any(f'filters.{attr}' in row['parameter'] for row in protocol['meta']['parameter_sources'])
+    for attr, seq in weak.items():
+        assert cal_temp(seq, **tm_arguments(conditions[attr])) < floors[attr]
+
+
 def test_smfish_tm_uses_the_stellaris_concentration_per_oligo():
     # Stellaris hybridizes the 48-oligo set at 125 nM in total, about 2.6 nM per oligo.
     assert load_template('smfish_stellaris')['hybridization']['probe_nM'] == 2.6

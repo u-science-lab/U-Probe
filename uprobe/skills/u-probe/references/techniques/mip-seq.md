@@ -82,6 +82,7 @@ RCA initiator primer, 25 nt in the template (published: 25 in 247 of 432, 26 in 
 | Sites per gene | 2, "in an exon close to the 5' end"; 8 pairs raised detection (Supp. Fig. 7) | pairs | Wu 2023 Methods; Wu 2024 SI |
 | Site position (no number published) | median start nt 885 (quartiles 455, 1,650); 54% within the first 1,000 nt, 71% within 1,500; template cap 1,000 | nt | this KB, 367 sites on the mouse canonical transcript |
 | Tm / GC criteria | none stated ("self-developed" program) | - | Wu 2023 Methods |
+| Arm and primer-site Tm, published | 25.1-49.6 C (median 39.6; 21 % below 37 C) over the 434 units (2x SSC, 10% FA, 30 nM); template floor 28 C, the 2.5th percentile of each unit's weakest part, rejects 9 units | C | this KB, Wu 2024 Supp. Table "Fig 3" |
 | Arm Tm, estimate | Th-1 arms 37-39 C; primer RNA part 47 C (2x SSC, 10% FA, 30 nM) | C | U-Probe/primer3 estimate, not a published criterion |
 | Hybridization | 30 nM each padlock + equimolar primer, 2x SSC, 10% formamide, 20 mM RVC, 37 C overnight | - | Wu 2023 Methods |
 | Ligation (RNA) | SplintR 1 U/uL, 0.2 U/uL RNase inhibitor, 37 C, 2 h | - | Wu 2023 Methods |
@@ -163,6 +164,8 @@ post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}
     near_5p: {condition: target_start <= 1000}     # "an exon close to the 5' end"
+    arm_5_tm: {condition: arm_5_tm >= 28}           # arm_3_tm, primer_tm alike: the low tail of the
+                                                    # published units (2.5th percentile; rejects 2 %)
   remove_overlap: {location_interval: 0}
   equal_space: {number_desired: 2}                 # 2 sites per gene
 ```
@@ -180,7 +183,8 @@ What to edit:
 **U-Probe departs:** (1) `source: mRNA` on the MANE/canonical transcript with a 1,000-nt cap, not
 "an exon near the 5' end" (no distance is published); (2) `equal_space` spreads the 2 sites evenly
 over the passing windows below the cap, while the paper's two sites are a median 223 nt apart;
-(3) the specificity filter is U-Probe's approximation, the paper states no criterion.
+(3) the specificity filter is U-Probe's approximation, the paper states no criterion; (4) the Tm floor
+of 28 C on both arms and the primer site comes from the published units, not from a stated criterion.
 
 ## 7. Pitfalls
 

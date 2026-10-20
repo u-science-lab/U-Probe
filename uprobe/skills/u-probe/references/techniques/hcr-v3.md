@@ -114,7 +114,10 @@ hybridization: {temperature_c: 37, na_mM: 975, probe_nM: 4, formamide_pct: 30, d
 attributes:
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:
-  filters: {target_mapped_genes: {condition: target_mapped_genes <= 1}}
+  filters:
+    target_mapped_genes: {condition: target_mapped_genes <= 1}
+    odd_tm: {condition: odd_tm >= 37}     # each half: at least the hybridization temperature
+    even_tm: {condition: even_tm >= 37}
   remove_overlap: {location_interval: 2}   # pairs 2 nt apart, as the Choi 2018 sets
   equal_space: {number_desired: 20}
 ```
@@ -132,7 +135,10 @@ Template departures:
 - Off-targets: Bowtie2 local on the 52-nt window (heuristic, <= 100 alignments; flagged 99 % of windows
   with a <= 2-substitution site in another gene). It also counts partial matches of ~25 nt, i.e. one
   half: conservative, it drops pairs that could not amplify on that gene.
-- No GC/Tm/homopolymer filter (as Choi 2018). `odd_tm`/`even_tm` and GC are reported only.
+- No GC or homopolymer filter (as Choi 2018); `odd_tm` and `even_tm` have a floor at the 37 C
+  hybridization temperature under the template's conditions (5x SSC, 30 % formamide, 4 nM). The 224
+  halves of the Choi 2018 human sets have 29.7-73.0 C under them (5th percentile 37.8 C); the floor
+  rejects 9 of the 112 published pairs (6 at 35 C, 3 at 33 C).
 
 ## 7. Pitfalls
 

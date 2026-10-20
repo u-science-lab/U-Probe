@@ -88,7 +88,9 @@ attributes:
     {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2, strand: sense,
      exempt_copies: {kmer: 30, min_shared: 0.5}}
 post_process:
-  filters: {target_mapped_genes: {condition: target_mapped_genes <= 1}}
+  filters:
+    target_mapped_genes: {condition: target_mapped_genes <= 1}
+    probe_tm: {condition: probe_tm >= 37}   # floor: the hybridization temperature
   remove_overlap: {location_interval: 2}
   equal_space: {number_desired: 48}
 # gene_expression: {table: expression.tsv, value_column: TPM, min_value: 1, min_fraction_of_target: 0.05}
@@ -105,6 +107,10 @@ Template departures:
   catches 17-nt matches; `max_mismatches: 3` comes closer. Off-targets are counted per probe, not
   per off-target gene across the set (`off_target_pool` is the opt-in for that).
 - GC: reported, not filtered or optimized toward 45 %; `equal_space` picks 48 by position.
+- Tm: a floor at the hybridization temperature, `probe_tm >= 37` under 2x SSC, 10 % formamide and
+  2.6 nM per oligo (125 nM for 48). Neither Raj nor Stellaris states one; the 480 Raj 2008 probes
+  have 31.8-67.8 C under these conditions (5th percentile 37.5 C) and the floor rejects 20 of them
+  (4 %), mostly AT-rich 17-mers (FAM105A, FKBP5).
 - Region: whole mRNA (Raj used the CDS).
 - Length: 20 nt, as Raj's Actb set and the Stellaris default; Raj's GFP (d2EGFP) set was 48 17-mers.
 
