@@ -82,6 +82,20 @@ def test_tm_window_applied_only_when_verified(name):
     assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
 
 
+@pytest.mark.parametrize('name', NAMES)
+def test_templates_rank_lower_scores_first(name, tmp_path):
+    # fold_score is -MFE: higher = more structure. Fewer self-matches, k-mer
+    # counts and mapped genes are better too.
+    protocol = load_template(name)
+    sorts = protocol['post_process'].get('sorts') or {}
+    lower_is_better = {key for key, attr in protocol['attributes'].items()
+                       if attr['type'] in ('fold_score', 'self_match', 'kmer_count', 'mapped_genes')}
+    assert not lower_is_better & set(sorts.get('is_descending') or [])
+    path = tmp_path / f'{name}.yaml'
+    path.write_text(read_template(name), encoding='utf-8')
+    assert not [f for f in validate_files(path) if 'sorted descending' in f.message]
+
+
 def test_double_hyb_rca_tm_filters_keep_legacy_conditions():
     # The 35-45 C filters were set under the legacy conditions, not the lifted experimental ones.
     conditions = effective_conditions(load_template('double_hyb_rca'))
@@ -181,6 +195,16 @@ def test_smfish_allows_no_off_target_gene_and_documents_the_pool_option(tmp_path
     assert not findings, render_text(findings)
 
 
+def test_smfish_meta_gives_raj_probe_lengths():
+    # Raj 2008's probe list: the d2EGFP (GFP) set is 48 17-mers and the Actb set 48 20-mers;
+    # only Supplementary Fig. 4 labels the GFP probes "20 bp".
+    meta = load_template('smfish_stellaris')['meta']
+    description = ' '.join(meta['description'].split())
+    assert 'd2EGFP test set is 48 17-mers' in description and '20-mers in the GFP test' not in description
+    row = next(r for r in meta['parameter_sources'] if r['parameter'] == 'extracts.target_region.length')
+    assert 'GFP) set 48 17-mers' in ' '.join(row['source'].split()) and '20 bp' not in row['quote']
+
+
 def commented_block(text, first_line):
     """The YAML of a commented-out top-level block: `# <first_line>` and the commented lines after it."""
     lines = text[text.index(f'\n# {first_line}\n') + 1:].splitlines()
@@ -263,6 +287,26 @@ def test_starmap_reproduces_published_pair():
             'ACCCTTGTCAACCTTGATGCTATTTTTATCTT') in pairs
 
 
+def test_seqfish_plus_reproduces_lohoff_probes():
+    # Lohoff et al. 2022, Supplementary Table 1A: the first two mouse Abcc4 probes (30-nt target
+    # regions; seqFISH+ readouts and primer). The table lists the readout sites as they appear in
+    # the probes, so the readout probes are their reverse complements.
+    sites = ['TAATCAAAGGCCGCA', 'GGGCCAGCGCAATAA', 'GGCTAGCAGTCCGTC', 'TATCATACGACGTGG']
+    primary = ['CGAGGGCTGTCCATTGGAGGTGTTCATAAC', 'TGTTTCGGTGAGGGCAGCGGCTTCGCCCTT']
+    published = [
+        'GTCTTATCATGTGCCTTTCCTTAATCAAAGGCCGCATGGGCCAGCGCAATAATCGAGGGCTGTCCATTGGAGGTGTTCATAACTGGCTAGCAGTCCGTCT'
+        'TATCATACGACGTGGCCCTATAGTGAGTCGTATTA',
+        'GTCTTATCATGTGCCTTTCCTGGGCCAGCGCAATAATGGCTAGCAGTCCGTCTTGTTTCGGTGAGGGCAGCGGCTTCGCCCTTTTATCATACGACGTGGT'
+        'TAATCAAAGGCCGCACCCTATAGTGAGTCGTATTA',
+    ]
+    protocol = load_template('seqfish_plus')
+    protocol['extracts']['target_region'].update(length=30, step=30)
+    api = offline_api(_validate_and_normalize_protocol(protocol), ''.join(reverse_complement(p) for p in primary),
+                      {'readouts': [reverse_complement(s) for s in sites]})
+    probes = api.construct_probes(api.generate_target_seqs())
+    assert probes['primary_probe'].tolist() == published  # probe_index 0 and 1: slots 12|34, then 23|41
+
+
 def test_hcr_matches_insitu_probe_generator():
     # maker37cb.py reverse complements the mRNA (W) and prints
     # up + upspc + W[27:52] and W[0:25] + dnspc + dn for each 52-nt window.
@@ -272,6 +316,16 @@ def test_hcr_matches_insitu_probe_generator():
         w = reverse_complement(window)
         assert odd == encoding['init_odd'] + encoding['spacer_odd'] + w[27:52]
         assert even == w[0:25] + encoding['spacer_even'] + encoding['init_even']
+
+
+def test_hcr_pairs_are_two_nt_apart_as_in_choi_2018():
+    # The published Choi 2018 sets tile pairs on a 54-nt grid: 52-nt windows, 2 nt apart.
+    protocol = _validate_and_normalize_protocol(load_template('hcr_v3'))
+    assert protocol['post_process']['remove_overlap'] == {'location_interval': 2}
+    api = offline_api(protocol, SEQ[:270])
+    windows = api.generate_target_seqs()
+    kept = post_process(windows, {'post_process': {'remove_overlap': protocol['post_process']['remove_overlap']}})
+    assert kept['start'].tolist() == [1, 55, 109, 163, 217]
 
 
 def test_double_hyb_rca_primer_binds_rna_at_5_prime_and_circle_at_3_prime():

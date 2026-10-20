@@ -122,7 +122,8 @@ reproduce a protocol (MERFISH 43-63%, Moffitt et al. 2016; seqFISH+ 45-65%, Eng 
 - `fold_score` = −MFE (kcal/mol, >= 0) of the sequence folded alone by ViennaRNA (Lorenz R et al. 2011
   Algorithms Mol Biol 6:26, doi:10.1186/1748-7188-6-26) with RNA parameters (Turner 2004; Mathews DH
   et al. 2004 PNAS 101:7287, doi:10.1073/pnas.0401799101) at `temperature_c`; formamide and salt are not
-  modelled. **Higher = more structured.** Filter with `fold <= X`, never sort it descending.
+  modelled. **Higher = more structured, so lower is better.** Filter with `fold <= X` and sort it in
+  `is_ascending` (least structured first), never `is_descending`.
 - For a DNA probe, RNA parameters overstate hairpin stability; compare windows with each other rather
   than reading absolute values. None of the papers cited here sets a universal threshold. Heuristic
   (uncertain, not from a paper): drop only the most structured tail of a target's windows (e.g. the top

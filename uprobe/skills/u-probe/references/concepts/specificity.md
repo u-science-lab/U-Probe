@@ -171,7 +171,8 @@ within 2 substitutions, `target_mapped_genes <= 1`; never exempt paralogs.
 Interspersed repeats make up ~45% of the human genome; Alu alone has > 1 million copies (~10%) (Lander
 ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in UTRs and introns.
 - RNA designs: repeat windows hit hundreds of genes. Bowtie2 stops at 100 alignments (counts saturate);
-  Bowtie 1 lists them all (slow, huge `_off_targets` cells: Excel limit). A per-probe cap (`<= 1` or
+  Bowtie 1 lists them all (slow; `_off_targets` cells beyond Excel's 32,767 characters are cut in the
+  `.xlsx`, full in the TSV). A per-probe cap (`<= 1` or
   `<= 2`) removes them; `off_target_pool` alone does not (each gene is hit by one probe only).
 - DNA designs: use `kmer_count` (Jellyfish genome k-mer counts) with a low maximum, and
   `sequence_pattern` for simple repeats. OligoMiner's `kmerFilter` drops a probe if any of its 18-mers

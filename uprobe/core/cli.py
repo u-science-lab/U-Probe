@@ -91,6 +91,10 @@ def _default_mapped_genes(protocol_config: dict, genome) -> dict:
     return {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}
 
 
+# The generated kmer_count attributes of DNA mode (Jellyfish, 35-mers).
+DNA_KMER_COUNT = {'type': 'kmer_count', 'kmer_len': 35, 'size': '1G', 'aligner': 'jellyfish'}
+
+
 def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> dict:
     """
     Generate default attributes based on probes structure and mode (DNA/RNA).
@@ -124,7 +128,14 @@ def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> 
             'type': 'self_match'
         }
         attributes['target_mapped_genes'] = _default_mapped_genes(protocol_config, genome)
-    
+    else:
+        # The genomic window is the sequence that binds the genome, so its k-mer
+        # count is the repeat measure the generated filter target_kmer_count
+        # <= 100 reads. Jellyfish counts canonical k-mers, so it equals that of
+        # a binding part rc(target_region); constant parts (primers, barcodes)
+        # do not bind the genome and must not decide which windows pass.
+        attributes['target_kmer_count'] = dict(DNA_KMER_COUNT, target='target_region')
+
     # Extract probe targets and generate attributes
     probe_targets = _extract_probe_targets(probes_config)
     
@@ -164,14 +175,7 @@ def _generate_default_attributes(protocol_config: dict, genome: dict = None) -> 
                 'type': 'mapped_sites',
                 'aligner': 'bowtie2'
             }
-            attributes[f'{safe_name}_kmer_count'] = {
-                'target': target_name,
-                'type': 'kmer_count',
-                'kmer_len': 35,
-                'threads': 10,
-                'size': '1G',
-                'aligner': 'jellyfish'
-            }
+            attributes[f'{safe_name}_kmer_count'] = dict(DNA_KMER_COUNT, target=target_name)
     
     return attributes
 
@@ -193,8 +197,9 @@ def _generate_default_summary(protocol_config: dict, attributes: dict) -> dict:
     # Select attributes for summary based on mode
     for attr_name in attributes.keys():
         if is_dna_mode:
-            # DNA: include part-level attributes (gc, tm, kmer_count)
-            if '_part' in attr_name and any(attr_name.endswith(x) for x in ['_gc', '_tm', '_kmer_count']):
+            # DNA: the window's k-mer count and part-level attributes (gc, tm, kmer_count)
+            if attr_name == 'target_kmer_count' or (
+                    '_part' in attr_name and any(attr_name.endswith(x) for x in ['_gc', '_tm', '_kmer_count'])):
                 summary['attributes'].append(attr_name)
         else:
             # RNA: include target + probe-level attributes (not parts)
@@ -245,6 +250,11 @@ def _log_tm_windows(protocol_config: dict) -> None:
                         "hybridization temperature as hybridization.temperature_c.")
 
 
+# Generated score attributes ranked lowest first: the least structured, least
+# self-complementary and least repetitive candidates come first.
+LOWER_IS_BETTER_SUFFIXES = ('_fold', '_self_match', '_kmer_count')
+
+
 def _generate_default_post_process(protocol_config: dict, attributes: dict) -> dict:
     """
     Generate default post_process configuration based on attributes.
@@ -273,7 +283,7 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
             'condition': _tm_condition(tm_protocol, 'target_tm')  # Tm in Celsius
         }
     
-    # Mode-specific filters
+    # Mode-specific filters: genome repeats (DNA), off-target genes (RNA)
     if is_dna_mode:
         if 'target_kmer_count' in attributes:
             post_process['filters']['target_kmer_count'] = {
@@ -302,18 +312,17 @@ def _generate_default_post_process(protocol_config: dict, attributes: dict) -> d
                 'condition': f'{attr_name} >= 0.2 & {attr_name} <= 0.8'
             }
     
-    # Generate sorts
-    # Ascending: GC, Tm and mapped genes. Fewer mapped genes are better.
+    # Generate sorts, all ascending: GC and Tm first, then the scores where
+    # lower is better: fewer mapped genes, less structure (fold_score is -MFE,
+    # >= 0), less self-complementarity, lower genome k-mer counts.
     for attr_name in attributes.keys():
         if (attr_name.endswith('_gc') or attr_name.endswith('_tm')
                 or attr_name.endswith('_mapped_genes')):
             post_process['sorts']['is_ascending'].append(attr_name)
-    
-    # Preserve the existing order for the remaining score types.
     for attr_name in attributes.keys():
-        if any(attr_name.endswith(suffix) for suffix in ['_fold', '_self_match', '_kmer_count']):
-            post_process['sorts']['is_descending'].append(attr_name)
-    
+        if any(attr_name.endswith(suffix) for suffix in LOWER_IS_BETTER_SUFFIXES):
+            post_process['sorts']['is_ascending'].append(attr_name)
+
     return post_process
 
 
@@ -461,9 +470,11 @@ def cli(ctx, verbose, quiet):
 @click.option('--raw', is_flag=True,
               help='Save unfiltered raw probe data.')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue execution even if some targets are invalid.')
-@click.option('--threads', '-t', default=10, type=int,
-              help='Number of threads for computation. [default: 10]')
+              help='Skip targets that are not in the genome annotation and design the others. '
+                   'Without it, any such target stops the run before designing.')
+@click.option('--threads', '-t', default=10, type=click.IntRange(min=1),
+              help='Threads for index building and for the aligner and Jellyfish steps of every attribute '
+                   'that sets no threads of its own. [default: 10]')
 @click.option('--json', 'json_output', is_flag=True,
               help='Print the run summary (summary.json) to stdout; logs and tool output go to stderr.')
 def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
@@ -472,11 +483,13 @@ def run(protocol, genomes, output, raw, continue_invalid, threads, json_output):
     
     This command runs the entire pipeline from genome index building to final probe generation.
     Every run writes <output>/summary.json and the final table as <name>_<time>_probes.tsv.
+    A gene target missing from the GTF stops the run before designing (status error),
+    unless --continue-invalid skips it.
 
     \b
     Exit status (with 0, 1 and 3, summary.json and the --json output are written first):
       0  probes were designed (status ok or partial)
-      1  the run failed (status error)
+      1  the run failed (status error), e.g. a target not in the GTF without --continue-invalid
       2  invalid command-line usage (missing or bad options)
       3  the run finished without any probe (status no_probes,
          no_probes_constructed, no_target_sequences or no_valid_targets)
@@ -654,11 +667,11 @@ def build_index(protocol, genomes, threads):
 @click.option('--genomes', '-g', required=True, type=click.Path(exists=True),
               help='Path to genome configuration file (YAML).')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue with valid targets even if some are invalid.')
+              help='Exit with 0 when some targets are invalid but others are valid.')
 def validate_targets(protocol, genomes, continue_invalid):
     """
     Validate target genes against the genome annotation.
-    
+
     Checks if all target genes specified in the protocol exist in the GTF file.
     """
     try:
@@ -666,16 +679,16 @@ def validate_targets(protocol, genomes, continue_invalid):
         uprobe = UProbeAPI(
             protocol_config=Path(protocol),
             genomes_config=Path(genomes),
-            output_dir=Path('./temp')  
+            output_dir=Path('./temp')
         )
-        valid = uprobe.validate_targets(continue_on_invalid=continue_invalid)       
-        if valid:
-            log.info("All target genes are valid!")
-        elif continue_invalid:
-            log.warning("Some targets are invalid but continuing as requested.")
+        valid = uprobe.validate_targets(continue_on_invalid=continue_invalid)
+        if not valid:
+            log.error("Target validation failed: no valid targets.")
+            sys.exit(1)
+        if uprobe.target_validation['invalid']:
+            log.warning("Some targets are invalid; the others are valid (--continue-invalid).")
         else:
-            log.error("Target validation failed!")
-            sys.exit(1)          
+            log.info("All target genes are valid!")
     except Exception as e:
         log.error(f"Target validation failed: {e}")
         sys.exit(1)
@@ -689,7 +702,7 @@ def validate_targets(protocol, genomes, continue_invalid):
 @click.option('--output', '-o', default='./results', type=click.Path(),
               help='Output directory. [default: ./results]')
 @click.option('--continue-invalid', is_flag=True,
-              help='Continue with valid targets even if some are invalid.')
+              help='Skip targets that are not in the genome annotation; without it, any such target stops.')
 def generate_targets(protocol, genomes, output, continue_invalid):
     """
     Generate target region sequences from the genome.
@@ -789,7 +802,10 @@ def construct_probes(protocol, genomes, targets, output):
               help='Output directory. [default: ./results]')
 @click.option('--raw', is_flag=True,
               help='Save unfiltered raw probe data.')
-def post_process(protocol, genomes, probes, output, raw):
+@click.option('--threads', '-t', default=10, type=click.IntRange(min=1),
+              help='Threads for the aligner and Jellyfish steps of every attribute that sets no threads '
+                   'of its own. [default: 10]')
+def post_process(protocol, genomes, probes, output, raw, threads):
     """
     Post-process probes (add attributes and apply filters).
     
@@ -804,7 +820,7 @@ def post_process(protocol, genomes, probes, output, raw):
             output_dir=Path(output)
         )
         df_probes = pd.read_csv(probes)       
-        df_processed = uprobe.post_process_probes(df_probes, raw_csv=raw)  
+        df_processed = uprobe.post_process_probes(df_probes, raw_csv=raw, threads=threads)
         if df_processed.empty:
             log.warning("No probes remaining after post-processing!")
         else:

@@ -54,7 +54,7 @@ def test_all_sources_range(reference, source):
         api._parse_targets = lambda: ([], {'G': seq})
         df = api.generate_target_seqs()
     else:
-        df = generate_target_seqs(source, ['1:0-48'] if source == 'genome' else ['G'], fa, gtf, [40, 46], step=2)
+        df = generate_target_seqs(source, ['1:1-48'] if source == 'genome' else ['G'], fa, gtf, [40, 46], step=2)
     expected = list(iter_target_windows(seq, [40, 46], 2))
     assert df.target_region.tolist() == [s for _, _, s in expected]
     assert df.probe_id.is_unique

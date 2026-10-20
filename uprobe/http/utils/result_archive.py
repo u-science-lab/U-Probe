@@ -7,7 +7,8 @@ import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 
-RESULT_SUFFIXES = frozenset({".xlsx", ".html"})
+# The .tsv tables keep every row and full cell values when a table does not fit Excel.
+RESULT_SUFFIXES = frozenset({".xlsx", ".tsv", ".html"})
 
 
 def _has_table_rows(source, entry):

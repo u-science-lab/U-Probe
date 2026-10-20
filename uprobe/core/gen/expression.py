@@ -5,12 +5,20 @@ this small Python-like language is accepted:
 
 * string and integer literals: ``'ACGT'``, ``13``, ``-6``
 * names from the probe context (``target_region``, ``target``, ``encoding``,
-  ``target_parts``) and names of other probes or parts, including dotted part
-  names such as ``circle_probe.part2.barcode2``
+  ``target_parts``, ``probe_index``) and names of other probes or parts,
+  including dotted part names such as ``circle_probe.part2.barcode2``
 * subscripts with an index, key or slice: ``target_region[26]``,
-  ``target_region[-13:]``, ``encoding[target]['BC1']``
+  ``target_region[-13:]``, ``encoding[target]['BC1']``,
+  ``encoding[target]['readouts'][probe_index % 4]``
 * ``+`` to concatenate strings (or add integers, e.g. in slice bounds)
+* ``%`` on two integers (remainder), e.g. ``(probe_index + 1) % 4``
 * calls to whitelisted functions: ``rc(seq)`` (reverse complement)
+
+``probe_index`` numbers the probes of a target, 0, 1, 2, ..., along the
+target (5' to 3' on an RNA, along the region on DNA), so that an expression
+can vary deterministically from probe to probe, e.g. rotate readouts. The
+final probes are numbered after post-processing (UProbeAPI.post_process_probes
+rebuilds the parts that read it); candidates are numbered in extraction order.
 
 Everything else (attribute access, other calls and operators, comprehensions,
 lambdas, ...) is rejected with an error naming the offending construct.
@@ -29,7 +37,8 @@ class ExpressionError(ValueError):
 # Functions callable from expressions; each takes one sequence string.
 FUNCTIONS = {'rc': reverse_complement}
 # Names provided to every expression by UProbeAPI.construct_probes.
-CONTEXT_NAMES = ('target_region', 'target', 'encoding', 'target_parts')
+CONTEXT_NAMES = ('target_region', 'target', 'encoding', 'target_parts', 'probe_index')
+PROBE_INDEX = 'probe_index'
 
 _CONSTRUCTS = {
     ast.Lambda: 'lambda expression',
@@ -53,7 +62,7 @@ _CONSTRUCTS = {
     ast.Slice: 'slice outside of a subscript',
 }
 _OPERATORS = {
-    ast.Sub: '-', ast.Mult: '*', ast.Div: '/', ast.FloorDiv: '//', ast.Mod: '%',
+    ast.Sub: '-', ast.Mult: '*', ast.Div: '/', ast.FloorDiv: '//',
     ast.Pow: '**', ast.MatMult: '@', ast.LShift: '<<', ast.RShift: '>>',
     ast.BitOr: '|', ast.BitXor: '^', ast.BitAnd: '&',
     ast.UAdd: 'unary +', ast.Not: 'not', ast.Invert: '~',
@@ -110,12 +119,12 @@ class _Checker:
             else:
                 self.visit(node.slice)
         elif isinstance(node, ast.BinOp):
-            if isinstance(node.op, ast.Add):
+            if isinstance(node.op, (ast.Add, ast.Mod)):
                 self.visit(node.left)
                 self.visit(node.right)
             else:
                 op = _OPERATORS.get(type(node.op), type(node.op).__name__)
-                self.errors.append(f"operator '{op}' is not allowed (only '+'): {_snippet(node)}")
+                self.errors.append(f"operator '{op}' is not allowed (only '+' and '%'): {_snippet(node)}")
         elif isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.USub):
                 self.visit(node.operand)
@@ -257,6 +266,16 @@ def _evaluate(node: ast.AST, namespace: T.Mapping[str, T.Any]):
         if (isinstance(left, str) and isinstance(right, str)) or (_is_int(left) and _is_int(right)):
             return left + right
         raise ExpressionError(f'cannot add {type(left).__name__} and {type(right).__name__}: {_snippet(node)}')
+    elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):
+        # Integers only: '%' on a string would be printf-style formatting.
+        left = _evaluate(node.left, namespace)
+        right = _evaluate(node.right, namespace)
+        if not (_is_int(left) and _is_int(right)):
+            raise ExpressionError(f"'%' takes two integers, got {type(left).__name__} and {type(right).__name__}: "
+                                  f'{_snippet(node)}')
+        if right == 0:
+            raise ExpressionError(f'remainder by zero: {_snippet(node)}')
+        return left % right
     elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
         operand = _evaluate(node.operand, namespace)
         if _is_int(operand):
@@ -285,6 +304,32 @@ def _probe_nodes(probes) -> T.Iterator[T.Tuple[str, dict]]:
     if isinstance(probes, dict):
         for probe_name, probe_config in probes.items():
             yield from walk(str(probe_name), probe_config)
+
+
+def probe_index_nodes(probes) -> T.Set[str]:
+    """Names of the probes and parts whose sequence depends on ``probe_index``.
+
+    A node depends on it when its expression reads ``probe_index`` or a node
+    that depends on it, or when it is a template with such a part. Nodes with
+    invalid expressions are left out (they are reported elsewhere).
+    """
+    nodes = dict(_probe_nodes(probes))
+    reads = {}
+    for name, config in nodes.items():
+        if 'template' in config:
+            parts = config.get('parts')
+            reads[name] = {f'{name}.{part}' for part in parts} if isinstance(parts, dict) else set()
+        elif 'expr' in config:
+            try:
+                reads[name] = expression_references(config['expr'])
+            except ExpressionError:
+                reads[name] = set()
+    dependent = {name for name, names in reads.items() if PROBE_INDEX in names}
+    while True:
+        more = {name for name, names in reads.items() if name not in dependent and names & dependent}
+        if not more:
+            return dependent
+        dependent |= more
 
 
 def check_probe_expressions(probes, check_names: bool = True) -> T.List[str]:

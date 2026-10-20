@@ -3,6 +3,7 @@ import typing as T
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -12,18 +13,32 @@ from .attributes import add_attributes
 from .hybridization import describe_conditions
 from .gen.barcodes import quick_generate
 from .gen.fun import TranscriptSelectionError, generate_target_seqs, validate_targets
+from .gen.expression import PROBE_INDEX, probe_index_nodes
 from .gen.probe import construct_probes
 from .process import post_process
+from .process.equal_space import positions_along_target
 from .report import generate_plot_report
 from .report.html import save_html_report
 from .report.formatting import prepare_result_table
-from .report.excel import save_xlsx
+from .report.excel import EXCEL_MAX_CELL_CHARS, EXCEL_MAX_ROWS, exceeds_excel_rows, save_xlsx
 from .report.run_summary import SUMMARY_FILENAME, build_run_summary, save_tsv, write_run_summary
 
 from .tools import build_genome
 from .utils import get_logger
 
 log = get_logger(__name__)
+
+
+class InvalidTargetsError(ValueError):
+    """Gene targets missing from the genome annotation, in a run that does not skip them."""
+
+    def __init__(self, targets):
+        self.targets = list(targets)
+        super().__init__(
+            f"{len(self.targets)} target(s) not found in the genome annotation: {', '.join(self.targets)}. "
+            "Targets are matched against the GTF gene_name, case-sensitively (uprobe validate --check-targets "
+            "suggests the closest names). Fix them, or pass --continue-invalid (Python API: "
+            "continue_on_invalid_targets=True) to skip them and design the other targets.")
 
 
 class UProbeAPI:
@@ -105,36 +120,42 @@ class UProbeAPI:
         log.info(f"Generated {len(barcodes)} barcodes.")
         return barcodes
 
-    def validate_targets(self, continue_on_invalid: bool = True) -> bool:
+    def validate_targets(self, continue_on_invalid: bool = False) -> bool:
+        """Look the gene targets up in the GTF; keep only the valid ones in the protocol.
+
+        A target that is not a GTF gene_name stops the run with InvalidTargetsError,
+        unless ``continue_on_invalid`` (``uprobe run --continue-invalid``): then
+        invalid targets are skipped and recorded in ``target_validation``.
+        Returns False when no target remains.
+        """
         genome_targets, direct_targets = self._parse_targets()
-        
+
         if not genome_targets and not direct_targets:
             raise ValueError("No targets specified in the protocol.")
-            
+
         log.info("Validating targets...")
-        
+
         valid_genome_targets = []
         invalid_list = []
         if genome_targets:
             gtf_path = Path(self.genome['gtf'])
             _, valid_list, invalid_list = validate_targets(genome_targets, gtf_path, DTF_NAME_FIX=True)
-
-            if invalid_list:
-                log.warning(f"Invalid targets found (not in genome): {invalid_list}")
-                
             valid_genome_targets = valid_list
-        
+        self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
+        if invalid_list and not continue_on_invalid:
+            raise InvalidTargetsError(invalid_list)
+        if invalid_list:
+            log.warning(f"Skipping {len(invalid_list)} target(s) not found in the genome annotation "
+                        f"(--continue-invalid): {', '.join(invalid_list)}")
+
         # Reconstruct targets for protocol
         new_targets = []
         new_targets.extend(valid_genome_targets)
         for name, seq in direct_targets.items():
             new_targets.append({name: seq})
         self.protocol["targets"] = new_targets
-        self.target_validation = {'valid': valid_genome_targets + list(direct_targets), 'invalid': invalid_list}
         if not new_targets:
             log.error("No valid targets remaining after validation.")
-            if not continue_on_invalid:
-                raise ValueError("No valid targets remaining.")
             return False
         log.info(f"Target validation successful. Valid: {len(valid_genome_targets)} genome targets, {len(direct_targets)} custom sequences.")
         return True
@@ -220,46 +241,63 @@ class UProbeAPI:
         log.info(f"Total generated target sequences: {len(df_final)}")
         return df_final
 
-    def construct_probes(self, df_targets: pd.DataFrame) -> pd.DataFrame:
-        log.info("Constructing probes...")
-        contexts = [
+    def _probe_contexts(self, df: pd.DataFrame, probe_index) -> list:
+        """The expression context of each row; ``probe_index`` gives each row's number."""
+        parts = self.protocol.get('extracts', {}).get('target_region', {}).get('layout', {}).get('parts', {})
+        return [
             {
                 "target_region": row['target_region'],
                 "target": row.get('target') or row.get('gene'),
                 "encoding": self.protocol['encoding'],
-                "target_parts": {name: row[f'target_parts.{name}'] for name in
-                                 self.protocol.get('extracts', {}).get('target_region', {}).get('layout', {}).get('parts', {})},
+                "target_parts": {name: row[f'target_parts.{name}'] for name in parts},
+                PROBE_INDEX: int(index),
             }
-            for _, row in df_targets.iterrows()
+            for index, (_, row) in zip(probe_index, df.iterrows())
         ]
-        probe_df = construct_probes(self.protocol, contexts)
+
+    def construct_probes(self, df_targets: pd.DataFrame) -> pd.DataFrame:
+        log.info("Constructing probes...")
+        # Candidates are numbered per target in extraction order; the final
+        # probes are renumbered along the target after post-processing.
+        target = df_targets['target'] if 'target' in df_targets.columns else pd.Series('', index=df_targets.index)
+        candidate_index = target.astype(str).groupby(target.astype(str).to_numpy()).cumcount().to_numpy()
+        probe_df = construct_probes(self.protocol, self._probe_contexts(df_targets, candidate_index))
         if probe_df.empty:
             log.error("No probes were constructed. Check probe construction parameters.")
         else:
             log.info(f"Successfully generated {probe_df.shape[0]} initial probes.")
         return probe_df
 
-    def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False) -> pd.DataFrame:
+    def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False,
+                            threads: int = 10) -> pd.DataFrame:
+        """Add the attributes, post-process and save the tables.
+
+        ``threads`` is used by the aligner and Jellyfish steps of attributes that
+        set no ``threads`` of their own.
+        """
         self.no_filtered_probes = False
         self.raw_file = None
-        self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None}
+        self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None, 'raw_tsv': None}
+        # Tables that did not fit Excel (see _save_table), for summary.json.
+        self.excel_limits = []
         log.info("Adding attributes to probes...")
         for line in describe_conditions(self.protocol):
             log.info(f"Hybridization conditions: {line}")
         # Off-target statistics of mapped_genes attributes, for summary.json.
         self.off_target_report = {}
-        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report)
+        df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report, threads)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = self.protocol.get("name", "probes")
         self._csv_filename = f"{name}_{time_str}.xlsx"
         # Plain-text copy of the final table for scripts and agents.
         tsv_path = self.output_dir / f"{name}_{time_str}_probes.tsv"
+        raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
+        raw_tsv_path = self.output_dir / f"{name}_{time_str}_raw.tsv"
         if raw_csv:
-            raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
             log.info(f"Saving raw results to {raw_path}")
-            save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
-            self.output_files['raw_xlsx'] = raw_path.name
+            raw_xlsx, raw_tsv = self._save_table(df_final, raw_path, raw_tsv_path, 'raw')
+            self.output_files.update(raw_xlsx=raw_xlsx, raw_tsv=raw_tsv)
 
         post_process_config = self.protocol.get('post_process', {})
         has_post_processing = any(post_process_config.get(key) for key in 
@@ -271,11 +309,11 @@ class UProbeAPI:
             
             if df_processed.empty:
                 log.warning("No probes passed post-processing. Raw candidates are available for inspection only.")
-                raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
-                save_xlsx(df_final, self.protocol, (raw_path).with_suffix(".xlsx"))
+                if self.output_files['raw_xlsx'] is None and self.output_files['raw_tsv'] is None:
+                    raw_xlsx, raw_tsv = self._save_table(df_final, raw_path, raw_tsv_path, 'raw')
+                    self.output_files.update(raw_xlsx=raw_xlsx, raw_tsv=raw_tsv)
                 self.no_filtered_probes = True
-                self.raw_file = raw_path.name
-                self.output_files['raw_xlsx'] = raw_path.name
+                self.raw_file = self.output_files['raw_xlsx'] or self.output_files['raw_tsv']
                 # Preserve column headers even if post_process returns a bare
                 # empty DataFrame. Raw candidates are not passing probes.
                 attrs = dict(df_processed.attrs)  # stages and off-target pool report
@@ -286,23 +324,91 @@ class UProbeAPI:
                 tsv_path.unlink(missing_ok=True)
                 return df_processed
             else:
+                df_processed = self._number_final_probes(df_processed, threads)
                 output_path = self.output_dir / f"{name}_{time_str}.xlsx"
                 log.info(f"Saving {df_processed.shape[0]} processed probes to {output_path}")
-                save_xlsx(df_processed, self.protocol, (output_path).with_suffix(".xlsx"))
-                save_tsv(df_processed, tsv_path)
-                self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
+                xlsx, tsv = self._save_table(df_processed, output_path, tsv_path, 'final')
+                self.output_files.update(xlsx=xlsx, tsv=tsv)
                 return df_processed
         else:
             log.info("No post-processing steps configured, using raw data as final result")
+            df_final = self._number_final_probes(df_final, threads)
             output_path = self.output_dir / f"{name}_{time_str}.xlsx"
             log.info(f"Saving {df_final.shape[0]} probes to {output_path}")
-            save_xlsx(df_final, self.protocol, (output_path).with_suffix(".xlsx"))
-            save_tsv(df_final, tsv_path)
-            self.output_files.update(xlsx=output_path.name, tsv=tsv_path.name)
+            xlsx, tsv = self._save_table(df_final, output_path, tsv_path, 'final')
+            self.output_files.update(xlsx=xlsx, tsv=tsv)
             return df_final
 
-    def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False, threads: int = 10) -> pd.DataFrame:      
-        """Run all steps and write summary.json, also after early exits and errors."""
+    def _number_final_probes(self, df: pd.DataFrame, threads: int = 10) -> pd.DataFrame:
+        """Rebuild the probes that read probe_index with the final probe numbers.
+
+        The final probes of each target are numbered 0, 1, 2, ... along the
+        target (by position, as equal_space orders them), written to the
+        ``probe_index`` column, and every probe or part whose expression
+        depends on it is rebuilt, so e.g. readouts rotated by
+        ``probe_index % 4`` are balanced over the final set. Attributes of
+        those probes and parts are recomputed; filters and sorts saw the
+        candidates' provisional numbers.
+        """
+        nodes = probe_index_nodes(self.protocol.get('probes'))
+        if not nodes or df.empty:
+            return df
+        target = df['target'].astype(str) if 'target' in df.columns else pd.Series('', index=df.index)
+        work = pd.DataFrame({'target': target.to_numpy(), 'position': positions_along_target(df).to_numpy(),
+                             'row': np.arange(len(df))})
+        work = work.sort_values(['target', 'position', 'row'], kind='stable')
+        work['rank'] = work.groupby('target', sort=False).cumcount()
+        ranks = work.sort_values('row')['rank'].to_numpy()
+        probes = construct_probes(self.protocol, self._probe_contexts(df, ranks))
+        df = df.copy()
+        df[PROBE_INDEX] = ranks
+        rebuilt = [name for name in probes.columns if name in nodes]
+        for name in rebuilt:
+            df[name] = probes[name].to_numpy()
+        affected = {name: attr for name, attr in (self.protocol.get('attributes') or {}).items()
+                    if isinstance(attr, dict) and str(attr.get('target', '')).replace(':', '.') in nodes}
+        log.info(f"Numbered the final probes of each target along the target ({PROBE_INDEX} 0, 1, ...) and rebuilt "
+                 f"{', '.join(rebuilt)}" + (f"; recomputed {', '.join(affected)}" if affected else ""))
+        if affected:
+            df = add_attributes(df, {**self.protocol, 'attributes': affected}, self.genome, {}, threads)
+        return df
+
+    def _save_table(self, df: pd.DataFrame, xlsx_path: Path, tsv_path: Path, kind: str):
+        """Write a result table as .xlsx and, when needed, .tsv; return the names written (or None).
+
+        ``kind`` is 'final' (its TSV is always written) or 'raw'. Excel never
+        fails the run or loses data: a table longer than a worksheet is written
+        as TSV only, and a cell longer than Excel allows is cut in the .xlsx with
+        a marker naming the TSV, which keeps the full value.
+        """
+        with_tsv = kind == 'final'
+        xlsx_name = None
+        if exceeds_excel_rows(df):
+            log.warning(f"The {kind} table has {len(df):,} rows, more than an Excel worksheet holds "
+                        f"({EXCEL_MAX_ROWS - 1:,}); writing {tsv_path.name} instead of {xlsx_path.name}.")
+            self.excel_limits.append({'table': kind, 'rows': len(df), 'xlsx': None, 'tsv': tsv_path.name})
+            with_tsv = True
+        else:
+            truncated = save_xlsx(df, self.protocol, xlsx_path, full_table=tsv_path.name)
+            xlsx_name = xlsx_path.name
+            if truncated:
+                log.warning(f"{sum(truncated.values())} cell(s) of {xlsx_name} hold more than Excel's "
+                            f"{EXCEL_MAX_CELL_CHARS:,} characters ({', '.join(truncated)}); they are cut there and "
+                            f"marked, and {tsv_path.name} keeps the full values.")
+                self.excel_limits.append({'table': kind, 'rows': len(df), 'xlsx': xlsx_name, 'tsv': tsv_path.name,
+                                          'truncated_cells': truncated})
+                with_tsv = True
+        if with_tsv:
+            save_tsv(df, tsv_path)
+        return xlsx_name, tsv_path.name if with_tsv else None
+
+    def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False,
+                     threads: int = 10) -> pd.DataFrame:
+        """Run all steps and write summary.json, also after early exits and errors.
+
+        ``threads`` is used to build the indexes and by every attribute that sets
+        no ``threads`` of its own (alignments, Jellyfish).
+        """
         run = {'started': datetime.now().astimezone(), 'step': 'normalize_protocol'}
         self.summary = None
         self.target_validation = None
@@ -325,10 +431,8 @@ class UProbeAPI:
         from uprobe.core.cli import _validate_and_normalize_protocol
         self.protocol = _validate_and_normalize_protocol(self.protocol, self.genome)
     
-        # 1. Build Genome Index (if needed)
-        run['step'] = 'build_index'
-        self.build_genome_index(threads=threads)
-        # 2. Validate Targets(RNA)
+        # 1. Validate Targets (RNA), before the indexes are built: a misspelled
+        # target stops the run at once, unless continue_on_invalid_targets skips it.
         run['step'] = 'validate_targets'
         source = self.protocol['extracts']['target_region']['source']
         if source != 'genome':
@@ -336,6 +440,9 @@ class UProbeAPI:
                 log.error("Workflow halted due to target validation failure.")
                 run['status'] = 'no_valid_targets'
                 return pd.DataFrame()
+        # 2. Build Genome Index (if needed)
+        run['step'] = 'build_index'
+        self.build_genome_index(threads=threads)
         # 3. Generate Target Region Sequences
         run['step'] = 'extract_target_regions'
         df_targets = self.generate_target_seqs()
@@ -361,10 +468,10 @@ class UProbeAPI:
             return pd.DataFrame()
         # 5. Post-process
         run['step'] = 'post_process'
-        df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv)
+        df_processed = self.post_process_probes(df_combined, raw_csv=raw_csv, threads=threads)
         run.update(raw=self._report_raw_data, final=df_processed, files=dict(self.output_files),
                    no_filtered_probes=self.no_filtered_probes, raw_file=self.raw_file,
-                   off_targets=self.off_target_report)
+                   off_targets=self.off_target_report, excel_limits=self.excel_limits)
         # 6. Generate Report (if configured)
         run['step'] = 'report'
         summary_config = self.protocol.get('summary', {})

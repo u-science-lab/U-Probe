@@ -23,14 +23,15 @@ Final primary probe after library amplification (~93 nt, Eng 2019):
 ```
 5'-[ I 15 ]s[ II 15 ]s[ target-binding 28 = rc(mRNA) ]s[ III 15 ]s[ IV 15 ]CCC-3'
     rc(readout probe, round I..IV)                                         ^ T7 +1..+3 (GGG -> CCC)
-s = 1-nt spacer (T in the Lohoff 2022 sequences, which reuse seqFISH+ readouts and primer;
-    Eng 2019 gives no spacer)
+s = 1-nt spacer (T in all 15,177 Lohoff 2022 probes, which reuse seqFISH+ readouts and primer;
+    its Methods text says "2-nucleotide spacer"; Eng 2019 gives no spacer)
 ```
 
-Oligo-pool oligo as ordered (before amplification):
+Oligo-pool oligo as ordered (before amplification; Lohoff 2022 Supplementary Table 1A, 135 nt with
+30-nt target regions):
 
 ```
-5'-[forward primer ~20-21]-[probe body as above]-[rc(T7 promoter) 20: CCCTATAGTGAGTCGTATTA]-3'
+5'-[forward primer 21: GTCTTATCATGTGCCTTTCCT]-[probe body as above]-[rc(T7 promoter) 20: CCCTATAGTGAGTCGTATTA]-3'
    removed: RT primer carries a uracil, cut by USER enzyme
 ```
 
@@ -38,7 +39,8 @@ Readout probe: 15 nt, 5' amine coupled to NHS-ester dye (Alexa 647, Cy3B, Alexa 
 
 - Order I-II-target-III-IV is drawn in Eng 2019 Fig. 1a; 5'/3' ends are not marked there. Lohoff 2022
   (135-nt pool oligos) confirms 5'-primer-R-T-R-T-target-T-R-T-R-rcT7-3' and rotates which round
-  sits in which slot across a gene's probes (R1R2|R3R4, R2R3|R4R1, R3R4|R1R2, R4R1|R2R3).
+  sits in which slot across a gene's probes (R1R2|R3R4, R2R3|R4R1, R3R4|R1R2, R4R1|R2R3, cycling in
+  the row order of its table, which is not the order along the transcript).
 - Length check: 4 x 15 + 28 = 88 nt; ~93 nt observed = spacers + the 3' CCC left by T7 transcription
   (inference; Eng 2019 does not explain the extra ~5 nt).
 
@@ -106,12 +108,14 @@ uprobe templates show seqfish_plus -o protocol.yaml
 
 ```yaml
 encoding:
-  GAPDH: {I: NNNNNNNNNNNNNNN, II: NNNNNNNNNNNNNNN, III: NNNNNNNNNNNNNNN, IV: NNNNNNNNNNNNNNN}
+  GAPDH: {readouts: [NNNNNNNNNNNNNNN, NNNNNNNNNNNNNNN, NNNNNNNNNNNNNNN, NNNNNNNNNNNNNNN]}   # rounds I-IV
 extracts:
   target_region: {source: CDS, transcripts: mane, length: 28, step: 1}
 probes:
-  primary_probe:
-    template: "{overhang_1}{overhang_2}{binding}{overhang_3}{overhang_4}"   # rc() of readout probes
+  primary_probe:   # 133-nt pool oligo, Lohoff 2022 layout
+    template: "{primer_fwd}{overhang_1}T{overhang_2}T{binding}T{overhang_3}T{overhang_4}{t7_rc}"
+    # primer_fwd GTCTTATCATGTGCCTTTCCT, t7_rc CCCTATAGTGAGTCGTATTA;
+    # overhang_j = rc(encoding[target]['readouts'][(probe_index + j - 1) % 4])
 hybridization: {temperature_c: 37, na_mM: 390, probe_nM: 1, formamide_pct: 40}
 post_process:
   filters:
@@ -123,15 +127,15 @@ post_process:
 ```
 
 What to edit:
-- `encoding`: per gene, the readout PROBE sequences of rounds I-IV from your codebook (the template
-  inserts their reverse complements). Placeholders `N` must be replaced.
-- Add the 1-nt spacers and, for ordering the pool, the primers (passes `uprobe validate`):
-  ```yaml
-  template: "{fwd}{overhang_1}T{overhang_2}T{binding}T{overhang_3}T{overhang_4}CCCTATAGTGAGTCGTATTA"
-  parts:
-    fwd: {template: "NNNNNNNNNNNNNNNNNNNN", parts: {}}   # your 20-nt forward primer
-  ```
-  Check the 3' tail against your amplification scheme (rc of the T7 promoter here).
+- `encoding`: per gene, `readouts`: the readout PROBE sequences of rounds I-IV, in round order, from
+  your codebook (the template inserts their reverse complements). Placeholders `N` must be replaced.
+- `primer_fwd`: the template uses the seqFISH+ forward primer of Lohoff 2022; use your library's.
+  Keep the rc(T7) tail if you amplify by T7 transcription (else replace it with your reverse primer
+  site). The template reproduces the first two published Lohoff 2022 Abcc4 probes exactly (with
+  `length: 30`).
+- Slot rotation: `probe_index` numbers a gene's final probes 0, 1, 2, ... along the RNA, and the
+  rounds shift by one slot per probe, as in Lohoff 2022: 12|34, 23|41, 34|12, 41|23, then again; every
+  round sits in every slot on a quarter of the probes. The final TSV has a `probe_index` column.
 - Add `gene_expression` (your sample's table, e.g. TPM >= 1) so unexpressed off-target genes do not
   count; this is the closest U-Probe gets to the expression-weighted 10,000-FPKM rule.
 - Optional: `remove_overlap: {location_interval: 2}` to follow the RNA SPOTs spacing.
@@ -140,9 +144,10 @@ What to edit:
 Template departures from Eng 2019 (from the template `meta.limitations` and the literature):
 - Off-targets: Bowtie 1 within 2 substitutions, unweighted by expression, vs BLAST 15-nt matches
   weighted by FPKM. Probe-probe 17-nt filter: not modelled.
-- No spacers or primers in the template; readout slots are fixed (no rotation as in Lohoff 2022).
-- CDS only, no automatic UTR fallback; spacing 0 nt; 5'/3' order of the overhangs is from an unlabelled
-  figure (consistent with Lohoff 2022 sequences, unverified for the Eng 2019 library itself).
+- Spacers, primer, tail and slot rotation follow Lohoff 2022, which reuses the seqFISH+ readouts and
+  primer; the Eng 2019 library sequences are not public. The rotation follows the RNA, Lohoff's the
+  row order of its table. Binding regions are 28 nt (Eng 2019), not Lohoff's 30.
+- CDS only, no automatic UTR fallback; spacing 0 nt.
 - `binding_tm` is reported only (no published Tm window).
 
 ## 7. Pitfalls
@@ -166,7 +171,8 @@ Template departures from Eng 2019 (from the template `meta.limitations` and the 
 - [ ] Overhangs are rc(readout probes); each gene has exactly its codebook's 4 readouts; each channel's
       readouts unique; readouts share no >= 10-nt contiguous match with each other.
 - [ ] No two probes of different genes share >= 17 nt (k-mer check on the final table).
-- [ ] Spacers/primers added if ordering a pool; final body ~88-93 nt.
+- [ ] Pool oligo = primer + 4 overhangs with T spacers + target + rc(T7) (133 nt with 28-nt targets);
+      each gene's rounds rotate through the 4 slots (`probe_index`).
 - [ ] Highly expressed genes excluded or routed to non-barcoded rounds.
 
 ## 9. References

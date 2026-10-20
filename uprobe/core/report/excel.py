@@ -11,6 +11,25 @@ from .formatting import prepare_result_table, sequence_groups, column_group
 from ..hybridization import declares_hybridization, effective_conditions
 
 
+# Excel's limits: rows per worksheet (the header included) and characters per cell.
+EXCEL_MAX_ROWS = 1_048_576
+EXCEL_MAX_CELL_CHARS = 32_767
+
+
+def exceeds_excel_rows(df) -> bool:
+    """True when the table (plus its header row) has more rows than a worksheet holds."""
+    return len(df) + 1 > EXCEL_MAX_ROWS
+
+
+def fit_excel_cell(value: str, full_table=None) -> str:
+    """Cut a string longer than an Excel cell holds, ending it with a marker that names ``full_table``."""
+    if len(value) <= EXCEL_MAX_CELL_CHARS:
+        return value
+    where = f"; full value in {full_table}" if full_table else ""
+    marker = f" ...[truncated: {len(value):,} characters{where}]"
+    return value[:EXCEL_MAX_CELL_CHARS - len(marker)] + marker
+
+
 PALETTE = [
     ("E5EDFA", "F3F6FC", "C9D8F0"),
     ("E1F0EA", "F1F8F4", "BFDCCC"),
@@ -34,7 +53,16 @@ def column_styles(columns, protocol):
     return styles
 
 
-def workbook_bytes(df, protocol):
+def workbook_bytes(df, protocol, full_table=None, truncated=None):
+    """The table as an .xlsx workbook.
+
+    Strings longer than an Excel cell are cut by fit_excel_cell, naming
+    ``full_table`` (the TSV that keeps them); ``truncated`` (a dict), if given,
+    receives the number of cut cells per column. The caller checks the row
+    limit (exceeds_excel_rows) first.
+    """
+    if exceeds_excel_rows(df):
+        raise ValueError(f"{len(df):,} rows exceed Excel's limit of {EXCEL_MAX_ROWS - 1:,} data rows")
     table = prepare_result_table(df, protocol)
     stream = BytesIO()
     book = xlsxwriter.Workbook(stream, {"in_memory": True, "strings_to_formulas": False,
@@ -65,8 +93,10 @@ def workbook_bytes(df, protocol):
             if value is None or pd.isna(value) or isinstance(value, float) and not math.isfinite(value):
                 sheet.write_blank(row_index, column_index, None, formats[column])
             elif isinstance(value, str):
-                if len(value) > 32767:
-                    raise ValueError(f"Excel cell exceeds 32767 characters: {column}")
+                if len(value) > EXCEL_MAX_CELL_CHARS:
+                    value = fit_excel_cell(value, full_table)
+                    if truncated is not None:
+                        truncated[column] = truncated.get(column, 0) + 1
                 sheet.write_string(row_index, column_index, value, formats[column])
             else:
                 sheet.write(row_index, column_index, value, formats[column])
@@ -81,7 +111,8 @@ def workbook_bytes(df, protocol):
     return stream.getvalue()
 
 
-def save_xlsx(df, protocol, path):
-    path = Path(path)
-    path.write_bytes(workbook_bytes(df, protocol))
-    return path
+def save_xlsx(df, protocol, path, full_table=None) -> dict:
+    """Write the table to ``path``; return {column: cells cut} (see workbook_bytes)."""
+    truncated = {}
+    Path(path).write_bytes(workbook_bytes(df, protocol, full_table, truncated))
+    return truncated

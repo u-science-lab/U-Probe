@@ -14,7 +14,7 @@ import yaml
 from click.testing import CliRunner
 from pyfaidx import Fasta
 
-from uprobe.core.api import UProbeAPI
+from uprobe.core.api import InvalidTargetsError, UProbeAPI
 from uprobe.core.cli import cli
 from uprobe.core.gen.fun import extract_trans_seqs, generate_target_seqs
 from uprobe.core.hybridization import TM_DEFAULTS
@@ -133,7 +133,7 @@ def test_summary_when_nothing_passes_post_processing(tmp_path):
     assert summary['status'] == 'no_probes'
     assert summary['flags'] == {'no_filtered_probes': True, 'raw_file': api.raw_file}
     assert (tmp_path / api.raw_file).is_file()
-    assert summary['output_files'] == {'xlsx': None, 'raw_xlsx': api.raw_file, 'tsv': None,
+    assert summary['output_files'] == {'xlsx': None, 'raw_xlsx': api.raw_file, 'tsv': None, 'raw_tsv': None,
                                        'html': None, 'summary': 'summary.json'}
     assert not list(tmp_path.glob('*.tsv'))
     assert summary['counts']['final_probes'] == 0 and summary['counts']['candidate_windows'] > 0
@@ -185,12 +185,60 @@ def test_summary_for_invalid_targets(tmp_path):
 
     api = make_api(tmp_path / 'out', targets=['Missing'])
     api.genome = {'gtf': str(gtf)}
-    with pytest.raises(ValueError, match='No valid targets'):
+    with pytest.raises(InvalidTargetsError, match='1 target.s. not found in the genome annotation: Missing'):
         api.run_workflow()
     summary = read_summary(tmp_path / 'out')
     assert summary['status'] == 'error' and summary['stopped_at'] == 'validate_targets'
-    assert 'No valid targets' in summary['error']
+    assert 'Missing' in summary['error'] and '--continue-invalid' in summary['error']
     assert summary['inputs']['invalid_targets'] == ['Missing']
+
+
+def test_any_invalid_target_stops_the_run_unless_continue_invalid(tmp_path):
+    # One gene target is not in the GTF; the direct sequence G1 is valid.
+    gtf = tmp_path / 'ref.gtf'
+    gtf.write_text('1\ttest\texon\t1\t48\t.\t-\t.\tgene_name "G"; transcript_id "T";\n')
+    api = make_api(tmp_path / 'stop', targets=[{'G1': MIXED}, 'Missing'])
+    api.genome = {'gtf': str(gtf)}
+    indexed = []
+    api.build_genome_index = lambda **kwargs: indexed.append(kwargs)
+    with pytest.raises(InvalidTargetsError) as error:
+        api.run_workflow()
+    assert error.value.targets == ['Missing'] and '--continue-invalid' in str(error.value)
+    assert indexed == []  # stopped before the indexes are built and anything is designed
+    summary = read_summary(tmp_path / 'stop')
+    assert summary['status'] == 'error' and summary['stopped_at'] == 'validate_targets'
+    assert summary['inputs']['invalid_targets'] == ['Missing'] and summary['counts']['candidate_windows'] is None
+    warning = summary['warnings'][0]
+    assert warning['code'] == 'invalid_targets' and 'stopped the run' in warning['message']
+    assert not list((tmp_path / 'stop').glob('*.tsv'))
+
+    api = make_api(tmp_path / 'skip', targets=[{'G1': MIXED}, 'Missing'])
+    api.genome = {'gtf': str(gtf)}
+    result = api.run_workflow(continue_on_invalid_targets=True)
+    summary = read_summary(tmp_path / 'skip')
+    assert set(result['target']) == {'G1'} and summary['status'] == 'partial'
+    assert summary['inputs']['invalid_targets'] == ['Missing'] and summary['targets']['G1']['final'] > 0
+    assert summary['warnings'][0] == {'code': 'invalid_targets', 'targets': ['Missing'],
+                                      'message': '1 target(s) not found in the genome annotation and skipped.'}
+
+
+def test_cli_stops_on_an_invalid_target_without_continue_invalid(tmp_path):
+    genomes = toy_genome(tmp_path, align_index=[])
+    protocol = toy_protocol(tmp_path, {'target_gc': {'target': 'target_region', 'type': 'gc_content'}})
+    output = tmp_path / 'out'
+    result = CliRunner().invoke(cli, ['run', '-p', str(protocol), '-g', str(genomes), '-o', str(output), '--json'])
+    assert result.exit_code == 1
+    summary = json.loads(result.stdout)
+    assert summary['status'] == 'error' and summary['stopped_at'] == 'validate_targets'
+    assert 'NotAGene' in summary['error'] and '--continue-invalid' in summary['error']
+    assert summary['inputs']['invalid_targets'] == ['NotAGene'] and summary['output_files']['tsv'] is None
+    # The step commands stop too; validate-targets accepts the flag for a partly valid list.
+    args = ['-p', str(protocol), '-g', str(genomes)]
+    assert CliRunner().invoke(cli, ['validate-targets', *args]).exit_code == 1
+    assert CliRunner().invoke(cli, ['validate-targets', *args, '--continue-invalid']).exit_code == 0
+    assert CliRunner().invoke(cli, ['generate-targets', *args, '-o', str(tmp_path / 'g')]).exit_code == 1
+    result = CliRunner().invoke(cli, ['generate-targets', *args, '-o', str(tmp_path / 'g'), '--continue-invalid'])
+    assert result.exit_code == 0 and (tmp_path / 'g' / 'target_sequences.csv').is_file()
 
 
 def toy_genome(tmp_path, align_index):
@@ -403,3 +451,25 @@ def test_http_runner_is_unaffected_by_the_exit_code(tmp_path, monkeypatch):
                                  continue_invalid_targets=False, log_path=str(tmp_path / 'task.log'))
     assert result['ok'] and result['no_filtered_probes'], result.get('error')
     assert read_summary(tmp_path / 'task')['status'] == 'no_probes'
+
+
+def test_web_tasks_skip_invalid_targets(tmp_path, monkeypatch):
+    # The web form has no --continue-invalid switch: web tasks skip invalid targets, as before.
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+    from uprobe.http.routers import task as task_router
+    from uprobe.http.utils import task_queue, uprobe_runner
+    monkeypatch.setenv('UPROBE_SERVER_ROOT', str(tmp_path / 'server'))
+    monkeypatch.setattr(task_queue, '_task_semaphore', None)
+    calls = []
+    monkeypatch.setattr(uprobe_runner, 'run_uprobe_workflow',
+                        lambda **kwargs: calls.append(kwargs) or {'ok': False, 'error': 'stub'})
+    record = SimpleNamespace(status='pending', progress=0, yaml_content='name: x')
+    monkeypatch.setattr(task_router, 'find_task_by_id', lambda username, task_id: record)
+    monkeypatch.setattr(task_router, 'update_task_in_db', lambda username, task: None)
+    with ThreadPoolExecutor(1) as pool:
+        monkeypatch.setattr(task_router, 'get_process_pool', lambda: pool)
+        asyncio.run(task_router._run_uprobe_task('tester', 't1'))
+    assert [call['continue_invalid_targets'] for call in calls] == [True]
+    assert record.status == 'failed' and record.error_message == 'stub'

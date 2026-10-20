@@ -43,8 +43,11 @@ targets:
 
 - Gene names are matched against GTF `gene_name` (falls back to `gene`), not gene ids. All gene ids
   sharing that name are pooled.
-- Regions are sliced as Python `[start:end)` on the FASTA record: `chr1:1000-2000` gives 1-based
-  bases 1001-2000. Windows come from the reference (+) strand.
+- Regions are 1-based and inclusive, as genome browsers and Ensembl show them: `chr1:1000-2000` is
+  bases 1000-2000 (1,001 nt); a start of 0 is an error. `avoid_otp` `target_regions` read the same way.
+  Windows come from the reference (+) strand; `sub_region` `s-e` is the window along the region, i.e.
+  genomic bases `start+s-1` to `start+e-1`. (U-Probe before this fix read targets 0-based: bases
+  1001-2000; designs from old protocols shift by one base.)
 - A literal sequence named after its Ensembl gene id (as written in the GTF) lets `mapped_genes`
   recognize that gene as the target rather than as an off-target.
 
@@ -69,7 +72,7 @@ extracts:
 
 `transcripts`: `all` = union of every transcript's features (merged exon model; windows never cross a
 splice junction; segments shorter than `length` give no window, except with `mRNA` where they still
-count in positions). `canonical` = GTF tag `Ensembl_canonical`; `mane` = `MANE_Select`, else
+count in positions; a target with no long-enough segment gets no windows, the others are unaffected). `canonical` = GTF tag `Ensembl_canonical`; `mane` = `MANE_Select`, else
 `Ensembl_canonical` (logged); a list = those ids (version optional), each target needs one. When one
 transcript per target is selected, `mRNA`/`exon`/`CDS` tile its **spliced** sequence, so windows also
 span exon-exon junctions (`exon_name` then lists the joined exons with `;`). `UTR` never splices.
@@ -118,11 +121,18 @@ probes:
 - Parts are `expr`, or `template` + `parts` (nested). Names must not contain `.` or `:`; a part is
   addressed as `probe.part` (or `probe:part`), nested `probe.part.sub`.
 - Allowed in `expr`: string literals (`"'ACGT'"`, note the inner quotes) and integers; names
-  `target_region`, `target` (the target's name), `encoding`, `target_parts`, and any probe/part name
-  (including dotted, e.g. `circle_probe.part2.barcode2`); indexing and slicing (`target_region[0:20]`,
-  `[-13:]`, `[::-1]`); `+` (concatenate strings or add integers); unary `-` on integers; `rc(x)`
-  (reverse complement, one argument). Nothing else: no other functions, methods, attributes,
+  `target_region`, `target` (the target's name), `encoding`, `target_parts`, `probe_index`, and any
+  probe/part name (including dotted, e.g. `circle_probe.part2.barcode2`); indexing and slicing
+  (`target_region[0:20]`, `[-13:]`, `[::-1]`, a list in `encoding`: `encoding[target]['readouts'][2]`);
+  `+` (concatenate strings or add integers); `%` (remainder of two integers); unary `-` on integers;
+  `rc(x)` (reverse complement, one argument). Nothing else: no other functions, methods, attributes,
   comparisons, conditionals, f-strings or comprehensions. Expressions are parsed, never `eval`ed.
+- `probe_index`: the probe's number within its target, 0, 1, 2, ... along the target, for parts that
+  vary from probe to probe, e.g. readout rotation: `rc(encoding[target]['readouts'][(probe_index + 1) % 4])`
+  with `encoding: {GAPDH: {readouts: [R_a, R_b, R_c, R_d]}}`. The final probes are numbered after
+  `post_process` (column `probe_index`) and the parts that read it are rebuilt, with their attributes;
+  filters and sorts see the candidates numbered in extraction order (`validate` warns about attributes
+  on such parts). The raw table keeps the candidates' numbering.
 - An expression can read other probes/parts (a DAG); cycles are errors.
 - A candidate whose expression fails (e.g. a missing encoding key) gets an empty probe; if all do,
   status `no_probes_constructed`.
@@ -138,12 +148,15 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
 | `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override |
-| `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure | `hybridization` (only `temperature_c` used) |
+| `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
-| `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` (10) |
+| `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` | `aligner: bowtie2` (required), `threads` |
-| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k | `aligner: jellyfish` (required), `kmer_len` (35), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `kmer_count` | highest genome count among the sequence's k-mers (canonical, Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
 | `blocks` | legacy; do not use | - |
+
+`threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute
+only to override the run's value.
 
 ```yaml
 attributes:
@@ -252,8 +265,10 @@ post_process:
   list. Combine with a per-probe filter (e.g. `<= 2`); `<= 1` makes it a no-op (`validate` warns).
 - `equal_space`: keeps `number_desired` per target at evenly spaced ranks along the target (first and
   last kept); fewer candidates -> all kept, status `partial`. Use with `remove_overlap`.
-- `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped.
-- `avoid_otp` (DNA, needs a `mapped_sites` attribute): per target `{target_regions: [chr:s-e],
+- `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped. Lower is better
+  for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: put them in `is_ascending` (`validate`
+  warns when one is in `is_descending`).
+- `avoid_otp` (DNA, needs a `mapped_sites` attribute): per target `{target_regions: [chr:s-e] (1-based),
   density_thresh: 1e-4, search_range: [-1000000, 1000000], avoid_target_overlap: true}`; removes probes
   whose off-target genome hits cluster (a density of other probes' hits within `search_range`), which
   would form a false focus. Adds `on_target`, `off_target`, `target_ratio`.
@@ -270,12 +285,14 @@ summary:
 
 - RNA mode attributes: `target_gc`, `target_tm`, `target_fold`, `target_self_match`, `target_mapped_genes`
   (Bowtie 1, 2 mismatches, `sense` when `bowtie` is in `align_index` and installed; Bowtie2 otherwise), plus
-  `_gc`, `_tm`, `_fold`, `_self_match` for every probe and part. DNA mode: those four for every part,
-  plus `_mapped_sites` (bowtie2) and `_kmer_count` (jellyfish, k 35).
+  `_gc`, `_tm`, `_fold`, `_self_match` for every probe and part. DNA mode: `target_kmer_count` on the
+  genomic window (jellyfish, k 35), and those four for every part plus `_mapped_sites` (bowtie2) and
+  `_kmer_count` (jellyfish, k 35).
 - Filters: Tm [T, T+40] °C at `hybridization.temperature_c` (37 °C if conditions are declared without
   it; 50-90 °C without a block) on **every** Tm attribute, constant parts included; GC 0.2-0.8 on
-  `target_gc` and whole probes; RNA `target_mapped_genes <= 4` (up to 3 off-target genes). DNA mode
-  gets no k-mer or site filter (the generated one names a `target_kmer_count` column that does not exist).
-- Sorts: GC, Tm, mapped genes ascending; `_fold`, `_self_match`, `_kmer_count` **descending** (legacy:
-  puts the most structured first). No `remove_overlap` or `equal_space`.
+  `target_gc` and whole probes; RNA `target_mapped_genes <= 4` (up to 3 off-target genes); DNA
+  `target_kmer_count <= 100` (no 35-mer of the window more than 100 times in the genome: a loose repeat
+  filter, far looser than OligoMiner's 18-mers < 5; see `references/concepts/specificity.md`).
+- Sorts: all ascending: GC, Tm, mapped genes, then `_fold`, `_self_match`, `_kmer_count` (least
+  structured, least self-complementary, least repetitive first). No `remove_overlap` or `equal_space`.
 Write your own blocks for any real design.

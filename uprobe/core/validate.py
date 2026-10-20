@@ -28,13 +28,14 @@ from types import SimpleNamespace
 
 import yaml
 
-from .gen.expression import CONTEXT_NAMES, check_expression, expression_references
+from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
 from .hybridization import FIELDS as HYBRIDIZATION_FIELDS, default_tm_window, validate_protocol_hybridization
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
                         MAX_MISMATCHES_LIMIT, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
+from .utils import REGION_PATTERN
 
 
 # Sections required by _validate_and_normalize_protocol.
@@ -63,6 +64,10 @@ ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'h
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
+# Attribute types whose lower values are better; sorting them descending ranks the worst first.
+LOWER_IS_BETTER = {'fold_score': 'most structured (fold_score is -MFE: higher = more structure)',
+                   'self_match': 'most self-complementary', 'kmer_count': 'most repetitive',
+                   'mapped_genes': 'least specific'}
 OPERATORS = ('<=', '>=', '<', '>', '==')
 OPERATOR_FIXES = {'=>': '>=', '=<': '<=', '=': '=='}
 SUMMARY_KEYS = ('report_name', 'attributes', 'report')
@@ -77,7 +82,7 @@ TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_st
                   'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
 OTP_COLUMNS = ('on_target', 'off_target', 'target_ratio')
 IUPAC = set('ACGTURYSWKMBDHVN')
-REGION_RE = re.compile(r'^([^:\s]+):(\d+)-(\d+)$')
+REGION_RE = REGION_PATTERN
 DRY_RUN_TARGETS = 200
 
 SNIPPETS = {
@@ -492,8 +497,11 @@ class _Validator:
                 if not match:
                     self.error(path, f'target {name!r} is not a region; source: genome needs chrom:start-end',
                                'e.g. chr1:100000-101000, or use source: mRNA, exon, CDS or UTR for gene names')
-                elif int(match[2]) >= int(match[3]):
-                    self.error(path, f'region {name!r} has start >= end', 'write chrom:start-end with start < end')
+                elif int(match[2]) < 1:
+                    self.error(path, f'region {name!r} starts at {match[2]}; regions are 1-based and inclusive, '
+                               'the first base is 1', f'e.g. {match[1]}:1-{match[3]}')
+                elif int(match[2]) > int(match[3]):
+                    self.error(path, f'region {name!r} ends before it starts', 'write chrom:start-end with start <= end')
             elif self.source is not None and REGION_RE.match(str(name)):
                 self.warning(path, f'target {name!r} looks like a genomic region, but source is {self.source} '
                              '(gene names)', 'use extracts.target_region.source: genome for regions')
@@ -725,18 +733,27 @@ class _Validator:
                     hint = _did_you_mean(barcode, entry, 'barcodes')
                     self.error(('encoding', key), f'target {key!r} has no barcode {barcode!r} (used by {used_by})',
                                (hint + '; or ' if hint else '') + f'add {barcode}: <sequence>')
-                elif not isinstance(entry[barcode], str) or not entry[barcode].strip():
-                    self.error(('encoding', key, barcode), f'barcode {barcode!r} of {key!r} is empty',
-                               f'set {barcode} to a nucleotide sequence')
-                elif set(entry[barcode].upper()) - IUPAC:
-                    self.warning(('encoding', key, barcode),
-                                 f'barcode {barcode!r} of {key!r} is not a nucleotide sequence: {entry[barcode]!r}',
-                                 'use only A, C, G, T/U and IUPAC codes such as N')
+                elif isinstance(entry[barcode], list):
+                    # A list of sequences, indexed by the expression (e.g. with probe_index).
+                    for i, value in enumerate(entry[barcode]):
+                        self._check_barcode_sequence(('encoding', key, barcode, i), f'{barcode}[{i}]', key, value)
+                    if not entry[barcode]:
+                        self.error(('encoding', key, barcode), f'barcode list {barcode!r} of {key!r} is empty',
+                                   f'list the sequences, e.g. {barcode}: [<sequence>, <sequence>]')
+                else:
+                    self._check_barcode_sequence(('encoding', key, barcode), barcode, key, entry[barcode])
         if any(keys is None for _, keys, _ in self.lookups):
             for key in encoding:
                 if key not in self.target_names:
                     self.warning(('encoding', key), f'encoding entry {key!r} is not a target and is never used',
                                  _did_you_mean(key, self.target_names, 'targets'))
+
+    def _check_barcode_sequence(self, path, barcode, key, value):
+        if not isinstance(value, str) or not value.strip():
+            self.error(path, f'barcode {barcode!r} of {key!r} is empty', f'set {barcode} to a nucleotide sequence')
+        elif set(value.upper()) - IUPAC:
+            self.warning(path, f'barcode {barcode!r} of {key!r} is not a nucleotide sequence: {value!r}',
+                         'use only A, C, G, T/U and IUPAC codes such as N')
 
     # -- hybridization conditions ----------------------------------------
     def check_hybridization(self):
@@ -812,6 +829,7 @@ class _Validator:
         if auto or not self.attributes:
             return  # generated attributes are only checked against the genome config
         columns = self.sequence_columns()
+        index_nodes = probe_index_nodes(protocol.get('probes'))
         for name, attr in self.attributes.items():
             path = ('attributes', name)
             if not isinstance(attr, dict):
@@ -849,6 +867,11 @@ class _Validator:
                 self.error(path + ('target',), f'target {target!r} is not target_region, a probe/part or a layout '
                            'part; the attribute would be skipped',
                            _did_you_mean(str(target).replace(':', '.'), columns, 'valid targets'))
+            elif target.replace(':', '.') in index_nodes:
+                self.warning(path + ('target',), f'{target!r} depends on probe_index, which numbers the final '
+                             'probes after post-processing: filters and sorts on this attribute see each candidate '
+                             'numbered in extraction order; the final table recomputes it',
+                             'compute it on the parts that do not read probe_index, or accept the approximation')
             if name in columns or name in TARGET_COLUMNS:
                 self.warning(path, f'attribute name {name!r} overwrites the column of the same name',
                              f'rename it, e.g. {name}_{kind or "value"}')
@@ -1030,7 +1053,7 @@ class _Validator:
             return
         if not isinstance(sorts, dict):
             self.error(path, 'sorts must be a mapping with is_ascending / is_descending lists',
-                       'sorts:\n  is_ascending: [probe_1_tm]\n  is_descending: [probe_1_fold]')
+                       'sorts:\n  is_ascending: [probe_1_fold]\n  is_descending: [probe_1_tm]')
             return
         for key in sorts:
             if key not in SORT_KEYS:
@@ -1050,6 +1073,15 @@ class _Validator:
                 elif seen.setdefault(name, key) != key:
                     self.warning(path + (key, i), f'{name!r} is in both is_ascending and is_descending',
                                  'keep it in one list')
+                elif key == 'is_descending' and self._attribute_type(name) in LOWER_IS_BETTER:
+                    worst = LOWER_IS_BETTER[self._attribute_type(name)]
+                    self.warning(path + (key, i), f'{name!r} is sorted descending, which ranks the {worst} '
+                                 'candidates first; lower is better', f'move {name} to is_ascending')
+
+    def _attribute_type(self, name):
+        attr = self.attributes.get(name)
+        kind = attr.get('type') if isinstance(attr, dict) else None
+        return ATTRIBUTE_ALIASES.get(kind.lower(), kind.lower()) if isinstance(kind, str) else None
 
     def _check_remove_overlap(self, config):
         path = ('post_process', 'remove_overlap')
@@ -1402,6 +1434,8 @@ class _Validator:
         from .gen.probe import DAG
         targets = self.target_names[:DRY_RUN_TARGETS]
         sizes = sorted(set(self.lengths))
+        # Probes that read probe_index are built for several probe numbers.
+        indexes = range(8) if probe_index_nodes(self.protocol['probes']) else (0,)
         failures, empties, odd, lengths = {}, {}, {}, {}
         logger = logging.getLogger('uprobe.core.gen.probe')
         level = logger.level
@@ -1418,9 +1452,9 @@ class _Validator:
                     for name, part_size in zip(self.layout[0], self.layout[1][size][0]):
                         target_parts[name] = region[offset:offset + part_size]
                         offset += part_size
-                for target in targets:
+                for target, probe_index in ((t, i) for t in targets for i in indexes):
                     context = {'target_region': region, 'target': target, 'encoding': self.protocol['encoding'],
-                               'target_parts': target_parts}
+                               'target_parts': target_parts, PROBE_INDEX: probe_index}
                     for node in order:
                         node.done, node.result = False, None
                     for node in order:
@@ -1447,7 +1481,7 @@ class _Validator:
             return
         finally:
             logger.setLevel(level)
-        total = len(targets) * len(sizes)
+        total = len(targets) * len(sizes) * len(indexes)
         for (name, message), cases in failures.items():
             target, size = cases[0]
             self.error(self.nodes[name][0], f'fails when probes are built ({len(cases)}/{total} test cases, e.g. '

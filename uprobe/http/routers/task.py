@@ -449,7 +449,9 @@ async def _run_uprobe_task(username: str, task_id: str):
             from uprobe.http.utils.uprobe_runner import run_uprobe_workflow
             loop = asyncio.get_running_loop()
             pool = get_process_pool()
-            job = functools.partial(run_uprobe_workflow, protocol_yaml=task.yaml_content, username=username, task_id=task_id, output_dir=str(task_results_dir), threads=TASK_THREADS, raw_csv=True, continue_invalid_targets=False, log_path=str(log_path))
+            # Web tasks skip targets missing from the GTF (logged and listed in summary.json):
+            # the web form has no --continue-invalid switch to retry with.
+            job = functools.partial(run_uprobe_workflow, protocol_yaml=task.yaml_content, username=username, task_id=task_id, output_dir=str(task_results_dir), threads=TASK_THREADS, raw_csv=True, continue_invalid_targets=True, log_path=str(log_path))
             fut = loop.run_in_executor(pool, job)
             tail_buf = deque(maxlen=2000)
             last_progress = [task.progress]
@@ -600,7 +602,7 @@ async def list_task_files(
     
     files = []
     for file_path in task_results_dir.iterdir():
-        if file_path.is_file() and file_path.suffix in {'.xlsx', '.html'}:
+        if file_path.is_file() and file_path.suffix in {'.xlsx', '.tsv', '.html'}:
             file_info = {
                 "name": file_path.name,
                 "size": file_path.stat().st_size,
@@ -638,7 +640,7 @@ async def download_single_file(
     if not str(file_path.resolve()).startswith(str(task_results_dir.resolve())):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith(".xlsx") else "text/csv" if filename.endswith('.csv') else "text/tab-separated-values" if filename.endswith('.tsv') else "text/html" if filename.endswith('.html') else "application/octet-stream"
     
     return FileResponse(
         path=str(file_path),

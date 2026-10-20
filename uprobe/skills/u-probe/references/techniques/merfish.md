@@ -26,8 +26,11 @@ alternative placement:  [P1][A][rc(R1)][rc(R2)][rc(RNA) 30][A][rc(R3)][rc(P2)]
 ```
 
 - R1-R3 are 3 of the gene's 4 readout PROBE sequences (dye-labelled 20-mers), chosen at random per
-  probe, with 1 or 2 readouts 5' of the target region (random). The probe carries their reverse
-  complements. Single A spacers avoid terminal G triplets / G quadruplets.
+  probe, with 1 or 2 readouts 5' of the target region (random) (Moffitt 2016 SI: "three readout
+  sequences that were randomly selected from the four readout sequences associated with the gene").
+  The probe carries their reverse complements. Single A spacers avoid terminal G triplets / G
+  quadruplets. All 4 readouts must appear across a gene's probes: with only 3, every molecule reads
+  as a 1-bit error and loses its error correction.
 - Primer 1 is the PCR forward and RT primer; primer 2 carries a T7 promoter (TAATACGACTCACTATAGGG) at
   its 5' end, and the probe holds its reverse complement at the 3' end (library: PCR -> in vitro
   transcription -> RT -> alkaline hydrolysis).
@@ -123,13 +126,14 @@ uprobe templates show merfish -o protocol.yaml
 ```
 
 ```yaml
-encoding:
-  GAPDH: {R1: ATCCTCCTTCAATACATCCC, R2: ACACTACCACCATTTCCTAT, R3: ACTCCACTACTACTCACTCT}  # readout PROBES
+encoding:   # readout PROBES of the gene's 4 on-bits (Moffitt 2016 Table S1, bits 1-4: RS0015, RS0083, RS0095, RS0109)
+  GAPDH: {readouts: [ATCCTCCTTCAATACATCCC, ACACTACCACCATTTCCTAT, ACTCCACTACTACTCACTCT, ACCCTCTAACTTCCATCACA]}
 extracts:
   target_region: {source: mRNA, transcripts: mane, length: 30, step: 1}
 probes:
   encoding_probe:
-    template: "{primer_1}A{readout_1}{binding}A{readout_2}{readout_3}{primer_2_rc}"   # readout_i = rc(R_i)
+    template: "{primer_1}A{readout_1}{binding}A{readout_2}{readout_3}{primer_2_rc}"
+    # readout_i: rc(encoding[target]['readouts'][(probe_index + i) % 4]), i = 1, 2, 3
 hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30}
 attributes:
   binding_tm: {target: encoding_probe.binding, type: annealing_temperature,
@@ -143,35 +147,20 @@ post_process:
   equal_space: {number_desired: 92}
 ```
 
-What to edit: `encoding` (per gene, the readout probe sequences of its code word), the two primer
-placeholders (20 N each), `equal_space` (92, 64 or 48), `location_interval` (-20 for short genes),
-`gene_expression` (your tissue). `genome` needs `bowtie` in `align_index`.
+What to edit: `encoding` (per gene, `readouts`: the 4 readout probe sequences of its code word, one
+per on-bit, in any order), the two primer placeholders (20 N each), `equal_space` (92, 64 or 48),
+`location_interval` (-20 for short genes), `gene_expression` (your tissue). `genome` needs `bowtie` in
+`align_index`.
+
+Readout rotation: `probe_index` numbers a gene's final probes 0, 1, 2, ... along the RNA, after
+`post_process` has chosen them; probe k leaves out readout k % 4 and carries the other three, so the 4
+combinations of 3 rotate along the RNA and each readout is on 3 of every 4 probes (69 of 92). The
+final TSV has a `probe_index` column; check the rotation there (`encoding_probe.readout_1..3`).
 
 Template departures:
-- Readouts: the template puts the same R1-R3, in one placement, on every probe. A weight-4 code word
-  has 4 readouts; with only 3 shown, every molecule reads as a 1-bit error and loses its error
-  correction. Put all 4 readouts in `encoding` and rotate them after the run (each readout on 3 of 4
-  probes, both placements). Tested snippet on the result TSV (check the column names):
-
-```python
-import pandas as pd
-rc = lambda s: s.translate(str.maketrans('ACGTN', 'TGCAN'))[::-1]
-codebook = {'GAPDH': ['R_a', 'R_b', 'R_c', 'R_d']}   # the gene's 4 readout PROBE sequences
-P1, P2_RC = 'N' * 20, 'N' * 20                        # primer 1, rc(primer 2)
-df = pd.read_csv('results/<name>_<time>_probes.tsv', sep='\t')
-df = df.sort_values(['target', 'target_start']).reset_index(drop=True)
-df['rank'] = df.groupby('target').cumcount()
-def build(row):
-    r = [s for j, s in enumerate(codebook[row['target']]) if j != row['rank'] % 4]
-    b = row['encoding_probe.binding']
-    if (row['rank'] // 4) % 2 == 0:
-        body = 'A' + rc(r[0]) + b + 'A' + rc(r[1]) + rc(r[2])
-    else:
-        body = 'A' + rc(r[0]) + rc(r[1]) + b + 'A' + rc(r[2])
-    return P1 + body + P2_RC
-df['encoding_probe'] = df.apply(build, axis=1)
-```
-
+- Readouts: rotated deterministically by `probe_index` (3 of 4 per probe, balanced along the RNA)
+  instead of chosen at random, and always in configuration A (1 readout 5', 2 readouts 3'); Moffitt
+  2016 also varied 1 or 2 readouts 5' at random.
 - Specificity: Bowtie 1 (<= 2 substitutions, any gene) instead of 17-mer specificity indices; the
   15-nt rRNA/tRNA screen and probe-probe / probe-primer cross-homology are not modelled.
 - Spacing: `equal_space` spreads 92 probes along the RNA; Moffitt 2016 took regions from the 5' end
@@ -193,7 +182,8 @@ df['encoding_probe'] = df.apply(build, axis=1)
 ## 10. Checklist
 
 - [ ] 30-nt target regions, GC and Tm in the chosen window (state the Tm conditions).
-- [ ] Every gene has its 4 readouts, each on ~75 % (3-readout design) or ~50 % (2-readout) of probes.
+- [ ] Every gene has its 4 readouts, each on ~75 % (3-readout design) or ~50 % (2-readout) of probes
+      (template: count `encoding_probe.readout_1..3` per gene in the TSV).
 - [ ] Probe = rc(readouts) + rc(RNA) + primers; A spacers present; length as designed (e.g. 132 nt).
 - [ ] Probes per gene reached (92/64/48) or the gene moved to sequential rounds.
 - [ ] Panel abundance: no gene above the per-gene cap; total within budget; blanks in the codebook.

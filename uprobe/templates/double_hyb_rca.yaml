@@ -170,10 +170,10 @@ post_process:
     n_mapped_genes:
       condition: n_mapped_genes <= 4
   sorts:
-    is_descending:
+    # Least structured first: fold_score is -MFE, so lower means less structure.
+    is_ascending:
       - circle_fold_score
       - amp_fold_score
-    is_ascending:
       - tm1
   remove_overlap:
     location_interval: 0

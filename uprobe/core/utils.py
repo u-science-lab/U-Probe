@@ -1,6 +1,7 @@
 import sys
 import logging
 import os
+import re
 from os.path import exists
 import typing as t
 from pyfaidx import Fasta
@@ -79,14 +80,40 @@ def write_fastq(outdir, gene, recname2seq: t.Mapping[str, str]):
             f.write("~"*len(seq)+"\n")
     return fq
 
+# A genomic region target (source: genome) or avoid_otp target region.
+REGION_PATTERN = re.compile(r'^(\S+):(\d+)-(\d+)$')
+
+
+def parse_region(region: str) -> t.Tuple[str, int, int]:
+    """(chrom, start, end) of 'chrom:start-end', 1-based and inclusive.
+
+    As genome browsers and Ensembl write regions: chr1:1-100 is the first 100
+    bases of chr1. Raises ValueError for anything else, a start below 1 or an
+    end before the start.
+    """
+    match = REGION_PATTERN.match(str(region).strip())
+    if not match:
+        raise ValueError(f"region {region!r} is not chrom:start-end")
+    chrom, start, end = match[1], int(match[2]), int(match[3])
+    if start < 1:
+        raise ValueError(f"region {region!r} starts at {start}; positions are 1-based, the first base is 1")
+    if end < start:
+        raise ValueError(f"region {region!r} ends before it starts")
+    return chrom, start, end
+
+
 def extract_fasta(fasta_path, target, min_length, overlap=None, step=None):
+    """Windows of a region target, chrom:start-end (1-based, inclusive; see parse_region).
+
+    sub_region numbers each window along the region, 1-based: window s-e
+    covers the genomic bases start + s - 1 to start + e - 1.
+    """
+    chrom, start, end = parse_region(target)
     with Fasta(str(fasta_path)) as fa:
-        chrom, region = target.split(':')
-        start, end = region.split('-')
-        seq = fa[chrom][int(start):int(end)].seq.upper()
+        seq = fa[chrom][start - 1:end].seq.upper()
     return [
-        [f"{target}_{n}", target, f"{i + 1}-{end}", tem]
-        for n, (i, end, tem) in enumerate(
+        [f"{target}_{n}", target, f"{i + 1}-{stop}", tem]
+        for n, (i, stop, tem) in enumerate(
             iter_target_windows(seq, min_length, step, overlap), start=1
         )
     ]

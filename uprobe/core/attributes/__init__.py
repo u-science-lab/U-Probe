@@ -15,12 +15,17 @@ def add_attributes(
         protocol: dict,
         genome: dict,
         report: dict = None,
+        threads: int = 10,
 ) -> pd.DataFrame:
-    """Compute protocol['attributes']; ``report`` (a dict) receives off-target statistics."""
+    """Compute protocol['attributes']; ``report`` (a dict) receives off-target statistics.
+
+    ``threads`` (``uprobe run --threads``) is used by every aligner and Jellyfish
+    step of an attribute that sets no ``threads`` of its own.
+    """
     # A private scratch directory per call: concurrent workflows sharing a
     # working directory must not share (and delete) each other's alignment files.
     with tempfile.TemporaryDirectory(prefix=".uprobe-tmp-", dir=".") as tmp_root:
-        return _add_attributes(df_probes, protocol, genome, Path(tmp_root), report)
+        return _add_attributes(df_probes, protocol, genome, Path(tmp_root), report, threads)
 
 
 def _add_attributes(
@@ -29,6 +34,7 @@ def _add_attributes(
         genome: dict,
         tmp_root: Path,
         report: dict = None,
+        threads: int = 10,
 ) -> pd.DataFrame:
     attributes: dict = protocol['attributes']
     off_targets = None  # created by the first mapped_genes attribute
@@ -51,6 +57,7 @@ def _add_attributes(
                 print(f"Warning: '{target}' not found in csv columns.")
                 continue
         attr_type: str = attr.get('type', '').lower() 
+        attr_threads = attr.get('threads', threads)
         if attr_type == "mapped_sites":
             if attr.get('aligner') == "bowtie2":
                 assert 'bowtie2' in genome.get('align_index', []), "Bowtie2 must be enabled in genome align_index" 
@@ -61,12 +68,12 @@ def _add_attributes(
                 if 'probe_id' in df_probes.columns and 'target' in df_probes.columns:
                     # DNA format (source: genome)
                     recname2seq = {f"{row['probe_id']}": row[actual_target] for _, row in df_probes.iterrows()}
-                    mapped_sites_results = cal_mapped_sites(str(tmp_dir), attr_name, recname2seq, str(index_prefix), attr.get("threads", 10))
+                    mapped_sites_results = cal_mapped_sites(str(tmp_dir), attr_name, recname2seq, str(index_prefix), attr_threads)
                     mapped_sites = [mapped_sites_results.get(f"{row['probe_id']}", []) for _, row in df_probes.iterrows()]
                 elif 'region' in df_probes.columns:
                     # RNA format (source: exon)
                     recname2seq = {f"{row['region']}": row[actual_target] for _, row in df_probes.iterrows()}
-                    mapped_sites_results = cal_mapped_sites(str(tmp_dir), attr_name, recname2seq, str(index_prefix), attr.get("threads", 10))
+                    mapped_sites_results = cal_mapped_sites(str(tmp_dir), attr_name, recname2seq, str(index_prefix), attr_threads)
                     mapped_sites = [mapped_sites_results.get(f"{row['region']}", []) for _, row in df_probes.iterrows()]
                 else:
                     raise ValueError(f"Unsupported DataFrame structure for mapped_sites attribute")
@@ -79,14 +86,10 @@ def _add_attributes(
         elif attr_type == "kmer_count":
             if attr.get('aligner') == "jellyfish":
                 assert genome.get('jellyfish', False) is True, "Jellyfish must be enabled in genome configuration" 
-                fasta_path = Path(genome['fasta'])
-                index_prefix = fasta_path.parent / 'jf_genome' / fasta_path.stem
                 kmer_len = attr.get("kmer_len", 35)
-                if_path = str(index_prefix) + '.jf'
-                if not os.path.exists(if_path):
-                    os.makedirs(str(index_prefix.parent), exist_ok=True)
-                    from uprobe.core.tools.aligner import build_jf_index
-                    build_jf_index(str(fasta_path), kmer_len, str(if_path), attr.get("threads", 10), attr.get("size", "1G"))
+                # One index per k-mer length, built when first needed.
+                from uprobe.core.tools import jellyfish_index
+                if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"))
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}
@@ -96,7 +99,7 @@ def _add_attributes(
                     recname2seq, 
                     str(if_path),
                     kmer_len, 
-                    attr.get("threads", 10)
+                    attr_threads
                 )
                 kmer_count_values = [kmer_counts[f"{i}"] for i in range(len(df_probes))]
                 df_probes[attr_name] = kmer_count_values
@@ -123,7 +126,7 @@ def _add_attributes(
                 if aligner == "bowtie":
                     hits = (bowtie_transcript_hits if by_transcript else bowtie_gene_hits)(
                         str(tmp_dir), recname2seq, task_id, str(index_prefix),
-                        settings['max_mismatches'], attr.get("threads", 10), settings['strand']
+                        settings['max_mismatches'], attr_threads, settings['strand']
                     )
                 else:
                     short = sum(len(seq) < BOWTIE2_LOCAL_MIN_LENGTH for seq in unique_sequences)
@@ -131,7 +134,7 @@ def _add_attributes(
                         log.warning(short_for_bowtie2(attr_name, short, len(unique_sequences)))
                     hits = (bowtie2_transcript_hits if by_transcript else bowtie2_gene_hits)(
                         str(tmp_dir), recname2seq, task_id, str(index_prefix),
-                        attr.get("threads", 10), settings['strand']
+                        attr_threads, settings['strand']
                     )
                 sequence_hits = {seq: hits.get(str(i), {}) for i, seq in enumerate(unique_sequences)}
                 transcript_hits = None

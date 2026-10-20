@@ -2,15 +2,15 @@ import typing as t
 from collections import defaultdict
 from intervaltree import IntervalTree, Interval
 import pysam
+from uprobe.core.utils import parse_region as parse_region_1based
 
 GenomicRegion = t.Tuple[str, int, int]
 Aln = t.Tuple[str, int, int]
 Block = t.Tuple[str, str, t.List[Aln]]
 
 def parse_region(region: str) -> GenomicRegion:
-    chr_, r_ = region.split(":")
-    s, e = r_.split("-")
-    s, e = int(s), int(e)
+    """chrom:start-end (1-based, inclusive) as a 0-based, half-open interval."""
+    chr_, s, e = parse_region_1based(region)
     return chr_, s - 1, e
 
 def read_align_blocks(
