@@ -82,8 +82,9 @@ uprobe build-index -p protocol.yaml -g genomes.yaml -t 16   # after step 4; `run
 ```
 
 - Pin `--release`. MANE Select tags exist for human only; Ensembl canonical for every species.
-- `align_index` must include `bowtie` for RNA probes of ~30 nt or less; `[bowtie]` alone skips the
-  slow Bowtie2 genome index when no attribute uses Bowtie2. DNA FISH needs `jellyfish: true`.
+- `align_index` must include `bowtie` for RNA probes of ~30 nt or less. `run` and `build-index` build
+  only the indexes the attributes search: the slow Bowtie2 genome index only for `mapped_sites`
+  (DNA FISH); `build-index --all` builds every one. DNA FISH needs `jellyfish: true`.
 - Own FASTA + GTF: write the `genomes.yaml` entry by hand (`references/uprobe/yaml-reference.md`).
 
 ### 4. Copy and edit the template

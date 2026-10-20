@@ -147,7 +147,7 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 - `--soft-masked` fetches the soft-masked FASTA instead (Ensembl `dna_sm`: repeats in lowercase; the name gets the suffix `_sm`). Every template can use it, since the aligners and Jellyfish ignore case; the Oligopaint template needs it, because its `extracts.target_region.masked: drop` skips the genome windows with a soft-masked or N base, as OligoMiner mines a repeat-masked genome.
 - Re-running skips files that are already present and verified, and resumes interrupted downloads. `--dry-run` prints the resolved URLs without downloading; `--mirror` replaces the Ensembl FTP base URL.
 - A new entry gets `align_index: [bowtie2]`, plus `bowtie` when Bowtie 1 (`bowtie-build`) is installed, for the [exhaustive off-target search](#off-target-search) (the log says so when it is not), and `jellyfish: true` when Jellyfish is installed. `--align-index` and `--jellyfish/--no-jellyfish` set them; re-fetching keeps the settings of an existing entry.
-- `--build-index` runs the same index build as `uprobe build-index`.
+- `--build-index` builds every index of the entry's `align_index`, as `uprobe build-index --all` does.
 
 #### Protocol Templates
 
@@ -288,7 +288,7 @@ GRCh38:
   jellyfish: false  
 ```
 
-`uprobe build-index` builds the indexes of the aligners in `align_index`; the transcriptome (`transcript.fa`, spliced from the GTF) is indexed for `bowtie2`, `blast` and `bowtie`, which has no genome index.
+`uprobe build-index` builds the indexes of the aligners in `align_index` that the protocol's attributes search, as `uprobe run` does before designing: `mapped_genes` searches its aligner's transcriptome index (`transcript.fa`, spliced from the GTF), `mapped_sites` the genome index. An RNA design that searches only the transcriptome therefore never builds the Bowtie2 genome index (13.5 min and 3.5 GB for mouse GRCm39). `uprobe build-index --all` builds every index of `align_index`: genome indexes for `bowtie2`, `blast` and `mmseqs`, transcriptome indexes for `bowtie2`, `blast` and `bowtie`, which has no genome index.
 
 Entries written by `uprobe genome fetch` also record their origin under `source` (Ensembl division, release, assembly and URLs), which each run copies into `summary.json`; the verified checksums are kept in `genome_source.json` next to the files. The workflow ignores keys it does not use.
 

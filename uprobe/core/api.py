@@ -23,7 +23,7 @@ from .report.formatting import prepare_result_table
 from .report.excel import EXCEL_MAX_CELL_CHARS, EXCEL_MAX_ROWS, exceeds_excel_rows, save_xlsx
 from .report.run_summary import SUMMARY_FILENAME, build_run_summary, save_tsv, write_run_summary
 
-from .tools import build_genome
+from .tools import build_genome, indexes_used
 from .utils import get_logger
 
 log = get_logger(__name__)
@@ -109,9 +109,16 @@ class UProbeAPI:
         log.info(f"Using FASTA: {genome['fasta']} and GTF: {genome['gtf']}")
         return genome
 
-    def build_genome_index(self, threads: int = 10):
+    def build_genome_index(self, threads: int = 10, all_indexes: bool = False):
+        """Build the indexes of the genome's align_index that the protocol's attributes search.
+
+        ``all_indexes`` builds every index of align_index instead (``uprobe build-index --all``).
+        """
         log.info("Building genome index...")
-        build_genome(self.genome, threads=threads)
+        if all_indexes:
+            build_genome(self.genome, threads=threads)
+        else:
+            build_genome(self.genome, threads=threads, used=indexes_used(self.protocol))
         log.info("Genome index building completed.")
 
     def quick_generate_barcodes(self, num_barcodes: int, length: int, **kwargs) -> T.List[str]:

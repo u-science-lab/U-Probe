@@ -24,8 +24,9 @@ every template, run as `references/uprobe/workflow.md` describes; your genes wil
 | Bowtie2 transcriptome, human | 6 min (8 threads) | 855 MB |
 | Bowtie2 genome + transcriptome (`bowtie2`), mouse | 16 min (9 threads) | 3.5 GB + 570 MB |
 
-`bowtie2` in `align_index` always builds the genome index too, although the RNA templates that use
-Bowtie2 (`hcr_v3`, `starmap`, `mipseq`, `double_hyb_rca`) only search the transcriptome. The
+A run builds only the indexes its attributes search, so the RNA templates that use Bowtie2
+(`hcr_v3`, `starmap`, `mipseq`, `double_hyb_rca`) build its transcriptome index and not the genome
+index, which only `mapped_sites` (Oligopaint) needs; `uprobe build-index --all` builds both. The
 Oligopaint run used Jellyfish 18-mer indexes restricted to the k-mers of its locus
 (`jellyfish count --if`); a genome-wide one was not built in this test.
 

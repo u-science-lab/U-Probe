@@ -707,7 +707,7 @@ def fetch_genome(species: str, release: T.Union[int, str, None] = "latest", divi
         from .api import UProbeAPI
         try:
             api = UProbeAPI(protocol_config={"genome": name}, genomes_config=genomes_yaml, output_dir=directory)
-            api.build_genome_index(threads=threads)
+            api.build_genome_index(threads=threads, all_indexes=True)
         except Exception as e:
             raise GenomeFetchError(
                 f"Genome '{name}' was downloaded and registered, but building indices failed: {e}. "

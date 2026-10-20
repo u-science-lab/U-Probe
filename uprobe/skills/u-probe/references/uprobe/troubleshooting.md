@@ -51,9 +51,10 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
   missing, so the generated attribute fell back to Bowtie2, whose local mode cannot align < 22 nt
   (every window counts 0 genes). **Fix:** install Bowtie 1, add `bowtie` to `align_index`, or write the
   attribute with `aligner: bowtie`. Never deliver short probes checked only by Bowtie2.
-- **Symptom:** first run takes hours at `build_index`. **Cause:** every `align_index` entry is built,
-  including a Bowtie2 genome index. **Fix:** build once with `uprobe build-index -t <cores>` before
-  designing; keep only the aligners you use (`[bowtie]` suffices for `mapped_genes` with Bowtie 1).
+- **Symptom:** first run takes long at `build_index`. **Cause:** a missing index that an attribute
+  searches is built first, e.g. the Bowtie2 genome index for `mapped_sites` (DNA FISH; hours for a
+  mammalian genome). Indexes no attribute searches are not built. **Fix:** build once with
+  `uprobe build-index -p protocol.yaml -g genomes.yaml -t <cores>` before designing.
 - **Symptom:** index build fails immediately / "does not contain a valid sequence". **Cause:**
   gzipped or truncated FASTA, a Git LFS pointer file, or a broken aligner binary. **Fix:** `head` the
   FASTA (must start with `>`); run `bowtie-build`/`bowtie2-build` by hand on a small FASTA.

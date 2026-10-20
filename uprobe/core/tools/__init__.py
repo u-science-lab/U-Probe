@@ -157,11 +157,34 @@ def build_transcripts_index(gtf: Path,
         raise RuntimeError(f"Incomplete {aligner} transcript index: {index_prefix}")
     return str(index_prefix)
 
-def build_genome(genome: dict,
-                 threads: int = 10
-                 ) -> dict:
-    """Build the genome index using the provided fasta file.
+def indexes_used(protocol: dict) -> dict:
+    """The aligner indexes a protocol's attributes search: {'genome': set, 'transcript': set}.
 
+    mapped_genes searches the transcriptome index of its aligner and mapped_sites
+    the genome index; kmer_count builds its Jellyfish index itself when first used.
+    """
+    used = {'genome': set(), 'transcript': set()}
+    for attr in (protocol.get('attributes') or {}).values():
+        if not isinstance(attr, dict) or not attr.get('aligner'):
+            continue
+        kind = str(attr.get('type', '')).lower()
+        if kind == 'mapped_genes':
+            used['transcript'].add(attr['aligner'])
+        elif kind == 'mapped_sites':
+            used['genome'].add(attr['aligner'])
+    return used
+
+
+def build_genome(genome: dict,
+                 threads: int = 10,
+                 used: dict = None,
+                 ) -> dict:
+    """Build the genome's indexes listed in its align_index.
+
+    With ``used`` (see indexes_used), only those the protocol's attributes
+    search: an RNA design that aligns to the transcriptome does not build the
+    Bowtie2 genome index, which takes far longer. Without it, every index of
+    align_index (``uprobe build-index --all``, ``genome fetch --build-index``).
     An index is skipped only when all of its files exist, so a build that was
     interrupted (leaving the <aligner>_genome folder behind) is redone.
     """
@@ -173,6 +196,10 @@ def build_genome(genome: dict,
             continue
         if aligner not in _GENOME_INDEX_EXISTS:
             raise NotImplementedError(f"aligner {aligner} is not implemented")
+        if used is not None and aligner not in used['genome']:
+            log.info(f"Not building the {aligner} genome index: no attribute of the protocol searches it "
+                     "(uprobe build-index --all builds every index of align_index)")
+            continue
         index_dir = fasta_path.parent / f"{aligner}_genome"/ prefix
         if _GENOME_INDEX_EXISTS[aligner](index_dir):
             log.info(f"index already exists: {index_dir}")
@@ -187,6 +214,10 @@ def build_genome(genome: dict,
             build_mmseqs_index(fasta_path, str(index_dir))
     for aligner in aligner_index:
         if aligner not in _TRANSCRIPT_INDEX_EXISTS:
+            continue
+        if used is not None and aligner not in used['transcript']:
+            log.info(f"Not building the {aligner} transcriptome index: no attribute of the protocol searches it "
+                     "(uprobe build-index --all builds every index of align_index)")
             continue
         tran_index_dir = fasta_path.parent / f"{aligner}_transcript"
         build_transcripts_index(gtf=Path(genome['gtf']),

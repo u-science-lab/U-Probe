@@ -132,6 +132,45 @@ def test_build_genome_indexes_only_the_transcriptome_for_bowtie(monkeypatch, tmp
                                       aligner='bowtie')
 
 
+def test_runs_build_only_the_indexes_their_attributes_search(monkeypatch, tmp_path):
+    # An RNA design that searches the transcriptome must not build the Bowtie2 genome index
+    # (13.5 min and 3.5 GB for mouse GRCm39); `uprobe build-index --all` still builds everything.
+    from uprobe.core import tools
+    from uprobe.core.api import UProbeAPI
+    built = []
+
+    def builder(aligner, suffixes):
+        def build(source, prefix, threads):
+            built.append(f'{aligner}:{Path(prefix).parent.name}')
+            for suffix in suffixes:
+                Path(str(prefix) + suffix).write_text('index')
+        return build
+    monkeypatch.setattr(tools, 'build_bowtie_index', builder('bowtie', tools._BOWTIE_SMALL_SUFFIXES))
+    monkeypatch.setattr(tools, 'build_bowtie2_index', builder('bowtie2', tools._BOWTIE2_SMALL_SUFFIXES))
+    (tmp_path / 'transcript.fa').write_text('>g_t\nACGT\n')
+    for name in ('g.fa', 'g.gtf'):
+        (tmp_path / name).write_text('')
+
+    def api(attributes, root):
+        genome = {'fasta': str(root / 'g.fa'), 'gtf': str(root / 'g.gtf'), 'align_index': ['bowtie', 'bowtie2']}
+        return UProbeAPI(protocol_config={'genome': 'g', 'attributes': attributes},
+                         genomes_config={'g': genome}, output_dir=root / 'out')
+
+    hits = {'hits': {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie2'}}
+    api(hits, tmp_path).build_genome_index(threads=2)
+    assert built == ['bowtie2:bowtie2_transcript']
+    sites = {'sites': {'target': 'target_region', 'type': 'mapped_sites', 'aligner': 'bowtie2'}}
+    api(sites, tmp_path).build_genome_index(threads=2)
+    assert built == ['bowtie2:bowtie2_transcript', 'bowtie2:bowtie2_genome']
+    fresh = tmp_path / 'fresh'
+    fresh.mkdir()
+    for name in ('g.fa', 'g.gtf', 'transcript.fa'):
+        (fresh / name).write_text((tmp_path / name).read_text())
+    built.clear()
+    api(hits, fresh).build_genome_index(threads=2, all_indexes=True)
+    assert sorted(built) == ['bowtie2:bowtie2_genome', 'bowtie2:bowtie2_transcript', 'bowtie:bowtie_transcript']
+
+
 def test_bowtie2_strand_options(monkeypatch, tmp_path):
     calls = []
     monkeypatch.setattr(attributes._attributes.subp, 'check_call', lambda cmd, shell: calls.append(cmd))
