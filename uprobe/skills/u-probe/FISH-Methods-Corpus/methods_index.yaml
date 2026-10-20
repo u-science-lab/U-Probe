@@ -1,0 +1,160 @@
+# Routing labels supplied by the user; official naming awaits source verification.
+# Planned destinations may be absent while corpus_status is not_researched.
+# The controlled probe_architecture and readout_strategy labels are defined in
+# corpus_schema.md ("Method classification"); detailed rationale lives in each
+# method's description.md ("Classification" section).
+methods:
+  - directory: "STARmap"
+    official_name: "STARmap"
+    aliases: ["STARmap"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["in_situ_sequencing"]
+    corpus_status: validated_with_warnings
+    files:
+      index: "STARmap/index.md"
+      metadata: "STARmap/metadata.yaml"
+      description: "STARmap/description.md"
+      protocols: "STARmap/protocols.md"
+      probes: "STARmap/probes.md"
+      benchmarks: "STARmap/benchmarks.md"
+      sources: "STARmap/sources.md"
+  - directory: "ExSeq"
+    official_name: "ExSeq"
+    aliases: ["ExSeq", "Expansion Sequencing", "Untargeted ExSeq", "Targeted ExSeq"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["in_situ_sequencing"]
+    corpus_status: validated_with_warnings
+    files:
+      index: "ExSeq/index.md"
+      metadata: "ExSeq/metadata.yaml"
+      description: "ExSeq/description.md"
+      protocols: "ExSeq/protocols.md"
+      probes: "ExSeq/probes.md"
+      benchmarks: "ExSeq/benchmarks.md"
+      sources: "ExSeq/sources.md"
+  - directory: "seqFISH+"
+    official_name: "seqFISH+"
+    aliases: ["seqFISH+", "RNA seqFISH+"]
+    classification:
+      probe_architecture: "linear"
+      readout_strategy: ["sequential_fish"]
+    corpus_status: validated_with_warnings
+    files:
+      index: "seqFISH+/index.md"
+      metadata: "seqFISH+/metadata.yaml"
+      description: "seqFISH+/description.md"
+      protocols: "seqFISH+/protocols.md"
+      probes: "seqFISH+/probes.md"
+      benchmarks: "seqFISH+/benchmarks.md"
+      sources: "seqFISH+/sources.md"
+  - directory: "MERFISH"
+    official_name: "MERFISH"
+    aliases: ["MERFISH"]
+    classification:
+      probe_architecture: "linear"
+      readout_strategy: ["sequential_fish"]
+    corpus_status: research_complete
+    files:
+      index: "MERFISH/index.md"
+      metadata: "MERFISH/metadata.yaml"
+      description: "MERFISH/description.md"
+      protocols: "MERFISH/protocols.md"
+      probes: "MERFISH/probes.md"
+      benchmarks: "MERFISH/benchmarks.md"
+      sources: "MERFISH/sources.md"
+  - directory: "Oligo-LiveFISH"
+    official_name: "Oligo-LiveFISH"
+    aliases: []
+    classification:
+      probe_architecture: "crispr"
+      readout_strategy: ["fluorescent_barcode", "live_imaging"]
+    corpus_status: research_complete
+    files:
+      index: "Oligo-LiveFISH/index.md"
+      metadata: "Oligo-LiveFISH/metadata.yaml"
+      description: "Oligo-LiveFISH/description.md"
+      protocols: "Oligo-LiveFISH/protocols.md"
+      probes: "Oligo-LiveFISH/probes.md"
+      benchmarks: "Oligo-LiveFISH/benchmarks.md"
+      sources: "Oligo-LiveFISH/sources.md"
+  - directory: "RAEFISH"
+    official_name: "RAEFISH"
+    aliases: ["RAEFISH"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["sequential_fish"]
+    corpus_status: research_complete
+    files:
+      index: "RAEFISH/index.md"
+      metadata: "RAEFISH/metadata.yaml"
+      description: "RAEFISH/description.md"
+      protocols: "RAEFISH/protocols.md"
+      probes: "RAEFISH/probes.md"
+      benchmarks: "RAEFISH/benchmarks.md"
+      sources: "RAEFISH/sources.md"
+  - directory: "TDDN-FISH"
+    official_name: "TDDN-FISH"
+    aliases: ["TDDN-FISH"]
+    classification:
+      probe_architecture: "nanostructure"
+      readout_strategy: ["sequential_fish"]
+    # Research complete on 2026-10-15. See TDDN-FISH/research_manifest.md for
+    # inspected sources. Awaiting independent review.
+    corpus_status: research_complete
+    files:
+      index: "TDDN-FISH/index.md"
+      metadata: "TDDN-FISH/metadata.yaml"
+      description: "TDDN-FISH/description.md"
+      protocols: "TDDN-FISH/protocols.md"
+      probes: "TDDN-FISH/probes.md"
+      benchmarks: "TDDN-FISH/benchmarks.md"
+      sources: "TDDN-FISH/sources.md"
+  - directory: "PRISM"
+    official_name: "PRISM"
+    aliases: ["PRISM"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["fluorescent_barcode"]
+    corpus_status: research_complete
+    files:
+      index: "PRISM/index.md"
+      metadata: "PRISM/metadata.yaml"
+      description: "PRISM/description.md"
+      protocols: "PRISM/protocols.md"
+      probes: "PRISM/probes.md"
+      benchmarks: "PRISM/benchmarks.md"
+      sources: "PRISM/sources.md"
+  - directory: "OpenFISH"
+    official_name: "OpenFISH"
+    aliases: ["OpenFISH"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["sequential_fish"]
+    # 2026 *Neuron* primary source confirmed by user on 2026-10-15.
+    # See preflight_validation_report.md P002 for the recency note.
+    corpus_status: research_complete
+    files:
+      index: "OpenFISH/index.md"
+      metadata: "OpenFISH/metadata.yaml"
+      description: "OpenFISH/description.md"
+      protocols: "OpenFISH/protocols.md"
+      probes: "OpenFISH/probes.md"
+      benchmarks: "OpenFISH/benchmarks.md"
+      sources: "OpenFISH/sources.md"
+  - directory: "MiP-seq"
+    official_name: "MiP-seq"
+    aliases: ["MiP-seq"]
+    classification:
+      probe_architecture: "padlock"
+      readout_strategy: ["in_situ_sequencing"]
+    corpus_status: research_complete
+    files:
+      index: "MiP-seq/index.md"
+      metadata: "MiP-seq/metadata.yaml"
+      description: "MiP-seq/description.md"
+      protocols: "MiP-seq/protocols.md"
+      probes: "MiP-seq/probes.md"
+      benchmarks: "MiP-seq/benchmarks.md"
+      sources: "MiP-seq/sources.md"

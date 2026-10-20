@@ -1,0 +1,56 @@
+method:
+  official_name: OpenFISH
+  full_name: null
+  aliases:
+  - OpenFISH
+classification:
+  categories:
+  - imaging-based spatial transcriptomics
+  applications:
+  - spatial RNA measurement
+  - same-section transcriptomics and metabolomics
+  # Controlled two-level classification (corpus_schema.md "Method classification").
+  probe_architecture: padlock
+  readout_strategy:
+  - sequential_fish
+  classification_evidence_status: reported
+  classification_source: S01
+  classification_notes: |
+    Modular target-binding probe pair combined with a reusable padlock carrying two readout (RO) sequences. Padlock circularization on adjacent target regions followed by rolling-circle amplification. Identity is decoded across multiple imaging rounds and color combinations (sequential rounds within the original protocol).
+publication:
+  original_year: 2026
+  original_reference: S01
+  doi: 10.1016/j.neuron.2026.09.007
+  pmid: '42810347'
+versions:
+- version_id: V01
+  version_name: Original 2026 publication
+  year: 2026
+  reference: S01
+  status: original
+probe:
+  architecture_type: Modular target-binding probe pair and reusable padlock; code-scoped
+    architecture
+  target_binding: Two 30-nt regions separated by a 2-nt target gap in inspected code
+  barcode_system: Round identity and two-color combination; implementation example
+  readout_system: 20-nt RO sequences; inspected implementation
+  amplification: Rolling circle amplification
+  sequencing_or_imaging: Fluorescence imaging
+  modifications: []
+design:
+  official_design_software_available: true
+  public_probe_sets_available: true
+benchmark:
+  benchmark_available: true
+  grade: C
+references:
+  primary_source_ids:
+  - S01
+  - S03
+  - S04
+  - S05
+  - S06
+  - S07
+validation:
+  status: research_complete
+field_states: {}
