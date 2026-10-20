@@ -44,6 +44,7 @@ Other published layouts:
 | Wang 2018 Sci Rep | 2 x 20 nt | [P1][R 20][target 30][R 20][rc T7]; P1 removed by USER | 72 nt (final) |
 | Zhang 2021 Nature (22-bit) | 2 x 20 nt | readout on each side of the target | |
 | Xia 2019 PNAS (10,050 genes) | 3 x 20 nt | [20][A][R][A][R][A][target 30][A][R][20] | 134 nt |
+| Xia 2019 Sci Rep (bDNA) | 3 x 20 nt (3 of 4) | Moffitt 2016 library unchanged (92 or 16 per RNA); readout sites bind amplifiers (section 6) | as Moffitt 2016 |
 
 ## 3. Design parameters
 
@@ -56,7 +57,7 @@ Other published layouts:
 | Homopolymer | none in Moffitt 2016; Chen: no runs >= 6 | | Chen 2015 |
 | Specificity | isoform- and gene-specificity index 0.75-1 (17-mer tables, expression-weighted) | Blosser 2021: isoform 0-1 | Moffitt 2016 |
 | rRNA / tRNA | no homology >= 15 nt (code; SI says "> 15") | Chen: > 14 nt to rRNA/tRNA, > 17 nt to genes > 10,000 FPKM | library_design_example.m L195 |
-| Tiling | non-overlapping, from the 5' end of each isoform | later: overlap up to 20 nt for short RNAs | Moffitt 2016; Wang 2018 |
+| Tiling | non-overlapping, from the 5' end of each isoform | Wang 2018: up to 20-nt overlap, 92 regions picked at random per RNA; Xia 2019: 20-nt overlap only for the 1,000 genes < 1,440 nt or short of targetable regions | Moffitt 2016; Wang 2018 Methods; Xia 2019 PNAS Results |
 | Probes per gene | 92 | Chen ~192 (140 genes) / ~94 (1001 genes); MIE >= 50; Blosser 64; Xia <= 48 | Moffitt 2016; Zhang 2021 |
 | Readouts | 20 nt; A/T/G only (G 50 %), GC 40-50 %, no G run > 3, <= 11 nt cross-homology and <= 11 nt homology to the transcriptome | Chen 2015: 30 nt, 4-letter | Moffitt 2016 SI |
 | Primers | 20 nt, Tm 70-72 C, GC 50-65 %, no run >= 4, self-compl. <= 6 nt, cross-homology <= 8 nt | Chen/MIE: Tm 70-80 C, GC clamp | Moffitt 2016; PrimerDesigner.m |
@@ -106,9 +107,23 @@ Published readout probes: Moffitt 2016 Table S1 (16 x 20 nt, RS0015 ... RS0548);
 - Whole mRNA incl. UTRs on the most abundant isoform (Chen 2015; Ensembl cDNA in MIE). U-Probe template:
   MANE Select mRNA. Probes may hit other isoforms; isoform specificity is not modelled by U-Probe.
 - 92 non-overlapping 30-mers need ~2.8 kb ("92 encoding probes for RNAs that are 3 kb or longer").
-  With up to 20-nt overlap, RNAs down to ~1.2 kb carry 92 (Wang 2018), ~500 nt carry 48 (Xia 2019).
-  In U-Probe, `remove_overlap: {location_interval: -20}` allows up to 20-nt overlap.
+  With up to 20-nt overlap, RNAs down to ~1.2 kb carry 92 (Wang 2018), ~500 nt carry 48 (Xia 2019
+  PNAS). Xia 2019 PNAS kept 48 non-overlapping probes for the 9,050 genes >= 1,440 nt and overlapped
+  only the other 1,000; these read at a median 68 % of the FPKM-normalized copy number of the rest.
+  In U-Probe, `remove_overlap: {location_interval: -20}` lets kept windows overlap by up to 20 nt (a
+  start every >= 10 nt) for every target of the protocol: run short genes in a second protocol with
+  -20 and `equal_space: {number_desired: 48}`, the rest with 0.
 - Fewer probes lower brightness and detection; genes with very few probes go to sequential rounds.
+- bDNA amplification (Xia 2019 Sci Rep) changes no encoding probe: a primary amplifier ends (3') in the
+  readout probe's sequence (bits 1-4 of its Table S1 are the template's readouts) after 5 x (unique
+  20-mer + 2 nt); a secondary ends in rc(that 20-mer) after 5 repeats of its own 20-mer, which a new
+  dye probe reads (5 x 5, 130-nt oligos; 9 x 9, 200 nt). Repeats use 3 letters (primary A/T/C,
+  secondary A/T/G, C or G at 50 %), screened for <= 11-nt transcriptome homology and then in cells:
+  16 of 20 pairs worked (G-rich secondaries bound cellular RNA, some pairs amplified poorly). Signal
+  5.5x / 10.5x / 30.6x (4 x 4 / 5 x 5 / 9 x 9); with 16 probes per RNA, 61 % of the 92-probe counts
+  vs 33 % unamplified, so RNAs >= 480 nt fit. U-Probe designs the encoding probes (`equal_space:
+  {number_desired: 16}`), not the amplifiers; `uprobe generate-barcodes --alphabet ACT --length 20`
+  only drafts orthogonal 3-letter 20-mers, without that composition or a transcriptome screen.
 
 ## 7. Specificity
 
@@ -154,7 +169,7 @@ post_process:
 ```
 
 What to edit: `encoding` (per gene, `readouts`: the 4 readout probe sequences of its code word, one
-per on-bit, in any order), the two primer placeholders (20 N each), `equal_space` (92, 64 or 48),
+per on-bit, in any order), the two primer placeholders (20 N each), `equal_space` (92, 64, 48; 16 with bDNA),
 `location_interval` (-20 for short genes), `gene_expression` (your tissue). `genome` needs `bowtie` in
 `align_index`.
 
@@ -204,6 +219,7 @@ Template departures:
 - Wang G, Moffitt JR, Zhuang X. 2018. Multiplexed imaging of high-density libraries of RNAs with MERFISH and expansion microscopy. Sci Rep 8:4847. doi:10.1038/s41598-018-22297-7. Author Correction (encoding probes ~50 uM, not ~300 uM): Sci Rep 8:6487. doi:10.1038/s41598-018-24844-8
 - Moffitt JR et al. 2018. Molecular, spatial, and functional single-cell profiling of the hypothalamic preoptic region. Science 362:eaau5324. doi:10.1126/science.aau5324
 - Xia C et al. 2019. Spatial transcriptome profiling by MERFISH reveals subcellular RNA compartmentalization and cell cycle-dependent gene expression. PNAS 116:19490-19499. doi:10.1073/pnas.1912459116
+- Xia C, Babcock HP, Moffitt JR, Zhuang X. 2019. Multiplexed detection of RNA using MERFISH and branched DNA amplification. Sci Rep 9:7721. doi:10.1038/s41598-019-43943-8 (Table S1: amplifier sequences)
 - Zhang M et al. 2021. Spatially resolved cell atlas of the mouse primary motor cortex by MERFISH. Nature 598:137-143. doi:10.1038/s41586-021-03705-x
 - Blosser TR, Zhuang X. 2021. MERFISH probe design v1. protocols.io. doi:10.17504/protocols.io.bujfnujn
 - Xu Q et al. 2009. Design of 240,000 orthogonal 25mer DNA barcode probes. PNAS 106:2289-2294. doi:10.1073/pnas.0812506106
