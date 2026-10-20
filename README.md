@@ -9,7 +9,7 @@
 <br>
 
 [![PyPI](https://img.shields.io/pypi/v/uprobe)](https://pypi.org/project/uprobe/)
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/UFISH-Team/U-Probe/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/u-science-lab/U-Probe/blob/main/LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://ufish-team.github.io/uprobe-official/)
 [![Website](https://img.shields.io/badge/Website-Official-green.svg)](https://ufish-team.github.io/uprobe-official/)
@@ -39,7 +39,7 @@ pip install uprobe
 ### Install from source (For development)
 
 ```bash
-git clone https://github.com/UFISH-Team/U-Probe.git
+git clone https://github.com/u-science-lab/U-Probe.git
 cd U-Probe
 pip install -e .
 ```
@@ -47,7 +47,7 @@ pip install -e .
 ### Using conda environment
 
 ```bash
-git clone https://github.com/UFISH-Team/U-Probe.git
+git clone https://github.com/u-science-lab/U-Probe.git
 cd U-Probe
 conda env create -f environments.yaml
 conda activate uprobe
@@ -640,13 +640,13 @@ Measured on Ensembl 113 human genes with template runs of the smFISH template (t
 
 The limit added 9-18 probes per gene set while a third to almost half of the final probes came to carry an off-target gene (each such gene hit by at most 2 probes of a set). An expression table gained more: 61 and 72 probes with `<= 1`. The smFISH template therefore keeps `target_mapped_genes <= 1`, recommends `gene_expression` and leaves `off_target_pool` as a commented-out option for genes with many paralogs or pseudogenes.
 
-For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/UFISH-Team/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
+For more detailed examples and advanced configurations, please refer to the [`tests/data/*.yaml`](https://github.com/u-science-lab/U-Probe/tree/main/tests/data "Click to visit here") directory and the built-in [protocol templates](#protocol-templates) (`uprobe templates list`).
 
 ## Community & Support
 
 - 📖 **Documentation**: [uprobe.readthedocs.io](https://uprobe.readthedocs.io/)
-- 💬 **GitHub Discussions**: [Ask questions and share ideas](https://github.com/UFISH-Team/U-Probe/discussions)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/UFISH-Team/U-Probe/issues)
+- 💬 **GitHub Discussions**: [Ask questions and share ideas](https://github.com/u-science-lab/U-Probe/discussions)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/u-science-lab/U-Probe/issues)
 - 🚀 **Contributing**: See our [contributing guide](https://uprobe.readthedocs.io/en/latest/contributing.html)
 
 ## Citation
@@ -658,7 +658,7 @@ If you use U-Probe in your research, please cite our paper (or software):
   title={U-Probe: Universal Probe Design Tool},
   author={Zhang, Qian and Xu, Weize and Cai, Huaiyuan},
   year={2025},
-  url={https://github.com/UFISH-Team/U-Probe},
+  url={https://github.com/u-science-lab/U-Probe},
   version={1.0.0}
 }
 ```
