@@ -243,6 +243,19 @@ def test_check_against_a_transcript_fasta(tmp_path):
     assert named['ok'] and set(named['targets']['G']['span']) == {'ENST1'}
 
 
+def test_check_spacing_of_genomic_windows(tmp_path):
+    # source: genome tables (Oligopaint) place windows by sub_region "s-e" along the region and
+    # have no target_start: --min-gap passed without checking anything.
+    columns = ['probe_id', 'target', 'sub_region', 'target_region', 'oligo.homology']
+    rows = [{'probe_id': f'chr1:1-400_{n}', 'target': 'chr1:1-400', 'sub_region': f'{s + 1}-{s + 35}',
+             'target_region': RNA[s:s + 35], 'oligo.homology': RNA[s:s + 35]} for n, s in enumerate([0, 30, 100])]
+    result = run_check(tmp_path, rows, '--sense', 'oligo.homology', '--min-gap', '0', columns=columns)
+    assert result['targets']['chr1:1-400']['gap'] == {'min': -5, 'median': 15, 'max': 35}
+    assert result['failures'] == ['chr1:1-400: smallest gap -5 nt < --min-gap 0']
+    unplaced = run_check(tmp_path, rows, '--sense', 'oligo.homology', '--min-gap', '0', columns=columns[:2] + columns[3:])
+    assert not unplaced['ok'] and 'cannot check --min-gap' in unplaced['failures'][0]
+
+
 def test_check_command_line(tmp_path, capsys):
     table = tmp_path / 'probes.tsv'
     rows = rows_at([0, 30])
