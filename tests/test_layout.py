@@ -169,3 +169,28 @@ async def test_http_layout_roundtrip(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         await workflow.submit_task(UploadFile(filename='bad.yaml',file=io.BytesIO(yaml.safe_dump(bad).encode())),SimpleNamespace(username='test'))
     assert exc.value.status_code==422 and len(saved)==1
+
+
+def test_remove_overlap_prefers_the_best_layout_of_a_start():
+    # A layout with length ranges gives several candidates per start; remove_overlap kept the
+    # shortest, so a STARmap unit was always 19 + 1 + 20 nt. prefer keeps the lowest value instead.
+    from uprobe.core.process import post_process
+    df = pd.DataFrame({'probe_id': list('abcd'), 'target': ['G'] * 4, 'target_start': [1, 1, 1, 50],
+                       'target_end': [40, 42, 46, 89], 'balance': [3.0, 0.5, 1.0, 0.2]})
+    shortest = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0}}})
+    assert shortest.probe_id.tolist() == ['a', 'd']
+    best = post_process(df, {'post_process': {'remove_overlap': {'location_interval': 0, 'prefer': 'balance'}}})
+    assert best.probe_id.tolist() == ['b', 'd']
+
+
+def test_difference_attribute(tmp_path, monkeypatch):
+    # |Tm(padlock half) - Tm(primer half)|: Picky chose the STARmap split with the best Tm match.
+    monkeypatch.chdir(tmp_path)
+    df = pd.DataFrame({'a': ['ACGTTGCAAGGCTTACGATC', 'AATTATATTCTATTAAAAGC'],
+                       'b': ['GGCATTCTCGTAGGCATCAA', 'CCAGGATAAGGGCATTCTCG']})
+    protocol = {'attributes': {'tm_a': {'target': 'a', 'type': 'annealing_temperature'},
+                               'tm_b': {'target': 'b', 'type': 'annealing_temperature'},
+                               'balance': {'type': 'difference', 'of': ['tm_a', 'tm_b']}}}
+    out = add_attributes(df, protocol, genome={})
+    assert out.balance.tolist() == pytest.approx((out.tm_a - out.tm_b).abs().tolist())
+    assert out.balance.gt(0).all()

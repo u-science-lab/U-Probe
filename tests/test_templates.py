@@ -28,7 +28,7 @@ REQUIRED = {
 META_KEYS = ['name', 'technology', 'description', 'citations', 'parameter_sources',
              'hybridization', 'replace']
 # Attribute types that need no genome, aligner index or external tool.
-OFFLINE_TYPES = {'gc_content', 'annealing_temperature', 'fold_score', 'self_match', 'length'}
+OFFLINE_TYPES = {'gc_content', 'annealing_temperature', 'fold_score', 'self_match', 'length', 'difference'}
 SEQ = ''.join(random.Random(0).choice('ACGT') for _ in range(400))
 
 
@@ -219,6 +219,9 @@ def test_template_validates_and_builds_probes(name, tmp_path, monkeypatch):
     combined = pd.concat([targets.reset_index(drop=True), probes], axis=1)
     attributes = protocol['attributes']
     for attr in attributes.values():
+        if attr['type'] == 'difference':  # of two attributes computed before it
+            assert set(attr['of']) <= set(attributes), attr
+            continue
         target = attr['target']
         assert target in combined or target.replace(':', '.') in combined, target
     pp = protocol['post_process']
@@ -413,10 +416,43 @@ def test_starmap_forbids_abutting_sites():
     assert parts['gap']['length'] == [1, 2]
     targets, _ = design('starmap', SEQ[:60], {'code': 'AAA'})
     assert set(targets['target_parts.gap.length']) == {1, 2}
-    # The designed 60 °C of the halves is recorded, not filtered (the paper's conditions are unknown).
+    # The designed 60 °C of the halves is recorded, not applied (the paper's conditions are unknown).
     window = protocol['meta']['tm_window']
     assert (window['applied'], window['value']) == (False, 60)
-    assert not [name for name in protocol['post_process']['filters'] if name.endswith('_tm')]
+
+
+def test_validate_checks_difference_attributes_and_prefer():
+    from uprobe.core.validate import validate_protocol
+    protocol = load_template('starmap')
+    assert not [f for f in validate_protocol(protocol) if f.severity == 'error']
+    protocol['attributes']['tm_balance']['of'] = ['padlock_tm', 'target_mapped_genes']  # defined after it
+    protocol['post_process']['remove_overlap']['prefer'] = 'tm_balanse'
+    errors = {f.path: f.message for f in validate_protocol(protocol) if f.severity == 'error'}
+    assert "'target_mapped_genes' is not an attribute defined before this one" in errors['attributes.tm_balance.of']
+    assert 'prefer must name an attribute' in errors['post_process.remove_overlap.prefer']
+
+
+def test_starmap_chooses_the_layout_of_each_site_by_tm_balance(tmp_path, monkeypatch):
+    # The published halves are 19-25 nt each, Tm-matched (median difference 0.9 C) around 58 C under
+    # the template's conditions; remove_overlap kept the shortest layout, 19 + 1 + 20 nt, everywhere.
+    monkeypatch.chdir(tmp_path)
+    protocol = _validate_and_normalize_protocol(load_template('starmap'))
+    filters = protocol['post_process']['filters']
+    assert filters['padlock_tm']['condition'] == 'padlock_tm >= 50 & padlock_tm <= 65'
+    assert filters['primer_tm']['condition'] == 'primer_tm >= 50 & primer_tm <= 65'
+    assert protocol['post_process']['remove_overlap']['prefer'] == 'tm_balance'
+    protocol['attributes'] = {k: v for k, v in protocol['attributes'].items() if v['type'] in OFFLINE_TYPES | {'difference'}}
+    protocol['post_process']['filters'] = {k: filters[k] for k in ('padlock_tm', 'primer_tm')}
+    protocol['post_process'].pop('equal_space')
+    rng = random.Random(3)  # SEQ is poly-T: one Random(0) per base
+    api = offline_api(protocol, ''.join(rng.choice('ACGT') for _ in range(400)), {'code': 'AAA'})
+    targets = api.generate_target_seqs()
+    combined = pd.concat([targets.reset_index(drop=True), api.construct_probes(targets).reset_index(drop=True)], axis=1)
+    final = post_process(add_attributes(combined, protocol, None), protocol)
+    assert len(final) >= 4
+    assert final['target_region'].str.len().nunique() > 1   # not one fixed layout
+    assert final['tm_balance'].max() < final['tm_balance'].quantile(0.5) + 5
+    assert final['tm_balance'].median() < 1.5
 
 
 def test_seqfish_plus_reproduces_lohoff_probes():

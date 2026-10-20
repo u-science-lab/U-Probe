@@ -135,7 +135,8 @@ condition separately per target.
 - **Symptom:** final probes overlap. **Cause:** `equal_space` without `remove_overlap` picks evenly
   spaced *ranks* of overlapping windows. **Fix:** add `remove_overlap: {location_interval: N}`.
 - With `length: [min, max]` or a `layout` with ranges, several candidates share a start; `remove_overlap`
-  keeps the first (shortest) passing one. Filter lengths you do not want.
+  keeps the first (shortest) passing one, or the lowest of `remove_overlap.prefer` (an attribute, e.g. a
+  `difference` of two Tm). Filter lengths you do not want.
 - Probes cluster in one region: the rest of the target failed filters (check positions of the raw
   candidates); `equal_space` spaces by rank among survivors, not by distance.
 

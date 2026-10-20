@@ -44,6 +44,12 @@ def _add_attributes(
         return series.map(values)
     task_id = secrets.token_hex(6)  
     for attr_name, attr in attributes.items():
+        if str(attr.get('type', '')).lower() == "difference":
+            # |a - b| of two attributes computed before it, e.g. the Tm of two probe halves.
+            first, second = attr['of']
+            df_probes[attr_name] = (pd.to_numeric(df_probes[first], errors='coerce')
+                                    - pd.to_numeric(df_probes[second], errors='coerce')).abs()
+            continue
         target = attr.get('target')
         if target is None:
             print(f"Warning: 'target' key is missing in attribute '{attr_name}'")
