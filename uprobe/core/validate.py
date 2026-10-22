@@ -57,13 +57,13 @@ LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
 ATTRIBUTE_TYPES = {
     'gc_content': None, 'annealing_temperature': None, 'length': None,
-    'fold_score': None, 'self_match': None, 'blocks': None,
+    'fold_score': None, 'self_match': None, 'blocks': None, 'rna_dna_dg37': None,
     'mapped_sites': ('bowtie2',), 'mapped_genes': MAPPED_GENES_ALIGNERS, 'kmer_count': ('jellyfish',),
     'difference': None,
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -878,6 +878,9 @@ class _Validator:
                                  _did_you_mean(option, ATTRIBUTE_KEYS, 'known options'))
             kind = attr.get('type')
             kind = str(kind).lower() if kind else None
+            if 'sequence' in attr and kind != 'rna_dna_dg37':
+                self.warning(path + ('sequence',), 'attribute option \'sequence\' only applies to rna_dna_dg37 and is ignored',
+                             'remove it')
             if kind is None:
                 self.error(path + ('type',), 'missing attribute `type`', 'valid types: ' + ', '.join(ATTRIBUTE_TYPES))
             elif kind not in ATTRIBUTE_TYPES:
@@ -892,6 +895,10 @@ class _Validator:
                                f'aligner: {aligners[0]}')
                 elif kind == 'mapped_genes':
                     self._check_mapped_genes(path, attr)
+                elif kind == 'rna_dna_dg37' and attr.get('sequence', 'probe') not in ('probe', 'target'):
+                    self.error(path + ('sequence',), f'sequence must be probe or target, got {attr["sequence"]!r}',
+                               'sequence: target   # the attribute\'s target is the RNA in sense orientation; '
+                               'probe (default): it is the DNA probe 5\'->3\'')
                 elif kind == 'kmer_count' and attr.get('strand', 'both') not in STRANDS:
                     self.error(path + ('strand',), f'strand must be one of {", ".join(STRANDS)}, got '
                                f'{attr["strand"]!r}', KMER_STRAND_HINT)

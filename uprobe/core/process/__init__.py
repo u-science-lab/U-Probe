@@ -18,7 +18,7 @@ def parse_condition(condition: str) -> list:
     conditions = [c.strip() for c in condition.split('&')]
     result = []
     # Match patterns like "column <= 80" or "column >= 35"
-    pattern = r'(\w+)\s*([<>=]+)\s*(\d+(?:\.\d+)?)'
+    pattern = r'(\w+)\s*([<>=]+)\s*([+-]?\d+(?:\.\d+)?)'
     for cond in conditions:
         match = re.match(pattern, cond)
         if not match:

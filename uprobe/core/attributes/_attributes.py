@@ -446,6 +446,36 @@ def cal_temp_merfish_design(seq: str, na_mM=50, probe_nM=50):
     entropy += -5.7 + 0.368 * (len(seq) - 1) * math.log(na_mM / 1000)
     return enthalpy * 1000 / (entropy + 1.9872 * math.log(probe_nM * 1e-9)) - 273.15
 
+# RNA/DNA nearest-neighbor free energies dG37 (kcal/mol) of the Oligostan script (Tsanov et al. 2016,
+# NAR 44:e165, doi:10.1093/nar/gkw784; Oligostan.r, ConvertRNASeq2DeltaGat37, in
+# bitbucket.org/muellerflorian/fish_quant).  Key: the dinucleotide of the DNA probe read 5'->3'.
+# The script gives no reference for the numbers (the paper cites Wu et al. 2002, Eur J Biochem
+# 269:2821, doi:10.1046/j.1432-1033.2002.02970.x, for the temperature dependence).
+OLIGOSTAN_DG37 = {
+    'AA': -0.2, 'AC': -1.5, 'AG': -0.9, 'AT': -1.0, 'CA': -1.0, 'CC': -2.2, 'CG': -1.2, 'CT': -1.4,
+    'GA': -0.8, 'GC': -2.4, 'GG': -1.5, 'GT': -1.0, 'TA': -0.3, 'TC': -1.4, 'TG': -1.0, 'TT': -0.4,
+}
+OLIGOSTAN_SALT_M = 0.115
+SEQUENCE_OF = ('probe', 'target')
+
+
+def cal_rna_dna_dg37(seq: str, sequence_of='probe', salt_M=OLIGOSTAN_SALT_M):
+    """RNA/DNA hybrid dG37 (kcal/mol, more negative is more stable) as the Oligostan script computes it.
+
+    The sum of the nearest-neighbor values of the probe's dinucleotides (probe read 5'->3', so
+    ``sequence_of='target'`` first reverse-complements an RNA target given in sense
+    orientation, as the script does) plus the salt term ``-(ln[Na+] * -0.175 - 0.2)``, a constant
+    of 0.1785 kcal/mol at its 0.115 M. There is no initiation or terminal term, and a
+    dinucleotide with a base other than A, C, G, T/U contributes 0, as in the script.
+    """
+    if not isinstance(seq, str) or len(seq) < 2:
+        return float('nan')
+    probe = seq.upper().replace('U', 'T')
+    if sequence_of == 'target':
+        probe = reverse_complement(probe)
+    total = sum(OLIGOSTAN_DG37.get(probe[i:i + 2], 0.0) for i in range(len(probe) - 1))
+    return total - (math.log(salt_M) * -0.175 - 0.2)
+
 def cal_fold(seq: str): # RNA fold
     return -RNA.fold_compound(seq).mfe()[1]
 

@@ -179,6 +179,11 @@ def _add_attributes(
                 calculate = cal_temp
             vals = cached(df_probes[actual_target], lambda seq: calculate(seq, **conditions))
             df_probes[attr_name] = vals
+        elif attr_type == "rna_dna_dg37":
+            sequence_of = attr.get("sequence", "probe")
+            if sequence_of not in SEQUENCE_OF:
+                raise ValueError(f"attributes.{attr_name}.sequence must be one of {', '.join(SEQUENCE_OF)}, got {sequence_of!r}")
+            df_probes[attr_name] = cached(df_probes[actual_target], lambda seq: cal_rna_dna_dg37(seq, sequence_of))
         elif attr_type == "gc_content":
             # Unrounded: filters compare it with the window bounds (19/30 = 0.633 > 0.63).
             vals = cached(df_probes[actual_target], cal_gc_content)
