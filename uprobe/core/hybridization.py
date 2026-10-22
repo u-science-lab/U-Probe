@@ -17,8 +17,10 @@ arguments and ViennaRNA's 37 °C), so protocols without the block produce
 unchanged results.
 
 An ``annealing_temperature`` attribute computes Tm with primer3 unless it sets
-``tm_method: multi_padlock_design``, the formula of the HybISS padlock design
-code (see cal_temp_multi_padlock_design), under the same conditions.
+``tm_method`` to the formula of a published design code, under the same conditions:
+``multi_padlock_design`` (HybISS padlocks, cal_temp_multi_padlock_design),
+``merfish_design`` (MERFISH, cal_temp_merfish_design) or ``oligominer``
+(OligoMiner, cal_temp_oligominer).
 """
 import math
 
@@ -29,7 +31,11 @@ ATTRIBUTE_TYPES = ('annealing_temperature', 'fold_score')
 TM_DEFAULTS = {'na_mM': 50.0, 'mg_mM': 0.0, 'dntp_mM': 0.6, 'probe_nM': 50.0, 'formamide_pct': 0.0}
 FOLD_DEFAULTS = {'temperature_c': 37.0}
 # Tm formulas of annealing_temperature attributes (option tm_method); the first is the default.
-TM_METHODS = ('primer3', 'multi_padlock_design')
+TM_METHODS = ('primer3', 'multi_padlock_design', 'merfish_design', 'oligominer')
+# Hybridization fields each design-code formula uses (the others are ignored); primer3 uses all but temperature_c.
+TM_FORMULA_FIELDS = {'multi_padlock_design': ('na_mM', 'mg_mM', 'probe_nM', 'formamide_pct'),
+                     'merfish_design': ('na_mM', 'probe_nM'),
+                     'oligominer': ('na_mM', 'probe_nM', 'formamide_pct')}
 PRIMER3_ARGUMENTS = {'na_mM': 'mv_conc', 'mg_mM': 'dv_conc', 'dntp_mM': 'dntp_conc', 'probe_nM': 'dna_conc'}
 # primer3 lowers Tm by (2.88 - 0.453 * GC fraction) °C per mol/l formamide
 # (Blake & Delcourt 1996, Nucleic Acids Res 24:2095-2103,
@@ -105,7 +111,7 @@ def validate_protocol_hybridization(protocol):
 
 
 def tm_method(attr, where='attribute'):
-    """The Tm formula of an annealing_temperature attribute: primer3 (default) or multi_padlock_design."""
+    """The Tm formula of an annealing_temperature attribute: primer3 (default) or a design code's."""
     if not isinstance(attr, dict) or 'tm_method' not in attr:
         return TM_METHODS[0]
     if str(attr.get('type', '')).lower() != 'annealing_temperature':
@@ -114,6 +120,21 @@ def tm_method(attr, where='attribute'):
     if method not in TM_METHODS:
         raise ValueError(f'{where}.tm_method must be one of {", ".join(TM_METHODS)}, got {method!r}')
     return method
+
+
+def tm_formula_arguments(method, conditions):
+    """Keyword arguments of the formula ``method``: declared conditions, legacy defaults for the rest."""
+    return {key: conditions.get(key, TM_DEFAULTS[key]) for key in TM_FORMULA_FIELDS[method]}
+
+
+def unused_fields(method, conditions):
+    """Declared Tm fields (not temperature_c) that the formula of ``method`` does not use.
+
+    Not reported for multi_padlock_design, whose protocols have always declared dntp_mM.
+    """
+    if method not in TM_FORMULA_FIELDS or method == 'multi_padlock_design':
+        return []
+    return [key for key in conditions if key in TM_DEFAULTS and key not in TM_FORMULA_FIELDS[method]]
 
 
 def multi_padlock_design_arguments(conditions):
@@ -184,7 +205,7 @@ def describe_conditions(protocol):
         method = tm_method(attributes.get(name), f'attributes.{name}') if kind == 'Tm' else TM_METHODS[0]
         if method != TM_METHODS[0]:
             kind = f'Tm [{method}]'
-            conditions = {key: value for key, value in conditions.items() if key != 'dntp_mM'}
+            conditions = {key: value for key, value in conditions.items() if key in TM_FORMULA_FIELDS[method]}
         text = ', '.join(units[key].format(value) for key, value in conditions.items())
         groups.setdefault((kind, text), []).append(name)
     return [f'{kind} ({", ".join(names)}): {text}' for (kind, text), names in groups.items()]

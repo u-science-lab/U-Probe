@@ -4,12 +4,16 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
-from ..hybridization import multi_padlock_design_arguments, resolve_conditions, tm_arguments, tm_method
+from ..hybridization import resolve_conditions, tm_arguments, tm_formula_arguments, tm_method
 from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, mapped_genes_settings,
                          short_for_bowtie2)
 from ..utils import get_logger, reverse_complement
 
 log = get_logger(__name__)
+
+TM_FORMULAS = {"multi_padlock_design": cal_temp_multi_padlock_design,
+               "merfish_design": cal_temp_merfish_design,
+               "oligominer": cal_temp_oligominer}
 
 def add_attributes(
         df_probes: pd.DataFrame,
@@ -166,9 +170,10 @@ def _add_attributes(
         elif attr_type == "annealing_temperature":
             # Only declared hybridization fields are passed; the rest keep the defaults.
             declared = resolve_conditions(protocol, attr_name)
-            if tm_method(attr, f"attributes.{attr_name}") == "multi_padlock_design":
-                conditions = multi_padlock_design_arguments(declared)
-                calculate = cal_temp_multi_padlock_design
+            method = tm_method(attr, f"attributes.{attr_name}")
+            if method != "primer3":
+                conditions = tm_formula_arguments(method, declared)
+                calculate = TM_FORMULAS[method]
             else:
                 conditions = tm_arguments(declared)
                 calculate = cal_temp

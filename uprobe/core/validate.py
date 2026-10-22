@@ -29,7 +29,8 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
-from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, tm_method,
+from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, resolve_conditions,
+                            tm_method, unused_fields,
                             validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
@@ -784,9 +785,17 @@ class _Validator:
         for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
             if isinstance(attr, dict) and 'tm_method' in attr:
                 try:
-                    tm_method(attr, f'attributes.{name}')
+                    method = tm_method(attr, f'attributes.{name}')
+                    try:
+                        ignored = unused_fields(method, resolve_conditions(self.protocol, name))
+                    except ValueError:
+                        ignored = []  # the hybridization block itself is reported below
+                    if ignored:
+                        self.warning(('attributes', name, 'tm_method'),
+                                     f'tm_method {method} does not use {", ".join(ignored)}, declared for this attribute',
+                                     'remove the field(s) or choose another tm_method')
                 except ValueError as exc:
-                    hint = (f'tm_method: {TM_METHODS[1]}   # or {TM_METHODS[0]} (the default)'
+                    hint = (f'tm_method: {TM_METHODS[1]}   # or {", ".join(TM_METHODS[2:])}, {TM_METHODS[0]} (the default)'
                             if 'must be one of' in str(exc) else 'remove it')
                     self.error(('attributes', name, 'tm_method'), str(exc), hint)
                 attr = {key: value for key, value in attr.items() if key != 'tm_method'}

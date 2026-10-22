@@ -366,6 +366,86 @@ def cal_temp_multi_padlock_design(seq: str, na_mM=50, mg_mM=0, probe_nM=50, form
     tm += 16.6 * math.log10(na_mM / 1000 + 3.795 * math.sqrt(mg_mM / 1000))
     return tm - 0.72 * formamide_pct
 
+# SantaLucia 1998 unified nearest-neighbor parameters (PNAS 95:1460-1465,
+# doi:10.1073/pnas.95.4.1460): dH (kcal/mol), dS (cal/K/mol) per dinucleotide,
+# the table Biopython calls DNA_NN3, which OligoMiner uses.  Complementary
+# dinucleotides (AA/TT, AC/GT, ...) share a value.
+SANTALUCIA_1998_NN = {
+    'AA': (-7.9, -22.2), 'AC': (-8.4, -22.4), 'AG': (-7.8, -21.0), 'AT': (-7.2, -20.4),
+    'CA': (-8.5, -22.7), 'CC': (-8.0, -19.9), 'CG': (-10.6, -27.2), 'CT': (-7.8, -21.0),
+    'GA': (-8.2, -22.2), 'GC': (-9.8, -24.4), 'GG': (-8.0, -19.9), 'GT': (-8.4, -22.4),
+    'TA': (-7.2, -21.3), 'TC': (-8.2, -22.2), 'TG': (-8.5, -22.7), 'TT': (-7.9, -22.2),
+}
+SANTALUCIA_1998_TERMINAL = {'AT': (2.3, 4.1), 'GC': (0.1, -2.8)}  # per end base pair
+# The nearest-neighbor table of the MERFISH design code (ZhuangLab/MERFISH_analysis,
+# TRDesigner.m SantaLuciaNearestNeighbor): SantaLucia & Hicks 2004 (Annu Rev Biophys Biomol
+# Struct 33:415-440), which differs from the 1998 values only for AA/TT (-7.6, -21.3).
+SANTALUCIA_2004_NN = {**SANTALUCIA_1998_NN, 'AA': (-7.6, -21.3), 'TT': (-7.6, -21.3)}
+
+
+def _nearest_neighbor_sums(seq, table):
+    return (sum(table[seq[i:i + 2]][0] for i in range(len(seq) - 1)),
+            sum(table[seq[i:i + 2]][1] for i in range(len(seq) - 1)))
+
+
+def _clean_dna(seq):
+    """Upper-case DNA, or None unless the sequence is at least 2 nt of A, C, G, T/U."""
+    seq = seq.upper().replace('U', 'T') if isinstance(seq, str) else ''
+    return seq if len(seq) >= 2 and not set(seq) - set('ACGT') else None
+
+
+def cal_temp_oligominer(seq: str, na_mM=50, probe_nM=50, formamide_pct=0):
+    """Tm (°C) by the formula of OligoMiner (Beliveau et al. 2018, PNAS 115:E2183).
+
+    Biopython ``Tm_NN(seq, nn_table=DNA_NN3, Na=na_mM, dnac1=probe_nM, dnac2=probe_nM)``
+    (blockParse.py / probeTm.py): SantaLucia 1998 nearest-neighbor sums with its
+    terminal A/T and G/C terms, the entropy salt correction ``0.368 (N-1) ln[Na+]``
+    (``saltcorr=5``), Tm = 1000 dH / (dS + R ln k) - 273.15 with R = 1.987 and the
+    strand concentration k = dnac1 - dnac2 / 2 (nM), rounded to 2 decimals as OligoMiner
+    does, then - 0.65 °C per % formamide (``chem_correction``).  OligoMiner's defaults
+    are 390 mM Na+, 25 nM oligo and target (-c, -C) and 50% formamide.  Divalent
+    cations and dNTPs are not part of the formula.  NaN for a sequence with bases other
+    than A, C, G, T/U.
+    """
+    seq = _clean_dna(seq)
+    if seq is None:
+        return float('nan')
+    enthalpy, entropy = _nearest_neighbor_sums(seq, SANTALUCIA_1998_NN)
+    for end in (seq[0], seq[-1]):
+        h, s = SANTALUCIA_1998_TERMINAL['AT' if end in 'AT' else 'GC']
+        enthalpy += h
+        entropy += s
+    entropy += 0.368 * (len(seq) - 1) * math.log(na_mM / 1000)
+    strand_nM = probe_nM - probe_nM / 2
+    tm = enthalpy * 1000 / (entropy + 1.987 * math.log(strand_nM * 1e-9)) - 273.15
+    return round(tm, 2) - 0.65 * formamide_pct
+
+
+def cal_temp_merfish_design(seq: str, na_mM=50, probe_nM=50):
+    """Tm (°C) by the formula of the MERFISH probe design code (Moffitt et al. 2016, PNAS 113:11046).
+
+    ZhuangLab/MERFISH_analysis probe_construction/TRDesigner.m GetRegionTm:
+    SantaLucia & Hicks 2004 nearest-neighbor sums, dH + 0.2 + 2.2 per terminal
+    A/T and dS - 5.7 + 6.9 per terminal A/T, dS + 0.368 (N-1) ln[Na+], and
+    Tm = 1000 dH / (dS + 1.9872 ln C) - 273.15 with C the probe concentration
+    itself, where Primer3 uses C/4 (the code's own note says it should be
+    probe minus half the target concentration).  The published window
+    (66-76 °C for the 30-nt MERFISH targets) is computed at 300 mM Na+ and 5 nM
+    probe, with no formamide, Mg2+ or dNTP term.  NaN for a sequence with bases
+    other than A, C, G, T/U.
+    """
+    seq = _clean_dna(seq)
+    if seq is None:
+        return float('nan')
+    enthalpy, entropy = _nearest_neighbor_sums(seq, SANTALUCIA_2004_NN)
+    for end in (seq[0], seq[-1]):
+        if end in 'AT':
+            enthalpy += 2.2
+            entropy += 6.9
+    enthalpy += 0.2
+    entropy += -5.7 + 0.368 * (len(seq) - 1) * math.log(na_mM / 1000)
+    return enthalpy * 1000 / (entropy + 1.9872 * math.log(probe_nM * 1e-9)) - 273.15
+
 def cal_fold(seq: str): # RNA fold
     return -RNA.fold_compound(seq).mfe()[1]
 
