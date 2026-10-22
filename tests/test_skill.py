@@ -296,6 +296,58 @@ def test_check_spacing_of_genomic_windows(tmp_path):
     assert not unplaced['ok'] and 'cannot check --min-gap' in unplaced['failures'][0]
 
 
+def test_check_per_part_gc_and_tm(tmp_path):
+    # A split unit: a window-level GC passes while one half is AT-rich (SNAIL-style padlock + primer).
+    at, gc_rich = 'ATATTAATTATAATTATATA', 'GCGGCCGCGCGGCCGCGCGC'
+    rows = []
+    for n in range(2):
+        rows.append({'probe_id': f'U_{n}', 'target': 'G', 'target_start': 1 + 40 * n, 'target_end': 40 + 40 * n,
+                     'target_region': at + gc_rich, 'half_a': reverse_complement(at), 'half_b': reverse_complement(gc_rich),
+                     'half_a_tm': 41.5, 'half_b_tm': 66.0})
+    columns = ['probe_id', 'target', 'target_start', 'target_end', 'target_region', 'half_a', 'half_b',
+               'half_a_tm', 'half_b_tm']
+    common = ['--binding', 'half_a', '--binding', 'half_b']
+    whole = run_check(tmp_path, rows, *common, '--gc', '0.3', '1', columns=columns)
+    assert not whole['ok'] and any('half_a outside GC' in f for f in whole['failures'])  # --gc applies to every part
+    ok = run_check(tmp_path, rows, *common, '--part-gc', 'half_b', '0.3', '1', '--part-tm', 'half_b_tm', '55', '70',
+                   columns=columns)
+    assert ok['ok'] and ok['targets']['G']['part_gc']['half_b']['median'] == 1.0
+    bad = run_check(tmp_path, rows, *common, '--part-gc', 'half_a', '0.3', '0.6', '--part-tm', 'half_a_tm', '50', '70',
+                    columns=columns)
+    assert sorted(bad['failures']) == ['G: 2 half_a outside GC 0.3-0.6', 'G: 2 half_a_tm outside Tm 50-70']
+    with pytest.raises(SystemExit, match='no column'):
+        run_check(tmp_path, rows, *common, '--part-gc', 'nope', '0.3', '0.6', columns=columns)
+
+
+def test_check_reports_duplicates_and_multi_site_windows(tmp_path):
+    # Tandem copies: the same 20-mer occurs three times on the transcript but is one oligo.
+    unit = RNA[:20]
+    transcript = RNA[100:130] + unit + RNA[130:150] + unit + RNA[150:170] + unit + RNA[170:200]
+    fasta = tmp_path / 'tx.fa'
+    fasta.write_text(f'>ENSG1_ENST1\n{transcript}\n')
+    other = transcript[0:20]
+    rows = []
+    for n, window in enumerate([unit, unit, other]):  # the table lists the repeated oligo twice
+        start = transcript.find(window)
+        rows.append({'probe_id': f'G_{n}', 'target': 'G', 'target_start': start + 1 + 100 * (n == 1),
+                     'target_end': start + 20 + 100 * (n == 1), 'target_region': window,
+                     'probe': reverse_complement(window), 'probe.binding': reverse_complement(window)})
+    columns = ['probe_id', 'target', 'target_start', 'target_end', 'target_region', 'probe', 'probe.binding']
+    result = run_check(tmp_path, rows, '--transcripts', str(fasta), '--transcript', 'G=ENST1', '--min-gap', '12',
+                       '--min-probes', '3', columns=columns)
+    entry = result['targets']['G']
+    assert entry['probes'] == 3 and entry['distinct_oligos'] == 2 and entry['duplicate_rows'] == 1
+    assert entry['multi_site'][0]['sites'] == 3 and len(entry['multi_site']) == 1
+    assert any('2 distinct oligos' in w for w in result['warnings'])
+    assert any('more than one place' in w for w in result['warnings'])
+    assert any('fewer than --min-probes 3' in f and '2 distinct' in f for f in result['failures'])
+    # --min-gap also looks at every site: the other window lies 9 nt before the first copy (gap 9 < 12).
+    assert any('over all their sites' in f for f in result['failures'])
+    # Without duplicates or repeats nothing is reported.
+    clean = run_check(tmp_path, rows_at([0, 30]))
+    assert 'multi_site' not in clean['targets']['G'] and clean['targets']['G']['distinct_oligos'] == 2
+
+
 def test_check_command_line(tmp_path, capsys):
     table = tmp_path / 'probes.tsv'
     rows = rows_at([0, 30])

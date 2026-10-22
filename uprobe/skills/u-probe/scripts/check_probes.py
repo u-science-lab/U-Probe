@@ -9,8 +9,12 @@ Reads the final table of `uprobe run` (<name>_<time>_probes.tsv) and checks that
 - with --transcripts, every window lies on the transcript U-Probe designed on (ids
   from --summary, or --transcript TARGET=ID), so the probes are on the reference mRNA;
 - with --gc, --tm, --min-gap or --min-probes, every probe or target meets those limits;
-and summarises per target: probes vs requested, span along the transcript, spacing,
-binding length and GC, Tm columns and off-target columns. Spacing uses target_start/target_end,
+  --part-gc / --part-tm give one binding part (e.g. one half of a split padlock/primer unit) its own
+  window, checked per part and not on the whole oligo;
+and summarises per target: probes vs requested, distinct oligos, windows found at more than one
+place of the transcript (all occurrences, not the first hit), span along the transcript, spacing
+(--min-gap also over every site of a repeated window), binding length and GC, Tm columns and
+off-target columns. Spacing uses target_start/target_end,
 or sub_region (s-e along the region) for genomic regions (source: genome).
 
 Standard library only. Exit status: 0 all checks passed, 1 a check failed, 2 unusable input.
@@ -38,6 +42,15 @@ def rc(seq):
 
 def gc(seq):
     return (seq.count('G') + seq.count('C')) / len(seq) if seq else 0.0
+
+
+def find_all(text, sub):
+    """0-based start of every (possibly overlapping) occurrence of sub in text."""
+    out, i = [], text.find(sub)
+    while i >= 0:
+        out.append(i)
+        i = text.find(sub, i + 1)
+    return out
 
 
 def number(value):
@@ -135,6 +148,11 @@ def parse_args(argv):
     p.add_argument('--tm', nargs=2, type=float, metavar=('MIN', 'MAX'), help='window for the Tm columns')
     p.add_argument('--tm-column', action='append', default=[], metavar='COLUMN',
                    help='Tm column(s) [default: numeric columns named *_tm or tm<N>]')
+    p.add_argument('--part-gc', nargs=3, action='append', default=[], metavar=('COLUMN', 'MIN', 'MAX'),
+                   help='GC fraction window of one part column, e.g. a padlock or primer half; repeatable')
+    p.add_argument('--part-tm', nargs=3, action='append', default=[], metavar=('COLUMN', 'MIN', 'MAX'),
+                   help='window for one numeric Tm column, e.g. the Tm of one half computed with a '
+                        'per-attribute hybridization override; repeatable')
     p.add_argument('--min-gap', type=int, metavar='NT', help='minimum gap between neighbouring windows')
     p.add_argument('--min-probes', type=int, metavar='N', help='minimum probes per target')
     p.add_argument('--json', action='store_true', help='print the report as JSON')
@@ -154,6 +172,15 @@ def check(args):
     if missing or not parts:
         raise SystemExit(f"binding column(s) {missing or 'none found'}; name them with --binding/--sense "
                          f"(columns: {', '.join(columns)})")
+    part_limits = {}
+    for kind, items in (('gc', args.part_gc), ('tm', args.part_tm)):
+        for column, low, high in items:
+            try:
+                part_limits.setdefault(kind, []).append((column, float(low), float(high)))
+            except ValueError:
+                raise SystemExit(f'--part-{kind} {column} {low} {high}: MIN and MAX must be numbers')
+            if column not in columns:
+                raise SystemExit(f'--part-{kind}: no column {column!r} (columns: {", ".join(columns)})')
     probes = {c.split('.')[0] for c, _ in parts}
     seq_columns = [c for c in columns if c.split('.')[0] in probes
                    and all(LETTERS.match(r[c]) for r in rows if r[c])]
@@ -182,6 +209,7 @@ def check(args):
         sequences = read_fasta(args.transcripts, wanted) if wanted else read_fasta(args.transcripts, max_records=2)
 
     failures, warnings, report = [], [], {}
+    key_columns = sorted(seq_columns)
 
     def fail(row, message):
         failures.append(f"{row.get('probe_id') or row['target']}: {message}")
@@ -205,13 +233,22 @@ def check(args):
     for target in targets:
         trows = [r for r in rows if r['target'] == target]
         entry = {'probes': len(trows)}
+        # Distinct oligos: identical sequences (a repeated window cut at several positions) are one oligo.
+        keys = [tuple(r[c].upper() for c in key_columns) for r in trows]
+        entry['distinct_oligos'] = len(set(keys))
+        entry['duplicate_rows'] = len(keys) - len(set(keys))
+        if entry['duplicate_rows']:
+            warnings.append(f"{target}: {entry['probes']} probes but {entry['distinct_oligos']} distinct oligos "
+                            f"({entry['duplicate_rows']} identical to another; count distinct oligos)")
         requested = ((summary.get('targets') or {}).get(target) or {}).get('requested_probes')
         if requested:
             entry['requested'] = requested
-            if len(trows) < requested:
-                warnings.append(f'{target}: {len(trows)} probes, {requested} requested (report the shortfall)')
-        if args.min_probes and len(trows) < args.min_probes:
-            failures.append(f'{target}: {len(trows)} probes, fewer than --min-probes {args.min_probes}')
+            if entry['distinct_oligos'] < requested:
+                warnings.append(f"{target}: {entry['distinct_oligos']} distinct oligos, {requested} requested "
+                                "(report the shortfall)")
+        if args.min_probes and entry['distinct_oligos'] < args.min_probes:
+            failures.append(f"{target}: {entry['distinct_oligos']} distinct oligos, fewer than --min-probes "
+                            f"{args.min_probes}")
         # Where the windows lie on the transcript(s) the target was designed on.
         ids = (chosen.get(target) or {}).get('ids')
         tx = {key: sequences[key] for key in (VERSION.sub('', i) for i in ids or []) if key in sequences}
@@ -219,26 +256,47 @@ def check(args):
             tx = dict(sequences)
         if args.transcripts and not tx:
             warnings.append(f'{target}: no transcript sequence to check against (give --summary or --transcript)')
-        positions = []
+        positions, all_sites = [], []
         entry['chosen_by'] = (chosen.get(target) or {}).get('chosen_by')
         if entry['chosen_by'] == 'all':
             warnings.append(f'{target}: designed on all annotated transcripts (transcripts: all), not on one '
                             'reference transcript; intended?')
         if tx:
             entry['transcripts'] = {i: len(s) for i, s in tx.items()}
-            for r in trows:
-                hits = [(i, s.find(r['target_region'].upper())) for i, s in tx.items()]
-                hits = [(i, pos) for i, pos in hits if pos >= 0]
+            multi = {}
+            for r, key in zip(trows, keys):
+                window = r['target_region'].upper()
+                hits = [(i, pos) for i, s in tx.items() for pos in find_all(s, window)]
                 if not hits:
                     fail(r, f"window not on the designed transcript ({', '.join(tx)})")
-                else:
-                    positions.append((hits[0][0], hits[0][1] + 1, hits[0][1] + len(r['target_region'])))
+                    continue
+                positions.append((hits[0][0], hits[0][1] + 1, hits[0][1] + len(window)))
+                all_sites += [(i, pos + 1, pos + len(window), key) for i, pos in hits]
+                if len(hits) > 1:
+                    multi.setdefault(key, (r.get('probe_id') or r['target'], len(window), hits))
+            if multi:
+                entry['multi_site'] = [{'probe_id': pid, 'sites': len(hits), 'positions': [
+                    f'{i}:{pos + 1}-{pos + length}' for i, pos in hits[:6]]} for pid, length, hits in multi.values()]
+                warnings.append(f"{target}: {len(multi)} of {entry['distinct_oligos']} distinct windows occur at "
+                                f"more than one place of the transcript (e.g. {entry['multi_site'][0]['probe_id']}: "
+                                f"{', '.join(entry['multi_site'][0]['positions'][:3])}); each oligo binds every copy, "
+                                "so spacing and probe counts must use all sites")
             for i, length in entry['transcripts'].items():
-                spans = [(s, e) for t, s, e in positions if t == i]
+                spans = [(s, e) for t, s, e, _ in all_sites if t == i]
                 if spans:
                     first, last = min(s for s, _ in spans), max(e for _, e in spans)
                     entry.setdefault('span', {})[i] = {'from': first, 'to': last, 'length': length,
                                                        'fraction': round((last - first + 1) / length, 3)}
+            if multi:
+                # Spacing between different oligos over every site of every window.
+                for i in entry['transcripts']:
+                    sites = sorted({(s, e, k) for t, s, e, k in all_sites if t == i})
+                    all_gaps = [b[0] - a[1] - 1 for a, b in zip(sites, sites[1:]) if a[2] != b[2]]
+                    if all_gaps:
+                        entry.setdefault('all_site_gap', {})[i] = dict(stats(all_gaps), overlaps=sum(g < 0 for g in all_gaps))
+                        if args.min_gap is not None and min(all_gaps) < args.min_gap:
+                            failures.append(f'{target}: smallest gap between different oligos over all their sites on '
+                                            f'{i} is {min(all_gaps)} nt < --min-gap {args.min_gap}')
         # Spacing along the target: gap = next start - previous end - 1 (1-based, inclusive).
         located = [window_position(r) for r in trows]
         if all(located):
@@ -264,6 +322,17 @@ def check(args):
                 out = sum(not args.gc[0] <= g <= args.gc[1] for g in gcs)
                 if out:
                     failures.append(f'{target}: {out} {c} outside GC {args.gc[0]}-{args.gc[1]}')
+        for kind, limits in part_limits.items():
+            for c, low, high in limits:
+                values = [gc(r[c].upper()) if kind == 'gc' else number(r[c]) for r in trows if kind == 'tm' or r[c]]
+                if kind == 'gc':
+                    entry.setdefault('part_gc', {})[c] = stats(values)
+                else:
+                    entry.setdefault('part_tm', {})[c] = stats(values)
+                out = sum(v is None or not low <= v <= high for v in values)
+                if out:
+                    label = 'GC' if kind == 'gc' else 'Tm'
+                    failures.append(f'{target}: {out} {c} outside {label} {low:g}-{high:g}')
         for c in tm_columns:
             tms = [number(r[c]) for r in trows]
             entry.setdefault('tm', {})[c] = stats(tms)
@@ -293,6 +362,12 @@ def render(result):
     for target, e in result['targets'].items():
         req = f" of {e['requested']} requested" if 'requested' in e else ''
         lines.append(f"{target}: {e['probes']} probes{req}" + (f" ({e['chosen_by']})" if e.get('chosen_by') else ''))
+        if e.get('duplicate_rows'):
+            lines.append(f"  distinct oligos: {e['distinct_oligos']} ({e['duplicate_rows']} duplicate rows)")
+        for m in (e.get('multi_site') or [])[:5]:
+            lines.append(f"  multi-site window {m['probe_id']}: {m['sites']} sites ({', '.join(m['positions'][:3])})")
+        for i, g in (e.get('all_site_gap') or {}).items():
+            lines.append(f"  gap over all sites on {i}: {g['min']:g}-{g['max']:g} nt; overlaps: {g['overlaps']}")
         for i, s in (e.get('span') or {}).items():
             lines.append(f"  on {i} ({s['length']} nt): nt {s['from']}-{s['to']} ({s['fraction']:.0%} of the transcript)")
         if 'gap' in e:
@@ -301,6 +376,10 @@ def render(result):
         for c, p in (e.get('parts') or {}).items():
             lines.append(f"  {c}: length {p['length']['min']:g}-{p['length']['max']:g}, "
                          f"GC {p['gc']['min']:.2f}-{p['gc']['max']:.2f} (median {p['gc']['median']:.2f})")
+        for kind in ('part_gc', 'part_tm'):
+            for c, t in (e.get(kind) or {}).items():
+                if t:
+                    lines.append(f"  {c} {kind[5:].upper()}: {t['min']:.2f}-{t['max']:.2f} (median {t['median']:.2f})")
         for c, t in (e.get('tm') or {}).items():
             if t:
                 lines.append(f"  {c}: {t['min']:.1f}-{t['max']:.1f} (median {t['median']:.1f})")
