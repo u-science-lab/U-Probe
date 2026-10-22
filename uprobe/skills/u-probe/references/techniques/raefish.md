@@ -191,6 +191,14 @@ U-Probe cannot do:
 - [ ] Codes unique, weight 4, no two genes sharing 3 on-bits; blanks kept.
 - [ ] `target_mapped_genes == 1`, `padlock_site_genes == 1`; Tm given at 2x SSC, 50% FA, 3 nM.
 - [ ] 1 set per gene (2 mouse-style); shortfalls named.
+- [ ] Run last (the paper states no GC, Tm, off-target or isoform rule: the Tm floor 41.5 C at 2x SSC, 50 % FA, 3 nM is U-Probe's calibration on the published parts; published parts have GC 53-90 %):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding padlock.binding --binding priming.binding --tm 41.5 100 --tm-column padlock_tm --tm-column priming_tm \
+    --min-gap 0 --min-probes 1
+```
 
 ## 9. References
 

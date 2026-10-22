@@ -155,7 +155,14 @@ cross-check and NUPACK binding-efficiency score.
 - [ ] A = bridge[0:14] + TA + rc(window 1-30); B = rc(window 33-62) + TA + bridge[-14:]; 46 nt.
 - [ ] Windows 62 nt on the reference mRNA; every pair of a gene carries that gene's bridge.
 - [ ] Each arm: GC 30-70 %, Tm >= 42 C at 390 mM Na+/30 % FA/20 nM, `*_mapped_genes` = 1.
-- [ ] `check_probes.py ... --gc 0.3 0.7 --tm 42 100 --min-gap 2 --min-probes 2` passes.
+- [ ] Run last, per arm (arm GC 30-70 %, Para default; the 42 C floor is the hybridization temperature under U-Probe's Tm, not the authors' 47 C formula; the 2-nt spacing is not published):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding probe_a.binding --binding probe_b.binding --gc 0.30 0.70 --tm 42 100 --tm-column a_tm --tm-column b_tm \
+    --min-gap 2 --min-probes 2
+```
 - [ ] 2 pairs per gene, or the shortfall named.
 
 ## 9. References

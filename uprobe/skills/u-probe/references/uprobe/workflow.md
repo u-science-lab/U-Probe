@@ -11,6 +11,11 @@ failures: `references/uprobe/troubleshooting.md`. Paths are relative to the skil
 - External tools, called by name from `PATH`: `bowtie` and `bowtie-build` (Bowtie 1, bioconda package `bowtie`),
   `bowtie2`/`bowtie2-build`, `jellyfish` (only for `kmer_count`), `makeblastdb`/`mmseqs` (only if listed in `align_index`).
   Install missing ones with `conda install -c bioconda bowtie bowtie2 jellyfish`. U-Probe never installs them itself.
+  When conda is slow or lacks a package, Bowtie 1 (`bowtie`, `bowtie-build`, `bowtie-inspect`) also comes as
+  prebuilt binaries in the release assets of github.com/BenLangmead/bowtie (zip per platform, e.g.
+  `bowtie-1.3.1-linux-x86_64.zip`); unzip and put the folder on `PATH`. Never replace it with your own scanner.
+- Use one Python environment for `uprobe`, its dependencies and the commands you run (mixing interpreters
+  gives import errors such as a numpy mismatch).
 - Runs write a scratch directory `.uprobe-tmp-*` in the current directory, and resolve relative paths
   (`genomes.yaml` entries, `gene_expression.table`) from it. Run from a writable directory.
 
@@ -31,7 +36,41 @@ uprobe genome list -g genomes.yaml [--json]    # files present? indexes built?
   is in it** for short probes (<= 30 nt): only Bowtie 1 searches off-targets exhaustively (`references/concepts/specificity.md`).
 - Pin `--release` for reproducible work; `latest` is resolved and recorded in the entry's `source`.
 - Your own FASTA + GTF: write the entry by hand (`fasta`, `gtf`, `align_index`, `jellyfish`). GTF `gene_name`
-  attributes are what `targets` match; MANE/canonical selection needs Ensembl or GENCODE tags.
+  attributes are what `targets` match; MANE/canonical selection needs `tag "MANE_Select"` /
+  `tag "Ensembl_canonical"` attributes on the transcript's GTF lines (Ensembl or GENCODE write them).
+- Only a transcriptome FASTA (spliced transcripts) plus a transcript table with MANE/canonical tags: treat each
+  transcript as a one-exon contig and write the two files yourself, then use the entry like any other. The
+  design then needs no genome, and only the index the decisive check needs (Bowtie 1 for windows of
+  <= 30 nt; in HCR also, `references/concepts/specificity.md`):
+
+```python
+# rows: (transcript_id, gene_id, gene_name, tag) with tag "MANE_Select", "Ensembl_canonical" or ""
+with open('transcripts.gtf', 'w') as gtf:
+    for tid, gid, name, tag in rows:
+        attrs = f'gene_id "{gid}"; gene_name "{name}"; transcript_id "{tid}";' + (f' tag "{tag}";' if tag else '')
+        gtf.write(f'{tid}\ttable\texon\t1\t{lengths[tid]}\t.\t+\t.\t{attrs}\n')   # FASTA record = transcript id
+```
+
+```yaml
+tx_hs:                                   # genomes.yaml
+  fasta: /data/tx/transcripts.fa         # one record per transcript id, spliced, + strand
+  gtf: /data/tx/transcripts.gtf
+  align_index: [bowtie]                  # add bowtie2 only if an attribute needs it
+  jellyfish: false
+```
+
+  Targets are the table's `gene_name`s (a different spelling than the user's symbols is the usual miss).
+  U-Probe cuts `transcript.fa` (records `<gene_id>_<transcript_id>`) from these two files and indexes it:
+  budget about three times the FASTA in disk (FASTA, `transcript.fa`, index; a Bowtie 1 index of the human
+  Ensembl 113 transcriptome is 650 MB, below). An index of the same
+  transcriptome built earlier is reused when `bowtie_transcript/` (files named `<fasta stem>.*`) and
+  `transcript.fa` sit next to the FASTA (symlink them); the same holds for `jf_genome/` indexes.
+- Before any genome-scale build (Bowtie2 genome index, genome-wide Jellyfish table, soft-masked copy of the
+  FASTA) estimate the size against the free disk (`df -h .`): a Bowtie2 genome index of a mammalian genome takes
+  a few GB (mouse GRCm39: 3.5 GB, 13.5 min, below), a genome-wide Jellyfish table grows with the number of
+  distinct k-mers of the whole genome, and temporary files come on top. Prefer an existing or
+  shared index, and for a locus-sized DNA FISH target count only the locus' k-mers
+  (`references/techniques/oligopaint-dna-fish.md`, section 6). Never copy a genome to mask it.
 
 ### Indexes
 
@@ -83,6 +122,9 @@ defaults (GC 0.2-0.8, Tm [T, T+40] °C on **every** probe and part, `target_mapp
 are permissive and can filter on constant parts; see `references/uprobe/yaml-reference.md`.
 
 ## 4. Validate
+
+Write the protocol file first, then validate, then run, one command after the other. Parallel commands made
+`validate` read a file that did not exist yet (exit 2, a confusing message).
 
 ```bash
 uprobe validate -p protocol.yaml -g genomes.yaml --check-targets [--json]
@@ -152,14 +194,20 @@ for each `mapped_genes` attribute `<attr>_off_targets` (`GENE:mismatches, ...`) 
 `<attr>_unexpressed`, `<attr>_hit_transcripts`, `<attr>_copies`. Rows are in `sorts` order, not along the target: sort by `target`, `target_start` to
 see the tiling.
 
-## 7. Iterate
+## 7. Report, then relax
 
 Change one thing at a time and rerun into a new `-o`. Typical loop:
-1. Too few probes -> look at `top_removal_stage`, then `references/uprobe/troubleshooting.md` ("Too few probes").
-2. Relax in this order, and say so in the report: widen the region (`CDS` -> `mRNA`), add an expression
-   table, `exempt_copies`, `min_fraction_of_target`, then Tm/GC windows within published ranges, then
-   `location_interval`. Do not relax specificity (`max_mismatches`, `<= 1`) for single-probe-signal methods.
-3. Never loosen a filter you cannot justify from `references/concepts/` or the technique file.
+1. Run with the method's published rules, the sample's expression table, `min_fraction_of_target` and
+   `exempt_copies` already in place (they are the specificity model, not relaxations). If a target has fewer
+   probes than requested, write the shortfall down first (probes, requested, `top_removal_stage`).
+2. Look at `top_removal_stage`, then `references/uprobe/troubleshooting.md` ("Too few probes"). Relax in this
+   order, one step per run, each reported with its yield: widen the region (`CDS` -> `mRNA`), then Tm/GC
+   windows within published ranges, then `location_interval` down to the method's smallest published value.
+   Add the expression settings of step 1 first if they were missing. Do not relax specificity
+   (`max_mismatches`, `<= 1`) for single-probe-signal methods, and do not change the standard length or arm
+   lengths of the set to fill the count.
+3. Never loosen a filter you cannot justify from `references/concepts/` or the technique file, and do not add
+   a hard filter the method does not publish; if you do, compare the yield with and without it.
 
 ## 8. Check before delivering
 
@@ -168,13 +216,14 @@ Do these on the final TSV and `summary.json`; report any failure instead of hidi
 | Check | How | Expect |
 | --- | --- | --- |
 | Status | `status`, exit code | `ok`; `partial` only with an explanation per target |
-| Probes per target | `targets.<t>.final` vs `requested_probes` | the technique's minimum (technique file; e.g. Stellaris recommends at least 25 of up to 48 smFISH probes) |
+| Probes per target | `targets.<t>.final` vs `requested_probes`; `check_probes.py` distinct oligos | the technique's minimum (technique file; e.g. Stellaris recommends at least 25 of up to 48 smFISH probes); count distinct oligos, not positions, for repeated targets |
 | Right transcripts | `targets.<t>.transcripts` | the isoform the user asked for (`chosen_by`) |
 | Strand | for a few rows: binding part == reverse complement of `target_region` (RNA probes; `references/concepts/probe-architecture.md`) | true; padlocks on cDNA are the exception |
 | Own-gene hit | `target_mapped_genes` on `target_region` with `strand: sense` | >= 1 on every row (0 means the window was not found in its own gene: wrong `strand`, wrong attribute target, or Bowtie2 on < 22 nt); literal-sequence targets absent from the annotation are 0 by design |
 | Off-targets | `<attr>_off_targets`, `off_targets.*.final_off_target_genes`, `_copies` | empty for `<= 1`; copies named and acceptable |
 | Tm, GC | `attributes` stats; histogram from TSV | inside the windows you set; Tm computed under the declared conditions |
-| Spacing | consecutive `target_start` differences per target | >= window length + `location_interval` |
+| Spacing | consecutive `target_start` differences per target; `check_probes.py --min-gap` (also over every site of a repeated window) | >= window length + `location_interval` |
+| Method's own values | the last command of the technique checklist (`--gc`, `--tm`, `--min-gap`, per-half `--part-gc`/`--part-tm`) | the values of the technique file's table, not those of the protocol you wrote |
 | Sequences | probe columns | only ACGT (no `N` placeholders left), expected lengths |
 | Barcodes | encoding parts per target | the intended readout/initiator per gene; no two genes share a code unless intended |
 

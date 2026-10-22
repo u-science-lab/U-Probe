@@ -88,18 +88,82 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 
 ## Too few probes
 
-Read `targets.<t>.after_stage` and `top_removal_stage`, then:
+**Report the shortfall first.** The run that follows the method's published rules (its length, GC, Tm,
+spacing, the sample's expression table with `min_fraction_of_target` and `exempt_copies`) is the result;
+write down probes vs requested and `top_removal_stage`, and deliver that set with the shortfall if nothing
+below is justified. Then read `targets.<t>.after_stage` and `top_removal_stage`, change one thing per run,
+report the yield of each change, and do not fill the count with a different length:
 
 | Stage that removed most | Likely cause | Fix (keep the method's specificity rule) |
 | --- | --- | --- |
-| `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true`; `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
-| `Filters` (Tm/GC) | window computed under other conditions, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; allow a `length` range so each site can meet the Tm window |
-| `Remove overlap` | short target: few non-overlapping sites | lower `location_interval` (smFISH: 2 is the Stellaris default), shorter windows, longer region (`mRNA` not `CDS`), amplified methods for very short RNAs (`references/concepts/targets-and-isoforms.md`) |
+| `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true` (copies only; paralogs stay counted); `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
+| `Filters` (Tm/GC) | window computed under other conditions or formula, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; reproduce the published window under its own conditions; do not stretch it, and do not change lengths set by the method |
+| `Remove overlap` | short target: few non-overlapping sites; repeats; first-fit packing | lower `location_interval` to the method's smallest published value (smFISH: 3 nt Raj, 2 nt Stellaris), longer region (`mRNA` not `CDS`), amplified methods for very short RNAs (`references/concepts/targets-and-isoforms.md`); the repeat and packing entries below |
 | `Off-target pool limit` | many probes share one off-target gene | expected; it trades count for cleanliness |
 | `Equal spacing` | never below the request | the shortfall is upstream |
 
 Count which filter fails: rerun with `--raw`, load `*_raw.xlsx` (`pandas.read_excel`) and evaluate each
 condition separately per target.
+
+### Length ranges are not a way to fill the count
+
+`length: [min, max]` makes a window of every length at every start, and `remove_overlap` keeps the
+shortest passing one per start. With a range around the standard length (`[18, 22]` for a 20-nt method)
+most of the set therefore leaves the standard length (18-mers where 18 passes, 22-mers only where
+shorter ones fail), which is a different set from the published one, not a rescue. Keep the standard
+length wherever it passes and take another length only at the sites where it fails, by ranking
+the windows of each start by their distance to the standard length with `remove_overlap.prefer`
+(an attribute, lower is better; the stand-in probe only supplies the reference length):
+
+```yaml
+name: standard_length_first
+genome: hg38
+targets: [GAPDH]
+encoding: {GAPDH: {}}
+extracts:
+  target_region: {source: mRNA, transcripts: mane, length: [18, 22], step: 1}
+probes:
+  smfish_probe:
+    template: "{binding}"
+    parts:
+      binding: {expr: "rc(target_region)"}
+  standard_20:                       # not ordered: a 20-nt stand-in whose length is the reference
+    template: "{ref}"
+    parts: {ref: {template: "AAAAAAAAAAAAAAAAAAAA", parts: {}}}
+hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 10, probe_nM: 2.6, dntp_mM: 0}
+attributes:
+  probe_len: {target: smfish_probe.binding, type: length}
+  standard_len: {target: standard_20, type: length}
+  len_off: {type: difference, of: [probe_len, standard_len]}   # |length - 20|, lower is better
+  probe_tm: {target: smfish_probe.binding, type: annealing_temperature}
+  target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2, strand: sense}
+post_process:
+  filters:
+    target_mapped_genes: {condition: target_mapped_genes <= 1}
+    probe_tm: {condition: probe_tm >= 37}
+  remove_overlap: {location_interval: 3, prefer: len_off}   # of one start's windows, the one nearest 20 nt
+  equal_space: {number_desired: 48}
+summary: {report_name: rna_report, attributes: [probe_len, probe_tm, target_mapped_genes]}
+```
+
+With only longer alternatives, `length: [20, 22]` needs no `prefer`: the shortest, 20 nt, wins wherever it
+passes. Either way the other lengths must lie inside the method's published range, and the final table's
+length distribution (`probe_len` counts) goes into the report; the standard-length set stays the
+reference to compare the yield against. `prefer` chooses between lengths of the same start only; it does
+not move starts (see "Overlapping or clustered probes").
+
+### Repeats inside the target
+
+- **Symptom:** the table reports `N/N` probes, yet fewer distinct sequences; `check_probes.py` lists
+  distinct oligos below the probe count and windows at more than one place of the transcript. **Cause:** a
+  target with tandem or internal repeats (tandem-repeat genes, repeated domains) contains the same
+  window at several positions; each position is a separate candidate, but one oligo binds every copy.
+  `remove_overlap` and `equal_space` see only the first site of each window, so identical oligos count as
+  separate probes and a window can overlap another oligo at its other copies. **Fix:** count distinct
+  oligos, not positions (`check_probes.py`, `--min-probes`); deduplicate by sequence, treat every site of an
+  oligo as occupied when checking spacing (`--min-gap` does), report multi-site oligos (they also carry more
+  signal per probe), and if the distinct set is short, report it before adding anything.
+
 
 ## Formamide makes Tm filters remove everything
 
@@ -136,7 +200,14 @@ condition separately per target.
   spaced *ranks* of overlapping windows. **Fix:** add `remove_overlap: {location_interval: N}`.
 - With `length: [min, max]` or a `layout` with ranges, several candidates share a start; `remove_overlap`
   keeps the first (shortest) passing one, or the lowest of `remove_overlap.prefer` (an attribute, e.g. a
-  `difference` of two Tm). Filter lengths you do not want.
+  `difference` of two Tm, or a distance to the standard length, above). Filter lengths you do not want.
+- `remove_overlap` is first-fit from the 5' end: it takes a start, then the next start beyond the gap, and never
+  looks back, so when the passing pool is barely enough it leaves no alternative for a weak window (a
+  half with low GC or Tm sits in the final set because the only other candidates overlap it). It does not choose
+  between different starts: put quality into `filters`, and prefer a method's published criteria to extra ones.
+  If you must choose among overlapping candidates by an objective (balanced halves, GC nearest a target), rank them
+  yourself on the raw table (`--raw`) and verify the pick with `check_probes.py`, instead of adding a filter that
+  the method does not publish; compare the yield and the picks with and without any extra filter.
 - Probes cluster in one region: the rest of the target failed filters (check positions of the raw
   candidates); `equal_space` spaces by rank among survivors, not by distance.
 

@@ -91,7 +91,7 @@ RCA initiator primer, 25 nt in the template (published: 25 in 247 of 432, 26 in 
 | Primer length | 25 (247 primers) or 26 (185); the template builds 25 | nt | Wu 2024 Supp. Table |
 | Sites per gene | 2, "in an exon close to the 5' end"; 8 pairs raised detection (Supp. Fig. 7) | pairs | Wu 2023 Methods; Wu 2024 SI |
 | Site position (no number published) | median start nt 885 (quartiles 455, 1,650); 54% within the first 1,000 nt, 71% within 1,500; template cap 1,000 | nt | this KB, 367 sites on the mouse canonical transcript |
-| Tm / GC criteria | none stated ("self-developed" program) | - | Wu 2023 Methods |
+| Tm / GC criteria | none stated ("self-developed" program); the paper gives no arm Tm, so a floor at the 37 C hybridization temperature is not a MiP-seq rule | - | Wu 2023 Methods |
 | Arm and primer-site Tm, published | 25.1-49.6 C (median 39.6; 21 % below 37 C) over the 434 units (2x SSC, 10% FA, 30 nM); template floor 28 C, the 2.5th percentile of each unit's weakest part, rejects 9 units | C | this KB, Wu 2024 Supp. Table "Fig 3" |
 | Arm Tm, estimate | Th-1 arms 37-39 C; primer RNA part 47 C (2x SSC, 10% FA, 30 nM) | C | U-Probe/primer3 estimate, not a published criterion |
 | Hybridization | 30 nM each padlock + equimolar primer, 2x SSC, 10% formamide, 20 mM RVC, 37 C overnight | - | Wu 2023 Methods |
@@ -116,7 +116,10 @@ discriminate a SNV; validate with wild-type/mutant controls.
   raise the cap for long transcripts, and check `summary.json` for `partial`.
 - Isoforms: choose sites shared by the isoforms you want to count; U-Probe's `transcripts: mane`
   designs on one reference transcript, and with one transcript windows can span exon junctions
-  (they then bind only spliced RNA).
+  (they then bind only spliced RNA). A transcript-level table that gives the reference transcript ~0 TPM
+  is no reason to leave it: keep the units the reference shares with the expressed isoforms, report any
+  shortfall, and label units on other isoforms as extras
+  (`references/concepts/targets-and-isoforms.md`, "Reference transcript with ~0 TPM").
 - SNV / allele designs: put the variant at the ligation junction, i.e. under the 3'-terminal base
   of arm_3 (pairs nt 14) or the 5'-terminal base of arm_5 (pairs nt 13); Wu 2024 tested "a single
   unmatched base adjacent to the ligation point". U-Probe has no variant-aware option; build such
@@ -224,8 +227,12 @@ of 28 C on both arms and the primer site comes from the published units, not fro
 - SplintR is "strongly inhibited" above 100 mM NaCl and slower when the 5'-phosphorylated base
   (padlock 5' end, pairing nt 13) is dC or dG (Lohman 2014): ligate in ligase buffer after washing
   out 2x SSC; prefer windows with A/T at the padlock 5' end if you rank by hand (not a MiP-seq rule).
-- 13-nt arms have Tm near 37 C: high-AT windows may hybridize poorly; consider filtering
-  `arm_5_tm`/`arm_3_tm` against the 37 C hybridization temperature.
+- 13-nt arms have Tm near 37 C, and that is by design: 21 % of the published arm and primer-site Tm
+  values are below 37 C under the hybridization block (section 3; computed here, the paper states no Tm).
+  Do not add a 37 C floor on `arm_5_tm`/`arm_3_tm`: it rejects what the published sets contain and can leave
+  few or no units on the reference transcript. The 28 C floor is the weakest tail of the
+  published units, the position cap (`near_5p`, `target_start <= 1000`) U-Probe's reading of "close to the 5'
+  end"; compare the yield with and without either (SKILL.md rule 10).
 - Bowtie2 reports at most 100 alignments; windows in repeats or gene families may be under-counted.
 - The primer's spacer base is the *sense* nt 27, so it cannot pair with nt 27; it is a spacer, not
   an extra binding base. If you write primers by hand, keep this (25 nt, the published majority),
@@ -245,6 +252,13 @@ of 28 C on both arms and the primer site comes from the published units, not fro
 - [ ] Per-position B1/B2 colour codes are unique across genes; dyes match the SBL scheme.
 - [ ] Number of sites per gene matches the plan (2 near the 5' end, or more); sites do not overlap.
 - [ ] Conditions recorded: 2x SSC, 10% FA, 37 C hybridization; SplintR; Phi29 at 30 C.
+- [ ] Run last (no Tm or GC is published: the 28 C floor is the published units' tail, not a criterion; arms are 13 nt):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --binding padlock.arm_5 --binding padlock.arm_3 --binding rca_primer.binding \
+    --tm 28 100 --min-gap 0 --min-probes 2
+```
 
 ## 9. References
 

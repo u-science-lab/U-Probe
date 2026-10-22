@@ -199,6 +199,17 @@ def test_smfish_tm_uses_the_stellaris_concentration_per_oligo():
     assert load_template('smfish_stellaris')['hybridization']['probe_nM'] == 2.6
 
 
+def test_smfish_template_filters_the_stellaris_gc_window_and_keeps_raj_spacing():
+    # Xiao 2023 (Methods): Stellaris Probe Designer, 40-60 % GC; Raj 2008: >= 3 nt between oligos,
+    # which also satisfies the designer's 2 nt.
+    protocol = load_template('smfish_stellaris')
+    assert protocol['post_process']['filters']['target_gc']['condition'] == 'target_gc >= 0.40 & target_gc <= 0.60'
+    assert protocol['post_process']['remove_overlap']['location_interval'] == 3
+    meta = protocol['meta']
+    assert not any('TODO' in item for item in meta['limitations'])
+    assert any('filters.target_gc' in row['parameter'] for row in meta['parameter_sources'])
+
+
 def offline_api(protocol, seq=SEQ, encoding=None):
     """Swap the template targets for one direct sequence; no genome needed."""
     protocol = copy.deepcopy(protocol)

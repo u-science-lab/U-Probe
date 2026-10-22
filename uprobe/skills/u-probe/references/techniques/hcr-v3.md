@@ -127,7 +127,12 @@ What to edit:
   the table in section 2 (the template ships B1 and B2 only).
 - `equal_space.number_desired`: 20 for qHCR; 25-30+ for dHCR (all passing pairs if fewer).
 - Add `gene_expression` so only expressed off-target genes remove pairs.
-- Optional exhaustive search: add `bowtie` to `align_index` and set `aligner: bowtie`, `max_mismatches: 2`.
+- Off-target search: prefer `bowtie` in `align_index` and `aligner: bowtie`, `max_mismatches: 2` on the pair
+  window (exhaustive within 2 substitutions; the template's Bowtie2 is a heuristic and also builds a
+  Bowtie2 transcriptome index, the slowest step of a run). A pair amplifies only when both halves bind
+  side by side, so a whole-window search with Bowtie 1 is the check that matters; Bowtie2 additionally
+  flags partial (one-half) matches and indels and drops pairs that could not amplify there (the QA run
+  kept the same pairs, `references/uprobe/template-qa.md`).
 
 Template departures:
 - Spacing: not a departure; `location_interval: 2` keeps pairs at least 2 nt apart, as in the Choi
@@ -161,6 +166,13 @@ Template departures:
 - [ ] 20 pairs (qHCR) or >= 25-30 (dHCR) per target, or the shortfall reported.
 - [ ] `target_mapped_genes` = 1 for every pair (or off-targets unexpressed / copies of the target).
 - [ ] Buffer plan: 30 % formamide, 5x SSC, 4 nM per probe, 37 C overnight; hairpins 60 nM snap-cooled.
+- [ ] No GC, Tm or homopolymer filter beyond the published sets (section 3); do not add one without comparing the yield.
+- [ ] Run last (Choi 2018 states no GC or Tm window; the Tm floor is U-Probe's, the 2-nt spacing that of its sets):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --min-gap 2 --min-probes 20 --tm 37 100
+```
 
 ## 9. References
 

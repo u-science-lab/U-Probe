@@ -35,8 +35,11 @@ U-Probe README measurements (Ensembl 113 human transcriptome):
 - Cost: Bowtie 1 searched 15,295 sequences in 4.6 s (8 threads); its index took ~5 min and 650 MB.
 
 Rule: windows <= 30 nt -> `aligner: bowtie`, `max_mismatches: 2` (the templates' choice). Windows
->= 40 nt -> Bowtie2 is adequate for substitutions and also finds partial matches and indels; add a
-second `mapped_genes` attribute with Bowtie 1 when you need the exhaustive guarantee. For 28-30-nt
+>= 40 nt -> Bowtie2 also finds partial matches and indels but is a heuristic (it misses 1-3 % of the
+windows with a <= 2-substitution site in another gene); where the unit of signal is the whole window
+(HCR pairs, SNAIL and padlock sites) the exhaustive substitution search is the decisive check, so Bowtie 1 alone
+is a sound default there (it also spares the Bowtie2 transcriptome index, the slowest build of an RNA run),
+and Bowtie2 is an optional second attribute for indels and one-half matches. For 28-30-nt
 windows, extrapolating the numbers above, a 3-substitution site can still have its Tm above the
 hybridization temperature, so `max_mismatches: 3` is defensible (derived, not from a paper).
 
@@ -88,6 +91,11 @@ U-Probe (`gene_expression:` block, applies to all `mapped_genes` attributes):
 - `min_fraction_of_target` (relative): an off-target gene counts only above max(`min_value`, f x
   target's value). Rationale: an RNA at a few percent of the target's level adds at most a few percent
   false spots. README: 0.05 raised human GAPDH from 7 to 14 probes, ACTB 38 -> 44, mouse Eef1a1 17 -> 48.
+- Default configuration. With the sample's expression table, start with all of: `level: transcript` (or
+  gene), `min_value: 1`, `min_fraction_of_target: 0.05` and `exempt_copies` on the off-target attribute. They are
+  the specificity model, not relaxations: without them the pool shrinks for no imaging reason and leaves less
+  room for the method's other windows. An absolute 1 TPM floor alone (`absent: count`) is a stricter, not a
+  "conservative", model: a negligible RNA next to a highly expressed target still removes every probe on it.
 - `absent: count` (default) counts genes missing from the table as expressed; `ignore` trusts the table
   to list every expressed gene (right only for a table on the same annotation).
 - Transcript vs gene level. Only molecules that carry the site can make false signal. A gene-level
@@ -118,7 +126,10 @@ and duplicated loci also contain the target.
 Mechanism: if a gene contains most of the target's sequence, every window of the target also lies in
 it; no probe choice can avoid it, and counting it removes all probes. Decide instead:
 - `exempt_copies` (k = 30, `min_shared` 0.5): genes with a transcript holding >= half of the target's
-  30-mers are listed in `<attr>_copies` and not counted. README shares: EEF1A1P5 holds 81% of the EEF1A1
+  30-mers are listed in `<attr>_copies` and not counted. It exempts only such near-identical copies (every
+  probe of the set hits them anyway); it does not exempt paralogs or genes that share some windows, and
+  it does not say that a copy is silent. Do not drop it "to tell the target from its paralogs": the paralogs
+  stay counted with it. README shares: EEF1A1P5 holds 81% of the EEF1A1
   merged CDS 30-mers; mouse Gapdh retrocopy Gm13394 76% (668 TPM in NIH/3T3); paralog ACTG1 only 5-7% of
   ACTB (stays counted); SPDYE8-15 hold 84-89% of SPDYE17 (the probes detect the family).
 - Then report: if a copy is expressed, the probe set measures target + copy. Say so to the user.
@@ -176,6 +187,8 @@ within 2 substitutions, `target_mapped_genes <= 1`; never exempt paralogs.
 
 Interspersed repeats make up ~45% of the human genome; Alu alone has > 1 million copies (~10%) (Lander
 ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in UTRs and introns.
+- Repeats within the target RNA itself (tandem copies) are not off-targets but make one oligo bind several
+  sites: count distinct oligos and use all sites for spacing (`references/concepts/targets-and-isoforms.md`).
 - RNA designs: repeat windows hit hundreds of genes. Bowtie2 stops at 100 alignments (counts saturate);
   Bowtie 1 lists them all (slow; `_off_targets` cells beyond Excel's 32,767 characters are cut in the
   `.xlsx`, full in the TSV). A per-probe cap (`<= 1` or
@@ -194,7 +207,7 @@ ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in 
 | --- | --- | --- | --- | --- | --- | --- |
 | smFISH 18-22 nt | `target_region`, `sense` | bowtie, 2 | `<= 1` | recommended (+ fraction 0.05) | `exempt_copies` | optional |
 | MERFISH / seqFISH+ 28-30 nt | `target_region`, `sense` | bowtie, 2 (3 defensible) | `<= 1` | recommended | `exempt_copies` | optional |
-| HCR v3 pair 52 nt | whole pair window, `sense` | Bowtie2 (+ a Bowtie 1 attribute, 2, for the exhaustive substitution search) | `<= 1` | recommended | report copies | no |
+| HCR v3 pair 52 nt | whole pair window, `sense` | Bowtie 1 alone, 2 (exhaustive within the radius; Bowtie2 only as an optional second attribute for indels and partial matches) | `<= 1` | recommended | report copies | no |
 | Padlock / SNAIL 30-46 nt | whole site, `sense`; plus the junction (`padlock_iss`) or the arm site (`double_hyb_rca`) | bowtie (<= 30 nt) / Bowtie2 | `<= 1` on each | recommended | report copies | no |
 | Oligopaint 35-41 nt | homology, windows from a soft-masked genome (`masked: drop`) | `kmer_count` (k 18, `strand: sense`) + `mapped_sites` | `kmer_count <= 4`, `<attr>_num == 1` | n/a | n/a | `avoid_otp` |
 

@@ -30,10 +30,10 @@ RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48
 | --- | --- | --- | --- |
 | Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48; Suppl. Fig. 4 labels these "20 bp") | | Raj 2008 Suppl. Methods and probe list, doi:10.1038/nmeth.1253 |
 | Length (Stellaris) | 18-22 nt, typically 20; 18-19 nt in GC-rich regions, 21-22 nt in AT-rich regions | | Biosearch designer FAQ / blog |
-| GC | "as close to 45 % as possible" (dynamic programming); the Actb set actually spans 35-80 % (mean 56 %) | no hard window | Raj 2008 |
-| GC (Stellaris) | no number; thermodynamic placement, skewed-GC stretches skipped | | Biosearch FAQ |
-| Tm | none published (Raj, Stellaris) | | |
-| Spacing | >= 3 nt (Raj 2008); default 2 nt, may be 1 (Stellaris; CAL Fluor Red 635 needs 2) | | Raj 2008; Biosearch blog |
+| GC | "as close to 45 % as possible" (dynamic programming); the Actb set actually spans 35-80 % (mean 56 %) | a target, no hard window | Raj 2008 |
+| GC (Stellaris) | **40-60 %** ("the limits of the design tool"); skewed-GC stretches are skipped | filter it: a position-based tiling never centres GC | Xiao 2023 RNA 29:1274, Methods "Oligo design and purchase", doi:10.1261/rna.079591.123 |
+| Tm | no value: "similar melting temperatures" (Stellaris designer); none in Raj | | Xiao 2023 |
+| Spacing | >= 3 nt (Raj 2008); at least 2 nt, default 2, may be 1 (Stellaris designer, Xiao 2023; CAL Fluor Red 635 needs 2) | use **3 nt**: it satisfies both | Raj 2008 Suppl.; Biosearch blog; Xiao 2023 |
 | Probes per RNA | 48 (Raj 2008); Stellaris max 48 per set, >= 25 recommended; tissue: > 20, 48 preferred, up to 96 | 12 or 24 probes: spots not reliably identifiable (Raj Suppl. Fig. 3) | Raj 2008; Stellaris guide; Lyubimova 2013 |
 | Target length | >= ~1 kb for 48 x 20-mers with 2-nt gaps (1,054 nt); ~600 nt for a reduced set | | Lyubimova 2013; Stellaris FAQ |
 | Labelling | 3' amine + NHS-ester dye, one per oligo | | Raj 2008 |
@@ -43,7 +43,7 @@ RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48
 | Wash (Stellaris) | Wash A (10 % formamide, 2x SSC) 30 min, then DAPI in Wash A 30 min; Wash B (2x SSC) 2-5 min | 37 C; Wash B RT | Stellaris protocol |
 | Tissue (Lyubimova) | hybridization overnight and washes 30 min, 10 % formamide; raise to 25 % formamide if background is high | 30 C | Lyubimova 2013, doi:10.1038/nprot.2013.109 |
 
-Disagreements to state to the user: spacing (Raj 3 nt vs Stellaris/Lyubimova 2 nt); wash temperature
+Disagreements to state to the user: spacing (Raj 3 nt vs Stellaris/Lyubimova 2 nt; default to 3 nt, 2 nt only when the user names the Stellaris designer); wash temperature
 (Raj and Lyubimova 30 C vs Stellaris 37 C); formamide in washes (10 % default, 15-25 % to cut
 background); region (CDS only vs UTRs, below); probe dose (Stellaris 125 nM total vs Raj ~7-140 nM).
 
@@ -90,23 +90,30 @@ attributes:
 post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}
+    target_gc: {condition: target_gc >= 0.40 & target_gc <= 0.60}   # Stellaris designer's window
     probe_tm: {condition: probe_tm >= 37}   # floor: the hybridization temperature
-  remove_overlap: {location_interval: 2}
+  remove_overlap: {location_interval: 3}   # Raj; the Stellaris designer needs 2
   equal_space: {number_desired: 48}
 # gene_expression: {table: expression.tsv, value_column: TPM, min_value: 1, min_fraction_of_target: 0.05}
 ```
 
 What to edit: `targets`; `genome` with `bowtie` in `align_index` (Bowtie2 cannot align 20-mers and
-would report no off-targets); uncomment `gene_expression` with the sample's table;
-`location_interval: 3` for Raj spacing; `source: CDS` for a CDS-only set. `length: [18, 22]` makes
-windows of every length; only together with a GC or Tm filter does it let GC-skewed sites take
-another length (`remove_overlap` keeps the shortest passing window at each start).
+would report no off-targets); uncomment `gene_expression` with the sample's table (the default
+configuration with `exempt_copies`, SKILL.md rule 6); `location_interval: 2` only for the Stellaris
+designer's spacing; `source: CDS` for a CDS-only set. Keep `length: 20`. A range such as
+`length: [18, 22]` makes windows of every length and `remove_overlap` keeps the shortest passing
+window at each start, so most of the set drops to 18-19 nt, not just the GC-skewed sites. If 20-nt
+sites fall short, report the shortfall first; then take another length only where 20 fails
+(`references/uprobe/troubleshooting.md`, "Too few probes").
 
 Template departures:
 - Off-targets: Bowtie 1 within 2 substitutions (>= 18 of 20 nt). The Stellaris "> 16 nt" rule also
   catches 17-nt matches; `max_mismatches: 3` comes closer. Off-targets are counted per probe, not
   per off-target gene across the set (`off_target_pool` is the opt-in for that).
-- GC: reported, not filtered or optimized toward 45 %; `equal_space` picks 48 by position.
+- GC: filtered to the Stellaris designer's 40-60 % (Xiao 2023); not optimized toward Raj's 45 %,
+  because `equal_space` picks 48 by position: check the median GC of the final set (Raj's own Actb set
+  has 35-80 % GC, so the window is the designer's, not Raj's).
+- Spacing: 3 nt (Raj), which also meets the designer's 2 nt.
 - Tm: a floor at the hybridization temperature, `probe_tm >= 37` under 2x SSC, 10 % formamide and
   2.6 nM per oligo (125 nM for 48). Neither Raj nor Stellaris states one; the 480 Raj 2008 probes
   have 31.8-67.8 C under these conditions (5th percentile 37.5 C) and the floor rejects 20 of them
@@ -132,11 +139,17 @@ Template departures:
 
 - [ ] All probes 17-22 nt (20 default), reverse complement of the mRNA.
 - [ ] >= 25 probes per RNA (48 target); `summary.json` status `ok` or shortfall explained.
-- [ ] Gaps >= 2 nt (3 nt for Raj rules); no overlapping probes.
-- [ ] GC near 45 % on average; no probe with extreme GC (< 30 % or > 70 %) if avoidable.
+- [ ] Gaps >= 3 nt (2 nt only for the Stellaris designer's spacing); no overlapping probes.
+- [ ] Every probe 40-60 % GC (Stellaris designer), median near 45 %; not the 30-70 % "extremes" band.
 - [ ] `target_mapped_genes` = 1, or off-targets listed as unexpressed / copies; no off-target gene hit by
       >= 5 probes.
 - [ ] Conditions stated: 10 % formamide, 2x SSC, 37 C hybridization; wash temperature chosen.
+- [ ] Run last, with these values and not those of your protocol file (Tm is U-Probe's floor under the template's conditions):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --gc 0.40 0.60 --min-gap 3 --min-probes 25 --tm 37 100
+```
 
 ## 9. References
 
@@ -144,4 +157,5 @@ Template departures:
 - Raj A, Tyagi S. 2010. Detection of individual endogenous RNA transcripts in situ using multiple singly labeled probes. Methods Enzymol 472:365-386. doi:10.1016/S0076-6879(10)72004-8
 - Lyubimova A et al. 2013. Single-molecule mRNA detection and counting in mammalian tissue. Nat Protoc 8:1743-1758. doi:10.1038/nprot.2013.109
 - Calvo L, Ronshaugen M, Pettini T. 2021. smiFISH and embryo segmentation for single-cell multi-gene RNA quantification in arthropods. Commun Biol 4:352. doi:10.1038/s42003-021-01803-0
+- Xiao W, Yeom KH, Lin CH, Black DL. 2023. Methods, "Oligo design and purchase" (Stellaris Probe Designer v4.2 criteria). RNA 29:1274-1287. doi:10.1261/rna.079591.123
 - LGC Biosearch Technologies. Stellaris RNA FISH protocol for adherent cells; Stellaris Getting Started Guide; Stellaris Probe Designer FAQ (biosearchtech.com).

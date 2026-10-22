@@ -41,7 +41,26 @@ stability, how U-Probe computes Tm, and how to place a Tm window relative to the
 - Strand concentration: Primer3 assumes equal concentrations of both strands (the C_T/4 term of
   SantaLucia 1998). In FISH the probe is in large excess over its target, where the term is about the
   probe concentration; by the same equations this raises Tm by about 1.4-2 °C (computed with U-Probe's Primer3 call: +2.0 °C for 20-mers at 50 nM,
-  +1.4 °C for 30-mers at 1 nM). Uniform offset; it rarely changes which windows pass.
+  +1.4 °C for 30-mers at 1 nM). The offset is almost uniform, but a published window is only as wide
+  as its margin: it matters at both edges. Measured against the design code of a published window
+  (random windows, GC 35-60 %, U-Probe's Primer3 call, no dNTPs):
+  - MERFISH (the code uses ln C_T with C_T = 5 nM; 300 mM Na+, no formamide): the code is +1.36 C above
+    Primer3 at `probe_nM: 5` (sd 0.03, +1.27 to +1.50, 2,000 30-mers); 17.7 % of random 30-mers then fall
+    outside 66-76 C under Primer3 against 9.1 % under the code's formula, nearly all of them on the cold side;
+  - OligoMiner (Biopython `Tm_NN`, DNA_NN3, `saltcorr` 5, 390 mM Na+, 25 nM each strand, 0.65 C per %
+    formamide at 50 %): +1.49 C above U-Probe at the template's `probe_nM: 25` (sd 0.35, +0.8 to +2.3,
+    6,000 36-41-mers), of which 0.55 C is the strand term and the rest the formamide model; of the windows
+    inside 42-47 C by Primer3, 23 % are outside it under OligoMiner (all too hot), and 30 % of the windows
+    OligoMiner accepts are rejected by Primer3.
+  So the sentence "it rarely changes which windows pass" is wrong for narrow published windows. Reproduce
+  the source formula, or its offset, in the window you filter, and check the final table with it (next bullet).
+- Reproducing a C_T-based formula with Primer3: set `probe_nM` to 4 x the source's strand concentration
+  (Primer3 divides by 4): `probe_nM: 20` for MERFISH's 5 nM reproduces its code to 0.01 C (difference
+  -0.006 +- 0.023 over 2,000 30-mers); `probe_nM: 50` gives OligoMiner's strand term (12.5 nM) exactly, and
+  the remaining +0.94 C (sd 0.35, formamide model, GC dependent) is a shift to apply to the window or an
+  external calculation: compute the source function on the final table and check it with `check_probes.py
+  --tm-column` (`references/techniques/oligopaint-dna-fish.md`, section 8). Whichever way, state which
+  formula, conditions and offset the reported Tm refers to.
 - `tm_method: multi_padlock_design` (attribute option) swaps Primer3 for the formula of the HybISS
   design code (Moldia/multi_padlock_design `lib/screenseq.py`): Sugimoto 1996 DNA/DNA nearest
   neighbours, one initiation term, C_T = probe concentration, `+16.6 log10([Na+] + 3.795 sqrt[Mg2+])`,
@@ -73,15 +92,29 @@ Typical values (U-Probe/Primer3, median of random 45%-GC windows, 50 nM probe):
 
 ## Choosing the Tm window
 
+Geometry comes first: binding and arm lengths, GC, spacing and probe counts are the method's, and the Tm
+is a check or a floor under the stated conditions. Never choose a Tm you like and grow or shrink the probes
+to reach it: the published windows hold at the design conditions and formula of the method (below), and
+re-deriving them at the hybridization buffer moves every probe out of them (a length stays within the range the
+method itself publishes, never beyond it).
+
 1. Declare the hybridization conditions of the protocol (`temperature_c`, `na_mM`, `mg_mM`,
    `formamide_pct`, `probe_nM`). SSC: 1x = 150 mM NaCl + 15 mM trisodium citrate = 195 mM Na+.
 2. If the method's paper gives a Tm window **with** the conditions it was computed under, reproduce it:
    put those conditions in a per-attribute `hybridization:` override and use the published window
    (MERFISH: 66-76 °C at 300 mM Na+, 5 nM probe, no formamide, 30-nt target regions, Moffitt et al.
    2016 PNAS 113:11046, doi:10.1073/pnas.1612826113; OligoMiner: 42-47 °C at 390 mM Na+ and 50%
-   formamide, Beliveau et al. 2018). When the paper's formula differs from Primer3, also reproduce the
+   formamide, Beliveau et al. 2018). When the paper's formula differs from Primer3, reproduce the
    formula if U-Probe has it (HybISS: 65-75 °C with `tm_method: multi_padlock_design`, Gyllborg et al.
-   2020); otherwise state the offset.
+   2020); otherwise state the measured offset (section above) and either shift the window by it or check
+   the final table with the source function.
+   - When the numbers are in a figure, or the formula is not in the text, read the method's own code
+     (OligoMiner `blockParse.py`, MERFISH `TRDesigner.m`, HybISS `multi_padlock_design`, the STARmap design
+     repository) for the exact function and defaults.
+   - A window given for the whole oligo or for one part is applied to that same quantity. The parts of a
+     split design (the two halves of a padlock/primer unit, two arms) each need their own attribute with
+     their own `hybridization:` override, filtered and checked per part (`check_probes.py --part-tm COLUMN
+     MIN MAX`, `--part-gc`); a window on the whole unit says nothing about an AT-rich half.
 3. Otherwise set the window **relative to the hybridization temperature under the real conditions**.
    Published protocols, recomputed with U-Probe under their own conditions (median of random windows
    in their GC range), sit at these margins above the hybridization temperature:
@@ -99,7 +132,9 @@ Typical values (U-Probe/Primer3, median of random 45%-GC windows, 50 nM probe):
    T_hyb at high formamide. Computed by this skill's authors from the templates' conditions; treat as
    orientation, not as a rule from one paper.
 4. Keep the window **narrow** (MERFISH 10 °C, OligoMiner 5 °C) so all probes of a set bind similarly
-   under one stringency; a variable `length: [min, max]` lets each site reach the window.
+   under one stringency; where the method itself publishes a length range (OligoMiner 35-41 nt, Stellaris
+   18-22 nt), `length: [min, max]` lets each site reach the window, with the caveat that `remove_overlap`
+   keeps the shortest passing window per start (`references/uprobe/troubleshooting.md`).
 5. Stringency is the margin: the closer T_hyb is to Tm, the more a mismatch matters. U-Probe/Primer3
    thermodynamic alignment, 2x SSC: one central mismatch lowers a 20-mer's Tm by ~6 °C (median; 3-9),
    a 30-mer's by ~3 °C; two central mismatches ~13 °C (20-mer) and ~7 °C (30-mer); a central 1-nt

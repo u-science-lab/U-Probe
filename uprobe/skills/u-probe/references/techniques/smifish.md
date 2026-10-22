@@ -45,7 +45,7 @@ FLAP                     3'-dye[ FLAP 28   ]dye-5'
 | Parameter | Value | Conditions / note | Source |
 | --- | --- | --- | --- |
 | Gene-specific length | 26-32 nt | chosen per site to hit the dG target | Tsanov 2016 Fig. 1A, doi:10.1093/nar/gkw784; Oligostan |
-| Affinity | dG37 of the RNA/DNA duplex in [-36, -28] kcal/mol; Oligostan scans targets -36 to -28 in 0.5 steps and keeps probes within +-1 kcal/mol of the best (-32 is only an example) | Wu 2002 NN parameters, 0.115 M salt | Tsanov 2016; Oligostan.r |
+| Affinity | dG37 of the RNA/DNA duplex in [-36, -28] kcal/mol (Fig. 1A). Set-level rule: Oligostan.r tries each target dG from -36 to -28 in 0.5 steps, keeps the probes within +-1 kcal/mol of it (score 1 - 0.1 x \|dG - target\| >= 0.9) and takes the target that leaves the most probes (or a fixed one, e.g. -32) | dG = sum of 16 dinucleotide values over the probe 5'->3' minus a 0.115 M salt term, no initiation or formamide term (section 6) | Tsanov 2016 Fig. 1A; Oligostan.r |
 | dG vs Tm design | dG-based sets beat Tm-based sets; 3 of 7 Tm-designed sets gave no signal | | Tsanov 2016 Suppl. Table 1 |
 | GC | 40-60 % | | Oligostan |
 | Sequence rules | "PNAS rules" (Xu 2009) on the probe: 1 A < 28 %; 2 no AAAA; 3 C 22-28 %; 4 no CCCC; 5 no 4 C in any 6 consecutive nt within the first 12; Oligostan script default 1, 2, 4 (its documentation says all 5) | relax in order 3, 5, 1, 2, 4 | Oligostan; Xu 2009, doi:10.1073/pnas.0812506106 |
@@ -119,13 +119,32 @@ summary: {report_name: rna_report, attributes: [target_gc, binding_tm, target_ma
 ```
 
 How it departs from Oligostan (say so to the user):
-- No RNA/DNA dG attribute in U-Probe. The Tm window is a proxy that equalizes affinity: `length: [26, 32]`
-  makes every length, and `remove_overlap` keeps the shortest window passing the filters at each start.
+- The published selection is on dG37, not Tm, and `annealing_temperature` is a DNA/DNA Tm: a Tm window
+  cannot hold a dG window at its edges (in one test 2 of 48 probes sat 0.2-0.4 kcal/mol outside
+  [-36, -28]). The Tm window above is only a proxy that equalizes affinity: `length: [26, 32]` makes
+  every length, and `remove_overlap` keeps the shortest window passing the filters at each start.
   53-57 C is the median Primer3 Tm of random 26-32-mers (GC 40-60 %) under these conditions, computed
   for this file (26-mers 53 C, 32-mers 58 C), not a published value. Tsanov 2016 found Tm-based designs
-  inferior, so for critical genes compare with Oligostan output.
+  inferior, so finish with the dG filter below.
 - PNAS rules 2 and 4 are filters; rules 1 (A < 28 %), 3 and 5 need a post-filter on the TSV, e.g.
   `b = df['primary.binding']; df = df[b.str.count('A') / b.str.len() < 0.28]`.
+- dG post-filter (reproduces Oligostan.r's `ConvertRNASeq2DeltaGat37` and `dGCalc.RNA.37`: the 16 values
+  below, summed over the L-1 dinucleotides of the probe's binding part read 5'->3', minus
+  `-0.175 ln(0.115) - 0.2` = 0.1785). Run it on a table made with a wider Tm band (e.g. 50-60 C) and
+  more candidates than needed (`equal_space` 48 or more), then keep 24 evenly spaced rows:
+
+```python
+T = dict(zip(['AA','AC','AG','AT','CA','CC','CG','CT','GA','GC','GG','GT','TA','TC','TG','TT'],
+             [-0.2,-1.5,-0.9,-1.0,-1.0,-2.2,-1.2,-1.4,-0.8,-2.4,-1.5,-1.0,-0.3,-1.4,-1.0,-0.4]))
+dg = lambda s: sum(T[s[i:i+2]] for i in range(len(s) - 1)) - 0.1785   # kcal/mol at 37 C, 0.115 M salt
+df['dg37'] = df['primary.binding'].map(dg)
+best = max(range(-72, -55), key=lambda t: (abs(df.dg37 - t / 2) <= 1).sum())   # target in 0.5 steps
+df = df[(df.dg37 >= -36) & (df.dg37 <= -28) & ((df.dg37 - best / 2).abs() <= 1)]
+```
+
+  One target dG for the whole set keeps every probe in a 2 kcal/mol band, inside the [-36, -28]
+  interval, which a Tm band does not guarantee. The script's table is not cited to Wu 2002 in the code;
+  compare with Oligostan output for critical genes. Re-run `scripts/check_probes.py` on the kept rows.
 - RepeatMasker masking is not applied; the off-target search removes most repeat windows.
 - Optional: `gene_expression` as in `smfish_stellaris`; FLAP at the 5' end: `"{flap_site}{binding}"`.
 
@@ -142,10 +161,17 @@ How it departs from Oligostan (say so to the user):
 ## 8. Checklist
 
 - [ ] Gene-specific parts 26-32 nt (or the user's chosen 20-nt variant), rc of the RNA.
+- [ ] dG37 of every gene-specific part in [-36, -28] and within +-1 kcal/mol of one target dG (section 6), not just Tm 53-57 C.
 - [ ] FLAP-binding site = rc(chosen FLAP), at the agreed end; total length <= 60 nt.
 - [ ] 24 probes per RNA (12-48), gaps >= 2 nt; GC 40-60 %; no AAAA / CCCC in the probe.
 - [ ] `target_mapped_genes` = 1 or explained; one FLAP (and dye) per gene imaged together.
 - [ ] Pre-annealing and buffer plan stated (15 % formamide, 1x SSC, 37 C).
+- [ ] Run last, with the file's own values (the Tm column is a proxy and is not checked):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --binding primary.binding --gc 0.40 0.60 --min-gap 2 --min-probes 12
+```
 
 ## 9. References
 

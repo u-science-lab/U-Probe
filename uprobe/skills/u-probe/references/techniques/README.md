@@ -3,7 +3,8 @@
 Read this first when a user names an imaging technology or describes an experiment and you must pick
 a probe architecture and a U-Probe template. Each file covers one technology: architecture, published
 parameters with DOIs, target region, specificity, the U-Probe template and its departures, pitfalls,
-a checklist.
+a checklist that ends with the exact `scripts/check_probes.py` command for that method, with the
+method's own published values (run it with those, not with the values of your protocol file).
 
 ## Decision table
 
