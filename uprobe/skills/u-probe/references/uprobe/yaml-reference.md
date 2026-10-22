@@ -30,6 +30,13 @@ GRCh38_e113:
   jellyfish: false                 # true enables kmer_count
 ```
 
+Only a transcriptome FASTA (and a transcript table)? Write each transcript as a one-exon contig: a GTF
+with one `exon` line per transcript (`1` to its length, `+`, `gene_id`, `gene_name`, `transcript_id`, and
+`tag "MANE_Select";` or `tag "Ensembl_canonical";` where the table says so), `fasta:` the transcript FASTA
+(records = transcript ids) and `align_index: [bowtie]`; `references/uprobe/workflow.md` (section 1) has the
+script and the sizes. Indexes built earlier are found when `bowtie_transcript/<fasta stem>.*`,
+`transcript.fa` and `jf_genome/` sit next to the FASTA (symlinks work).
+
 `uprobe genome fetch` writes such entries plus a `source` record. With `--soft-masked` it fetches Ensembl's
 soft-masked FASTA (`dna_sm`: repeats in lowercase; default name suffix `_sm`). Every template can use it: the
 aligners and Jellyfish ignore case, and only `extracts.target_region.masked: drop` reads the masking. See
@@ -212,7 +219,9 @@ Unset fields keep the legacy PCR-like defaults (`na_mM` 50, `mg_mM` 0, `dntp_mM`
 (without Mg2+ they change no Tm), and `probe_nM` per oligo where its protocol states it (smFISH: 125 nM
 for the 48-oligo set, so 2.6). An `annealing_temperature` or `fold_score` attribute can carry its own
 `hybridization:` mapping, merged over the block (used to reproduce a published Tm window computed under
-other conditions). Values >= 0; `na_mM`, `probe_nM` > 0; `temperature_c`, `formamide_pct` <= 100.
+other conditions, or the Tm of one part of a split unit, which keeps a published window computed under
+its own concentrations separate from the experiment's buffer: one attribute per part, each with its
+override, filtered per part and checked with `check_probes.py --part-tm`). Values >= 0; `na_mM`, `probe_nM` > 0; `temperature_c`, `formamide_pct` <= 100.
 
 ## gene_expression
 
@@ -273,7 +282,11 @@ post_process:
   one when it starts more than `location_interval` nt after the end of the last kept one. It packs from
   the 5' end; of the candidates of one start (a `length` range or a `layout` with ranges) it keeps the
   shortest, or with `prefer: <attribute>` the one with the lowest value (the STARmap template: the split
-  whose halves' Tm match best). It does not choose between different starts, so put quality into `filters`.
+  whose halves' Tm match best; keeping a standard length: `references/uprobe/troubleshooting.md`, "Length
+  ranges are not a way to fill the count"). It is first-fit: it never looks back, so when the passing
+  pool is barely enough it leaves no alternative for a weak window. It does not choose between different
+  starts, so put quality into `filters`, and add only filters the method publishes (compare the yield with and
+  without any other).
 - `off_target_pool`: per target, walks probes in `sorts` order and drops a probe whose off-target gene
   (from `<attr>_off_targets`) is already hit by `max_probes_per_gene` kept probes. `attribute` may be a
   list. Combine with a per-probe filter (e.g. `<= 2`); `<= 1` makes it a no-op (`validate` warns).

@@ -201,6 +201,42 @@ def test_install_for_codex_and_claude(tmp_path, monkeypatch):
     assert bad.exit_code == 2 and '--user applies' in bad.output
 
 
+def _check_commands(text):
+    """The check_probes.py command lines of the fenced bash blocks of a reference, continuations joined."""
+    commands = []
+    for block in re.findall(r'```bash\n(.*?)```', text, flags=re.S):
+        joined = re.sub(r'\\\n\s*', ' ', block)
+        commands += [line.strip() for line in joined.splitlines() if 'scripts/check_probes.py' in line]
+    return commands
+
+
+TECHNIQUES = sorted(p for p in (SKILL / 'references' / 'techniques').glob('*.md') if p.name != 'README.md')
+
+
+@pytest.mark.parametrize('path', TECHNIQUES, ids=lambda p: p.name)
+def test_every_technique_checklist_ends_with_a_check_probes_command(path, tmp_path):
+    text = path.read_text(encoding='utf-8')
+    checklist = re.split(r'^## \d+\. (?:Verification checklist|Checklist)\s*$', text, flags=re.M)
+    assert len(checklist) == 2, f'{path.name}: no checklist section'
+    commands = _check_commands(checklist[1].split('\n## ')[0])
+    assert commands, f'{path.name}: the checklist has no check_probes.py command'
+    for command in commands:  # the options must parse with the script's own argument parser
+        tokens = command.replace('<genome dir>', 'genomes').split()
+        assert tokens[:2] == ['python', '<skill>/scripts/check_probes.py'], command
+        args = check_probes.parse_args(tokens[2:])
+        assert args.tsv.endswith('.tsv'), command
+
+
+def test_the_standard_length_recipe_of_troubleshooting_validates_without_warnings(tmp_path):
+    from uprobe.core.validate import validate_files
+    text = (SKILL / 'references' / 'uprobe' / 'troubleshooting.md').read_text(encoding='utf-8')
+    blocks = [b for b in re.findall(r'```yaml\n(.*?)```', text, flags=re.S) if 'prefer: len_off' in b]
+    assert len(blocks) == 1
+    path = tmp_path / 'standard_length_first.yaml'
+    path.write_text(blocks[0], encoding='utf-8')
+    assert [f.message for f in validate_files(path) if f.severity in ('error', 'warning')] == []
+
+
 # -- scripts/check_probes.py on hand-made tables ---------------------------------------------
 
 _rng = random.Random(3)

@@ -164,6 +164,14 @@ or decoding (ExSeqProcessing).
 - [ ] Codes unique, distance >= 3 (7 rounds) or checksum/distance 2 (4 rounds); Illumina BC =
       code mapped A/C/G/T; SOLiD BC from the repo; all padlocks of a gene share the code.
 - [ ] Probes per gene (8-16) and spacing recorded; shortfalls named.
+- [ ] Run last, with the file's own values (arm GC 40-65 %; the Tm 50 C floor is U-Probe's stand-in at 300 mM Na+, 100 nM, for oligoprop's 52-55; gap 0, or 5 for the brain panels):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding padlock.arm_5 --binding padlock.arm_3 --gc 0.40 0.65 --tm 50 100 --tm-column arm_5_tm --tm-column arm_3_tm \
+    --min-gap 0 --min-probes 8
+```
 
 ## 9. References
 

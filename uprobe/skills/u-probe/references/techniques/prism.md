@@ -169,6 +169,13 @@ U-Probe cannot do:
 - [ ] `target_tm` 65-75 C (model and conditions recorded); no GGGGG; `target_mapped_genes` = 1.
 - [ ] One unique barcode per gene; its R segment has a primer, rc(R), in the RCA pool.
 - [ ] Order notes: 5' phosphate on padlocks, phosphorothioates on primers, dyes on imaging probes.
+- [ ] Run last (Tm 65-75 C on the 40-nt sequence; the paper states no model, so `target_tm` is the HybISS formula; GC is unconstrained, published windows 37.5-67.5 %):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding padlock.arm_5 --binding padlock.arm_3 --tm 65 75 --tm-column target_tm --min-gap 0 --min-probes 1
+```
 
 ## 9. References
 

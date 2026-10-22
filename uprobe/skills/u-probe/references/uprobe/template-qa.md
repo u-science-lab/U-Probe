@@ -28,9 +28,14 @@ A run builds only the indexes its attributes search, so the RNA templates that u
 (`hcr_v3`, `starmap`, `mipseq`, `double_hyb_rca`) build its transcriptome index and not the genome
 index, which only `mapped_sites` (Oligopaint) needs; `uprobe build-index --all` builds both. The
 Oligopaint run used Jellyfish 18-mer indexes restricted to the k-mers of its locus
-(`jellyfish count --if`); a genome-wide one was not built in this test.
+(`jellyfish count --if`); a genome-wide one was not built in this test. The recipe is in
+`references/techniques/oligopaint-dna-fish.md` (section 7).
 
 ## Results
+
+The `smfish_stellaris` rows below were measured before the template filtered GC to 40-60 % and kept 3 nt
+between probes (it then used 2 nt and no GC filter); expect fewer probes per gene with them, and report the
+shortfall (`references/uprobe/troubleshooting.md`). The other rows are unchanged.
 
 Wall time of `uprobe run` with the indexes in place. About 30 s of a human RNA run (20 s of a mouse
 one) is parsing the GTF, once for target validation and extraction; the design itself takes 5-25 s.
@@ -59,10 +64,11 @@ one) is parsing the GTF, once for target validation and extraction; the design i
 
 ## Expected limits of the templates
 
-- `smfish_stellaris`, `hcr_v3` and `mipseq` filter no GC and only a Tm floor taken from the published
-  probe sets: smFISH and each HCR half at least the 37 C hybridization temperature (4% of the Raj
-  2008 probes and 8% of the Choi 2018 pairs are below it), MiP-seq arms and primer site at least 28 C
-  (2% of the published units are below it). AT-rich regions therefore give fewer probes.
+- `smfish_stellaris` filters GC to the Stellaris designer's 40-60 % (Xiao 2023) and, like `hcr_v3` and
+  `mipseq`, a Tm floor taken from the published probe sets: smFISH and each HCR half at least the 37 C
+  hybridization temperature (4% of the Raj 2008 probes and 8% of the Choi 2018 pairs are below it),
+  MiP-seq arms and primer site at least 28 C (2% of the published units are below it). `hcr_v3` and
+  `mipseq` filter no GC. AT-rich regions therefore give fewer probes.
 - `starmap` keeps halves of 50-65 C and, at each start, the split whose halves' Tm match best
   (`remove_overlap.prefer: tm_balance`); it does not aim at Picky's designed 60 C.
 - `merfish` requests more probes than short genes hold; report the shortfall
@@ -72,16 +78,21 @@ one) is parsing the GTF, once for target validation and extraction; the design i
 
 ## check_probes.py options per template
 
-`check_probes.py` finds the parts named `<probe>.binding` by itself; name the others.
+`check_probes.py` finds the parts named `<probe>.binding` by itself; name the others. Use the method's own
+values from its technique file (the same commands end each technique checklist), never the values of the
+protocol you just wrote: a filter written too loosely then verifies itself. `--min-probes` counts distinct
+oligos; `--part-gc COLUMN MIN MAX` and `--part-tm COLUMN MIN MAX` check one part (a half of a split unit)
+with its own window. Tm columns are U-Probe's; for windows published under another formula the offset is
+in the technique file (`merfish`, `oligopaint`).
 
 | Template | Options |
 | --- | --- |
-| `smfish_stellaris` | `--min-gap 2 --min-probes 25 --tm 37 100` |
-| `hcr_v3` | `--min-gap 2 --tm 37 100` |
-| `merfish` | `--gc 0.43 0.63 --tm 66 76 --tm-column binding_tm --min-gap 0` |
-| `seqfish_plus` | `--gc 0.45 0.65 --min-gap 0` |
-| `padlock_iss` | `--sense padlock.arm_5 --sense padlock.arm_3 --tm 65 75 --tm-column target_tm --min-gap 15` |
-| `starmap` | `--min-gap 0 --tm 50 65` |
-| `mipseq` | `--binding padlock.arm_5 --binding padlock.arm_3 --binding rca_primer.binding --tm 28 100 --min-gap 0` |
-| `oligopaint` | `--sense oligopaint_oligo.homology --gc 0.2 0.8 --tm 42 47 --tm-column homology_tm --min-gap 0` (no `--transcripts`) |
+| `smfish_stellaris` | `--gc 0.40 0.60 --min-gap 3 --min-probes 25 --tm 37 100` (`--min-gap 2` only for the Stellaris designer's spacing) |
+| `hcr_v3` | `--min-gap 2 --min-probes 20 --tm 37 100` |
+| `merfish` | `--gc 0.43 0.63 --tm 66 76 --tm-column binding_tm --min-gap 0 --min-probes 48` with the override at `probe_nM: 20`; with the template's 5 nM, `--tm 64.6 74.6` |
+| `seqfish_plus` | `--gc 0.45 0.65 --min-gap 0 --min-probes 24` |
+| `padlock_iss` | `--sense padlock.arm_5 --sense padlock.arm_3 --tm 65 75 --tm-column target_tm --min-gap 15 --min-probes 5` |
+| `starmap` | `--min-gap 0 --min-probes 3 --part-gc target_region 0.30 0.70 --part-tm padlock_tm 50 65 --part-tm primer_tm 50 65 --part-gc padlock.binding 0.30 0.70 --part-gc primer.binding 0.30 0.70` |
+| `mipseq` | `--binding padlock.arm_5 --binding padlock.arm_3 --binding rca_primer.binding --tm 28 100 --min-gap 0 --min-probes 2` |
+| `oligopaint` | `--sense oligopaint_oligo.homology --gc 0.2 0.8 --tm 42 47 --tm-column homology_tm_om --min-gap 0` on a copy of the table with OligoMiner's Tm (technique file, section 8); no `--transcripts` |
 | `double_hyb_rca` | `--binding circle_probe.part1 --binding circle_probe.part3 --binding amp_probe.part2 --tm 35 45 --min-gap 0` |

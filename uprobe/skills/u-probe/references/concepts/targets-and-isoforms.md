@@ -65,6 +65,31 @@ set decides which windows exist.
   housekeeping genes lay on the reference mRNA.
 - `summary.json -> targets.<t>.transcripts` (`chosen_by`: `MANE_Select`, `Ensembl_canonical`, `listed`,
   `all`) records what was used; report it.
+- The reference transcript and the method's windows come first; coverage of other isoforms only breaks
+  ties between windows that both satisfy the method. Do not shorten probes, move off the reference or add
+  filters to reach isoforms the user did not ask for.
+
+### Reference transcript with ~0 TPM
+
+A transcript-level expression table can give the reference transcript (MANE Select or Ensembl canonical)
+about 0 TPM while the gene is well expressed. That is weak evidence, not a reason to leave it: transcript
+TPM of overlapping isoforms is an estimate. Salmon, for instance, infers abundances "given the collection of
+ambiguously mapping sequenced fragments" with an EM algorithm (Patro R et al. 2017 Nat Methods 14:417,
+doi:10.1038/nmeth.4197; kallisto and RSEM do the same), so reads that the isoforms share are split between
+them by the model, not observed. MANE Select is by design one representative transcript per protein-coding
+gene, an exact match between the Ensembl/GENCODE and RefSeq annotations (Morales J et al. 2022 Nature 604:310,
+doi:10.1038/s41586-022-04558-8).
+- Keep the units on sequence of the reference transcript. If the table suggests that another isoform carries
+  the signal, choose windows the reference shares with the expressed isoforms: run on the reference, then
+  check which units also lie on the expressed isoform with `check_probes.py --transcript TARGET=ID
+  --transcripts transcript.fa` (units not on it fail).
+- If the shared sequence holds fewer units than requested, keep the units it does hold and report the
+  shortfall. Add units on other isoforms only as labelled extras, never in place of a unit that satisfies
+  both; do not switch the whole design to another transcript.
+- Do not add coverage filters (for example a minimum share of the expressed isoforms' TPM) or arm-Tm floors
+  the method does not publish to force the choice (SKILL.md rule 10).
+- For the off-target rule the gene's total still counts: `min_fraction_of_target` uses the sum over all the
+  target's transcripts, so a ~0 reference transcript does not make the relative threshold zero.
 
 ## Isoform-specific designs
 
@@ -85,6 +110,21 @@ an isoform-unique exon (or exon part), or an exon-exon junction only that isofor
   exons included.
 - Sites shared by all major isoforms (to count every isoform equally): the same `transcript_names`
   analysis, keeping rows that list every isoform you care about.
+
+## Repeats inside the target
+
+A target with tandem or internal repeats (tandem-repeat genes, repeated domains) contains the same
+window at several positions, and one oligo binds every copy. Treat it explicitly:
+- Count distinct oligos, not positions: identical sequences are one probe. `uprobe run` counts rows, so a
+  table can say "20/20" while holding fewer distinct oligos; `scripts/check_probes.py` reports distinct
+  oligos and, with `--transcripts`, the windows that occur at more than one place of the transcript (all
+  occurrences, not the first).
+- Spacing and overlap hold between oligos over all their sites: two oligos can be non-overlapping at their
+  first sites yet overlap at another copy (`check_probes.py --min-gap` checks every site). Remove such
+  pairs by sequence, keeping the one the design objective prefers.
+- A multi-site oligo adds signal per probe (it binds several copies); report them, and keep the others
+  as the evenly spread set. A shortfall in distinct oligos is reported before any relaxation
+  (`references/uprobe/troubleshooting.md`, "Repeats inside the target").
 
 ## Exon-exon junction windows
 
@@ -128,7 +168,10 @@ at most about (L + g) / (w + g) non-overlapping windows, before filters remove s
 Filters (specificity, Tm, GC) typically remove a sizeable share of positions, so a ~1-kb mRNA rarely
 yields 48 smFISH probes. For short or crowded targets, in this order:
 1. Widen the region: `mRNA` (UTRs) instead of `CDS`; a single reference transcript tiles across junctions.
-2. Shorter windows or a `length` range (keep Tm in window), smaller `location_interval`.
+2. Smaller `location_interval` down to the method's smallest published value. Report the shortfall of the
+   published-length set first: a `length` range is not a rescue, because it changes the length of most of the
+   set (`references/uprobe/troubleshooting.md`, "Length ranges are not a way to fill the count"); take
+   another length only at sites where the standard one fails, and only inside the method's published range.
 3. Rescue specificity losses legitimately: expression table, `exempt_copies` (`references/concepts/specificity.md`).
 4. Accept fewer probes if the method tolerates it (state the expected dimmer spots), or switch to an
    amplified method (HCR, padlock/RCA; `references/techniques/`) for very short RNAs.

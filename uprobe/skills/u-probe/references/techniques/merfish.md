@@ -52,7 +52,7 @@ Other published layouts:
 | --- | --- | --- | --- |
 | Target region | 30 nt | all MERFISH papers | Chen 2015; Moffitt 2016 |
 | GC | 43-63 % | Xia 2019: 33-73 %; Blosser 2021: 35-75 % | Moffitt 2016 SI, doi:10.1073/pnas.1612826113 |
-| Tm | 66-76 C | SantaLucia NN, 300 mM monovalent salt, 5 nM probe, no formamide | Moffitt 2016 SI; TRDesigner.m |
+| Tm | 66-76 C | SantaLucia NN, 300 mM monovalent salt, 5 nM probe, no formamide; the design code (`GetRegionTm`) uses ln(C_T) with C_T = 5 nM, not C_T/4: Primer3 at `probe_nM: 5` reads 1.36 C lower (+1.27 to +1.50, 2,000 random 30-mers, GC 40-60 %); `probe_nM: 20` reproduces the code to 0.01 C (section 8) | Moffitt 2016 SI; TRDesigner.m |
 | Tm (other papers) | Chen: > 70 C, off-target < 72 C, no secondary structure > 76 C (OligoArray); Xia: 61-81 C | | Chen 2015; Xia 2019 |
 | Homopolymer | none in Moffitt 2016; Chen: no runs >= 6 | | Chen 2015 |
 | Specificity | isoform- and gene-specificity index 0.75-1 (17-mer tables, expression-weighted) | Blosser 2021: isoform 0-1 | Moffitt 2016 |
@@ -113,6 +113,10 @@ Published readout probes: Moffitt 2016 Table S1 (16 x 20 nt, RS0015 ... RS0548);
   In U-Probe, `remove_overlap: {location_interval: -20}` lets kept windows overlap by up to 20 nt (a
   start every >= 10 nt) for every target of the protocol: run short genes in a second protocol with
   -20 and `equal_space: {number_desired: 48}`, the rest with 0.
+- Overlap is the exception: use the published non-overlap rule (`location_interval: 0`) and allow overlap
+  only for a transcript too short to carry the requested probes without it, as Xia 2019 did for genes
+  < 1,440 nt (Wang 2018 overlapped up to 20 nt for every RNA). Report the departure and keep the
+  non-overlapping probes of such a gene where the count is reached.
 - Fewer probes lower brightness and detection; genes with very few probes go to sequential rounds.
 - bDNA amplification (Xia 2019 Sci Rep) changes no encoding probe: a primary amplifier ends (3') in the
   readout probe's sequence (bits 1-4 of its Table S1 are the template's readouts) after 5 x (unique
@@ -168,6 +172,13 @@ post_process:
   equal_space: {number_desired: 92}
 ```
 
+Tm under the source formula: the design code adds the strand term as ln(5 nM), Primer3 as
+ln(5 nM / 4). Set the override to `probe_nM: 20` (4 x 5 nM) so U-Probe's `binding_tm` reproduces the
+code's value (difference -0.01 +- 0.02 C on 2,000 random 30-mers) and keep 66-76; left at 5 nM the same
+window rejects valid probes at the low end (17.7 % of random windows fall outside 66-76 at 5 nM,
+9.1 % under the code's formula) and admits ones up to 1.4 C too hot at the upper end. Check with
+the same value (below).
+
 What to edit: `encoding` (per gene, `readouts`: the 4 readout probe sequences of its code word, one
 per on-bit, in any order), the two primer placeholders (20 N each), `equal_space` (92, 64, 48; 16 with bDNA),
 `location_interval` (-20 for short genes), `gene_expression` (your tissue). `genome` needs `bowtie` in
@@ -202,13 +213,21 @@ Template departures:
 
 ## 10. Checklist
 
-- [ ] 30-nt target regions, GC and Tm in the chosen window (state the Tm conditions).
+- [ ] 30-nt target regions, GC 43-63 % and Tm 66-76 C under the source formula (state the conditions;
+      Primer3 `probe_nM: 5` is 1.4 C below it, section 8), no overlap except for transcripts too short.
 - [ ] Every gene has its 4 readouts, each on ~75 % (3-readout design) or ~50 % (2-readout) of probes
       (template: count `encoding_probe.readout_1..3` per gene in the TSV).
 - [ ] Probe = rc(readouts) + rc(RNA) + primers; A spacers present; length as designed (e.g. 132 nt).
 - [ ] Probes per gene reached (92/64/48) or the gene moved to sequential rounds.
 - [ ] Panel abundance: no gene above the per-gene cap; total within budget; blanks in the codebook.
 - [ ] `target_mapped_genes` = 1 or explained (`_unexpressed`, `_copies`); no rRNA/tRNA 15-mers.
+- [ ] Run last, with the published values (`binding_tm` at `probe_nM: 20` as above; with the template's 5 nM
+      use `--tm 64.6 74.6`, the window minus the 1.4 C offset):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --gc 0.43 0.63 --tm 66 76 --tm-column binding_tm --min-gap 0 --min-probes 48
+```
 
 ## 11. References
 

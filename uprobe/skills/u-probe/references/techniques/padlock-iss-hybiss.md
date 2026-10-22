@@ -247,6 +247,14 @@ Variants (each validated with `uprobe validate`):
 - [ ] Sites at least 15 nt apart, up to 5 per gene; with gene-specific RT, every site within its primer's cDNA.
 - [ ] IDs unique per gene; bridge probe = ID nt 2-18 + 2-nt linker + rc(readout); codes at Hamming distance >= 2.
 - [ ] Backbone (ID + anchor) has no transcriptome hit and no strong hairpin with the arms.
+- [ ] Arms are 15 + 15 as published; no Tm is derived per arm (`arm_5_tm`/`arm_3_tm` are reported only) and no extra Tm band is added: the window is the 30-nt `target_tm` under the repo's formula and conditions (75 mM monovalent, 10 mM Mg2+, 20 % formamide, 0.1 uM).
+- [ ] Run last, with the file's own values (Gyllborg 2020: Tm 65-75 C, space between targets 15 nt, 5 per gene; no GC is published):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --sense padlock.arm_5 --sense padlock.arm_3 --tm 65 75 --tm-column target_tm --min-gap 15 --min-probes 5
+```
 
 ## 9. References
 

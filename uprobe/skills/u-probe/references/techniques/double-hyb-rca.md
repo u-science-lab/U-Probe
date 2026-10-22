@@ -216,6 +216,13 @@ state; `step: 20` (the `mipseq` template scans every position).
 - [ ] `n_mapped_genes` and `arm_mapped_genes` = 1 per unit with the intended aligner/expression table.
 - [ ] Fold/Tm filters recomputed after barcodes are final; arm Tm near the hybridization temperature.
 - [ ] Ligase (RNA-templated), hybridization and RCA conditions stated, and marked as borrowed.
+- [ ] Run last (arm Tm 35-45 C under 50 mM Na+, 50 nM, no formamide is the unverified test-protocol criterion; windows overlap by design at `step: 20`, so `--min-gap 0` flags them):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding circle_probe.part1 --binding circle_probe.part3 --binding amp_probe.part2 --tm 35 45 --min-gap 0
+```
 
 ## 9. References
 
