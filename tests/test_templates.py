@@ -29,7 +29,9 @@ META_KEYS = ['name', 'technology', 'description', 'citations', 'parameter_source
              'hybridization', 'replace']
 # Attribute types that need no genome, aligner index or external tool.
 OFFLINE_TYPES = {'gc_content', 'annealing_temperature', 'fold_score', 'self_match', 'length', 'difference'}
-SEQ = ''.join(random.Random(0).choice('ACGT') for _ in range(400))
+# One generator: Random(0) built per base would repeat its first base, a homopolymer, which is one oligo.
+_RNG = random.Random(0)
+SEQ = ''.join(_RNG.choice('ACGT') for _ in range(400))
 
 
 def test_library_has_every_technology():

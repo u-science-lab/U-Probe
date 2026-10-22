@@ -23,7 +23,9 @@ from uprobe.core.sampling import iter_target_windows
 
 ROOT = Path(__file__).parents[1]
 TOY = ROOT / 'tests/examples/toy_genome'
-MIXED = 'ATGCGTACGTTAGCCGATCGATGCTAGCTAGGCTAGCATCGATCGGCTAGCTAGCGATCGATCGTAGCTAGCTGACTGATCGATGCTAGCTAGCTAGG' * 2
+_UNIT = 'ATGCGTACGTTAGCCGATCGATGCTAGCTAGGCTAGCATCGATCGGCTAGCTAGCGATCGATCGTAGCTAGCTGACTGATCGATGCTAGCTAGCTAGG'
+# Two different halves: windows that repeat a sequence are one oligo (process/oligo_sites.py).
+MIXED = _UNIT + _UNIT[::-1]
 POLY_A = 'A' * 150
 FILTERS = {'target_gc': {'condition': 'target_gc >= 0.3'}}
 

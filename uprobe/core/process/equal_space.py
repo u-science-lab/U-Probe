@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Any, Optional
 from uprobe.core.utils import get_logger
 from .regions import region_bounds
+from . import oligo_sites
 
 log = get_logger(__name__)
 
@@ -37,6 +38,21 @@ def positions_along_target(df: pd.DataFrame) -> pd.Series:
     return region_bounds(df)['start']
 
 
+def _collapse_identical_oligos(target_df: pd.DataFrame):
+    """One row per distinct oligo of the target (the first site along it), so that an oligo that
+    binds several sites counts once; a no-op without duplicate window sequences."""
+    work = target_df.reset_index(drop=True)
+    ids = oligo_sites.oligo_ids(work, ['target'])
+    if ids is None or not ids.duplicated().any():
+        return target_df, []
+    bounds = pd.DataFrame({'start': positions_along_target(work)})
+    bounds['end'] = bounds['start'] + work[oligo_sites.OLIGO_COLUMN].str.len() - 1
+    result, report = oligo_sites.collapse_identical(work, ['target'], bounds)
+    log.info(f"equal_space: {len(work) - len(result)} candidate(s) repeat another one's sequence on the same "
+             f"target and were counted once")
+    return result.reset_index(drop=True), report
+
+
 def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
     """Keep number_desired probes per target, spread evenly along the target.
 
@@ -50,10 +66,13 @@ def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
         log.warning("DataFrame does not have 'target' column, skip equal_space processing")
         return df
     result_dfs = []
+    multi_site = []
     targets = df['target'].unique()
     log.info(f"equal_space processing started, there are {len(targets)} targets")
     for target in targets:
         target_df = df[df['target'] == target].copy()
+        target_df, multi = _collapse_identical_oligos(target_df)
+        multi_site += multi
         current_count = len(target_df)
         desired = number_desired(config, target)
         if desired is None:
@@ -80,6 +99,8 @@ def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
             result_dfs.append(selected_df)
     if result_dfs:
         final_df = pd.concat(result_dfs, ignore_index=True)
+        if multi_site:
+            final_df.attrs['multi_site_oligos'] = multi_site
         log.info(f"equal_space processing completed, final number of probes: {len(final_df)}")
         return final_df
     else:

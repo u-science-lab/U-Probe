@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import pytest
 
@@ -148,7 +150,9 @@ def dna_windows(tmp_path, targets):
 def test_remove_overlap_in_dna_mode_with_regions_and_direct_sequences(tmp_path):
     # Direct sequences add transcript_names and start/end columns that genome
     # windows lack (NaN), so all but the first window of each region were dropped.
-    sequence = 'ACGTTGCAAGCTTCGATGCA' * 10
+    rng = random.Random(7)
+    # Not periodic: windows that repeat one sequence are one oligo (oligo_sites.py).
+    sequence = ''.join(rng.choice('ACGT') for _ in range(200))
     mixed = dna_windows(tmp_path, ['1:1-200', '1:201-400', {'S': sequence}])
     assert mixed['transcript_names'].isna().any() and mixed['start'].isna().any()
     config = {'post_process': {'remove_overlap': {'location_interval': 0}}}
