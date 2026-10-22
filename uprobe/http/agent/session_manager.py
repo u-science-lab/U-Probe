@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from pantheon.chatroom import ChatRoom
 from pantheon.factory.template_io import UnifiedMarkdownParser
 from pantheon.utils.vision import parse_image_mentions
-from uprobe.http.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths
+from uprobe.http.agent.output_sandbox import apply_agent_runtime_env, resolve_agent_paths, probe_resource_context
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +186,7 @@ class AgentSessionManager:
 
     def _build_chat_message(self, content: str) -> List[dict]:
         """Build chat message with image support."""
-        return parse_image_mentions(content)
+        return parse_image_mentions(content + "\n\n" + probe_resource_context())
 
     async def upload_file(self, session_id: str, file_obj: BinaryIO, filename: str, upload_dir: Optional[Path] = None) -> Dict[str, Any]:
         """Save an uploaded file and return its metadata."""

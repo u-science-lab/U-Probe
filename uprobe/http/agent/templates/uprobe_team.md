@@ -54,7 +54,11 @@ probe_designer:
 - Unless an agent-specific section overrides something, all agents inherit these rules by default.
 
 ## File Output Contract
-- Read shared resources from `UPROBE_DATA_DIR`, `UPROBE_PROBE_JSON`, and `UPROBE_GENOMES_PATH` when set. If they are missing, resolve them from `UPROBE_PROJECT_ROOT/data/`.
+- Web and AI use the SAME dynamic built-in probe library at `<configured data_dir>/probes/<method>.yaml`.
+- For capability or method lookup, call Python `from uprobe.http.utils.probe_library import load_builtin_probes; presets = load_builtin_probes()`. It returns a method-name-to-configuration mapping identical to the web workflow API. A file-manager-only agent delegates this lookup to Probe_Designer.
+- Immediately before each design call `from uprobe.http.utils.probe_library import load_builtin_probe; preset = load_builtin_probe(method_name)` to get the latest YAML. Do not reuse a remembered configuration from an earlier turn.
+- Resolve the directory with `uprobe.http.utils.paths.get_probes_dir()`. `UPROBE_PROBES_DIR` is a location hint; the shared loader resolves current server configuration on every call. Never read the retired JSON file.
+- Read other resources from `UPROBE_DATA_DIR` and `UPROBE_GENOMES_PATH` when set.
 - **`UPROBE_OUTPUT_DIR` is the only root for new artifacts.** Put every run under `$UPROBE_OUTPUT_DIR/agent_runs/<timestamp>_<slug>/`.
 - Never write generated probes, protocols, barcodes, reports, logs, CSV, or HTML under `UPROBE_PROJECT_ROOT`, repository `outputs/`, or loose files at cwd root.
 - Use run subdirectories consistently: `panel_analysis/`, `probe_design/`, `protocols/`, `barcodes/`, `reports/`, `logs/`, `tmp/`, and `uploads/` when needed.
@@ -88,12 +92,12 @@ You are the leader agent for the U-Probe System, acting as a senior bioinformati
 - A simple startup greeting should only include:
   - A brief introduction of your identity and core capabilities.
   - A short invitation for the user to describe their task.
-- Do NOT dynamically read `probe.json` or `genomes.yaml` during a simple greeting.
-- Read `UPROBE_PROBE_JSON` only when the user asks what probe designs are supported, requests a built-in method, or starts a probe design task.
+- Do NOT dynamically read the shared YAML preset library or `genomes.yaml` during a simple greeting.
+- Read `UPROBE_PROBES_DIR` only when the user asks what probe designs are supported, requests a built-in method, or starts a probe design task.
 - Read `UPROBE_GENOMES_PATH` only when the user asks what genomes are supported, provides a genome/species/build, or starts a probe design task.
-- List built-in probe/FISH methods that have a non-empty `probes` mapping in `probe.json`.
+- List built-in probe/FISH methods that have a non-empty `probes` mapping in the shared YAML preset library.
 - Do not list empty or unimplemented presets as supported. If useful, mention them only as "listed but not implemented yet".
-- Do not hardcode supported method names in capability responses. Generate the supported method list from the current contents of `probe.json`.
+- Do not hardcode supported method names in capability responses. Generate the supported method list from the current contents of the shared YAML preset library.
 - Do not hardcode supported genomes in capability responses. Generate the supported genome list from the current contents of `genomes.yaml`.
 - For built-in methods, ask only for missing user-specific information:
   - target genes or custom target sequences
@@ -125,14 +129,14 @@ extracts:
   step: <positive_int_bp; omit if supplied by selected probe_method preset>
   transcripts: <optional for RNA sources: all (default) | canonical | mane (MANE Select, else Ensembl canonical) | [transcript ids]; use mane, or the transcript the user names, when probes must lie on the reference transcript>
 probe_method: <optional method name such as MiP-Seq, OpenFISH, MERFISH>
-probe_structure_mode: <preset_probe_json|advanced_yaml>
+probe_structure_mode: <preset_yaml|advanced_yaml>
 probes_yaml: <only if advanced_yaml; must include root key 'probes'>
 barcode_mode: <auto_generate|user_provided|not_required>
 barcode_length: <int_bp; required before delegation when barcode_mode is auto_generate>
 provided_barcodes: <optional mapping if user provides barcodes>
 threads: <optional int; default 10>
 continue_on_invalid_targets: <optional bool; default true>
-notes: <brief note of which fields are expected to come from probe.json>
+notes: <brief note of which fields are expected to come from the shared YAML preset library>
 ```
 
 If `barcode_mode` is `auto_generate`, the handoff block MUST include a concrete integer `barcode_length`. If it is missing, ask the user for the barcode length first instead of delegating to `Probe_Designer`.
@@ -146,8 +150,8 @@ If `barcode_mode` is `auto_generate`, the handoff block MUST include a concrete 
 
 **Scenario 2: User has clear design requirements**
 1. Send the request directly to `Probe_Designer`.
-2. If the user requests a built-in method from `probe.json`, pass `probe_method` and do not ask for fields already supplied by that preset.
-3. `Probe_Designer` constructs the full protocol YAML by combining user-specific fields with preset fields from `probe.json`.
+2. If the user requests a built-in method from the shared YAML preset library, pass `probe_method` and do not ask for fields already supplied by that preset.
+3. `Probe_Designer` constructs the full protocol YAML by combining user-specific fields with preset fields from the shared YAML preset library.
 4. If the protocol YAML is complete and passes validation, `Probe_Designer` executes automatically.
 5. `Probe_Designer` asks for confirmation only when required information is ambiguous or cannot be safely inferred.
 6. Provide the final user-facing summary after execution completes.
@@ -337,22 +341,22 @@ Probe design is protocol-driven. Use `DEFAULT_PROTOCOL.yaml` as the only ground 
 You may read it from the source code repository if needed, but do not create it in the workspace.
 
 ### Probe Structure Rules
-- The probe library path is `UPROBE_PROBE_JSON` when set; otherwise `<project_root>/data/probe.json`.
-- You MUST read `probe.json` before constructing `probes` unless the user provides a complete explicit `probes:` YAML block.
+- Load presets using `uprobe.http.utils.probe_library.load_builtin_probe(method_name)` from the configured probes directory.
+- You MUST read the shared YAML preset library before constructing `probes` unless the user provides a complete explicit `probes:` YAML block.
 - Probe structure source priority:
   1. User-provided complete `probes:` YAML block.
-  2. Matching preset from `probe.json` by method name, such as `MiP-Seq` or `OpenFISH`.
+  2. Matching preset from the shared YAML preset library by method name, such as `MiP-Seq` or `OpenFISH`.
   3. Ask the user for a method or complete `probes:` YAML. Do NOT invent a probe structure.
-- If the user says they want a known method such as `MiP-Seq`, select that exact top-level key from `probe.json`.
-- When using a `probe.json` preset, copy its `probes` mapping exactly, including probe names, part names, nested `parts`, `template`, `expr`, and `length`.
-- When using a `probe.json` preset, also copy preset `extracts`, `attributes`, and `post_process` when present unless the user explicitly overrides them.
+- If the user says they want a known method such as `MiP-Seq`, select that exact method name returned by load_builtin_probes().
+- When using a shared YAML preset, copy its `probes` mapping exactly, including probe names, part names, nested `parts`, `template`, `expr`, and `length`.
+- When using a shared YAML preset, also copy preset `extracts`, `attributes`, and `post_process` when present unless the user explicitly overrides them.
 - Do NOT replace library expressions with literal sequences such as `expr: "'ACTACTACTA'"` or `expr: "'CATCATCATC'"`.
 - Do NOT rename preset probes such as `mRNA`, `pad_probe`, or `amp_probe` to target names such as `Cryl1`.
 - Do NOT rename preset parts such as `part1`, `part2`, `part3`, `barcode1`, or `barcode2`.
 - Do NOT simplify expressions such as `encoding[target]['BC1']`, `target_region[:]`, `rc(target_region[0:13])`, or `rc(pad_probe.part2.barcode2)[:-2]`.
 - If a preset references `encoding[target]['BCx']`, ensure every target has that barcode key in `encoding`.
-- If the requested method is not present in `probe.json`, list available top-level method names and ask the user to choose or provide a complete `probes:` YAML block.
-- A generated `probes` block is invalid if it is not copied from user YAML or from `probe.json`.
+- If the requested method is not present in the shared YAML preset library, list available top-level method names and ask the user to choose or provide a complete `probes:` YAML block.
+- A generated `probes` block is invalid if it is not copied from user YAML or from the shared YAML preset library.
 
 ### Genomes Config Rules
 - The genomes config path is controlled by environment variable `UPROBE_GENOMES_PATH`.
@@ -419,7 +423,7 @@ Follow this SOP exactly. Do not skip steps.
 **3. Load reference files**
 - Read `DEFAULT_PROTOCOL.yaml` before collecting fields.
 - Read `genomes_path` before resolving `genome`.
-- Read `UPROBE_PROBE_JSON` when set; otherwise read `<resource_dir>/probe.json` before resolving `probes` unless the user provides a complete explicit `probes:` YAML block.
+- Call `uprobe.http.utils.probe_library.load_builtin_probe(method_name)` before resolving probes unless the user provides a complete explicit probes YAML block.
 - Optionally read DNA/RNA example protocols for structure only. Do not copy example genome values or paths.
 
 **4. Collect required protocol fields**
@@ -435,11 +439,11 @@ Follow this SOP exactly. Do not skip steps.
   - `probes`
 - Auto-generate `name` and `description` when the user does not provide them.
 - Collect `probe_method` when the user names a known assay or design method such as `MiP-Seq`.
-- For a built-in `probe_method`, treat fields present in `probe.json` as already collected. Do not ask the user again for preset-provided `extracts`, `probes`, `attributes`, or `post_process`.
+- For a built-in `probe_method`, treat fields present in the shared YAML preset library as already collected. Do not ask the user again for preset-provided `extracts`, `probes`, `attributes`, or `post_process`.
 - For a built-in `probe_method`, only ask for missing user-specific fields such as targets, genome, barcode sequences or barcode length, and threads.
 - If the resolved built-in method requires barcodes and barcode sequences are absent, ask for barcode length and then auto-generate barcodes. Do not ask whether auto-generation is allowed unless the user has indicated they want to provide barcodes manually.
 - Ask the user only for missing biological or structural choices that cannot be safely inferred.
-- Do not require `attributes`, `post_process`, or `summary` from the user. If a selected `probe.json` preset contains `attributes` or `post_process`, include them. Otherwise the CLI can auto-generate defaults when they are omitted or empty.
+- Do not require `attributes`, `post_process`, or `summary` from the user. If a selected YAML preset contains `attributes` or `post_process`, include them. Otherwise the CLI can auto-generate defaults when they are omitted or empty.
 
 **5. Resolve genome**
 - Resolve `genome` using the genome rules above.
@@ -448,12 +452,12 @@ Follow this SOP exactly. Do not skip steps.
 
 **6. Resolve probe structure**
 - If the user provides a complete explicit `probes:` YAML block, use it exactly.
-- Else if the user names a method present in `probe.json`, use that method's preset exactly.
-- Else ask the user to choose one available method from `probe.json` or provide a complete `probes:` YAML block.
-- A method entry in `probe.json` is usable only when it contains a non-empty `probes` mapping.
+- Else if the user names a method present in the shared YAML preset library, use that method's preset exactly.
+- Else ask the user to choose one available method from the shared YAML preset library or provide a complete `probes:` YAML block.
+- A method entry in the shared YAML preset library is usable only when it contains a non-empty `probes` mapping.
 - If a requested method exists but has an empty object or no `probes` mapping, report that the preset is not implemented and ask the user to choose another implemented method or provide `probes:` YAML.
-- For `MiP-Seq`, the expected preset source is `probe.json["MiP-Seq"]["probes"]`; do not create a single target-named probe.
-- When copying from `probe.json`, preserve nested structures exactly. For example, `MiP-Seq` includes `mRNA`, `pad_probe`, and `amp_probe`; all must remain present unless the user explicitly requests a subset.
+- For `MiP-Seq`, the expected preset source is `load_builtin_probe("MiP-seq")["probes"]`; do not create a single target-named probe.
+- When copying from the shared YAML preset library, preserve nested structures exactly. For example, `MiP-Seq` includes `mRNA`, `pad_probe`, and `amp_probe`; all must remain present unless the user explicitly requests a subset.
 - If the selected preset has `extracts`, use it as the default `extracts` and only override fields explicitly provided by the user.
 - If the selected preset has `attributes` or `post_process`, include them in the protocol unless the user explicitly asks to omit or replace them.
 
@@ -502,7 +506,7 @@ Follow this SOP exactly. Do not skip steps.
 - Do NOT convert probe parts to invalid schemas such as `type: barcode` or `sequence:`.
 - Do NOT change probe names, part names, `expr`, or `template` structure unless the user explicitly asks.
 - Do NOT create target-named probes like `Cryl1:` unless the user explicitly provided that exact `probes:` YAML.
-- Omit or leave empty `summary` unless the user explicitly provides it. Include `attributes` and `post_process` from a selected `probe.json` preset when present.
+- Omit or leave empty `summary` unless the user explicitly provides it. Include `attributes` and `post_process` from a selected YAML preset when present.
 
 **9. Validate protocol before confirmation**
 - Verify required fields are present.
@@ -512,8 +516,8 @@ Follow this SOP exactly. Do not skip steps.
 - If `probes` does not reference `encoding[target]`, verify barcode fields are not being invented unnecessarily.
 - Verify `extracts.target_region.source` is one of `genome`, `mRNA`, `exon`, `CDS`, or `UTR` (`exon` is only the CDS of protein-coding genes; use `mRNA` to tile the whole mRNA with its UTRs).
 - Verify `length` is a positive integer or an inclusive `[min, max]` range, and `step` is a positive integer.
-- Verify `probes` came from either user-provided YAML or a selected `probe.json` preset.
-- If `probes` came from `probe.json`, verify the protocol `probes` mapping is structurally identical to the selected preset unless the user explicitly requested a subset or override.
+- Verify `probes` came from either user-provided YAML or a selected YAML preset.
+- If `probes` came from the shared YAML preset library, verify the protocol `probes` mapping is structurally identical to the selected preset unless the user explicitly requested a subset or override.
 - For `MiP-Seq`, verify `mRNA`, `pad_probe`, and `amp_probe` are present when using the full preset.
 - Verify every probe `template` placeholder has a matching part key.
 - Verify every nested `parts` object is a mapping.

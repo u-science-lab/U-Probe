@@ -132,10 +132,11 @@ async def test_http_submit_range_and_reject_invalid(monkeypatch):
 
 
 def test_deployed_mip_seq_regression(reference):
-    preset_path = Path(os.environ.get('UPROBE_PRESET', '/home/qzhang/uprobe_all/cathe/probe.json'))
-    if not preset_path.exists():
+    from uprobe.http.utils.probe_library import load_builtin_probe
+    try:
+        preset = load_builtin_probe('MiP-seq')
+    except (FileNotFoundError, KeyError):
         pytest.skip('deployed preset is tested on lc_zq')
-    preset = json.loads(preset_path.read_text())['MiP-seq']
     assert preset['extracts']['target_region'] == {'source': 'exon', 'length': 40, 'step': 1}
     seq, fa, gtf = reference
     old = generate_target_seqs('exon', ['G'], fa, gtf, 40, overlap=39)

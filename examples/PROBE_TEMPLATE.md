@@ -4,7 +4,22 @@
 probe design. Its sequences and thresholds are illustrative and are not validated
 for experimental use.
 
-Copy it to the configured data directory as `probe.json` and customize it locally.
+The web workflow and web AI share `<configured data_dir>/probes/*.yaml`.
+Each filename is the method name (for example, `MiP-seq.yaml`), and each file
+contains that method's configuration directly, without an outer method-name key.
+The existing `/workflow/builtin_probes` endpoint still returns a method-to-config
+mapping. Files are reread on every lookup; bad YAML files are logged and skipped
+individually. The packaged CLI templates are independent and unchanged.
+
+For a one-time conversion of an existing JSON library:
+
+```sh
+python -m uprobe.http.utils.migrate_probes /path/to/probe.json /path/to/data/probes
+```
+
+The conversion preserves all fields and refuses to overwrite an existing
+directory. The original JSON remains available for backup, but is not read at
+runtime. Customize the YAML files in the new directory after migration.
 Keep the production file outside the repository when it contains unpublished designs.
 
 - Barcode lengths are optional. Add `length` to a barcode or `default_length` to

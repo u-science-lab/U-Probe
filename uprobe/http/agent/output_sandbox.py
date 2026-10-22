@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal
 
 from uprobe.http.utils.agent_store import safe_path_component
-from uprobe.http.utils.paths import get_server_root
+from uprobe.http.utils.paths import get_server_root, get_data_dir, get_probes_dir, get_genomes_yaml
 
 
 AgentEntrypoint = Literal["cli", "web"]
@@ -26,7 +26,7 @@ class AgentRuntimePaths:
     output_root: Path
     memory_root: Path
     data_dir: Path
-    probe_json: Path
+    probes_dir: Path
     genomes_path: Path
 
 
@@ -63,7 +63,7 @@ def cli_session_component(chat_id: str | None = None) -> str:
 
 def _resolve_project_root(workspace: Path) -> Path:
     ws = workspace.expanduser().resolve()
-    if (ws / "data" / "probe.json").exists() and (ws / "data" / "genomes.yaml").exists():
+    if (ws / "data" / "genomes.yaml").exists():
         return ws
     return get_server_root().expanduser().resolve()
 
@@ -125,7 +125,7 @@ def resolve_agent_paths(
 
     workspace_root = (workspace or get_server_root()).expanduser().resolve()
     project_root = _resolve_project_root(workspace_root)
-    data_dir = project_root / "data"
+    data_dir = get_data_dir()
     effective_session_id = cli_session_component(session_id) if entrypoint == "cli" else session_id
     output_root = _resolve_output_root(
         entrypoint=entrypoint,
@@ -151,8 +151,8 @@ def resolve_agent_paths(
         output_root=output_root,
         memory_root=memory_root,
         data_dir=data_dir,
-        probe_json=data_dir / "probe.json",
-        genomes_path=data_dir / "genomes.yaml",
+        probes_dir=get_probes_dir(),
+        genomes_path=get_genomes_yaml(),
     )
 
 
@@ -162,9 +162,26 @@ def apply_agent_runtime_env(paths: AgentRuntimePaths) -> None:
     os.environ["UPROBE_PROJECT_ROOT"] = str(paths.project_root)
     os.environ["UPROBE_WORKSPACE_ROOT"] = str(paths.workspace_root)
     os.environ["UPROBE_DATA_DIR"] = str(paths.data_dir)
-    os.environ["UPROBE_PROBE_JSON"] = str(paths.probe_json)
+    os.environ.pop("UPROBE_PROBE_JSON", None)
+    os.environ["UPROBE_PROBES_DIR"] = str(get_probes_dir())
     os.environ["UPROBE_GENOMES_PATH"] = str(paths.genomes_path)
     os.environ["UPROBE_OUTPUT_DIR"] = str(paths.output_root)
+
+
+def probe_resource_context() -> str:
+    """Update old conversations without reading templates on a greeting."""
+    return (
+        "[Application probe resource context]\n"
+        f"Current built-in library: {get_probes_dir()} (<method>.yaml). "
+        "This replaces earlier probe.json resource instructions. For method lookups "
+        "use Python uprobe.http.utils.probe_library.load_builtin_probes(); it returns "
+        "method names mapped to configurations, exactly like the web workflow API. "
+        "Immediately before a design, call load_builtin_probe(method_name) from the "
+        "same module to read the latest configuration. Never use remembered presets "
+        "or the retired JSON file. A file-manager-only agent delegates this lookup "
+        "to Probe_Designer. A greeting does not require a lookup.\n"
+        "[/Application probe resource context]"
+    )
 
 
 def resolve_cli_agent_output_dir(chat_id: str | None) -> Path:

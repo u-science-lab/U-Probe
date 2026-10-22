@@ -13,7 +13,8 @@ from datetime import datetime
 from uprobe.http.routers.task import TaskRead, TaskParameters, update_task_in_db
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.core.api import UProbeAPI
-from uprobe.http.utils.paths import get_barcodes_csv, get_probe_json
+from uprobe.http.utils.paths import get_barcodes_csv
+from uprobe.http.utils.probe_library import load_builtin_probes
 
 CSV_FILE_PATH = get_barcodes_csv()
 
@@ -120,11 +121,7 @@ async def get_barcodes_dict(barcode: str):
 @workflow.get("/builtin_probes")
 async def get_builtin_probes():
     try:
-        probe_json_path = get_probe_json()
-        if not probe_json_path.exists():
-            return {}
-        with open(probe_json_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        return load_builtin_probes()
     except Exception as e:
         logging.error(f"Failed to load built-in probes: {e}")
         raise HTTPException(status_code=500, detail="Failed to load built-in probes")

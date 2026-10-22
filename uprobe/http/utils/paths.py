@@ -102,9 +102,9 @@ def get_barcodes_csv() -> Path:
     """Return the path to the barcodes CSV file."""
     return (get_data_dir() / "barcodes" / "KYRCA 2-2-12.csv").resolve()
 
-def get_probe_json() -> Path:
-    """Return the path to the probe.json file."""
-    return (get_data_dir() / "probe.json").resolve()
+def get_probes_dir() -> Path:
+    """Shared built-in YAML library; resolve the configured data directory anew."""
+    return (get_data_dir() / "probes").resolve()
 
 def get_tasks_dir() -> Path:
     """Return the directory for storing user tasks."""
