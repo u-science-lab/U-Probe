@@ -27,8 +27,18 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
   **ignore silently**: misspelled `post_process` step (e.g. `remove_overlaps`), filter or sort on an
   unknown column, `or`/`|` or text after a number in a condition. Always validate after editing.
 - **Symptom:** `condition` rejected or misread. **Cause:** only `<column> <op> <number>` joined by `&`;
-  no negative numbers, no scientific notation, no `or`. **Fix:** split into several filters; write
-  `0.00001` not `1e-5`; `fold_score` is >= 0, so `target_fold <= 5`, never `>= -5`.
+  a signed number is fine (`dg37 >= -36`), scientific notation and `or` are not. **Fix:** split into several
+  filters; write `0.00001` not `1e-5`; `fold_score` is >= 0, so `target_fold <= 5`, never `>= -5`.
+- **Symptom:** `validate` warns `tm_method merfish_design (or oligominer) uses ...; ... not declared`, or
+  `does not use ...`. **Cause:** a design code's formula reads only some conditions; one it reads is not
+  declared (it then runs at the legacy PCR defaults, e.g. 64.9 instead of 42.9 °C for an OligoMiner example
+  probe), or the attribute's override declares one it ignores. **Fix:** give the attribute the published
+  window's conditions as its override (`hybridization: {na_mM: 300, probe_nM: 5}` for MERFISH, `{na_mM: 390,
+  probe_nM: 25, formamide_pct: 50}` for OligoMiner) and nothing else.
+- **Symptom:** `validate` warns that `rna_dna_dg37` on `target_region` reads it as the probe. **Cause:**
+  `target_region` is the RNA sense sequence; with `sequence: probe` (the default) the value is that of the
+  other strand (up to 8.8 kcal/mol off). **Fix:** put the attribute on the probe's binding part, or keep
+  `target_region` with `sequence: target`.
 - **Symptom:** `validate` warns `... is sorted descending, which ranks the most structured candidates
   first`; or the top-ranked probes have the highest `_fold`, `_self_match` or `_kmer_count`.
   **Cause:** lower is better for these scores (`fold_score` is -MFE), but protocols that kept the
@@ -42,7 +52,8 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
 
 - **Symptom:** `AssertionError: bowtie must be enabled in genome align_index` (or `bowtie2`,
   `Jellyfish must be enabled`). **Cause:** an attribute needs an index the genome entry does not list.
-  **Fix:** add `bowtie`/`bowtie2` to `align_index` or set `jellyfish: true`; `uprobe build-index`.
+  **Fix:** add `bowtie`/`bowtie2` to `align_index` or set `jellyfish: true` (or `locus_only: true` on the
+  `kmer_count` attribute, which needs no genome-wide table); `uprobe build-index`.
 - **Symptom:** run fails with `FileNotFoundError` naming `bowtie-build` (at `build_index`) or `bowtie`
   (at the attributes), or `validate -g` warns `bowtie-build and bowtie not found on PATH`. **Cause:** Bowtie 1 not installed (it is a separate
   package from Bowtie2). **Fix:** `conda install -c bioconda bowtie`; check `which bowtie bowtie-build`.
@@ -62,7 +73,21 @@ Start every diagnosis from the exit code and `summary.json` (`status`, `message`
   length has its own Jellyfish index, `jf_genome/<stem>.k<kmer_len>.jf` (`.stranded.jf` with `strand:
   sense` or `antisense`), built when first needed (an index left by older versions, `jf_genome/<stem>.jf`,
   is reused only if its header has the same k).
-  **Fix:** expected; keep one `kmer_len` per genome to build once, and delete indexes you no longer use.
+  **Fix:** for a locus-sized target set `locus_only: true` on the attribute: one pass over the genome counts
+  only the candidates' k-mers (about a minute for human, a few MB). For genome-wide tables keep one
+  `kmer_len` per genome to build once, and delete indexes you no longer use.
+- **Symptom:** `kmer_count` with `locus_only` fails in `jellyfish count`, or `validate` warns `jellyfish is
+  not on PATH`. **Cause:** no Jellyfish, or Jellyfish 1.x, which has no `--if`. **Fix:** install Jellyfish 2
+  (`conda install -c bioconda kmer-jellyfish`; `jellyfish --version` prints 2.x).
+- **Symptom:** `validate`, the run or `genome add --existing-index` stops on an index under `indexes:` whose
+  records are not named `<gene_id>_<transcript_id>` (e.g. `ENST01.1 -> gene 'ENST01.1'`). **Cause:** a
+  transcriptome index built from a plain transcript FASTA: `mapped_genes` reads each hit's gene from the record
+  name, so the target's own isoforms would count as off-target genes. **Fix:** build it from U-Probe's
+  `transcript.fa` (`bowtie-build <index_dir>/transcript.fa <prefix>`), or drop the key and let the run build
+  it. Without `bowtie-inspect`/`bowtie2-inspect` on `PATH` the names are not checked (a warning).
+- **Symptom:** `genome add` warns that FASTA records are not in the records table. **Cause:** they are left
+  out of the annotation and of the off-target index, so their genes can never count as off-targets.
+  **Fix:** list every transcript in the table, or `--unlisted include` (each becomes a gene of its own).
 
 ## Targets and transcripts
 
@@ -97,7 +122,7 @@ report the yield of each change, and do not fill the count with a different leng
 | Stage that removed most | Likely cause | Fix (keep the method's specificity rule) |
 | --- | --- | --- |
 | `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true` (copies only; paralogs stay counted); `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
-| `Filters` (Tm/GC) | window computed under other conditions or formula, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; reproduce the published window under its own conditions; do not stretch it, and do not change lengths set by the method |
+| `Filters` (Tm/GC) | window computed under other conditions or formula, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; reproduce the published window under its own conditions and formula (`tm_method`); do not stretch it, and do not change lengths set by the method |
 | `Remove overlap` | short target: few non-overlapping sites; repeats; first-fit packing | lower `location_interval` to the method's smallest published value (smFISH: 3 nt Raj, 2 nt Stellaris), longer region (`mRNA` not `CDS`), amplified methods for very short RNAs (`references/concepts/targets-and-isoforms.md`); the repeat and packing entries below |
 | `Off-target pool limit` | many probes share one off-target gene | expected; it trades count for cleanliness |
 | `Equal spacing` | never below the request | the shortfall is upstream |
@@ -154,15 +179,16 @@ not move starts (see "Overlapping or clustered probes").
 
 ### Repeats inside the target
 
-- **Symptom:** the table reports `N/N` probes, yet fewer distinct sequences; `check_probes.py` lists
-  distinct oligos below the probe count and windows at more than one place of the transcript. **Cause:** a
-  target with tandem or internal repeats (tandem-repeat genes, repeated domains) contains the same
-  window at several positions; each position is a separate candidate, but one oligo binds every copy.
-  `remove_overlap` and `equal_space` see only the first site of each window, so identical oligos count as
-  separate probes and a window can overlap another oligo at its other copies. **Fix:** count distinct
-  oligos, not positions (`check_probes.py`, `--min-probes`); deduplicate by sequence, treat every site of an
-  oligo as occupied when checking spacing (`--min-gap` does), report multi-site oligos (they also carry more
-  signal per probe), and if the distinct set is short, report it before adding anything.
+- **Symptom:** warning `multi_site_oligos`; rows with `n_sites` > 1 and `oligo_sites`; fewer probes than the
+  target's length suggests. **Cause:** a target with tandem or internal repeats (tandem-repeat genes,
+  repeated domains) contains the same window at several positions, and one oligo binds every copy. U-Probe
+  counts such an oligo once: `remove_overlap` keeps it only where none of its sites is within
+  `location_interval` of a kept one, then all its sites are occupied; `equal_space` ranks it once.
+  **Fix:** nothing to undo. Report the multi-site oligos (they carry more signal per probe) and count
+  distinct oligos (`check_probes.py --min-probes`; `--min-gap` uses `oligo_sites` or every site on the
+  transcript). If the distinct set is short, report it before adding anything. A table made by an older
+  U-Probe (identical rows, no `n_sites`) must be deduplicated by sequence and checked over all sites
+  (`check_probes.py --transcripts ... --min-gap`).
 
 
 ## Formamide makes Tm filters remove everything
@@ -172,10 +198,10 @@ not move starts (see "Overlapping or clustered probes").
   Na+) applied to Tm computed under the protocol's `hybridization` block with formamide. Primer3 lowers
   Tm by about 0.6-0.7 °C per % formamide (`references/concepts/hybridization-and-tm.md`): a 20-mer at 45% GC
   computes about 60 °C in 2x SSC, 40 °C at 30% formamide, 27 °C at 50%.
-- **Fix:** give the Tm attribute the window's own design conditions with a per-attribute override,
-  `hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0}` (as the MERFISH template does); or set
-  the window relative to the real hybridization temperature under the real conditions. Never shift a
-  window without saying which conditions it refers to.
+- **Fix:** give the Tm attribute the window's own formula and design conditions:
+  `tm_method: merfish_design` with `hybridization: {na_mM: 300, probe_nM: 5}` (as the MERFISH template does;
+  `oligominer` for OligoMiner's 42-47 °C); or set the window relative to the real hybridization temperature
+  under the real conditions. Never shift a window without saying which formula and conditions it refers to.
 - Related: auto-generated filters (no `post_process`) put a Tm window [T, T+40] °C on every probe
   *and part*, constant readouts included; one constant part outside it removes every candidate. Write
   `post_process` yourself.

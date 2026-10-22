@@ -237,6 +237,18 @@ def test_the_standard_length_recipe_of_troubleshooting_validates_without_warning
     assert [f.message for f in validate_files(path) if f.severity in ('error', 'warning')] == []
 
 
+def test_the_smifish_protocol_validates_without_warnings(tmp_path):
+    # The dG37 filter sits on the probe's binding part: on target_region it would read the other strand.
+    from uprobe.core.validate import validate_files
+    text = (SKILL / 'references' / 'techniques' / 'smifish.md').read_text(encoding='utf-8')
+    [block] = [b for b in re.findall(r'```yaml\n(.*?)```', text, flags=re.S) if 'name: smifish' in b]
+    protocol = yaml.safe_load(block)
+    assert protocol['attributes']['dg37'] == {'target': 'primary.binding', 'type': 'rna_dna_dg37'}
+    path = tmp_path / 'smifish.yaml'
+    path.write_text(block, encoding='utf-8')
+    assert [f.message for f in validate_files(path) if f.severity in ('error', 'warning')] == []
+
+
 # -- scripts/check_probes.py on hand-made tables ---------------------------------------------
 
 _rng = random.Random(3)
@@ -382,6 +394,37 @@ def test_check_reports_duplicates_and_multi_site_windows(tmp_path):
     # Without duplicates or repeats nothing is reported.
     clean = run_check(tmp_path, rows_at([0, 30]))
     assert 'multi_site' not in clean['targets']['G'] and clean['targets']['G']['distinct_oligos'] == 2
+
+
+def test_check_reads_the_multi_site_oligos_uprobe_lists(tmp_path):
+    # U-Probe keeps an oligo with several sites once and names its sites (n_sites, oligo_sites along the
+    # target): the report and --min-gap use them without a transcript FASTA (DNA designs have none).
+    columns = COLUMNS + ['n_sites', 'oligo_sites']
+    rows = rows_at([0, 60])
+    rows[0].update(n_sites=2, oligo_sites='1-20;41-60')
+    result = run_check(tmp_path, rows, '--min-gap', '3', columns=columns)
+    entry = result['targets']['G']
+    assert entry['uprobe_multi_site'] == [{'probe_id': 'G_0', 'sites': 2, 'positions': ['1-20', '41-60']}]
+    assert any('U-Probe lists 1 oligos with several sites' in w for w in result['warnings'])
+    assert entry['gap']['min'] == 40 and entry['all_site_gap']['target']['min'] == 0  # 41-60 abuts 61-80
+    assert result['failures'] == ['G: smallest gap between different oligos over all their sites (oligo_sites) '
+                                  'is 0 nt < --min-gap 3']
+    assert run_check(tmp_path, rows, '--min-gap', '0', columns=columns)['ok']
+    # A table without the columns (no repeat) reports nothing of the kind.
+    assert 'uprobe_multi_site' not in run_check(tmp_path, rows_at([0, 60]))['targets']['G']
+
+
+def test_check_range_of_any_numeric_column(tmp_path):
+    # e.g. Oligostan's dG37 window of smiFISH probes (rna_dna_dg37, kcal/mol, negative).
+    columns = COLUMNS + ['dg37']
+    rows = rows_at([0, 30, 60])
+    for row, dg in zip(rows, (-30.5, -27.2, None)):
+        row['dg37'] = '' if dg is None else dg
+    result = run_check(tmp_path, rows, '--range', 'dg37', '-36', '-28', columns=columns)
+    assert result['targets']['G']['range']['dg37'] == {'min': -30.5, 'median': -28.85, 'max': -27.2}
+    assert result['failures'] == ['G: 2 dg37 outside range -36 to -28']  # one too weak, one missing
+    with pytest.raises(SystemExit, match='no column'):
+        run_check(tmp_path, rows, '--range', 'dg', '-36', '-28', columns=columns)
 
 
 def test_check_command_line(tmp_path, capsys):

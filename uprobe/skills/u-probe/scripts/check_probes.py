@@ -10,10 +10,12 @@ Reads the final table of `uprobe run` (<name>_<time>_probes.tsv) and checks that
   from --summary, or --transcript TARGET=ID), so the probes are on the reference mRNA;
 - with --gc, --tm, --min-gap or --min-probes, every probe or target meets those limits;
   --part-gc / --part-tm give one binding part (e.g. one half of a split padlock/primer unit) its own
-  window, checked per part and not on the whole oligo;
+  window, checked per part and not on the whole oligo; --range gives any numeric column (e.g. an
+  rna_dna_dg37 column) a window;
 and summarises per target: probes vs requested, distinct oligos, windows found at more than one
-place of the transcript (all occurrences, not the first hit), span along the transcript, spacing
-(--min-gap also over every site of a repeated window), binding length and GC, Tm columns and
+place of the transcript (all occurrences, not the first hit), the oligos U-Probe lists with several
+sites (n_sites, oligo_sites), span along the transcript, spacing (--min-gap also over every site of a
+repeated window, from the transcript or from oligo_sites), binding length and GC, Tm columns and
 off-target columns. Spacing uses target_start/target_end,
 or sub_region (s-e along the region) for genomic regions (source: genome).
 
@@ -153,6 +155,8 @@ def parse_args(argv):
     p.add_argument('--part-tm', nargs=3, action='append', default=[], metavar=('COLUMN', 'MIN', 'MAX'),
                    help='window for one numeric Tm column, e.g. the Tm of one half computed with a '
                         'per-attribute hybridization override; repeatable')
+    p.add_argument('--range', nargs=3, action='append', default=[], metavar=('COLUMN', 'MIN', 'MAX'),
+                   help='window for any numeric column, e.g. an rna_dna_dg37 column (kcal/mol); repeatable')
     p.add_argument('--min-gap', type=int, metavar='NT', help='minimum gap between neighbouring windows')
     p.add_argument('--min-probes', type=int, metavar='N', help='minimum probes per target')
     p.add_argument('--json', action='store_true', help='print the report as JSON')
@@ -173,14 +177,15 @@ def check(args):
         raise SystemExit(f"binding column(s) {missing or 'none found'}; name them with --binding/--sense "
                          f"(columns: {', '.join(columns)})")
     part_limits = {}
-    for kind, items in (('gc', args.part_gc), ('tm', args.part_tm)):
+    for kind, items in (('gc', args.part_gc), ('tm', args.part_tm), ('range', args.range)):
+        option = '--range' if kind == 'range' else f'--part-{kind}'
         for column, low, high in items:
             try:
                 part_limits.setdefault(kind, []).append((column, float(low), float(high)))
             except ValueError:
-                raise SystemExit(f'--part-{kind} {column} {low} {high}: MIN and MAX must be numbers')
+                raise SystemExit(f'{option} {column} {low} {high}: MIN and MAX must be numbers')
             if column not in columns:
-                raise SystemExit(f'--part-{kind}: no column {column!r} (columns: {", ".join(columns)})')
+                raise SystemExit(f'{option}: no column {column!r} (columns: {", ".join(columns)})')
     probes = {c.split('.')[0] for c, _ in parts}
     seq_columns = [c for c in columns if c.split('.')[0] in probes
                    and all(LETTERS.match(r[c]) for r in rows if r[c])]
@@ -297,6 +302,31 @@ def check(args):
                         if args.min_gap is not None and min(all_gaps) < args.min_gap:
                             failures.append(f'{target}: smallest gap between different oligos over all their sites on '
                                             f'{i} is {min(all_gaps)} nt < --min-gap {args.min_gap}')
+        # Oligos U-Probe itself lists with several sites of the target (n_sites, oligo_sites along the target).
+        listed = [(r, key, [SUB_REGION.match(site) for site in (r.get('oligo_sites') or '').split(';') if site])
+                  for r, key in zip(trows, keys)]
+        reported = [(r, sites) for r, _, sites in listed if (number(r.get('n_sites')) or 0) > 1 and sites]
+        if reported:
+            entry['uprobe_multi_site'] = [{'probe_id': r.get('probe_id') or target, 'sites': len(sites),
+                                           'positions': [m.group(0) for m in sites if m][:6]} for r, sites in reported]
+            first = entry['uprobe_multi_site'][0]
+            warnings.append(f"{target}: U-Probe lists {len(reported)} oligos with several sites of the target (n_sites; "
+                            f"e.g. {first['probe_id']}: {', '.join(first['positions'][:3])}); each is one probe that "
+                            "occupies all its sites")
+            if 'all_site_gap' not in entry:  # no transcript to search: spacing over the sites U-Probe lists
+                sites = []
+                for r, key, found in listed:
+                    if found and all(found):
+                        sites += [(int(m.group(1)), int(m.group(2)), key) for m in found]
+                    elif window_position(r):
+                        sites.append((*window_position(r), key))
+                sites = sorted(set(sites))
+                all_gaps = [int(b[0] - a[1] - 1) for a, b in zip(sites, sites[1:]) if a[2] != b[2]]
+                if all_gaps:
+                    entry['all_site_gap'] = {'target': dict(stats(all_gaps), overlaps=sum(g < 0 for g in all_gaps))}
+                    if args.min_gap is not None and min(all_gaps) < args.min_gap:
+                        failures.append(f'{target}: smallest gap between different oligos over all their sites '
+                                        f'(oligo_sites) is {min(all_gaps)} nt < --min-gap {args.min_gap}')
         # Spacing along the target: gap = next start - previous end - 1 (1-based, inclusive).
         located = [window_position(r) for r in trows]
         if all(located):
@@ -324,15 +354,13 @@ def check(args):
                     failures.append(f'{target}: {out} {c} outside GC {args.gc[0]}-{args.gc[1]}')
         for kind, limits in part_limits.items():
             for c, low, high in limits:
-                values = [gc(r[c].upper()) if kind == 'gc' else number(r[c]) for r in trows if kind == 'tm' or r[c]]
-                if kind == 'gc':
-                    entry.setdefault('part_gc', {})[c] = stats(values)
-                else:
-                    entry.setdefault('part_tm', {})[c] = stats(values)
+                values = [gc(r[c].upper()) if kind == 'gc' else number(r[c]) for r in trows if kind != 'gc' or r[c]]
+                entry.setdefault(f'part_{kind}' if kind != 'range' else 'range', {})[c] = stats(values)
                 out = sum(v is None or not low <= v <= high for v in values)
                 if out:
-                    label = 'GC' if kind == 'gc' else 'Tm'
-                    failures.append(f'{target}: {out} {c} outside {label} {low:g}-{high:g}')
+                    label = {'gc': 'GC', 'tm': 'Tm', 'range': 'range'}[kind]
+                    window = f'{low:g} to {high:g}' if kind == 'range' else f'{low:g}-{high:g}'
+                    failures.append(f'{target}: {out} {c} outside {label} {window}')
         for c in tm_columns:
             tms = [number(r[c]) for r in trows]
             entry.setdefault('tm', {})[c] = stats(tms)
@@ -366,6 +394,8 @@ def render(result):
             lines.append(f"  distinct oligos: {e['distinct_oligos']} ({e['duplicate_rows']} duplicate rows)")
         for m in (e.get('multi_site') or [])[:5]:
             lines.append(f"  multi-site window {m['probe_id']}: {m['sites']} sites ({', '.join(m['positions'][:3])})")
+        for m in (e.get('uprobe_multi_site') or [])[:5]:
+            lines.append(f"  oligo with {m['sites']} sites (U-Probe) {m['probe_id']}: {', '.join(m['positions'][:3])}")
         for i, g in (e.get('all_site_gap') or {}).items():
             lines.append(f"  gap over all sites on {i}: {g['min']:g}-{g['max']:g} nt; overlaps: {g['overlaps']}")
         for i, s in (e.get('span') or {}).items():
@@ -376,10 +406,12 @@ def render(result):
         for c, p in (e.get('parts') or {}).items():
             lines.append(f"  {c}: length {p['length']['min']:g}-{p['length']['max']:g}, "
                          f"GC {p['gc']['min']:.2f}-{p['gc']['max']:.2f} (median {p['gc']['median']:.2f})")
-        for kind in ('part_gc', 'part_tm'):
+        for kind in ('part_gc', 'part_tm', 'range'):
             for c, t in (e.get(kind) or {}).items():
                 if t:
-                    lines.append(f"  {c} {kind[5:].upper()}: {t['min']:.2f}-{t['max']:.2f} (median {t['median']:.2f})")
+                    span = f"{t['min']:.2f}-{t['max']:.2f}" if kind != 'range' else f"{t['min']:.2f} to {t['max']:.2f}"
+                    lines.append(f"  {c} {kind[5:].upper() if kind != 'range' else 'range'}: {span} "
+                                 f"(median {t['median']:.2f})")
         for c, t in (e.get('tm') or {}).items():
             if t:
                 lines.append(f"  {c}: {t['min']:.1f}-{t['max']:.1f} (median {t['median']:.1f})")
