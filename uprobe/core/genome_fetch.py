@@ -727,7 +727,8 @@ def search(query: str, division: str = "vertebrates", release: T.Union[int, str,
     return release, search_species(query, table, limit=limit)
 
 
-def _index_status(fasta: T.Optional[Path], aligner: str) -> T.Dict[str, T.Optional[bool]]:
+def _index_status(fasta: T.Optional[Path], aligner: str, entry: T.Optional[dict] = None) -> T.Dict[str, T.Optional[bool]]:
+    from .genome_paths import index_prefix
     from .tools import _TRANSCRIPT_ONLY, _blast_index_exists, _bowtie2_index_exists, _bowtie_index_exists
     check = {"bowtie2": _bowtie2_index_exists, "bowtie": _bowtie_index_exists,
              "blast": _blast_index_exists}.get(aligner)
@@ -735,7 +736,8 @@ def _index_status(fasta: T.Optional[Path], aligner: str) -> T.Dict[str, T.Option
     kinds = ("transcript",) if aligner in _TRANSCRIPT_ONLY else ("genome", "transcript")
     if fasta is None or check is None:
         return {kind: None for kind in kinds}
-    return {kind: check(fasta.parent / f"{aligner}_{kind}" / fasta.stem) for kind in kinds}
+    where = {"fasta": str(fasta), **{k: v for k, v in (entry or {}).items() if k in ("index_dir", "indexes")}}
+    return {kind: check(index_prefix(where, aligner, kind)) for kind in kinds}
 
 
 def describe_genomes(genomes_yaml: T.Union[str, Path]) -> T.List[dict]:
@@ -753,7 +755,7 @@ def describe_genomes(genomes_yaml: T.Union[str, Path]) -> T.List[dict]:
             "fasta_exists": bool(paths["fasta"] and paths["fasta"].is_file()),
             "gtf": str(paths["gtf"]) if paths["gtf"] else None,
             "gtf_exists": bool(paths["gtf"] and paths["gtf"].is_file()),
-            "indexes": {a: _index_status(paths["fasta"], a) for a in entry.get("align_index") or []},
+            "indexes": {a: _index_status(paths["fasta"], a, entry) for a in entry.get("align_index") or []},
             "jellyfish": bool(entry.get("jellyfish", False)),
             "source": source or None,
         })

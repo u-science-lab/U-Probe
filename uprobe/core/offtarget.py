@@ -96,7 +96,8 @@ def bowtie_unavailable(genome) -> str:
     if genome.get('fasta') and not shutil.which('bowtie-build'):
         from .tools import _bowtie_index_exists
         fasta = Path(genome['fasta'])
-        if not _bowtie_index_exists(fasta.parent / 'bowtie_transcript' / fasta.stem):
+        from .genome_paths import index_prefix
+        if not _bowtie_index_exists(index_prefix(genome, 'bowtie', 'transcript')):
             return 'its transcriptome index is not built and bowtie-build is not on PATH'
     return ''
 
@@ -356,9 +357,11 @@ class OffTargetCounter:
 
     def _transcript_fasta(self, aligner: str) -> Path:
         """transcript.fa of the <aligner>_transcript index, extracted again if it is gone."""
+        from .genome_paths import index_root
         from .tools import transcript_fasta
         fasta = Path(self.genome['fasta'])
-        path = transcript_fasta(fasta, fasta.parent / f'{aligner}_transcript')
+        root = index_root(self.genome)
+        path = transcript_fasta(fasta, root / f'{aligner}_transcript', root)
         if not path.is_file() or path.stat().st_size == 0:
             from .gen.fun import extract_trans_seqs
             log.info(f'exempt_copies needs the transcript sequences; extracting {path}')

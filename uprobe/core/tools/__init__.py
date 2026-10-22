@@ -71,7 +71,7 @@ _TRANSCRIPT_ONLY = ("bowtie",)
 
 
 def jellyfish_index(fasta: Path, kmer_len: int, threads: int = 10, size: str = '1G',
-                    canonical: bool = True) -> Path:
+                    canonical: bool = True, directory: Path = None) -> Path:
     """The Jellyfish index of the genome's k-mers of length ``kmer_len``, built if missing.
 
     One index per k, jf_genome/<stem>.k<kmer_len>.jf next to the FASTA, so a
@@ -84,7 +84,7 @@ def jellyfish_index(fasta: Path, kmer_len: int, threads: int = 10, size: str = '
     counts the k-mers as written on the FASTA's forward strand (kmer_count
     with strand: sense or antisense).
     """
-    directory = fasta.parent / 'jf_genome'
+    directory = Path(directory) if directory else fasta.parent / 'jf_genome'
     path = directory / f'{fasta.stem}.k{kmer_len}{"" if canonical else ".stranded"}.jf'
     if path.is_file() and path.stat().st_size > 0:
         return path
@@ -116,13 +116,14 @@ def jellyfish_kmer_len(path: Path):
         return None
 
 
-def transcript_fasta(fasta: Path, outdir: Path) -> Path:
+def transcript_fasta(fasta: Path, outdir: Path, root: Path = None) -> Path:
     """The transcript.fa a transcriptome index in ``outdir`` is built from.
 
-    It lies next to the genome FASTA or in ``outdir``; when neither exists,
-    the path next to the genome FASTA, where it is extracted.
+    It lies next to the genome FASTA (in ``root``, the entry's index_dir, when
+    given) or in ``outdir``; when neither exists, the path there, where it is
+    extracted.
     """
-    candidates = (fasta.parent / "transcript.fa", outdir / "transcript.fa")
+    candidates = ((Path(root) if root else fasta.parent) / "transcript.fa", outdir / "transcript.fa")
     return next((p for p in candidates if p.is_file() and p.stat().st_size > 0), candidates[0])
 
 
@@ -130,7 +131,8 @@ def build_transcripts_index(gtf: Path,
                              fasta: Path,
                              outdir: Path,
                              threads: int = 10,
-                             aligner: str = "bowtie2"
+                             aligner: str = "bowtie2",
+                             root: Path = None
                             ) -> str:
     if aligner not in _TRANSCRIPT_INDEX_EXISTS:
         raise ValueError(f"Unsupported transcript aligner: {aligner}")
@@ -142,7 +144,7 @@ def build_transcripts_index(gtf: Path,
     index_exists = _TRANSCRIPT_INDEX_EXISTS[aligner]
     if index_exists(index_prefix):
         return str(index_prefix)
-    trans_fasta_path = transcript_fasta(fasta, outdir)
+    trans_fasta_path = transcript_fasta(fasta, outdir, root)
     if not trans_fasta_path.is_file() or trans_fasta_path.stat().st_size == 0:
         extract_trans_seqs(gtf, fasta, trans_fasta_path)
     if not trans_fasta_path.is_file() or trans_fasta_path.stat().st_size == 0:
@@ -190,6 +192,8 @@ def build_genome(genome: dict,
     """
     fasta_path = Path(genome['fasta'])
     prefix = fasta_path.stem
+    # Where the derived folders live: the entry's index_dir, else next to the FASTA (genome_paths.index_root).
+    root = Path(str(genome['index_dir'])) if genome.get('index_dir') else fasta_path.parent
     aligner_index: list = genome['align_index']
     for aligner in aligner_index:
         if aligner in _TRANSCRIPT_ONLY:
@@ -200,10 +204,14 @@ def build_genome(genome: dict,
             log.info(f"Not building the {aligner} genome index: no attribute of the protocol searches it "
                      "(uprobe build-index --all builds every index of align_index)")
             continue
-        index_dir = fasta_path.parent / f"{aligner}_genome"/ prefix
+        pointed = (genome.get('indexes') or {}).get(f"{aligner}_genome")  # genome_paths.pointed_index
+        index_dir = Path(str(pointed)) if pointed else root / f"{aligner}_genome" / prefix
         if _GENOME_INDEX_EXISTS[aligner](index_dir):
             log.info(f"index already exists: {index_dir}")
             continue
+        if pointed:
+            raise ValueError(f"indexes.{aligner}_genome points to {pointed}, where no complete {aligner} index "
+                             "exists; fix the prefix or remove the entry so that U-Probe builds one")
         log.info(f"index does not exist or is incomplete, building {aligner} index for {prefix}: {index_dir}")
         index_dir.parent.mkdir(parents=True, exist_ok=True)
         if aligner == "bowtie2":
@@ -219,10 +227,19 @@ def build_genome(genome: dict,
             log.info(f"Not building the {aligner} transcriptome index: no attribute of the protocol searches it "
                      "(uprobe build-index --all builds every index of align_index)")
             continue
-        tran_index_dir = fasta_path.parent / f"{aligner}_transcript"
+        pointed = (genome.get('indexes') or {}).get(f"{aligner}_transcript")
+        if pointed:
+            pointed = Path(str(pointed))
+            if not _TRANSCRIPT_INDEX_EXISTS[aligner](pointed):
+                raise ValueError(f"indexes.{aligner}_transcript points to {pointed}, where no complete {aligner} "
+                                 "index exists; fix the prefix or remove the entry so that U-Probe builds one")
+            log.info(f"Using the existing {aligner} transcriptome index {pointed}")
+            continue
+        tran_index_dir = root / f"{aligner}_transcript"
         build_transcripts_index(gtf=Path(genome['gtf']),
                                 fasta=fasta_path,
                                 outdir=tran_index_dir,
                                 threads=threads,
-                                aligner=aligner)
+                                aligner=aligner,
+                                root=root)
     return genome

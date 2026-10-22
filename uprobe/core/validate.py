@@ -1415,11 +1415,17 @@ class _Validator:
                     self.warning((name, 'align_index', i), f'{" and ".join(missing)} not found on PATH; indexing and '
                                  f'aligning with {aligner} will fail',
                                  f'install it, e.g. conda install -c bioconda {ALIGN_PACKAGES[aligner]}', doc)
+        self.check_index_locations(name, entry, doc)
         attributes = protocol.get('attributes')
         needs = {'bowtie2': [], 'bowtie': [], 'jellyfish': []}
         for attr_name, attr in (attributes.items() if isinstance(attributes, dict) else []):
             aligners = ATTRIBUTE_TYPES.get(str(attr.get('type', '')).lower()) if isinstance(attr, dict) else None
-            if aligners:
+            if aligners and isinstance(attr, dict) and attr.get('locus_only') is True and attr.get('type') == 'kmer_count':
+                # Counts from the FASTA in one pass: no jellyfish: true index, only the program.
+                if not shutil.which('jellyfish'):
+                    self.warning(('attributes', attr_name), 'jellyfish is not on PATH; kmer_count with locus_only '
+                                 'will fail', 'install it, e.g. conda install -c bioconda kmer-jellyfish', doc)
+            elif aligners:
                 needs[attr.get('aligner') if attr.get('aligner') in aligners else aligners[0]].append(attr_name)
         enabled = {'bowtie2': 'bowtie2' in align, 'bowtie': 'bowtie' in align,
                    'jellyfish': entry.get('jellyfish', False) is True}
@@ -1444,6 +1450,34 @@ class _Validator:
                              'install it, e.g. conda install -c bioconda jellyfish', doc)
         if self.lookup_targets and files_ok:
             self.check_targets_in_genome(entry)
+
+    def check_index_locations(self, name, entry, doc):
+        """index_dir and indexes of a genome entry (see genome_paths)."""
+        from .genome_paths import KINDS
+        if 'index_dir' in entry and (not isinstance(entry['index_dir'], str) or not entry['index_dir'].strip()):
+            self.error((name, 'index_dir'), f'index_dir must be a directory path, got {entry["index_dir"]!r}',
+                       'index_dir: /path/to/indexes   # instead of next to the FASTA', doc)
+        if 'indexes' not in entry:
+            return
+        indexes = entry['indexes']
+        if not isinstance(indexes, dict):
+            self.error((name, 'indexes'), 'indexes must map <aligner>_<kind> to the prefix of an existing index',
+                       'indexes:\n  bowtie_transcript: /path/to/prefix', doc)
+            return
+        from .tools import _GENOME_INDEX_EXISTS, _TRANSCRIPT_INDEX_EXISTS
+        for key, prefix in indexes.items():
+            aligner, _, kind = str(key).partition('_')
+            if kind not in KINDS or aligner not in ALIGN_INDEXES:
+                self.error((name, 'indexes', key), f'unknown index {key!r}: use <aligner>_<kind> with kind '
+                           f'{" or ".join(KINDS)}, e.g. bowtie_transcript', 'indexes:\n  bowtie_transcript: /path/to/prefix', doc)
+            elif not isinstance(prefix, str) or not prefix.strip():
+                self.error((name, 'indexes', key), f'{key} must be the prefix of an index, got {prefix!r}',
+                           'bowtie_transcript: /path/to/prefix   # as given to bowtie', doc)
+            else:
+                exists = (_GENOME_INDEX_EXISTS if kind == 'genome' else _TRANSCRIPT_INDEX_EXISTS).get(aligner)
+                if exists is not None and not exists(Path(prefix)):
+                    self.error((name, 'indexes', key), f'no complete {aligner} index at the prefix {prefix}; it is '
+                               'used as it is and never built', 'fix the prefix, or remove the entry so that U-Probe builds one', doc)
 
     def check_targets_in_genome(self, entry):
         if self.source == 'genome':

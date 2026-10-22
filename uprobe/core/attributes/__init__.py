@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
+from ..genome_paths import index_prefix as index_prefix_of, index_root
 from ..hybridization import resolve_conditions, tm_arguments, tm_formula_arguments, tm_method
 from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, mapped_genes_settings,
                          short_for_bowtie2)
@@ -96,7 +97,7 @@ def _add_attributes(
             if attr.get('aligner') == "bowtie2":
                 assert 'bowtie2' in genome.get('align_index', []), "Bowtie2 must be enabled in genome align_index" 
                 fasta_path = Path(genome['fasta'])
-                index_prefix = fasta_path.parent / 'bowtie2_genome' / fasta_path.stem
+                index_prefix = index_prefix_of(genome, 'bowtie2', 'genome')
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 if 'probe_id' in df_probes.columns and 'target' in df_probes.columns:
@@ -138,7 +139,7 @@ def _add_attributes(
                     # One index per k-mer length (and per strand setting), built when first needed.
                     from uprobe.core.tools import jellyfish_index
                     if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"),
-                                              canonical=strand == "both")
+                                              canonical=strand == "both", directory=index_root(genome) / 'jf_genome')
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}
                 if strand == "antisense":
                     recname2seq = {key: reverse_complement(seq) for key, seq in recname2seq.items()}
@@ -162,7 +163,7 @@ def _add_attributes(
                 fasta_path = Path(genome['fasta'])
                 # fisheye calculates mapped genes against a transcriptome index,
                 # not against the genomic chromosome index.
-                index_prefix = fasta_path.parent / f'{aligner}_transcript' / fasta_path.stem
+                index_prefix = index_prefix_of(genome, aligner, 'transcript')
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
                 # Row keys distinguish lengths at the same exon/start position.

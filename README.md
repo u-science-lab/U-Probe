@@ -149,6 +149,31 @@ uprobe genome list -g genomes.yaml    # entries, file and index status (--json f
 - A new entry gets `align_index: [bowtie2]`, plus `bowtie` when Bowtie 1 (`bowtie-build`) is installed, for the [exhaustive off-target search](#off-target-search) (the log says so when it is not), and `jellyfish: true` when Jellyfish is installed. `--align-index` and `--jellyfish/--no-jellyfish` set them; re-fetching keeps the settings of an existing entry.
 - `--build-index` builds every index of the entry's `align_index`, as `uprobe build-index --all` does.
 
+#### 🧬 Use a Transcriptome FASTA and a Transcript Table
+When you have transcript sequences and a table of transcripts instead of a genome and its GTF, register them directly:
+
+```bash
+uprobe genome add human_tx --transcriptome transcripts.fa --records transcripts.tsv --align-index bowtie
+```
+
+- `--transcriptome` is a plain-text FASTA with one record per transcript (the header up to the first space is the transcript id, matched with or without a `.N` version). `--records` is a TSV (CSV when the name contains `.csv`) with a transcript id column (`transcript_id`, `transcript`, `enst`, ...), a gene name column (`gene_name`, `gene`, `symbol`, ...), and optionally a gene id (`gene_id`, `ensg`; default: the gene name), tags and CDS start/end within the transcript (`cds_start`, `cds_end`). MANE Select and Ensembl canonical come from a `tag`/`tags` column (comma-separated GTF tags), a `mane_select`/`mane`/`mane_status` column (1/true/yes, or a value containing `Select`) and an `ensembl_canonical`/`canonical` column (1/true/yes); name other columns with `--transcript-column`, `--gene-column`, `--gene-id-column`, `--tag-column`, `--mane-column` and `--canonical-column`.
+- Each FASTA record becomes a single-exon, plus-strand "contig" of a synthetic GTF (`<out>/<name>/annotation.gtf`; `transcript`, `exon` and, with CDS columns, `CDS` lines carrying `gene_name`, `gene_id`, `transcript_id` and the `tag`s), so `source: mRNA` (and `exon`, `CDS`) with `transcripts: mane` or `canonical` and gene-name targets work as with a genome. `<out>/<name>/transcript.fa` holds the transcripts named `<gene_id>_<transcript_id>`, the names the off-target search reads (a `_` in a gene id is written as `-`), so every transcript of the table is in the off-target index. FASTA records missing from the table are left out (`--unlisted include` keeps each as a gene of its own); the command logs how many.
+- The entry's `fasta` is a link in `<out>/<name>/` to your FASTA, and its `index_dir` is that directory (or `--index-dir`), so nothing is written next to your files. Only the indexes a protocol searches are built (`--align-index bowtie` is enough for the exhaustive off-target search of windows up to 30 nt; no genome-scale index is built). `--dry-run` reads the inputs and prints the entry only.
+
+Any entry can also move or reuse its indexes with two optional keys:
+
+```yaml
+human_tx:
+  fasta: /data/transcripts.fa
+  gtf: /data/annotation.gtf
+  align_index: [bowtie]
+  index_dir: /fast/disk/human_tx          # <aligner>_genome/, <aligner>_transcript/, jf_genome/ and transcript.fa live here, not next to the FASTA
+  indexes:                                # an index that already exists: the prefix given to bowtie / bowtie2
+    bowtie_transcript: /data/bowtie/transcripts   # used as it is, never built; `uprobe validate` errors when it is incomplete
+```
+
+`uprobe genome add ... --existing-index bowtie_transcript=/data/bowtie/transcripts` writes the second key. An index listed under `indexes` must name the transcriptome (`transcript`) or genome (`genome`) index of an aligner in `align_index`; with the default layout the prefix is `<index_dir>/<aligner>_<kind>/<FASTA stem>`.
+
 #### Protocol Templates
 
 U-Probe ships complete protocol templates for published probe technologies: smFISH (Stellaris-style), MERFISH, seqFISH+, HCR v3.0, STARmap, padlock ISS (HybISS), MiP-seq, Oligopaint/OligoMiner and the double-hybridization RCA design. Each template declares the source protocol's [hybridization conditions](#hybridization-conditions); where a paper gives a Tm window together with the conditions it was computed under (MERFISH, Oligopaint, HybISS), the Tm attribute is computed under those conditions and the window is applied as a filter; smFISH, HCR v3 and MiP-seq have a Tm floor and STARmap a Tm window taken from their published probe sets under the template's conditions (`meta.parameter_sources`). A `meta` block cites the source papers, maps every parameter to its source and lists what you must replace (genome, targets, barcodes/readouts). Every template passes `uprobe validate`. Every RNA template designs on the reference transcript (`transcripts: mane`: MANE Select, the Ensembl canonical transcript without it) and takes the region its source designed on (`meta.parameter_sources` quotes the evidence): the whole mRNA for smFISH, MERFISH, HCR v3, HybISS and MiP-seq, whose published probes also lie in UTRs, and the CDS for seqFISH+ and STARmap, which used the coding region, and for the double-hybridization RCA design. Raj et al. 2008 tiled the coding region of each smFISH target; the smFISH template takes the whole mRNA, as the Stellaris designer suggests for expanding a set, so that genes sharing coding sequence with paralogs or pseudogenes still reach 48 probes (`source: CDS` for the coding region alone). Templates whose target windows are 30 nt or shorter (smFISH, seqFISH+, MERFISH, HybISS) count off-target genes with the exhaustive Bowtie 1 search, so their genome needs `bowtie` in `align_index`; the smFISH template keeps only probes without an off-target gene, exempts copies of the target (`exempt_copies`, as the MERFISH and seqFISH+ templates do), recommends (commented out) an expression table, by transcript when you have one, with `min_fraction_of_target`, and offers `off_target_pool` as a commented-out option for genes with many paralogs; see [Off-target search](#off-target-search).
