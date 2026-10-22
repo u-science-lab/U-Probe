@@ -11,6 +11,29 @@ from ..utils import get_logger, reverse_complement
 
 log = get_logger(__name__)
 
+
+def locus_kmer_index(fasta, sequences, kmer_len, threads, size, canonical, directory):
+    """A small Jellyfish index holding the genome counts of only the ``sequences``' k-mers.
+
+    ``jellyfish count --if`` (Marcais & Kingsford 2011) reads the k-mers of a FASTA first and
+    counts, over the genome, only those. Both strands of every sequence are listed, since a
+    stranded index (strand: sense or antisense) holds each k-mer as written on the forward
+    strand. The hash is sized for the k-mers listed unless ``size`` is given.
+    """
+    from uprobe.core.tools import build_jf_index
+    unique = list(dict.fromkeys(seq for seq in sequences if isinstance(seq, str) and len(seq) >= kmer_len))
+    locus_fasta = directory / "locus_kmers.fa"
+    with open(locus_fasta, "w") as handle:
+        for i, seq in enumerate(unique):
+            handle.write(f">{i}\n{seq}\n>{i}r\n{reverse_complement(seq)}\n")
+    kmers = sum(len(seq) - kmer_len + 1 for seq in unique) * 2
+    index = directory / "locus_kmers.jf"
+    log.info(f"Counting {kmers:,} candidate {kmer_len}-mers across {fasta} (jellyfish count --if)")
+    build_jf_index(str(fasta), kmer_len, str(index), threads, size or str(max(1_000_000, 2 * kmers)),
+                   canonical=canonical, only_kmers_in=str(locus_fasta))
+    return index
+
+
 TM_FORMULAS = {"multi_padlock_design": cal_temp_multi_padlock_design,
                "merfish_design": cal_temp_merfish_design,
                "oligominer": cal_temp_oligominer}
@@ -96,7 +119,8 @@ def _add_attributes(
                 )
         elif attr_type == "kmer_count":
             if attr.get('aligner') == "jellyfish":
-                assert genome.get('jellyfish', False) is True, "Jellyfish must be enabled in genome configuration" 
+                assert attr.get("locus_only", False) or genome.get('jellyfish', False) is True, \
+                    "Jellyfish must be enabled in genome configuration" 
                 kmer_len = attr.get("kmer_len", 35)
                 # both: canonical k-mers (both strands); sense / antisense: the sequence's
                 # k-mers / their reverse complements on the FASTA's forward strand.
@@ -104,12 +128,17 @@ def _add_attributes(
                 if strand not in STRAND_OPTIONS:
                     raise ValueError(f"attributes.{attr_name}.strand must be one of "
                                      f"{', '.join(STRAND_OPTIONS)}, got {strand!r}")
-                # One index per k-mer length (and per strand setting), built when first needed.
-                from uprobe.core.tools import jellyfish_index
-                if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"),
-                                          canonical=strand == "both")
                 tmp_dir = tmp_root / attr_name
                 tmp_dir.mkdir()
+                if attr.get("locus_only", False):
+                    # Count only the candidates' k-mers across the genome, in one pass and a small temporary index.
+                    if_path = locus_kmer_index(Path(genome['fasta']), df_probes[actual_target], kmer_len, attr_threads,
+                                               attr.get("size"), strand == "both", tmp_dir)
+                else:
+                    # One index per k-mer length (and per strand setting), built when first needed.
+                    from uprobe.core.tools import jellyfish_index
+                    if_path = jellyfish_index(Path(genome['fasta']), kmer_len, attr_threads, attr.get("size", "1G"),
+                                              canonical=strand == "both")
                 recname2seq = {f"{i}": row[actual_target] for i, (_, row) in enumerate(df_probes.iterrows())}
                 if strand == "antisense":
                     recname2seq = {key: reverse_complement(seq) for key, seq in recname2seq.items()}

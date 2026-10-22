@@ -25,7 +25,7 @@ from .report.excel import EXCEL_MAX_CELL_CHARS, EXCEL_MAX_ROWS, exceeds_excel_ro
 from .report.run_summary import SUMMARY_FILENAME, build_run_summary, save_tsv, write_run_summary
 
 from .tools import build_genome, indexes_used
-from .utils import get_logger
+from .utils import RepeatMask, get_logger
 
 log = get_logger(__name__)
 
@@ -195,6 +195,9 @@ class UProbeAPI:
         # 1. Process Genome Targets
         if genome_targets:
             log.info(f"Extracting {len(genome_targets)} targets from genome using source '{extract_params['source']}'...")
+            # A missing or malformed mask file is a protocol error: it fails the run with its message.
+            mask = (RepeatMask(extract_params['mask'])
+                    if extract_params.get('mask') and extract_params['source'] == 'genome' else None)
             try:
                 df_genome = generate_target_seqs(
                     source=extract_params['source'],
@@ -205,6 +208,7 @@ class UProbeAPI:
                     step=step,
                     transcripts=extract_params.get('transcripts', 'all'),
                     masked=extract_params.get('masked', 'keep'),
+                    mask=mask,
                     df_gtf=self._gtf_table() if extract_params['source'] in RNA_SOURCES else None,
                 )
                 self.transcripts_used = df_genome.attrs.get('transcripts') or {}

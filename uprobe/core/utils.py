@@ -114,7 +114,73 @@ def masked_prefix(seq: str):
     return np.concatenate(([0], np.cumsum(masked)))
 
 
-def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, masked='keep'):
+class RepeatMask:
+    """Masked bases of the loci, from a file given apart from the genome (extracts.target_region.mask).
+
+    A BED file (chrom, start, end: 0-based, end exclusive, in the coordinates of the genome FASTA;
+    e.g. RepeatMasker or UCSC rmsk intervals, optionally gzipped), or a soft-masked FASTA of the
+    loci whose record names are regions, chrom:start-end (1-based, inclusive, as targets are
+    written), with repeats in lowercase. The intervals apply to the extracted locus, so the genome
+    FASTA need not be a soft-masked copy.
+    """
+
+    def __init__(self, path):
+        import numpy as np
+        self.path = str(path)
+        self.intervals = {}  # chrom -> (starts, ends) arrays, BED coordinates
+        self.loci = {}       # chrom -> [(start, boolean array)] 1-based start of a soft-masked FASTA record
+        opener = __import__('gzip').open if self.path.endswith('.gz') else open
+        with opener(self.path, 'rt') as handle:
+            first = next((line for line in handle if line.strip()), '')
+        if first.startswith('>'):
+            with Fasta(self.path) as fa:
+                for name in fa.keys():
+                    chrom, start, end = parse_region(name)
+                    seq = fa[name][:].seq
+                    if len(seq) != end - start + 1:
+                        raise ValueError(f"{self.path}: record {name!r} has {len(seq)} bases, its name says "
+                                         f"{end - start + 1}")
+                    flags = np.frombuffer(seq.encode('ascii', 'replace'), dtype=np.uint8)
+                    self.loci.setdefault(chrom, []).append(
+                        (start, ((flags >= ord('a')) & (flags <= ord('z'))) | (flags == ord('N'))))
+        else:
+            rows = {}
+            with opener(self.path, 'rt') as handle:
+                for number, line in enumerate(handle, 1):
+                    if not line.strip() or line.startswith(('#', 'track', 'browser')):
+                        continue
+                    fields = line.split()
+                    try:
+                        start, end = int(fields[1]), int(fields[2])
+                    except (IndexError, ValueError):
+                        raise ValueError(f"{self.path}, line {number}: expected a BED line "
+                                         f"'chrom start end', got {line.strip()[:60]!r}") from None
+                    if start < 0 or end < start:
+                        raise ValueError(f"{self.path}, line {number}: invalid interval {start}-{end}")
+                    rows.setdefault(fields[0], []).append((start, end))
+            for chrom, pairs in rows.items():
+                array = np.array(pairs, dtype=np.int64)
+                self.intervals[chrom] = (array[:, 0], array[:, 1])
+
+    def chromosomes(self):
+        return set(self.intervals) | set(self.loci)
+
+    def flags(self, chrom, start, end):
+        """Boolean array, one per base of chrom:start-end (1-based, inclusive): masked or not."""
+        import numpy as np
+        flags = np.zeros(end - start + 1, dtype=bool)
+        if chrom in self.intervals:
+            starts, ends = self.intervals[chrom]
+            for a, b in zip(starts[(ends >= start) & (starts < end)], ends[(ends >= start) & (starts < end)]):
+                flags[max(a + 1, start) - start:min(b, end) - start + 1] = True  # BED a..b is 1-based a+1..b
+        for locus_start, locus in self.loci.get(chrom, []):
+            low, high = max(locus_start, start), min(locus_start + len(locus) - 1, end)
+            if low <= high:
+                flags[low - start:high - start + 1] |= locus[low - locus_start:high - locus_start + 1]
+        return flags
+
+
+def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, masked='keep', mask=None):
     """Windows of a region target, chrom:start-end (1-based, inclusive; see parse_region).
 
     sub_region numbers each window along the region, 1-based: window s-e
@@ -122,7 +188,8 @@ def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, maske
     upper-cased. ``masked='drop'`` skips the windows with a masked base, i.e.
     a soft-masked (lowercase) base or an N of a repeat-masked FASTA, as
     OligoMiner mines a repeat-masked genome; the others keep the probe_id
-    they have with ``masked='keep'``.
+    they have with ``masked='keep'``. ``mask`` (a RepeatMask) adds the bases it
+    marks to the masked ones, for ``masked='drop'``, so an unmasked genome can be used.
     """
     if masked not in MASKED_OPTIONS:
         raise ValueError(f"masked must be one of {', '.join(MASKED_OPTIONS)}, got {masked!r}")
@@ -131,6 +198,10 @@ def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, maske
         raw = fa[chrom][start - 1:end].seq
     seq = raw.upper()
     prefix = masked_prefix(raw) if masked == 'drop' else None
+    if prefix is not None and mask is not None:
+        import numpy as np
+        flags = mask.flags(chrom, start, end)
+        prefix = np.concatenate(([0], np.cumsum(((np.diff(prefix) > 0) | flags[:len(raw)]))))
     windows, skipped = [], 0
     for n, (i, stop, tem) in enumerate(iter_target_windows(seq, min_length, step, overlap), start=1):
         if prefix is not None and prefix[stop] != prefix[i]:
@@ -139,7 +210,7 @@ def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, maske
         windows.append([f"{target}_{n}", target, f"{i + 1}-{stop}", tem])
     if prefix is not None:
         log = get_logger(__name__)
-        if raw == seq:
+        if raw == seq and mask is None:
             log.warning(f"{target} has no soft-masked (lowercase) base: if the FASTA is not repeat-masked, "
                         "masked: drop only skips windows with N (use a soft-masked genome, e.g. "
                         "`uprobe genome fetch --soft-masked`)")

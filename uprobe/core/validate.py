@@ -51,7 +51,7 @@ OPTIONAL_KEYS = (
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
 SOURCES = ('genome', 'mRNA', 'exon', 'CDS', 'UTR')
-REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts', 'masked')
+REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts', 'masked', 'mask')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
@@ -63,7 +63,7 @@ ATTRIBUTE_TYPES = {
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -139,6 +139,8 @@ TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; cano
 KMER_STRAND_HINT = ("strand: sense   # both (default): canonical k-mers, both strands; sense: the k-mers as "
                     "written on the FASTA's forward strand (OligoMiner, PaintSHOP); antisense: their reverse "
                     "complements")
+MASK_HINT = ('mask: repeats.bed   # BED (chrom, start, end; 0-based, genome coordinates) of the repeats, or a '
+             'FASTA of soft-masked loci named chrom:start-end; used with masked: drop')
 MASKED_HINT = ('masked: drop   # skip source: genome windows with a soft-masked (lowercase) or N base; '
                'keep (default) upper-cases them')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
@@ -284,6 +286,7 @@ class _Validator:
         self.source = None
         self.layout = None  # compile_layout result
         self.lengths = None  # (min, max) length of extracted target regions
+        self.mask = None  # the RepeatMask of extracts.target_region.mask
         self.genome_targets, self.direct_targets = [], {}
         self.target_names: T.List[str] = []
         self.target_paths: T.Dict[str, tuple] = {}
@@ -424,6 +427,7 @@ class _Validator:
             self.source = source
         self.check_transcripts(region, path)
         self.check_masked(region, path)
+        self.check_mask(region, path)
         if region.get('length') is None:
             self.error(path + ('length',), 'missing `length`',
                        'length: 40   # positive integer, or an inclusive range: [38, 42]')
@@ -472,6 +476,29 @@ class _Validator:
         elif value != 'keep' and self.source is not None and self.source != 'genome':
             self.warning(path + ('masked',), 'masked applies to source: genome and is ignored for gene targets',
                          'remove masked')
+
+    def check_mask(self, region, path):
+        if 'mask' not in region:
+            return
+        value = region['mask']
+        if not isinstance(value, str) or not value.strip():
+            self.error(path + ('mask',), f'mask must be the path of a BED file or a soft-masked FASTA, got {value!r}',
+                       MASK_HINT)
+            return
+        if self.source is not None and self.source != 'genome':
+            self.warning(path + ('mask',), 'mask applies to source: genome and is ignored for gene targets',
+                         'remove mask')
+            return
+        if region.get('masked') != 'drop':
+            self.warning(path + ('mask',), 'mask only has an effect with masked: drop',
+                         'masked: drop   # skip the windows that contain a masked base')
+        from .utils import RepeatMask
+        try:
+            mask = RepeatMask(value)
+        except (OSError, ValueError) as exc:
+            self.error(path + ('mask',), f'cannot read the mask {value}: {exc}', MASK_HINT)
+            return
+        self.mask = mask
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -878,6 +905,9 @@ class _Validator:
                                  _did_you_mean(option, ATTRIBUTE_KEYS, 'known options'))
             kind = attr.get('type')
             kind = str(kind).lower() if kind else None
+            if 'locus_only' in attr and kind != 'kmer_count':
+                self.warning(path + ('locus_only',), 'attribute option \'locus_only\' only applies to kmer_count and is ignored',
+                             'remove it')
             if 'sequence' in attr and kind != 'rna_dna_dg37':
                 self.warning(path + ('sequence',), 'attribute option \'sequence\' only applies to rna_dna_dg37 and is ignored',
                              'remove it')
@@ -899,6 +929,9 @@ class _Validator:
                     self.error(path + ('sequence',), f'sequence must be probe or target, got {attr["sequence"]!r}',
                                'sequence: target   # the attribute\'s target is the RNA in sense orientation; '
                                'probe (default): it is the DNA probe 5\'->3\'')
+                elif kind == 'kmer_count' and 'locus_only' in attr and not isinstance(attr['locus_only'], bool):
+                    self.error(path + ('locus_only',), f'locus_only must be true or false, got {attr["locus_only"]!r}',
+                               'locus_only: true   # count only the candidates\' k-mers, in one pass over the genome')
                 elif kind == 'kmer_count' and attr.get('strand', 'both') not in STRANDS:
                     self.error(path + ('strand',), f'strand must be one of {", ".join(STRANDS)}, got '
                                f'{attr["strand"]!r}', KMER_STRAND_HINT)
@@ -1433,6 +1466,13 @@ class _Validator:
                                f'use an end <= {lengths[chrom]}')
             if self.region().get('masked') == 'drop':
                 self.check_masked_genome(entry['fasta'], lengths)
+            mask = self.mask
+            chromosomes = {m[1] for m in (REGION_RE.match(str(t)) for t in self.genome_targets) if m}
+            if mask is not None and chromosomes and not chromosomes & mask.chromosomes():
+                self.warning(('extracts', 'target_region', 'mask'),
+                             f'the mask has no interval on {", ".join(sorted(chromosomes))}; its chromosomes are '
+                             f'{", ".join(sorted(mask.chromosomes())[:5])}: no window would be masked',
+                             'use the chromosome names of the genome FASTA (chr1 vs 1)')
         elif self.source is not None and self.genome_targets:
             from .gen.fun import read_gtf
             try:

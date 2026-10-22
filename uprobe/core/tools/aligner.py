@@ -1,4 +1,5 @@
 from pathlib import Path
+import shlex
 import subprocess as subp
 
 from uprobe.core.utils import get_logger
@@ -59,7 +60,7 @@ def build_mmseqs_index(fa_path, output_path):
     subp.check_call(cmd, shell=True)
     return output_path
 
-def build_jf_index(fasta, k, out_jf, threads=10, size='64G', canonical=True):
+def build_jf_index(fasta, k, out_jf, threads=10, size='64G', canonical=True, only_kmers_in=None):
     """
     Args:
         fasta (str): input FASTA
@@ -71,15 +72,19 @@ def build_jf_index(fasta, k, out_jf, threads=10, size='64G', canonical=True):
             reverse complement together, i.e. both strands); False counts
             the k-mers as written on the FASTA's forward strand, as
             OligoMiner's and PaintSHOP's dictionaries do
+        only_kmers_in (str): a FASTA whose k-mers are the only ones counted
+            (``jellyfish count --if``: one pass over ``fasta``, an index of
+            the size of that file; k-mers of the file that ``fasta`` lacks
+            get 0, and k-mers outside it are not counted, so they query as 0)
     """
     cmd = [
         'jellyfish', 'count',
         '-m', str(k),
         '-s', size,
         '-t', str(threads),
-    ] + (['-C'] if canonical else []) + [
-        '-o', out_jf,
-        fasta
+    ] + (['-C'] if canonical else []) + (['--if', shlex.quote(str(only_kmers_in))] if only_kmers_in else []) + [
+        '-o', shlex.quote(str(out_jf)),
+        shlex.quote(str(fasta))
     ]
     cmd = " ".join(cmd)
     log.info(f"Call cmd: {cmd}")

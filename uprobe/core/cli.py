@@ -370,6 +370,9 @@ def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None)
                              f"got {region['masked']!r}")
         if region.get('source', 'genome') != 'genome' and region['masked'] != 'keep':
             log.warning('extracts.target_region.masked applies to source: genome; it is ignored for gene targets')
+    if 'mask' in region and (not isinstance(region['mask'], str) or not region['mask'].strip()):
+        raise ValueError(f"extracts.target_region.mask must be the path of a BED file or a soft-masked FASTA, "
+                         f"got {region['mask']!r}")
     if 'layout' in region:
         from .layout import compile_layout
         compile_layout(region['layout'], region['length'])
