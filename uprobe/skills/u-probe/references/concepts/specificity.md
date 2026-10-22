@@ -188,12 +188,14 @@ within 2 substitutions, `target_mapped_genes <= 1`; never exempt paralogs.
 Interspersed repeats make up ~45% of the human genome; Alu alone has > 1 million copies (~10%) (Lander
 ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in UTRs and introns.
 - Repeats within the target RNA itself (tandem copies) are not off-targets but make one oligo bind several
-  sites: count distinct oligos and use all sites for spacing (`references/concepts/targets-and-isoforms.md`).
+  sites: U-Probe counts it once and spaces it over all its sites (`n_sites`, warning `multi_site_oligos`;
+  `references/concepts/targets-and-isoforms.md`).
 - RNA designs: repeat windows hit hundreds of genes. Bowtie2 stops at 100 alignments (counts saturate);
   Bowtie 1 lists them all (slow; `_off_targets` cells beyond Excel's 32,767 characters are cut in the
   `.xlsx`, full in the TSV). A per-probe cap (`<= 1` or
   `<= 2`) removes them; `off_target_pool` alone does not (each gene is hit by one probe only).
-- DNA designs: use `kmer_count` (Jellyfish genome k-mer counts) with a low maximum, and
+- DNA designs: use `kmer_count` (Jellyfish genome k-mer counts; `locus_only: true` for a locus, which
+  counts only its candidates' k-mers with the same result) with a low maximum, and
   `sequence_pattern` for simple repeats. OligoMiner's `kmerFilter` drops a probe if any of its 18-mers
   occurs >= k times in the genome; the paper ran k = 5 (Beliveau BJ et al. 2018 PNAS 115:E2183,
   doi:10.1073/pnas.1714530115). U-Probe's `kmer_count` reports the highest 18-mer count, so the

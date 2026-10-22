@@ -37,6 +37,9 @@ meta:
     - short: ZhuangLab MERFISH_analysis library design example (code)
       title: example_scripts/library_design_example.m
       url: https://github.com/ZhuangLab/MERFISH_analysis/blob/master/example_scripts/library_design_example.m
+    - short: ZhuangLab MERFISH_analysis target region designer (code)
+      title: probe_construction/TRDesigner.m (GetRegionTm)
+      url: https://github.com/ZhuangLab/MERFISH_analysis/blob/master/probe_construction/TRDesigner.m
   parameter_sources:
     - parameter: extracts.target_region.source and transcripts
       value: mRNA of the MANE Select transcript, the Ensembl canonical one without it
@@ -74,9 +77,19 @@ meta:
       value: 0.43-0.63
       source: Moffitt 2016, SI Methods; also 'GC', [43 63]/100 in library_design_example.m
       quote: designed with a GC range of 43-63%, a TM range of 66-76 C
-    - parameter: post_process.filters.binding_tm (with attributes.binding_tm.hybridization)
-      value: 66-76 C at 300 mM monovalent salt, 5 nM probe, no formamide
-      source: Moffitt 2016, SI Methods (quoted under meta.tm_window and the target_gc row)
+    - parameter: post_process.filters.binding_tm (with attributes.binding_tm.tm_method and hybridization)
+      value: >-
+        66-76 C at 300 mM monovalent salt, 5 nM probe, no formamide, computed
+        with the design code's formula (tm_method: merfish_design)
+      source: >-
+        Moffitt 2016, SI Methods (window and conditions, quoted under
+        meta.tm_window and the target_gc row); TRDesigner.m GetRegionTm (the
+        formula: SantaLucia & Hicks 2004 nearest-neighbour sums, salt term
+        0.368 (N-1) ln[Na+], and ln C with C the probe concentration, where
+        Primer3 uses C/4). Primer3 at 5 nM reads about 1.4 C lower, which put
+        cold windows of the published range outside 66 C: GAPDH, ACTB and
+        EEF1A1 (hg38, no expression table) gave 7, 11 and 33 probes with
+        Primer3 and 7, 11 and 38 with this formula.
     - parameter: post_process.remove_overlap.location_interval
       value: 0
       source: Moffitt 2016, SI Methods; threePrimeSpace default 0 in TRDesigner.m
@@ -113,12 +126,14 @@ meta:
     value: [66, 76]
     target: encoding_probe.binding
     attribute: binding_tm
-    conditions: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0, method: SantaLucia nearest-neighbour}
+    conditions: {na_mM: 300, probe_nM: 5, method: "tm_method merfish_design (TRDesigner.m GetRegionTm); no formamide term"}
     source: Moffitt 2016, SI Methods ("assuming a monovalent salt concentration of 300 mM ... and a probe concentration of 5 nM")
     note: >-
-      Applied: attributes.binding_tm.hybridization sets these design
-      conditions (not the experimental ones of the hybridization block) and
-      post_process.filters.binding_tm keeps 66-76 C.
+      Applied: attributes.binding_tm computes the design code's Tm
+      (tm_method: merfish_design) under these design conditions (not the
+      experimental ones of the hybridization block, whose formamide the
+      formula does not use), and post_process.filters.binding_tm keeps
+      66-76 C.
   limitations:
     - >-
       Moffitt 2016 picks 3 of the gene's 4 code-word readouts at random for each
@@ -126,6 +141,7 @@ meta:
       rotates the 4 combinations of 3 deterministically along the RNA (probe_index)
       and always uses configuration A (1 readout 5', 2 readouts 3').
     - Moffitt 2016 used 92 encoding probes per gene; equal_space keeps 92, spread evenly along the RNA rather than taken from the 5' end, and all passing regions of a gene with fewer.
+    - "tm_method merfish_design is ported from TRDesigner.m and checked against a hand calculation of the code's terms; neither the papers nor the repository publish per-probe Tm values to compare with."
   replace:
     - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH here)"
@@ -191,8 +207,10 @@ attributes:
   binding_tm:
     target: encoding_probe.binding
     type: annealing_temperature
-    # Design conditions of the 66-76 C window (meta.tm_window), not the hybridization block.
-    hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}
+    # The design code's formula and conditions of the 66-76 C window (meta.tm_window),
+    # not Primer3 under the hybridization block.
+    tm_method: merfish_design
+    hybridization: {na_mM: 300, probe_nM: 5}
   target_mapped_genes:
     target: target_region
     type: mapped_genes

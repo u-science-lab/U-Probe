@@ -9,8 +9,10 @@ failures: `references/uprobe/troubleshooting.md`. Paths are relative to the skil
 
 - `uprobe --version` (or `python -m uprobe`). Python 3.10+.
 - External tools, called by name from `PATH`: `bowtie` and `bowtie-build` (Bowtie 1, bioconda package `bowtie`),
-  `bowtie2`/`bowtie2-build`, `jellyfish` (only for `kmer_count`), `makeblastdb`/`mmseqs` (only if listed in `align_index`).
-  Install missing ones with `conda install -c bioconda bowtie bowtie2 jellyfish`. U-Probe never installs them itself.
+  `bowtie2`/`bowtie2-build`, `jellyfish` (only for `kmer_count`; Jellyfish 2: `locus_only` runs its `count --if`),
+  `makeblastdb`/`mmseqs` (only if listed in `align_index`). Install missing ones with
+  `conda install -c bioconda bowtie bowtie2 kmer-jellyfish` (`kmer-jellyfish` is Jellyfish 2 on Linux and macOS;
+  check `jellyfish --version`). U-Probe never installs them itself.
   When conda is slow or lacks a package, Bowtie 1 (`bowtie`, `bowtie-build`, `bowtie-inspect`) also comes as
   prebuilt binaries in the release assets of github.com/BenLangmead/bowtie (zip per platform, e.g.
   `bowtie-1.3.1-linux-x86_64.zip`); unzip and put the folder on `PATH`. Never replace it with your own scanner.
@@ -38,39 +40,40 @@ uprobe genome list -g genomes.yaml [--json]    # files present? indexes built?
 - Your own FASTA + GTF: write the entry by hand (`fasta`, `gtf`, `align_index`, `jellyfish`). GTF `gene_name`
   attributes are what `targets` match; MANE/canonical selection needs `tag "MANE_Select"` /
   `tag "Ensembl_canonical"` attributes on the transcript's GTF lines (Ensembl or GENCODE write them).
-- Only a transcriptome FASTA (spliced transcripts) plus a transcript table with MANE/canonical tags: treat each
-  transcript as a one-exon contig and write the two files yourself, then use the entry like any other. The
-  design then needs no genome, and only the index the decisive check needs (Bowtie 1 for windows of
-  <= 30 nt; in HCR also, `references/concepts/specificity.md`):
+- Only a transcriptome FASTA (spliced transcripts, plain text) plus a transcript table: register them, and
+  the design needs no genome and only the index the decisive check needs (Bowtie 1 for windows of <= 30 nt;
+  in HCR also, `references/concepts/specificity.md`):
 
-```python
-# rows: (transcript_id, gene_id, gene_name, tag) with tag "MANE_Select", "Ensembl_canonical" or ""
-with open('transcripts.gtf', 'w') as gtf:
-    for tid, gid, name, tag in rows:
-        attrs = f'gene_id "{gid}"; gene_name "{name}"; transcript_id "{tid}";' + (f' tag "{tag}";' if tag else '')
-        gtf.write(f'{tid}\ttable\texon\t1\t{lengths[tid]}\t.\t+\t.\t{attrs}\n')   # FASTA record = transcript id
+```bash
+uprobe genome add tx_hs --transcriptome transcripts.fa --records transcripts.tsv --align-index bowtie \
+    --out ./genomes --genomes genomes.yaml [--index-dir /fast/disk/tx_hs] [--dry-run]
 ```
 
-```yaml
-tx_hs:                                   # genomes.yaml
-  fasta: /data/tx/transcripts.fa         # one record per transcript id, spliced, + strand
-  gtf: /data/tx/transcripts.gtf
-  align_index: [bowtie]                  # add bowtie2 only if an attribute needs it
-  jellyfish: false
-```
-
-  Targets are the table's `gene_name`s (a different spelling than the user's symbols is the usual miss).
-  U-Probe cuts `transcript.fa` (records `<gene_id>_<transcript_id>`) from these two files and indexes it:
-  budget about three times the FASTA in disk (FASTA, `transcript.fa`, index; a Bowtie 1 index of the human
-  Ensembl 113 transcriptome is 650 MB, below). An index of the same
-  transcriptome built earlier is reused when `bowtie_transcript/` (files named `<fasta stem>.*`) and
-  `transcript.fa` sit next to the FASTA (symlink them); the same holds for `jf_genome/` indexes.
-- Before any genome-scale build (Bowtie2 genome index, genome-wide Jellyfish table, soft-masked copy of the
-  FASTA) estimate the size against the free disk (`df -h .`): a Bowtie2 genome index of a mammalian genome takes
-  a few GB (mouse GRCm39: 3.5 GB, 13.5 min, below), a genome-wide Jellyfish table grows with the number of
-  distinct k-mers of the whole genome, and temporary files come on top. Prefer an existing or
-  shared index, and for a locus-sized DNA FISH target count only the locus' k-mers
-  (`references/techniques/oligopaint-dna-fish.md`, section 6). Never copy a genome to mask it.
+  The table (TSV, or CSV by name) needs a transcript id (FASTA record names, version optional) and a gene
+  name; a gene id, a `tag`/`tags` column (`MANE_Select`, `Ensembl_canonical`), MANE/canonical flag columns and
+  CDS start/end are optional (`uprobe genome add --help` names the columns). Each transcript becomes a
+  one-exon contig of a written GTF, so gene targets, `source: mRNA` and `transcripts: mane`/`canonical` work as
+  with a genome. Targets are the table's gene names (a different spelling than the user's symbols is the usual
+  miss). The table must list every transcript of the FASTA: unlisted records are left out of the off-target
+  index (a warning says how many; `--unlisted include` keeps each as a gene of its own). Running it again with
+  changed sequences or gene ids removes the indexes built from the old ones. Budget about twice the FASTA in
+  disk (`transcript.fa`, records `<gene_id>_<transcript_id>`, and its index; a Bowtie 1 index of the human
+  Ensembl 113 transcriptome is 650 MB, below).
+- Indexes elsewhere or built before: `index_dir:` in an entry puts `<aligner>_genome/`, `<aligner>_transcript/`,
+  `jf_genome/` and `transcript.fa` there instead of next to the FASTA; `indexes:` (or `genome add
+  --existing-index bowtie_transcript=PREFIX`) uses an existing index as it is and never builds over it. A
+  transcriptome index there must have records named `<gene_id>_<transcript_id>` with the GTF's gene ids, i.e.
+  be built from U-Probe's `transcript.fa`: an index of a plain transcript FASTA counts the target's own
+  isoforms as off-target genes, and `validate` and the run stop on it (they list the records with
+  `bowtie-inspect`/`bowtie2-inspect`; without them they only warn). Syntax:
+  `references/uprobe/yaml-reference.md` (genomes.yaml).
+- Before any genome-scale build (Bowtie2 genome index, genome-wide Jellyfish table) estimate the size against
+  the free disk (`df -h .`): a Bowtie2 genome index of a mammalian genome takes a few GB (mouse GRCm39: 3.5 GB,
+  13.5 min, below), a genome-wide Jellyfish table grows with the number of distinct k-mers of the whole genome,
+  and temporary files come on top. Prefer an existing or shared index (`indexes:`). A locus-sized DNA FISH
+  target needs no genome-wide k-mer table: `kmer_count` with `locus_only: true` counts only its candidates'
+  k-mers in one pass over the genome (`references/techniques/oligopaint-dna-fish.md`, section 6). Never copy a
+  genome to mask it: give a repeat BED as `extracts.target_region.mask`.
 
 ### Indexes
 
@@ -78,15 +81,16 @@ tx_hs:                                   # genomes.yaml
 designs anything; build them ahead with `uprobe build-index -p protocol.yaml -g genomes.yaml -t 16` (the
 same indexes; `--all`: every index of `align_index`) or `genome fetch --build-index` (every one).
 
-| `align_index` entry | Builds (next to the FASTA) | Needed by |
+| `align_index` entry | Builds (next to the FASTA, or in `index_dir`) | Needed by |
 | --- | --- | --- |
 | `bowtie` | `bowtie_transcript/` (transcriptome only) | `mapped_genes` with `aligner: bowtie` |
 | `bowtie2` | `bowtie2_genome/` (for `mapped_sites`) and `bowtie2_transcript/` (for `mapped_genes`), each only when an attribute searches it | `mapped_sites`; `mapped_genes` with `aligner: bowtie2` |
 | `blast`, `mmseqs` | genome (and BLAST transcript) databases | nothing in the current attributes |
-| `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length (`.stranded.jf` for `strand: sense`/`antisense`), at the first `kmer_count` with it | `kmer_count` |
+| `jellyfish: true` | `jf_genome/<stem>.k<kmer_len>.jf`, one per k-mer length (`.stranded.jf` for `strand: sense`/`antisense`), at the first `kmer_count` with it | `kmer_count` without `locus_only` |
+| none | a temporary table of the candidates' k-mers in the run's scratch directory, not kept | `kmer_count` with `locus_only: true` (only the `jellyfish` 2.x program) |
 
 - The transcriptome is `transcript.fa` (every GTF transcript, spliced, records `<gene_id>_<transcript_id>`),
-  extracted next to the FASTA once.
+  extracted next to the FASTA (or in `index_dir`) once.
 - Bowtie 1 transcriptome index of human Ensembl 113: about 5 min and 650 MB (README). A Bowtie2 *genome*
   index of a mammalian genome takes much longer (mouse GRCm39: 13.5 min, 3.5 GB); RNA designs, which
   only search the transcriptome, never build it.
@@ -177,7 +181,8 @@ counts, a 100-row preview of the raw candidates and a link to the `--raw` table)
 - `status`, `message`, `warnings[].code` (`invalid_targets`, `no_candidate_windows`,
   `probe_construction_failed`, `stage_removed_all`, `targets_without_probes`,
   `fewer_probes_than_requested`, `off_target_genes_not_in_expression_table`,
-  `targets_not_in_expression_table`, `copies_not_checked`).
+  `targets_not_in_expression_table`, `copies_not_checked`, `multi_site_oligos`: a kept oligo binds
+  several sites of its target, an internal repeat; it counts once and occupies all of them).
 - `targets.<name>`: `candidate_windows`, `probes_constructed`, `after_stage` (count after each stage),
   `final`, `requested_probes`, `top_removal_stage`, `transcripts` (`selection`, `chosen_by`, `ids`).
 - `stages`: before/after/removed per stage, all targets together. `Filters` is one stage: to see which
@@ -191,8 +196,9 @@ Final table columns (TSV): `probe_id`, `target`, `exon_name`, `transcript_names`
 exon), `target_start`/`target_end` (along the target), `target_region` (the target RNA/DNA sense
 sequence of the window), one column per probe and part (`probe`, `probe.part`), one per attribute, and
 for each `mapped_genes` attribute `<attr>_off_targets` (`GENE:mismatches, ...`) and, as configured,
-`<attr>_unexpressed`, `<attr>_hit_transcripts`, `<attr>_copies`. Rows are in `sorts` order, not along the target: sort by `target`, `target_start` to
-see the tiling.
+`<attr>_unexpressed`, `<attr>_hit_transcripts`, `<attr>_copies`; `n_sites` and `oligo_sites` (`start-end;...` along
+the target) when a kept oligo binds several sites. Rows are in `sorts` order, not along the target: sort by
+`target`, `target_start` to see the tiling.
 
 ## 7. Report, then relax
 
@@ -216,13 +222,13 @@ Do these on the final TSV and `summary.json`; report any failure instead of hidi
 | Check | How | Expect |
 | --- | --- | --- |
 | Status | `status`, exit code | `ok`; `partial` only with an explanation per target |
-| Probes per target | `targets.<t>.final` vs `requested_probes`; `check_probes.py` distinct oligos | the technique's minimum (technique file; e.g. Stellaris recommends at least 25 of up to 48 smFISH probes); count distinct oligos, not positions, for repeated targets |
+| Probes per target | `targets.<t>.final` vs `requested_probes`; `check_probes.py` distinct oligos | the technique's minimum (technique file; e.g. Stellaris recommends at least 25 of up to 48 smFISH probes); U-Probe counts an oligo with several sites once (`n_sites`), and so does the check |
 | Right transcripts | `targets.<t>.transcripts` | the isoform the user asked for (`chosen_by`) |
 | Strand | for a few rows: binding part == reverse complement of `target_region` (RNA probes; `references/concepts/probe-architecture.md`) | true; padlocks on cDNA are the exception |
 | Own-gene hit | `target_mapped_genes` on `target_region` with `strand: sense` | >= 1 on every row (0 means the window was not found in its own gene: wrong `strand`, wrong attribute target, or Bowtie2 on < 22 nt); literal-sequence targets absent from the annotation are 0 by design |
 | Off-targets | `<attr>_off_targets`, `off_targets.*.final_off_target_genes`, `_copies` | empty for `<= 1`; copies named and acceptable |
 | Tm, GC | `attributes` stats; histogram from TSV | inside the windows you set; Tm computed under the declared conditions |
-| Spacing | consecutive `target_start` differences per target; `check_probes.py --min-gap` (also over every site of a repeated window) | >= window length + `location_interval` |
+| Spacing | consecutive `target_start` differences per target; `check_probes.py --min-gap` (also over every site of a repeated window: `oligo_sites`, or the transcript) | >= window length + `location_interval` |
 | Method's own values | the last command of the technique checklist (`--gc`, `--tm`, `--min-gap`, per-half `--part-gc`/`--part-tm`) | the values of the technique file's table, not those of the protocol you wrote |
 | Sequences | probe columns | only ACGT (no `N` placeholders left), expected lengths |
 | Barcodes | encoding parts per target | the intended readout/initiator per gene; no two genes share a code unless intended |

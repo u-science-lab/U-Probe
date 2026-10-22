@@ -52,7 +52,7 @@ Other published layouts:
 | --- | --- | --- | --- |
 | Target region | 30 nt | all MERFISH papers | Chen 2015; Moffitt 2016 |
 | GC | 43-63 % | Xia 2019: 33-73 %; Blosser 2021: 35-75 % | Moffitt 2016 SI, doi:10.1073/pnas.1612826113 |
-| Tm | 66-76 C | SantaLucia NN, 300 mM monovalent salt, 5 nM probe, no formamide; the design code (`GetRegionTm`) uses ln(C_T) with C_T = 5 nM, not C_T/4: Primer3 at `probe_nM: 5` reads 1.36 C lower (+1.27 to +1.50, 2,000 random 30-mers, GC 40-60 %); `probe_nM: 20` reproduces the code to 0.01 C (section 8) | Moffitt 2016 SI; TRDesigner.m |
+| Tm | 66-76 C | SantaLucia NN, 300 mM monovalent salt, 5 nM probe, no formamide, by the design code's formula (`TRDesigner.m` `GetRegionTm`: strand term ln C_T with C_T = 5 nM, not C_T/4), which is U-Probe's `tm_method: merfish_design`; Primer3 at `probe_nM: 5` reads 1.36 C lower (+1.27 to +1.50, random 30-mers) | Moffitt 2016 SI; TRDesigner.m |
 | Tm (other papers) | Chen: > 70 C, off-target < 72 C, no secondary structure > 76 C (OligoArray); Xia: 61-81 C | | Chen 2015; Xia 2019 |
 | Homopolymer | none in Moffitt 2016; Chen: no runs >= 6 | | Chen 2015 |
 | Specificity | isoform- and gene-specificity index 0.75-1 (17-mer tables, expression-weighted) | Blosser 2021: isoform 0-1 | Moffitt 2016 |
@@ -160,8 +160,8 @@ probes:
     # readout_i: rc(encoding[target]['readouts'][(probe_index + i) % 4]), i = 1, 2, 3
 hybridization: {temperature_c: 37, na_mM: 390, formamide_pct: 30, dntp_mM: 0}
 attributes:
-  binding_tm: {target: encoding_probe.binding, type: annealing_temperature,
-               hybridization: {na_mM: 300, probe_nM: 5, formamide_pct: 0, dntp_mM: 0}}   # design conditions of 66-76 C
+  binding_tm: {target: encoding_probe.binding, type: annealing_temperature, tm_method: merfish_design,
+               hybridization: {na_mM: 300, probe_nM: 5}}   # the design code's formula and conditions of 66-76 C
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.43 & target_gc <= 0.63}
@@ -172,12 +172,14 @@ post_process:
   equal_space: {number_desired: 92}
 ```
 
-Tm under the source formula: the design code adds the strand term as ln(5 nM), Primer3 as
-ln(5 nM / 4). Set the override to `probe_nM: 20` (4 x 5 nM) so U-Probe's `binding_tm` reproduces the
-code's value (difference -0.01 +- 0.02 C on 2,000 random 30-mers) and keep 66-76; left at 5 nM the same
-window rejects valid probes at the low end (17.7 % of random windows fall outside 66-76 at 5 nM,
-9.1 % under the code's formula) and admits ones up to 1.4 C too hot at the upper end. Check with
-the same value (below).
+Tm under the source formula: `tm_method: merfish_design` is the design code's `GetRegionTm`
+(SantaLucia & Hicks 2004 table, `0.368 (N-1) ln[Na+]`, strand term ln(5 nM) where Primer3 uses
+ln(5 nM / 4)), so the 66-76 C window applies as published; it reads only `na_mM` and `probe_nM`, and the
+buffer's 30 % formamide does not enter it. Under Primer3 at 5 nM the same window rejected valid probes at
+the low end and admitted ones up to 1.4 C too hot (17.7 % vs 9.1 % of random 30-mers outside 66-76). On
+GAPDH, ACTB and EEF1A1 (hg38, Ensembl 113, no expression table) the formula gave 7, 11 and 38 probes
+against 7, 11 and 33 with Primer3; 36 windows are shared, and each Primer3 set had one probe above 76 C
+by the code (`references/uprobe/template-qa.md`).
 
 What to edit: `encoding` (per gene, `readouts`: the 4 readout probe sequences of its code word, one
 per on-bit, in any order), the two primer placeholders (20 N each), `equal_space` (92, 64, 48; 16 with bDNA),
@@ -213,16 +215,15 @@ Template departures:
 
 ## 10. Checklist
 
-- [ ] 30-nt target regions, GC 43-63 % and Tm 66-76 C under the source formula (state the conditions;
-      Primer3 `probe_nM: 5` is 1.4 C below it, section 8), no overlap except for transcripts too short.
+- [ ] 30-nt target regions, GC 43-63 % and Tm 66-76 C under the source formula (`tm_method: merfish_design`,
+      300 mM, 5 nM; state them), no overlap except for transcripts too short.
 - [ ] Every gene has its 4 readouts, each on ~75 % (3-readout design) or ~50 % (2-readout) of probes
       (template: count `encoding_probe.readout_1..3` per gene in the TSV).
 - [ ] Probe = rc(readouts) + rc(RNA) + primers; A spacers present; length as designed (e.g. 132 nt).
 - [ ] Probes per gene reached (92/64/48) or the gene moved to sequential rounds.
 - [ ] Panel abundance: no gene above the per-gene cap; total within budget; blanks in the codebook.
 - [ ] `target_mapped_genes` = 1 or explained (`_unexpressed`, `_copies`); no rRNA/tRNA 15-mers.
-- [ ] Run last, with the published values (`binding_tm` at `probe_nM: 20` as above; with the template's 5 nM
-      use `--tm 64.6 74.6`, the window minus the 1.4 C offset):
+- [ ] Run last, with the published values (`binding_tm` is the design code's Tm):
 
 ```bash
 python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \

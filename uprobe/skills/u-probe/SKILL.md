@@ -17,15 +17,14 @@ references only when a step sends you there.
 
 ```bash
 pip install uprobe                                   # Python >= 3.10; or `pip install -e .` in a clone
-conda install -c bioconda bowtie bowtie2 jellyfish   # external tools; U-Probe never installs them
+conda install -c bioconda bowtie bowtie2 kmer-jellyfish   # external tools (Jellyfish 2); U-Probe never installs them
 uprobe --version; which bowtie bowtie-build bowtie2 bowtie2-build jellyfish
 ```
 
 - Bowtie 1 (`bowtie`, `bowtie-build`) is required for probes of ~30 nt or less (rule 4). Bowtie2
   serves genome searches and long windows; Jellyfish only `kmer_count` (DNA FISH).
-- A missing tool is installed or reported, never replaced by your own code; if conda cannot give
-  Bowtie 1, use its release binaries. Work in a writable directory (runs write `.uprobe-tmp-*`).
-  Details: `references/uprobe/workflow.md` (section 0).
+- A missing tool is installed or reported, never replaced by your own code; if conda cannot give Bowtie 1,
+  use its release binaries. Run in a writable directory (`references/uprobe/workflow.md`, section 0).
 
 ## Workflow
 
@@ -74,9 +73,10 @@ uprobe build-index -p protocol.yaml -g genomes.yaml -t 16   # after step 4; `run
 - Pin `--release`. MANE Select tags exist for human only; Ensembl canonical for every species.
 - `align_index` must include `bowtie` for RNA probes of ~30 nt or less. `run` and `build-index` build
   only the indexes the attributes search (the slow Bowtie2 genome index only for `mapped_sites`, DNA
-  FISH; `--all`: every one); DNA FISH needs `jellyfish: true`. Estimate sizes against free disk first.
-- Own FASTA + GTF, a transcriptome FASTA, or an existing index: write the `genomes.yaml` entry by
-  hand (`references/uprobe/yaml-reference.md`, `references/uprobe/workflow.md` section 1).
+  FISH); a locus counts only its own k-mers (`kmer_count` `locus_only: true`). Check free disk first.
+- Transcriptome FASTA + transcript table, no genome: `uprobe genome add NAME --transcriptome tx.fa
+  --records tx.tsv --align-index bowtie`. Own FASTA + GTF: write the entry; existing indexes:
+  `indexes:` (`references/uprobe/workflow.md` section 1, `references/uprobe/yaml-reference.md`).
 
 ### 4. Copy and edit the template
 
@@ -90,8 +90,8 @@ Read its `meta.replace` and `meta.limitations`, then set:
 - the designated transcript, `extracts.target_region.transcripts`: `mane` (human) or `canonical`,
   or `[ENST...]` for an isoform the user names; `source` as the technique file says;
 - `hybridization:` the user's conditions (`temperature_c`, `na_mM` with 2x SSC = 390,
-  `formamide_pct`, `probe_nM` per oligo, `mg_mM`, `dntp_mM: 0`); keep per-attribute overrides that
-  reproduce a published Tm window under its own conditions;
+  `formamide_pct`, `probe_nM` per oligo, `mg_mM`, `dntp_mM: 0`); keep per-attribute `hybridization:`
+  and `tm_method:` that reproduce a published Tm window under its own conditions and formula;
 - `gene_expression:` with the sample's table, `level: transcript`, `min_value: 1`,
   `min_fraction_of_target: 0.05`, and `exempt_copies` on the off-target attribute: the default
   configuration (rules 5-6; "Expression profile" below);
@@ -140,12 +140,12 @@ python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv \
 The script (standard library only; `--help`) fails when a binding part is not the reverse
 complement of `target_region`, a window is not on the transcript U-Probe designed on, or a sequence
 holds non-ACGT letters; it reports per target the count vs request, distinct oligos, windows found at
-more than one place (repeats), the span along the transcript, gaps and overlaps, binding length, GC,
-Tm and off-target columns. Add `--gc`, `--tm`, `--min-gap`, `--min-probes`, `--part-gc`/`--part-tm`
-(per half of split units), `--sense` (padlock arms that bind cDNA) with the method's published
-values copied from its technique file, never from the protocol you wrote: each technique checklist
-ends with the exact command (`references/uprobe/template-qa.md`). `transcript.fa` (records
-`<gene_id>_<transcript_id>`) appears next to the genome FASTA once a transcriptome index is built.
+more than one place (repeats; U-Probe's `n_sites`), the span along the transcript, gaps and overlaps,
+binding length, GC, Tm and off-target columns. Add `--gc`, `--tm`, `--min-gap`, `--min-probes`,
+`--part-gc`/`--part-tm` (per half of split units), `--range` (any column, e.g. a dG), `--sense` (padlock
+arms that bind cDNA) with the method's published values copied from its technique file, never from the
+protocol you wrote: each technique checklist ends with the exact command (`references/uprobe/template-qa.md`).
+`transcript.fa` (records `<gene_id>_<transcript_id>`) lies next to the genome FASTA, or in `index_dir`.
 Then confirm strand, transcript (`chosen_by`), empty `<attr>_off_targets` with `_copies` and
 `_unexpressed` named, counts, Tm/GC under the declared conditions and spacing; finish with the
 technique checklist and `references/uprobe/workflow.md` (section 8).
@@ -180,9 +180,9 @@ padlocks); every non-default choice, template departure and shortfall.
 3. Geometry comes from the method: use the technique file's published windows (binding and arm
    length, GC, spacing, probes per target, formamide) and design conditions; do not widen them by
    default and state every departure. Tm under the stated conditions is a check or a floor: never
-   derive a length from a Tm you chose, and reproduce a published Tm window under its own
-   conditions and formula (per-attribute `hybridization:`; else measure the offset). If the count
-   falls short, see rule 9 (`references/techniques/`, `references/concepts/hybridization-and-tm.md`).
+   derive a length from a Tm you chose, and reproduce a published Tm window under its own conditions
+   and formula (per-attribute `hybridization:` and `tm_method:`; else measure the offset). If the
+   count falls short, see rule 9 (`references/techniques/`, `references/concepts/hybridization-and-tm.md`).
 4. Windows of ~30 nt or less need an exhaustive off-target search: `mapped_genes` with
    `aligner: bowtie`, `max_mismatches: 2`, `strand: sense`; Bowtie2 cannot align < 22 nt and misses
    sites up to 30 nt; never write your own aligner (`references/concepts/specificity.md`).

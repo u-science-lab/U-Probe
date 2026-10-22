@@ -11,7 +11,9 @@ from uprobe.core.api import UProbeAPI
 from uprobe.core.attributes import add_attributes
 from uprobe.core.cli import cli, _extract_probe_targets, _validate_and_normalize_protocol
 from uprobe.core.gene_expression import validate_gene_expression
-from uprobe.core.hybridization import FIELDS as HYBRIDIZATION_FIELDS, TM_DEFAULTS, effective_conditions
+from uprobe.core.hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_DEFAULTS, TM_FORMULA_CONDITIONS,
+                                       TM_FORMULA_FIELDS, effective_conditions, resolve_conditions,
+                                       tm_formula_arguments)
 from uprobe.core.layout import validate_layout_references
 from uprobe.core.offtarget import mapped_genes_settings
 from uprobe.core.process import post_process
@@ -97,9 +99,30 @@ def test_tm_window_applied_only_when_verified(name):
     name = window['attribute']
     design = {key: value for key, value in window['conditions'].items() if key in HYBRIDIZATION_FIELDS}
     assert attributes[name]['hybridization'] == design
-    assert effective_conditions(protocol)[name] == {**TM_DEFAULTS, **design}
+    method = attributes[name].get('tm_method')
+    if method in TM_FORMULA_CONDITIONS:
+        # A design code's formula (MERFISH, OligoMiner) reads only its own fields, all set to the window's
+        # conditions; the block's buffer (formamide, dNTPs) does not enter it.
+        assert tm_formula_arguments(method, resolve_conditions(protocol, name)) == design
+        assert set(design) == set(TM_FORMULA_FIELDS[method])
+    else:
+        assert effective_conditions(protocol)[name] == {**TM_DEFAULTS, **design}
     low, high = window['value']
     assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
+
+
+def test_published_tm_windows_use_their_design_code_formula():
+    # MERFISH's 66-76 C and OligoMiner's 42-47 C were defined under the design code's formula; Primer3 reads
+    # about 1.4 and 1.5 C lower and moved a quarter to a third of the Oligopaint set out of the window.
+    merfish, oligopaint = load_template('merfish'), load_template('oligopaint')
+    assert merfish['attributes']['binding_tm']['tm_method'] == 'merfish_design'
+    assert oligopaint['attributes']['homology_tm']['tm_method'] == 'oligominer'
+    # A locus design counts only its candidates' k-mers: no genome-wide Jellyfish table is built.
+    assert oligopaint['attributes']['homology_kmer_count']['locus_only'] is True
+    replace = ' '.join(oligopaint['meta']['replace'])
+    assert 'jellyfish: true` is not needed' in replace and 'mask' in replace
+    sources = ' '.join(row['parameter'] for row in oligopaint['meta']['parameter_sources'])
+    assert 'homology_kmer_count.locus_only' in sources and 'homology_tm.tm_method' in sources
 
 
 @pytest.mark.parametrize('name', NAMES)
@@ -140,6 +163,7 @@ def test_templates_compute_tm_without_dntps(name):
 def test_tm_filters_filter_as_under_the_legacy_dntp(name):
     # dNTPs only bind Mg2+: every filtered Tm has no Mg2+ or a formula without dNTPs, so the
     # published windows (MERFISH, HybISS, Oligopaint, double_hyb_rca) filter as before.
+    from uprobe.core.attributes import cal_temp_merfish_design, cal_temp_oligominer
     from uprobe.core.attributes._attributes import cal_temp, cal_temp_multi_padlock_design
     from uprobe.core.hybridization import multi_padlock_design_arguments, tm_arguments
     protocol = load_template(name)
@@ -155,6 +179,11 @@ def test_tm_filters_filter_as_under_the_legacy_dntp(name):
             if spec.get('tm_method') == 'multi_padlock_design':
                 now = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(conditions[attr]))
                 before = cal_temp_multi_padlock_design(seq, **multi_padlock_design_arguments(legacy))
+            elif spec.get('tm_method') in TM_FORMULA_CONDITIONS:
+                method = spec['tm_method']
+                formula = {'merfish_design': cal_temp_merfish_design, 'oligominer': cal_temp_oligominer}[method]
+                now = formula(seq, **tm_formula_arguments(method, conditions[attr]))
+                before = formula(seq, **tm_formula_arguments(method, legacy))
             else:
                 now, before = cal_temp(seq, **tm_arguments(conditions[attr])), cal_temp(seq, **tm_arguments(legacy))
             assert now == pytest.approx(before), (attr, seq)

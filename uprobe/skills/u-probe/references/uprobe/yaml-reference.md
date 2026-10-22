@@ -1,8 +1,8 @@
 # U-Probe protocol YAML reference
 
 Read this when writing or editing `protocol.yaml` or `genomes.yaml`: every block, its options, its
-defaults and a minimal working example. Derived from the U-Probe code (0.2.x, `uprobe/core`), not from
-memory; when the README and the code differ, this file follows the code and says so.
+defaults and a minimal working example. Derived from the U-Probe code this skill ships with (`uprobe/core`),
+not from memory; when the README and the code differ, this file follows the code and says so.
 
 ## Top level
 
@@ -27,19 +27,15 @@ GRCh38_e113:
   fasta: /data/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa   # plain (not gzipped) FASTA
   gtf: /data/genomes/Homo_sapiens.GRCh38.113.gtf
   align_index: [bowtie, bowtie2]   # bowtie2 | bowtie | blast | mmseqs
-  jellyfish: false                 # true enables kmer_count
+  jellyfish: false                 # true: genome-wide k-mer tables for kmer_count (not for locus_only)
 ```
 
-Only a transcriptome FASTA (and a transcript table)? Write each transcript as a one-exon contig: a GTF
-with one `exon` line per transcript (`1` to its length, `+`, `gene_id`, `gene_name`, `transcript_id`, and
-`tag "MANE_Select";` or `tag "Ensembl_canonical";` where the table says so), `fasta:` the transcript FASTA
-(records = transcript ids) and `align_index: [bowtie]`; `references/uprobe/workflow.md` (section 1) has the
-script and the sizes. Indexes built earlier are found when `bowtie_transcript/<fasta stem>.*`,
-`transcript.fa` and `jf_genome/` sit next to the FASTA (symlinks work). U-Probe versions with
-`uprobe genome add NAME --transcriptome tx.fa --records tx.tsv` write that entry themselves (`uprobe genome
-add --help`); running it again with changed sequences or gene ids removes the indexes of the old ones.
+Only a transcriptome FASTA and a transcript table? `uprobe genome add NAME --transcriptome tx.fa --records
+tx.tsv --align-index bowtie` writes the entry (a one-exon GTF contig per transcript with the table's gene
+names, ids and MANE/canonical tags; `uprobe genome add --help`; `references/uprobe/workflow.md`, section 1).
+Running it again with changed sequences or gene ids removes the indexes built from the old ones.
 
-Two optional entry keys move or reuse indexes (versions that have them; `validate` checks both):
+Two optional entry keys move or reuse indexes (`validate` checks both):
 
 ```yaml
   index_dir: /fast/disk/hg38      # <aligner>_genome/, <aligner>_transcript/, jf_genome/, transcript.fa go here
@@ -93,11 +89,19 @@ extracts:
 
 `masked: drop` (source `genome` only) skips every window with a soft-masked (lowercase) or N base, as
 OligoMiner mines a repeat-masked genome; the other windows keep their `probe_id`. It needs a soft-masked
-FASTA (`uprobe genome fetch --soft-masked`, UCSC `hg38.fa`); the run log and `validate --check-targets`
-warn when a target has no lowercase base. `keep` upper-cases the windows and ignores masking. Versions with
-`mask: repeats.bed` (BED, 0-based, genome coordinates; or a FASTA of soft-masked loci named `chr:s-e`) drop
-the windows with a base in it too, so an unmasked FASTA works; its chromosome names must be those of the
-targets (`chr1` vs `1`: `validate` warns, otherwise nothing is masked).
+FASTA (`uprobe genome fetch --soft-masked`, UCSC `hg38.fa`) or a `mask`; the run log and `validate
+--check-targets` warn when a target has no lowercase base (nor a base in the mask). `keep` upper-cases the
+windows and ignores masking. `mask: repeats.bed` (with `masked: drop`) also drops the windows with a base in
+the file, so an unmasked FASTA works and no masked copy of the genome is needed: a BED (`chrom start end`,
+0-based, end-exclusive, genome coordinates, may be `.gz`; e.g. RepeatMasker / UCSC `rmsk` intervals) or a
+FASTA of soft-masked loci whose record names are regions (`>chr7:1000-52000`). Its chromosome names must be
+those of the targets (`chr1` vs `1`: `validate` warns, otherwise nothing is masked).
+
+```yaml
+    source: genome
+    masked: drop
+    mask: /data/hg38/rmsk.bed.gz   # repeats of the same assembly, same chromosome names
+```
 
 | `source` | Windows come from |
 | --- | --- |
@@ -184,18 +188,40 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | --- | --- | --- |
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
-| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method: multi_padlock_design` = the HybISS design code's formula (Sugimoto 1996 NN, `16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide; no dNTP term), for windows published under it; versions that have them: `merfish_design` (MERFISH code; uses `na_mM`, `probe_nM`: 300 mM, 5 nM for its 66-76 °C window) and `oligominer` (uses `na_mM`, `probe_nM`, `formamide_pct`: its defaults 390 mM, 25 nM, 50%), which take undeclared fields at the PCR defaults (50 mM, 50 nM, 0%; `validate` warns), so declare them |
+| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method` (below) for a window published under a design code's formula |
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
-| `rna_dna_dg37` (versions that have it) | Oligostan's RNA/DNA ΔG°37 (kcal/mol, more negative = more stable) of the probe read 5'->3' | `sequence`: `probe` (default; `target` = the probe or its binding part) or `target` (`target` = `target_region` or a `target_parts` part, the RNA in sense orientation, reverse-complemented first); `target_region` with `sequence: probe` gives the other strand's value (`validate` warns) |
+| `rna_dna_dg37` | Oligostan's RNA/DNA ΔG°37 (kcal/mol, more negative = more stable) of the probe read 5'->3' (smiFISH, Tsanov 2016: 16 dinucleotide values plus a 0.115 M salt term, 37 °C, no `hybridization`) | `sequence`: `probe` (default; `target` = the probe or its binding part) or `target` (`target` = `target_region` or a `target_parts` part, the RNA in sense orientation, reverse-complemented first); `target_region` with `sequence: probe` gives the other strand's value, up to 8.8 kcal/mol off (`validate` and the run warn) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` (Bowtie2 `--very-sensitive-local -k 100`, both strands: at most 100; `<attr>_num == 1` is OligoMiner's Unique Mode) | `aligner: bowtie2` (required), `threads` |
-| `kmer_count` | highest genome count among the sequence's k-mers (Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `strand` (`both`, the default: canonical k-mers, both strands; `sense`: the k-mers as written, counted on the FASTA's forward strand, as OligoMiner's dictionary; `antisense`: their reverse complements; `sense` and `antisense` read `jf_genome/<stem>.k<k>.stranded.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true` |
+| `kmer_count` | highest genome count among the sequence's k-mers (Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `strand` (`both`, the default: canonical k-mers, both strands; `sense`: the k-mers as written, counted on the FASTA's forward strand, as OligoMiner's dictionary; `antisense`: their reverse complements; `sense` and `antisense` read `jf_genome/<stem>.k<k>.stranded.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true`. `locus_only: true`: count only the candidates' k-mers (both strands listed) with `jellyfish count --if` in one pass over the genome FASTA, into a temporary table that is not kept; same counts, no genome-wide table, no `jellyfish: true` (Jellyfish 2 on `PATH`); for locus-sized DNA targets |
 | `difference` | `|a - b|` of two attributes defined before it, e.g. the Tm of two probe halves; no `target` | `of: [a, b]` (required) |
 | `blocks` | legacy; do not use | - |
 
 `threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute
 only to override the run's value.
+
+`tm_method` of `annealing_temperature` (default `primer3`) reproduces the formula a published window was
+computed with; give the attribute the window's own conditions as its `hybridization:` override:
+
+| `tm_method` | Formula (source code) | Uses | Published window |
+| --- | --- | --- | --- |
+| `multi_padlock_design` | HybISS padlock design (`lib/screenseq.py`): Sugimoto 1996 NN, `16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide, no dNTP term | `na_mM`, `mg_mM`, `probe_nM`, `formamide_pct` | HybISS 30-nt targets 65-75 °C |
+| `merfish_design` | MERFISH `TRDesigner.m` `GetRegionTm`: SantaLucia & Hicks 2004 NN, `0.368 (N-1) ln[Na+]`, strand term ln C (Primer3: C/4), so ~1.4 °C above Primer3 for 30-mers at 5 nM | `na_mM`, `probe_nM` | 66-76 °C at 300 mM, 5 nM |
+| `oligominer` | OligoMiner `blockParse.py`/`probeTm.py`: Biopython `Tm_NN`, DNA_NN3, salt correction 5, strand term `dnac1 - dnac2/2`, -0.65 °C per % formamide | `na_mM`, `probe_nM`, `formamide_pct` | 42-47 °C at 390 mM, 25 nM, 50 % (Balance) |
+
+`merfish_design` and `oligominer` take a field they use but nobody declared at the legacy PCR default (50 mM,
+50 nM, 0 %; `validate` and the run warn). `validate` also warns about a field the formula ignores, declared in
+the attribute's override (or, without an override, in the protocol block, which then holds the formula's
+conditions); with an override, the block's buffer (formamide, `dntp_mM: 0`) serves the other attributes:
+
+```yaml
+  binding_tm:
+    target: encoding_probe.binding
+    type: annealing_temperature
+    tm_method: merfish_design
+    hybridization: {na_mM: 300, probe_nM: 5}   # the 66-76 C window's design conditions, not the buffer
+```
 
 ```yaml
 attributes:
@@ -298,9 +324,8 @@ post_process:
 ```
 
 - `condition`: `<column> <op> <number>` joined by `&`; ops `<=`, `>=`, `<`, `>`, `==`; numbers in plain
-  decimal (no `1e-5`, no `|`/or: use separate filters); versions with `rna_dna_dg37` also accept a sign
-  (`dg37 >= -33`), older ones reject it. A condition on a column that
-  does not exist is **silently skipped** at run time (`validate` reports it).
+  decimal, with a sign where needed (`dg37 >= -33`; no `1e-5`, no `|`/or: use separate filters). A condition
+  on a column that does not exist is **silently skipped** at run time (`validate` reports it).
 - `remove_overlap`: per target, visits candidates by position (`target_start` in RNA mode) and keeps
   one when it starts more than `location_interval` nt after the end of the last kept one. It packs from
   the 5' end; of the candidates of one start (a `length` range or a `layout` with ranges) it keeps the

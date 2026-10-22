@@ -114,14 +114,14 @@ an isoform-unique exon (or exon part), or an exon-exon junction only that isofor
 ## Repeats inside the target
 
 A target with tandem or internal repeats (tandem-repeat genes, repeated domains) contains the same
-window at several positions, and one oligo binds every copy. Treat it explicitly:
-- Count distinct oligos, not positions: identical sequences are one probe. `uprobe run` counts rows, so a
-  table can say "20/20" while holding fewer distinct oligos; `scripts/check_probes.py` reports distinct
-  oligos and, with `--transcripts`, the windows that occur at more than one place of the transcript (all
-  occurrences, not the first).
-- Spacing and overlap hold between oligos over all their sites: two oligos can be non-overlapping at their
-  first sites yet overlap at another copy (`check_probes.py --min-gap` checks every site). Remove such
-  pairs by sequence, keeping the one the design objective prefers.
+window at several positions, and one oligo binds every copy. U-Probe treats it as one oligo:
+- Identical windows of a target count once: `remove_overlap` keeps such an oligo only if none of its sites
+  is within `location_interval` of a kept one and then occupies all of them, and `equal_space` ranks it once.
+  So spacing holds between oligos over all their sites, and the count is of distinct oligos.
+- The kept row gets `n_sites` and `oligo_sites` (`start-end;...` along the target), and `summary.json` a
+  `multi_site_oligos` warning listing each such oligo of the final table. `scripts/check_probes.py` reports
+  them, counts distinct oligos (`--min-probes`) and checks `--min-gap` over all their sites (from
+  `oligo_sites`, or from the transcript with `--transcripts`).
 - A multi-site oligo adds signal per probe (it binds several copies); report them, and keep the others
   as the evenly spread set. A shortfall in distinct oligos is reported before any relaxation
   (`references/uprobe/troubleshooting.md`, "Repeats inside the target").

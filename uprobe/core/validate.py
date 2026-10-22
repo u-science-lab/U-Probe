@@ -833,7 +833,12 @@ class _Validator:
                         conditions = resolve_conditions(self.protocol, name)
                     except ValueError:
                         conditions = None  # the hybridization block itself is reported below
-                    ignored = unused_fields(method, conditions) if conditions is not None else []
+                    # Fields the formula ignores, of the attribute's own override; of the protocol block only
+                    # when the attribute has none. With an override the block is the experiment's buffer (the
+                    # formamide and dntp_mM: 0 of a template whose window is computed under other conditions).
+                    own = attr.get('hybridization')
+                    declared = own if isinstance(own, dict) else conditions
+                    ignored = unused_fields(method, declared) if conditions is not None else []
                     if ignored:
                         self.warning(('attributes', name, 'tm_method'),
                                      f'tm_method {method} does not use {", ".join(ignored)}, declared for this attribute',

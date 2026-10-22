@@ -48,25 +48,35 @@ stability, how U-Probe computes Tm, and how to place a Tm window relative to the
     Primer3 at `probe_nM: 5` (sd 0.03, +1.27 to +1.50, 2,000 30-mers); 17.7 % of random 30-mers then fall
     outside 66-76 C under Primer3 against 9.1 % under the code's formula, nearly all of them on the cold side;
   - OligoMiner (Biopython `Tm_NN`, DNA_NN3, `saltcorr` 5, 390 mM Na+, 25 nM each strand, 0.65 C per %
-    formamide at 50 %): +1.49 C above U-Probe at the template's `probe_nM: 25` (sd 0.35, +0.8 to +2.3,
+    formamide at 50 %): +1.49 C above Primer3 at `probe_nM: 25` (sd 0.35, +0.8 to +2.3,
     6,000 36-41-mers), of which 0.55 C is the strand term and the rest the formamide model; of the windows
     inside 42-47 C by Primer3, 23 % are outside it under OligoMiner (all too hot), and 30 % of the windows
     OligoMiner accepts are rejected by Primer3.
-  So the sentence "it rarely changes which windows pass" is wrong for narrow published windows. Reproduce
-  the source formula, or its offset, in the window you filter, and check the final table with it (next bullet).
-- Reproducing a C_T-based formula with Primer3: set `probe_nM` to 4 x the source's strand concentration
-  (Primer3 divides by 4): `probe_nM: 20` for MERFISH's 5 nM reproduces its code to 0.01 C (difference
-  -0.006 +- 0.023 over 2,000 30-mers); `probe_nM: 50` gives OligoMiner's strand term (12.5 nM) exactly, and
-  the remaining +0.94 C (sd 0.35, formamide model, GC dependent) is a shift to apply to the window or an
-  external calculation: compute the source function on the final table and check it with `check_probes.py
-  --tm-column` (`references/techniques/oligopaint-dna-fish.md`, section 8). Whichever way, state which
-  formula, conditions and offset the reported Tm refers to.
-- `tm_method: multi_padlock_design` (attribute option) swaps Primer3 for the formula of the HybISS
-  design code (Moldia/multi_padlock_design `lib/screenseq.py`): Sugimoto 1996 DNA/DNA nearest
-  neighbours, one initiation term, C_T = probe concentration, `+16.6 log10([Na+] + 3.795 sqrt[Mg2+])`,
-  -0.72 °C per % formamide, no dNTP term; same `hybridization:` fields. It exists to apply the
-  published 65-75 °C HybISS window: on the 1,195 published HybISS targets Primer3 runs 3.4 ± 1.5 °C
-  lower (range -3.2 to +7.5, more for AT-rich targets), so no Primer3 window is equivalent.
+  So the sentence "it rarely changes which windows pass" is wrong for narrow published windows: apply such a
+  window under its own formula. U-Probe has these formulas as `tm_method` (attribute option; the attribute's
+  `hybridization:` override carries the window's design conditions; `references/uprobe/yaml-reference.md`):
+  - `multi_padlock_design`, the HybISS design code (Moldia/multi_padlock_design `lib/screenseq.py`):
+    Sugimoto 1996 DNA/DNA nearest neighbours, one initiation term, C_T = probe concentration,
+    `+16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide, no dNTP term. On the 1,195 published
+    HybISS targets Primer3 runs 3.4 ± 1.5 °C lower (range -3.2 to +7.5, more for AT-rich targets), so no
+    Primer3 window is equivalent to its 65-75 °C;
+  - `merfish_design`, the MERFISH code (`TRDesigner.m` `GetRegionTm`; reads `na_mM`, `probe_nM`), for 66-76 °C
+    at 300 mM and 5 nM;
+  - `oligominer`, OligoMiner's `blockParse.py`/`probeTm.py` (reads `na_mM`, `probe_nM`, `formamide_pct`; it
+    reproduces OligoMiner's example probes to 0.01 °C), for its 37-42, 42-47 and 47-52 °C presets at 390 mM,
+    25 nM and 50 % formamide.
+  On real loci and genes the switch changes the set more than the count: a Primer3 42-47 °C Oligopaint set had
+  32 % of its probes above 47 °C under OligoMiner's formula (1,486 probes; 1,479 with the formula), and each
+  Primer3 MERFISH set one probe above 76 °C (`references/uprobe/template-qa.md`).
+- A published window computed with a formula U-Probe does not have: measure the offset as above and shift
+  the window by it, or compute the source function on the final table and check that column with
+  `check_probes.py --tm-column` (or `--range`). For a formula whose only difference is a C_T strand term,
+  Primer3 at `probe_nM` = 4 x the source's strand concentration reproduces it (Primer3 divides by 4: at
+  20 nM it matched the MERFISH code to 0.01 °C). Whichever way, state which formula, conditions and offset
+  the reported Tm refers to.
+- smiFISH probes are selected by an RNA/DNA free energy, not a Tm: `rna_dna_dg37` computes Oligostan's
+  dG37 of the probe read 5'->3' (`references/techniques/smifish.md`); put it on the binding part, or on
+  `target_region` with `sequence: target`.
 
 ### Formamide: Blake & Delcourt vs the 0.65 °C/% rule
 
@@ -106,8 +116,8 @@ method itself publishes, never beyond it).
    2016 PNAS 113:11046, doi:10.1073/pnas.1612826113; OligoMiner: 42-47 °C at 390 mM Na+ and 50%
    formamide, Beliveau et al. 2018). When the paper's formula differs from Primer3, reproduce the
    formula if U-Probe has it (HybISS: 65-75 °C with `tm_method: multi_padlock_design`, Gyllborg et al.
-   2020); otherwise state the measured offset (section above) and either shift the window by it or check
-   the final table with the source function.
+   2020; MERFISH: `merfish_design`; OligoMiner: `oligominer`); otherwise state the measured offset (section
+   above) and either shift the window by it or check the final table with the source function.
    - When the numbers are in a figure, or the formula is not in the text, read the method's own code
      (OligoMiner `blockParse.py`, MERFISH `TRDesigner.m`, HybISS `multi_padlock_design`, the STARmap design
      repository) for the exact function and defaults.

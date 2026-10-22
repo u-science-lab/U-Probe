@@ -11,12 +11,14 @@ meta:
     denatured DNA are targets). As in OligoMiner, they are mined from a
     repeat-masked genome: windows with a soft-masked (lowercase) or N base
     are skipped. The homology settings are OligoMiner's "Balance" preset as
-    in its genome-wide hg38 set (35-41 nt, Tm 42-47 C under 390 mM Na+ and
-    50% formamide, GC 20-80%, no AAAAA/TTTTT/CCCCC/GGGGG or N), followed by
-    OligoMiner's specificity checks: a unique Bowtie2 alignment (outputClean
-    Unique Mode) and the 18-mer k-mer filter, which counts each k-mer on the
-    genome's forward strand. The flanking 21-nt primers follow the original
-    Oligopaint library format (32 nt of genomic sequence flanked by 21-nt
+    in its genome-wide hg38 set (35-41 nt, Tm 42-47 C by OligoMiner's own Tm
+    formula under 390 mM Na+, 25 nM probe and 50% formamide, GC 20-80%, no
+    AAAAA/TTTTT/CCCCC/GGGGG or N), followed by OligoMiner's specificity
+    checks: a unique Bowtie2 alignment (outputClean Unique Mode) and the
+    18-mer k-mer filter, which counts each k-mer on the genome's forward
+    strand (only the k-mers of the locus' candidates are counted, in one
+    pass over the genome, instead of building a genome-wide table). The
+    flanking 21-nt primers follow the original Oligopaint library format (32 nt of genomic sequence flanked by 21-nt
     primers); after amplification one primer carries the fluorophore and the
     other a nicking site, so the final probe is the labelled primer plus the
     homology region. The primers here are N placeholders that you must
@@ -31,9 +33,12 @@ meta:
     - short: Beliveau et al. 2012, PNAS
       title: Versatile design and synthesis platform for visualizing genomes with Oligopaint FISH probes
       doi: 10.1073/pnas.1213818110
-    - short: OligoMiner source code (blockParse.py, outputClean.py, kmerFilter.py)
+    - short: OligoMiner source code (blockParse.py, probeTm.py, outputClean.py, kmerFilter.py)
       title: beliveau-lab/OligoMiner
       url: https://github.com/beliveau-lab/OligoMiner
+    - short: Marcais and Kingsford 2011, Bioinformatics (Jellyfish)
+      title: A fast, lock-free approach for efficient parallel counting of occurrences of k-mers
+      doi: 10.1093/bioinformatics/btr011
   parameter_sources:
     - parameter: extracts.target_region.masked
       value: drop (needs a soft-masked FASTA, e.g. Ensembl dna_sm or UCSC hg38.fa)
@@ -59,9 +64,20 @@ meta:
       value: 0.20-0.80
       source: OligoMiner blockParse.py -g/-G defaults
       quote: minimum allowed percent G + C, default is 20 ... default is 80
-    - parameter: post_process.filters.homology_tm (with attributes.homology_tm.hybridization)
-      value: 42-47 C at 390 mM Na+, 50% formamide, 25 nM probe
-      source: OligoMiner blockParse.py -t/-T, -s and -F defaults (see meta.tm_window)
+    - parameter: post_process.filters.homology_tm (with attributes.homology_tm.tm_method and hybridization)
+      value: >-
+        42-47 C at 390 mM Na+, 50% formamide, 25 nM probe, computed with
+        OligoMiner's formula (tm_method: oligominer)
+      source: >-
+        OligoMiner blockParse.py -t/-T, -s, -F and -c/-C defaults (see
+        meta.tm_window) and probeTm.py: Biopython Tm_NN with the DNA_NN3
+        table, salt correction 5, strand concentration dnac1 - dnac2/2,
+        rounded to 2 decimals, minus 0.65 C per % formamide. The window is
+        defined under this formula; Primer3 (SantaLucia 1998, Blake-Delcourt
+        formamide) reads about 1.5 C lower for these windows. On
+        chr19:10,000,001-10,200,000 (hg38) the Primer3 window gave 1,486
+        probes, 473 of them above 47 C by this formula; this one gives 1,479.
+      quote: The minimum allowed Tm, default is 42 ... The maximum allowed Tm, default is 47
     - parameter: post_process.filters.homopolymers
       value: AAAAA, TTTTT, CCCCC, GGGGG excluded
       source: OligoMiner blockParse.py -X default
@@ -90,6 +106,17 @@ meta:
         OligoMiner kmerFilter.py (-m 18; drops a probe when a k-mer count is
         >= -k) and Beliveau 2018 genome-wide runs (-k 5)
       quote: Filter probes with kmers occurring => than this many times
+    - parameter: attributes.homology_kmer_count.locus_only
+      value: true (count only the 18-mers of the candidate windows, both strands listed, in one pass over the genome FASTA)
+      source: >-
+        Jellyfish 2 count --if (Marcais and Kingsford 2011; `jellyfish count
+        --help`: "Count only k-mers in this files"). The counts of the listed
+        k-mers equal those of a genome-wide dictionary (OligoMiner's
+        `jellyfish count -s 3300M -m 18 ...` over hg38), so the k <= 4
+        filter is unchanged (on the 50-kb example locus the final table was
+        identical to one made with a table of the locus' k-mers); the
+        temporary index is MB-sized and not kept, and no genome-wide table is
+        built for a locus design.
     - parameter: attributes.homology_kmer_count.strand
       value: sense (the probe's k-mers as written, counted on the FASTA's forward strand)
       source: >-
@@ -117,18 +144,19 @@ meta:
     value: [42, 47]
     target: oligopaint_oligo.homology
     attribute: homology_tm
-    conditions: {na_mM: 390, formamide_pct: 50, probe_nM: 25, dntp_mM: 0, method: "Biopython Tm_NN, DNA_NN3, saltcorr 5, 0.65 C per % formamide"}
+    conditions: {na_mM: 390, formamide_pct: 50, probe_nM: 25, method: "tm_method oligominer: Biopython Tm_NN, DNA_NN3, saltcorr 5, 0.65 C per % formamide"}
     source: OligoMiner blockParse.py -t/-T defaults ("The minimum allowed Tm, default is 42" / "default is 47")
     note: >-
-      Applied: attributes.homology_tm.hybridization sets these design
-      conditions and post_process.filters.homology_tm keeps 42-47 C.
+      Applied: attributes.homology_tm computes OligoMiner's Tm (tm_method:
+      oligominer) under these design conditions and
+      post_process.filters.homology_tm keeps 42-47 C.
   limitations:
     - "OligoMiner's outputClean LDA Mode (each Bowtie2 alignment scored with an LDA model of duplex stability; used for the 19p13.2 sets of Beliveau 2018 Table S1) is not reproduced. The template applies Unique Mode instead: it drops a probe with any second alignment, however weak."
     - "No secondary-structure filter: Beliveau 2018 applied none to its probe sets (Methods; Table S1). OligoMiner's optional structureCheck.py (NUPACK dna1998; keeps probes whose unstructured state has probability > 0.1 at 47 C + 0.65 C per % formamide) has no U-Probe equivalent: fold_score is a ViennaRNA RNA MFE."
-    - U-Probe computes Tm with primer3 (SantaLucia 1998 parameters and salt correction; formamide after Blake and Delcourt 1996, about 0.61-0.72 C per %), not with OligoMiner's Biopython Tm_NN (DNA_NN3, 0.65 C per %), so oligos close to 42 or 47 C may be classified differently.
+    - "kmer_count with locus_only reads the whole genome FASTA once per run (a temporary index of the candidates' k-mers, not kept). For many runs over the same genome, or a whole-chromosome paint, a genome-wide table built once (locus_only: false and jellyfish: true in the genome entry) can be cheaper; the counts are the same."
     - "No primer sequences are given: primer_1 and primer_2_rc are 21-N placeholders, and a library ordered with them cannot be amplified (meta.replace says what to supply)."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here) whose FASTA is soft-masked (repeats in lowercase): `uprobe genome fetch --species homo_sapiens --soft-masked`, or UCSC hg38.fa. With an unmasked FASTA, masked: drop skips no repeat (uprobe validate --check-targets and the run log warn). It must set `jellyfish: true` for kmer_count and list bowtie2 in align_index for mapped_sites (the genome-wide index is built by `uprobe build-index`)"
+    - "genome: a genome name from your genomes.yaml (hg38 here) whose FASTA is soft-masked (repeats in lowercase): `uprobe genome fetch --species homo_sapiens --soft-masked`, or UCSC hg38.fa. With an unmasked FASTA, give the repeats as extracts.target_region.mask (a RepeatMasker BED of the same assembly and chromosome names, e.g. UCSC rmsk intervals); otherwise masked: drop skips no repeat (uprobe validate --check-targets and the run log warn). The entry must list bowtie2 in align_index for mapped_sites (the genome-wide index is built by `uprobe build-index`). kmer_count uses locus_only, so `jellyfish: true` is not needed, only Jellyfish 2 (`jellyfish count --if`) on PATH"
     - "targets: genomic intervals chrom:start-end in your FASTA's naming (a 50-kb example interval here)"
     - "oligopaint_oligo.primer_1 and primer_2_rc: replace both 21-N placeholders with a real primer pair. primer_1 is the forward PCR primer, 5'->3' as you order it; primer_2_rc is the reverse complement of the reverse PCR primer (the library oligo carries its binding site). Each primer 20-22 nt (21 in Beliveau 2012; 20-22 in Beliveau 2018 Table S2), with similar Tm; neither may occur in the target genome or pair with the other or with the homologies. Use one pair per pool or sub-pool, e.g. a published set designed to be orthogonal to the genome (PaintSHOP, Hershberg 2021) or a pair from Beliveau 2018 Table S2. Sequences that are not part of the library oligo go on the ordered primers: the dye, a nicking site, or a T7 promoter tail (TAATACGACTCACTATAGGG) for in vitro transcription. Readout or secondary-oligo sites for indirect labelling are extra parts of oligopaint_oligo."
 
@@ -149,7 +177,8 @@ extracts:
     length: [35, 41]
     step: 1
     # Skip windows with a soft-masked (lowercase) or N base: OligoMiner mines
-    # repeat-masked FASTA (meta.parameter_sources). Needs a soft-masked genome.
+    # repeat-masked FASTA (meta.parameter_sources). Needs a soft-masked genome,
+    # or an unmasked one plus `mask: <RepeatMasker BED>` (meta.replace).
     masked: drop
 
 probes:
@@ -183,8 +212,9 @@ attributes:
   homology_tm:
     target: oligopaint_oligo.homology
     type: annealing_temperature
-    # Design conditions of the 42-47 C window (meta.tm_window).
-    hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25, dntp_mM: 0}
+    # OligoMiner's Tm formula and the design conditions of its 42-47 C window (meta.tm_window).
+    tm_method: oligominer
+    hybridization: {na_mM: 390, formamide_pct: 50, probe_nM: 25}
   homology_kmer_count:
     target: oligopaint_oligo.homology
     type: kmer_count
@@ -193,6 +223,9 @@ attributes:
     # OligoMiner's dictionary counts k-mers on the forward strand only (no -C);
     # its <= 4 threshold refers to these counts (meta.parameter_sources).
     strand: sense
+    # Count only the candidates' k-mers, in one pass over the genome FASTA:
+    # the same counts as a genome-wide table, without building one.
+    locus_only: true
   homology_sites:
     # Genome alignments, Bowtie2 --very-sensitive-local -k 100 on both strands:
     # OligoMiner's Unique Mode alignment. homology_sites_num counts them.
