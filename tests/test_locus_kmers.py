@@ -172,3 +172,29 @@ def test_mask_through_the_api_and_validate(tmp_path, monkeypatch):
     missing = findings(masked='drop', mask=str(tmp_path / 'nope.bed'))
     assert missing[0].severity == 'error' and 'cannot read the mask' in missing[0].message
     assert findings(masked='drop', mask=5)[0].severity == 'error'
+
+
+def test_mask_chromosome_names_are_checked_without_the_genome(tmp_path):
+    # A mask on other chromosome names (1 vs chr1) masks nothing: validate says so without --check-targets.
+    ref, _ = genome(tmp_path)
+    other = mask_bed(tmp_path, 'ensembl.bed', ('1\t100\t140',))
+
+    def warnings(mask):
+        protocol = {**region_protocol(ref, step=20, masked='drop', mask=str(mask)), 'genome': 'test'}
+        return [f.message for f in validate_protocol(protocol) if f.path == 'extracts.target_region.mask']
+    [message] = warnings(other)
+    assert 'no interval on chr1' in message and 'its chromosomes are 1' in message
+    assert warnings(mask_bed(tmp_path)) == []
+
+
+def test_no_masked_base_warning_is_kept_when_the_mask_misses_the_region(tmp_path, caplog):
+    ref, _ = genome(tmp_path)
+    caplog.set_level('WARNING')
+    extract_fasta(ref, 'chr1:1-400', 40, step=20, masked='drop', mask=RepeatMask(mask_bed(tmp_path)))
+    assert 'no soft-masked' not in caplog.text  # the mask marks bases 101-140
+    extract_fasta(ref, 'chr1:201-400', 40, step=20, masked='drop', mask=RepeatMask(mask_bed(tmp_path)))
+    assert 'chr1:201-400 has no soft-masked (lowercase) base and the mask' in caplog.text
+    caplog.clear()
+    extract_fasta(ref, 'chr1:1-400', 40, step=20, masked='drop',
+                  mask=RepeatMask(mask_bed(tmp_path, 'ensembl.bed', ('1\t100\t140',))))
+    assert 'the mask has no interval on chr1 at all' in caplog.text and 'check its chromosome names' in caplog.text

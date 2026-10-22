@@ -10,7 +10,7 @@ import yaml
 from .sampling import normalize_sampling, iter_target_windows
 from .layout import compile_layout, expand_layout_candidates, validate_layout_references
 from .attributes import add_attributes
-from .hybridization import describe_conditions
+from .hybridization import describe_conditions, legacy_formula_warnings
 from .gen.barcodes import quick_generate
 from .gen.fun import (GTF_RUN_FIELDS, RNA_SOURCES, TranscriptSelectionError, generate_target_seqs, read_gtf,
                       validate_targets)
@@ -310,6 +310,8 @@ class UProbeAPI:
         log.info("Adding attributes to probes...")
         for line in describe_conditions(self.protocol):
             log.info(f"Hybridization conditions: {line}")
+        for message in legacy_formula_warnings(self.protocol):
+            log.warning(message)
         # Off-target statistics of mapped_genes attributes, for summary.json.
         self.off_target_report = {}
         df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report, threads)

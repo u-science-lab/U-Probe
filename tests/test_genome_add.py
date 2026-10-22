@@ -192,3 +192,117 @@ def test_validate_checks_index_dir_and_pointers(tmp_path, inputs):
     assert 'unknown index' in messages(index_dir=str(tmp_path), indexes={'bowtie_exon': '/x'})[0][1]
     assert 'no complete bowtie index' in messages(indexes={'bowtie_transcript': str(tmp_path / 'none')})[0][1]
     assert 'must map' in messages(indexes=['x'])[0][1]
+
+
+# -- an existing index must name its records <gene_id>_<transcript_id> --------------------
+
+def fake_index(prefix, aligner='bowtie'):
+    from uprobe.core.tools import _BOWTIE_SMALL_SUFFIXES, _BOWTIE2_SMALL_SUFFIXES
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    for suffix in (_BOWTIE_SMALL_SUFFIXES if aligner == 'bowtie' else _BOWTIE2_SMALL_SUFFIXES):
+        prefix.with_name(prefix.name + suffix).write_text('index')
+    return prefix
+
+
+PLAIN = ['ENST01.3', 'ENST02.1', 'ENST03.2', 'NM_000003.1']  # a transcript FASTA's own names
+NAMED = ['ENSG01_ENST01.3', 'ENSG01_ENST02.1', 'ENSG02_ENST03.2', 'ENSG-03_ENST04.1']  # U-Probe's transcript.fa
+
+
+def test_existing_index_with_other_record_names_is_refused(tmp_path, inputs, monkeypatch):
+    import uprobe.core.offtarget as offtarget
+    prefix = fake_index(tmp_path / 'ext' / 'tx')
+    monkeypatch.setattr(offtarget, 'index_record_names', lambda aligner, where: PLAIN)
+    # genome add: refused before anything is written.
+    with pytest.raises(TranscriptomeError, match=r"4 of 4 records are not named <gene_id>_<transcript_id>.*"
+                                                 r"ENST01.3 -> gene 'ENST01.3'.*NM_000003.1 -> gene 'NM'"):
+        add(tmp_path, inputs, existing_indexes={'bowtie_transcript': str(prefix)})
+    assert not (tmp_path / 'genomes.yaml').exists()
+    assert not list((tmp_path / 'genomes' / 'tx').glob('*.tmp'))
+    # The same index named in genomes.yaml by hand: validate and the run refuse it.
+    add(tmp_path, inputs)
+    genomes = yaml.safe_load((tmp_path / 'genomes.yaml').read_text())
+    genomes['tx']['indexes'] = {'bowtie_transcript': str(prefix)}
+    protocol = {'name': 'p', 'genome': 'tx', 'targets': ['AAA'], 'encoding': {},
+                'extracts': {'target_region': {'source': 'mRNA', 'length': 30}},
+                'probes': {'p1': {'template': '{a}', 'parts': {'a': {'expr': 'rc(target_region)'}}}},
+                'attributes': {'mg': {'target': 'target_region', 'type': 'mapped_genes', 'aligner': 'bowtie'}}}
+    errors = [f.message for f in validate_protocol(protocol, genomes=genomes) if f.severity == 'error']
+    assert any('records are not named <gene_id>_<transcript_id>' in message for message in errors), errors
+    with pytest.raises(ValueError, match='records are not named'):
+        build_genome(genomes['tx'], threads=1, used={'genome': set(), 'transcript': {'bowtie'}})
+    # Records named after the annotation are accepted.
+    monkeypatch.setattr(offtarget, 'index_record_names', lambda aligner, where: NAMED)
+    assert not [f for f in validate_protocol(protocol, genomes=genomes) if f.severity == 'error' and 'records' in f.message]
+    build_genome(genomes['tx'], threads=1, used={'genome': set(), 'transcript': {'bowtie'}})
+    assert add(tmp_path, inputs, existing_indexes={'bowtie_transcript': str(prefix)})['entry']['indexes']
+
+
+def test_unchecked_record_names_are_a_warning(tmp_path, inputs, monkeypatch):
+    import uprobe.core.offtarget as offtarget
+    prefix = fake_index(tmp_path / 'ext' / 'tx')
+    monkeypatch.setattr(offtarget, 'index_record_names', lambda aligner, where: None)  # no bowtie-inspect
+    add(tmp_path, inputs, existing_indexes={'bowtie_transcript': str(prefix)})
+    genomes = yaml.safe_load((tmp_path / 'genomes.yaml').read_text())
+    protocol = {'name': 'p', 'genome': 'tx', 'targets': ['AAA'], 'encoding': {},
+                'extracts': {'target_region': {'source': 'mRNA', 'length': 30}},
+                'probes': {'p1': {'template': '{a}', 'parts': {'a': {'expr': 'rc(target_region)'}}}},
+                'attributes': {'gc': {'target': 'target_region', 'type': 'gc_content'}}}
+    warnings = [f.message for f in validate_protocol(protocol, genomes=genomes) if f.severity == 'warning']
+    assert any('bowtie-inspect is not on PATH' in message for message in warnings), warnings
+
+
+@needs_bowtie2
+def test_plain_transcript_index_is_refused_with_bowtie2(tmp_path, inputs):
+    import subprocess
+    fasta = inputs[0]
+    subprocess.run(['bowtie2-build', '-q', str(fasta), str(tmp_path / 'plain')], check=True)
+    with pytest.raises(TranscriptomeError, match="ENST01.3 -> gene 'ENST01.3'"):
+        add(tmp_path, inputs, existing_indexes={'bowtie2_transcript': str(tmp_path / 'plain')})
+    add(tmp_path, inputs)
+    built = tmp_path / 'genomes' / 'tx' / 'transcript.fa'
+    subprocess.run(['bowtie2-build', '-q', str(built), str(tmp_path / 'named')], check=True)
+    entry = add(tmp_path, inputs, existing_indexes={'bowtie2_transcript': str(tmp_path / 'named')})['entry']
+    build_genome({**entry, 'align_index': ['bowtie2']}, threads=1)
+
+
+# -- genome add again: indexes of the previous sequences are removed --------------------------
+
+def test_re_adding_changed_sequences_removes_the_indexes_built_from_them(tmp_path, inputs):
+    directory = tmp_path / 'genomes' / 'tx'
+    add(tmp_path, inputs)
+    transcript_index = fake_index(directory / 'bowtie_transcript' / 'transcriptome')
+    kmers = directory / 'jf_genome' / 'transcriptome.k35.jf'
+    kmers.parent.mkdir()
+    kmers.write_text('index')
+    # The same inputs again: transcript.fa is unchanged, its indexes stay.
+    assert add(tmp_path, inputs)['removed_indexes'] == []
+    assert transcript_index.with_name('transcriptome.1.ebwt').is_file() and kmers.is_file()
+    # A changed gene id renames the transcript.fa records: the bowtie index of the old names goes.
+    fasta, table, _ = inputs
+    table.write_text(table.read_text().replace('ENSG01', 'ENSG09'))
+    removed = add(tmp_path, inputs)['removed_indexes']
+    assert removed == [str(directory / 'bowtie_transcript')]
+    assert not (directory / 'bowtie_transcript').exists() and kmers.is_file()  # the FASTA is the same
+    # Another FASTA: the indexes of the old one (jf_genome) go too.
+    fake_index(directory / 'bowtie_transcript' / 'transcriptome')
+    other = tmp_path / 'other.fa'
+    other.write_text(fasta.read_text().replace('>ENST02.1 cdna gene:x\n', '>ENST02.1 cdna gene:x\nA'))
+    result = add_transcriptome('tx', other, table, out_dir=tmp_path / 'genomes', genomes_yaml=tmp_path / 'genomes.yaml',
+                               align_index=['bowtie'])
+    assert sorted(result['removed_indexes']) == [str(directory / 'bowtie_transcript'), str(directory / 'jf_genome')]
+
+
+@needs_bowtie2
+def test_re_added_transcriptome_gets_an_index_of_its_new_records(tmp_path, inputs):
+    from uprobe.core.offtarget import index_record_names
+    add(tmp_path, inputs)
+    entry = {**yaml.safe_load((tmp_path / 'genomes.yaml').read_text())['tx'], 'align_index': ['bowtie2']}
+    build_genome(entry, threads=1)
+    prefix = index_prefix(entry, 'bowtie2', 'transcript')
+    assert 'ENSG01_ENST01.3' in index_record_names('bowtie2', prefix)
+    _, table, _ = inputs
+    table.write_text(table.read_text().replace('ENSG01', 'ENSG09'))
+    add(tmp_path, inputs)
+    build_genome(entry, threads=1)
+    names = index_record_names('bowtie2', prefix)
+    assert 'ENSG09_ENST01.3' in names and not any(name.startswith('ENSG01_') for name in names)

@@ -29,8 +29,8 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
-from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, resolve_conditions,
-                            tm_method, unused_fields,
+from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, formula_hint,
+                            legacy_formula_fields, resolve_conditions, tm_method, unused_fields,
                             validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
@@ -354,6 +354,7 @@ class _Validator:
         self.check_top_level()
         self.check_extracts()
         self.check_targets()
+        self.check_mask_targets()
         self.check_probes()
         self.check_encoding()
         self.check_hybridization()
@@ -499,6 +500,21 @@ class _Validator:
             self.error(path + ('mask',), f'cannot read the mask {value}: {exc}', MASK_HINT)
             return
         self.mask = mask
+
+    def check_mask_targets(self):
+        """The mask's chromosome names against the targets' (no genome needed): a mask on other names masks nothing."""
+        if self.mask is None:
+            return
+        chromosomes = sorted({m[1] for m in (REGION_RE.match(str(t)) for t in self.genome_targets) if m})
+        named = sorted(self.mask.chromosomes())
+        missing = [chrom for chrom in chromosomes if chrom not in named]
+        if missing:
+            listed = (f'its chromosomes are {", ".join(named[:5])}{", ..." if len(named) > 5 else ""}' if named
+                      else 'it has no interval at all')
+            self.warning(('extracts', 'target_region', 'mask'),
+                         f'the mask has no interval on {", ".join(missing)}, the chromosome(s) of the targets; '
+                         f'{listed}: no window there would be masked',
+                         'name the chromosomes as the targets and the genome FASTA do (chr1 vs 1)')
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -814,13 +830,17 @@ class _Validator:
                 try:
                     method = tm_method(attr, f'attributes.{name}')
                     try:
-                        ignored = unused_fields(method, resolve_conditions(self.protocol, name))
+                        conditions = resolve_conditions(self.protocol, name)
                     except ValueError:
-                        ignored = []  # the hybridization block itself is reported below
+                        conditions = None  # the hybridization block itself is reported below
+                    ignored = unused_fields(method, conditions) if conditions is not None else []
                     if ignored:
                         self.warning(('attributes', name, 'tm_method'),
                                      f'tm_method {method} does not use {", ".join(ignored)}, declared for this attribute',
                                      'remove the field(s) or choose another tm_method')
+                    legacy = legacy_formula_fields(method, conditions) if conditions is not None else ''
+                    if legacy:
+                        self.warning(('attributes', name, 'tm_method'), legacy, formula_hint(method))
                 except ValueError as exc:
                     hint = (f'tm_method: {TM_METHODS[1]}   # or {", ".join(TM_METHODS[2:])}, {TM_METHODS[0]} (the default)'
                             if 'must be one of' in str(exc) else 'remove it')
@@ -893,6 +913,7 @@ class _Validator:
             return  # generated attributes are only checked against the genome config
         columns = self.sequence_columns()
         index_nodes = probe_index_nodes(protocol.get('probes'))
+        from .attributes import target_sense
         for name, attr in self.attributes.items():
             path = ('attributes', name)
             if not isinstance(attr, dict):
@@ -929,6 +950,13 @@ class _Validator:
                     self.error(path + ('sequence',), f'sequence must be probe or target, got {attr["sequence"]!r}',
                                'sequence: target   # the attribute\'s target is the RNA in sense orientation; '
                                'probe (default): it is the DNA probe 5\'->3\'')
+                elif kind == 'rna_dna_dg37' and target_sense(attr.get('target')) and attr.get('sequence', 'probe') == 'probe':
+                    self.warning(path + (('sequence',) if 'sequence' in attr else ('target',)),
+                                 f'{attr["target"]} is the target RNA in sense orientation, but with sequence: probe '
+                                 '(the default) rna_dna_dg37 reads its target as the DNA probe 5\'->3\': the value is '
+                                 'that of the other strand, not of the probe on this target',
+                                 'sequence: target   # reverse-complements the RNA first, as Oligostan does; or point '
+                                 'target at the probe or its binding part')
                 elif kind == 'kmer_count' and 'locus_only' in attr and not isinstance(attr['locus_only'], bool):
                     self.error(path + ('locus_only',), f'locus_only must be true or false, got {attr["locus_only"]!r}',
                                'locus_only: true   # count only the candidates\' k-mers, in one pass over the genome')
@@ -1478,6 +1506,25 @@ class _Validator:
                 if exists is not None and not exists(Path(prefix)):
                     self.error((name, 'indexes', key), f'no complete {aligner} index at the prefix {prefix}; it is '
                                'used as it is and never built', 'fix the prefix, or remove the entry so that U-Probe builds one', doc)
+                elif kind == 'transcript' and aligner in MAPPED_GENES_ALIGNERS:
+                    self.check_index_records(name, entry, key, aligner, prefix, doc)
+
+    def check_index_records(self, name, entry, key, aligner, prefix, doc):
+        """The records of a transcriptome index given under indexes must be <gene_id>_<transcript_id> of the
+        entry's GTF: mapped_genes reads each hit's gene from the record name."""
+        from .offtarget import transcript_index_problem
+        try:
+            problem, note = transcript_index_problem(entry, aligner, prefix)
+        except (OSError, RuntimeError) as exc:
+            problem, note = '', f'indexes.{key}: cannot list the records of {prefix}: {exc}'
+        if problem:
+            self.error((name, 'indexes', key), problem,
+                       f'{aligner}-build <index_dir>/transcript.fa {prefix}   # the transcript.fa U-Probe writes '
+                       '(uprobe genome add), whose records are <gene_id>_<transcript_id>', doc)
+        elif note:
+            hint = (f'install {aligner} (its {aligner}-inspect lists the records)' if 'inspect' in note
+                    else 'check the gtf of the entry')
+            self.warning((name, 'indexes', key), note, hint, doc)
 
     def check_targets_in_genome(self, entry):
         if self.source == 'genome':
@@ -1500,13 +1547,6 @@ class _Validator:
                                f'use an end <= {lengths[chrom]}')
             if self.region().get('masked') == 'drop':
                 self.check_masked_genome(entry['fasta'], lengths)
-            mask = self.mask
-            chromosomes = {m[1] for m in (REGION_RE.match(str(t)) for t in self.genome_targets) if m}
-            if mask is not None and chromosomes and not chromosomes & mask.chromosomes():
-                self.warning(('extracts', 'target_region', 'mask'),
-                             f'the mask has no interval on {", ".join(sorted(chromosomes))}; its chromosomes are '
-                             f'{", ".join(sorted(mask.chromosomes())[:5])}: no window would be masked',
-                             'use the chromosome names of the genome FASTA (chr1 vs 1)')
         elif self.source is not None and self.genome_targets:
             from .gen.fun import read_gtf
             try:
@@ -1536,13 +1576,16 @@ class _Validator:
                    if m and m[1] in lengths and int(m[3]) <= lengths[m[1]]]
         if not regions:
             return
+        if self.mask is not None and any(self.mask.flags(m[1], int(m[2]), int(m[3])).any() for m in regions):
+            return  # extracts.target_region.mask marks the repeats
         with Fasta(str(fasta)) as fa:
             if any(not fa[m[1]][int(m[2]) - 1:int(m[3])].seq.isupper() for m in regions):
                 return
-        self.warning(('extracts', 'target_region', 'masked'), 'the targets have no soft-masked (lowercase) base: '
-                     'the FASTA looks unmasked, so masked: drop skips only windows with N, not repeats',
+        masks = ' and the mask marks none of their bases' if self.mask is not None else ''
+        self.warning(('extracts', 'target_region', 'masked'), 'the targets have no soft-masked (lowercase) base'
+                     f'{masks}: the FASTA looks unmasked, so masked: drop skips only windows with N, not repeats',
                      'use a soft-masked FASTA, e.g. `uprobe genome fetch --species homo_sapiens --soft-masked` '
-                     'or UCSC hg38.fa')
+                     'or UCSC hg38.fa, or a mask: of the repeats (BED)')
 
     def check_transcripts_in_genome(self, gtf, targets):
         """The transcripts option against the GTF: listed ids, and the tags canonical and mane read."""

@@ -87,7 +87,7 @@ def _split_names(value) -> list:
 
 
 def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
-                     location_interval: int, prefer: str = None, ids=None) -> list:
+                     location_interval: int, prefer: str = None, ids=None, sites_of=None) -> list:
     """Index labels of the rows to keep, group by group.
 
     Rows are visited by start, and a row is kept when it starts more than
@@ -98,7 +98,8 @@ def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
 
     ``ids`` (oligo_sites.oligo_ids) names the identical oligos: one that binds
     several sites is kept once, only when none of its sites is within
-    location_interval of a kept site, and then occupies all of them.
+    location_interval of a kept site, and then occupies all of them; ``sites_of``
+    (oligo_sites.sites_by_oligo) lists the sites of each.
     """
     work = df[group_cols].assign(_start=bounds['start'], _end=bounds['end'])
     order = group_cols + ['_start']
@@ -106,7 +107,7 @@ def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
         work['_prefer'] = pd.to_numeric(df[prefer], errors='coerce')
         order.append('_prefer')
     work = work.sort_values(by=order, kind='stable', na_position='last')
-    if ids is not None and not ids.duplicated().any():
+    if sites_of is None:
         ids = None  # every oligo has one site
     keep = []
     for _, group in work.groupby(group_cols, dropna=False, sort=False):
@@ -117,31 +118,36 @@ def _non_overlapping(df: pd.DataFrame, group_cols: list, bounds: pd.DataFrame,
                     keep.append(label)
                     current_end = end
             continue
-        sites_of = oligo_sites.sites_by_oligo(ids.loc[group.index], bounds.loc[group.index])
+        group_ids = ids.loc[group.index].tolist()
         occupied = oligo_sites.Occupancy(location_interval)
         decided = set()
-        for label in group.index:
-            oligo = ids[label]
+        for label, oligo in zip(group.index, group_ids):
             if oligo in decided:
                 continue
             decided.add(oligo)  # refused once, refused later: the occupied sites only grow
-            sites = oligo_sites.merged_sites(sites_of[oligo])
+            sites = sites_of[oligo]
+            if len(sites) > 1:
+                sites = oligo_sites.merged_sites(sites)
             if not occupied.conflicts(sites):
                 keep.append(label)
                 occupied.add(sites)
     return keep
 
 
-def _with_site_report(df, result, keep, ids, bounds):
+def _oligo_sites(df, group_cols, bounds):
+    """(oligo ids, their sites) when some oligo occurs more than once, else (None, None)."""
+    ids = oligo_sites.oligo_ids(df, group_cols)
+    if ids is None or not ids.duplicated().any():
+        return None, None
+    return ids, oligo_sites.sites_by_oligo(ids, bounds)
+
+
+def _with_site_report(result, keep, ids, sites_of):
     """Name the kept oligos that bind several sites: n_sites and oligo_sites columns (only then)
     and result.attrs['multi_site_oligos']."""
-    if ids is None or not ids.duplicated().any():
-        return result
-    report, sites_of = oligo_sites.describe_kept(df, ids, bounds, keep)
-    if report:
-        result = oligo_sites.annotate(result, keep, ids, sites_of)
-        result.attrs['multi_site_oligos'] = report
-    return result
+    if sites_of is not None:
+        result = oligo_sites.annotate_kept(result, keep, ids, sites_of)
+    return oligo_sites.settle(result)
 
 
 def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_interval: int,
@@ -159,9 +165,9 @@ def _remove_overlap_along_targets(df: pd.DataFrame, transcript_col, location_int
                            'end': pd.to_numeric(df['target_end'], errors='coerce')}, index=df.index)
     if bounds.isna().any().any():  # direct sequences: positions along the sequence itself
         bounds = bounds.fillna(region_bounds(df))
-    ids = oligo_sites.oligo_ids(df, ['target'])
-    keep = _non_overlapping(df, ['target'], bounds, location_interval, prefer, ids)
-    result = _with_site_report(df, df.loc[keep].copy(), keep, ids, bounds)
+    ids, sites_of = _oligo_sites(df, ['target'], bounds)
+    keep = _non_overlapping(df, ['target'], bounds, location_interval, prefer, ids, sites_of)
+    result = _with_site_report(df.loc[keep].copy(), keep, ids, sites_of)
     if transcript_col:
         sites = list(zip(df['target'], bounds['start'], bounds['end']))
         names = {}
@@ -211,9 +217,9 @@ def remove_overlap(df: pd.DataFrame,
     # Numeric bounds: genome windows carry only sub_region ("101-140"), also
     # next to direct sequences, whose start/end columns they leave empty.
     bounds = region_bounds(df)
-    ids = oligo_sites.oligo_ids(df, group_cols)
-    keep = _non_overlapping(df, group_cols, bounds, location_interval, prefer, ids)
-    return _with_site_report(df, df.loc[keep], keep, ids, bounds).reset_index(drop=True)
+    ids, sites_of = _oligo_sites(df, group_cols, bounds)
+    keep = _non_overlapping(df, group_cols, bounds, location_interval, prefer, ids, sites_of)
+    return _with_site_report(df.loc[keep].copy(), keep, ids, sites_of).reset_index(drop=True)
 
 # post_process runs its steps in this order, whatever their order in the protocol.
 STEP_ORDER = ('filters', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'sorts')
@@ -228,7 +234,6 @@ def post_process(df: pd.DataFrame,
     """
     stages = []
     pool_report = None
-    multi_site = []  # identical oligos that bind several sites of a target (oligo_sites.py)
     # Per-target counts after each stage (aligned with `stages`) for the run summary.
     target_counts = []
     target_col = next((c for c in ('target', 'gene') if c in df.columns), None)
@@ -337,7 +342,6 @@ def post_process(df: pd.DataFrame,
         logger.info("Removing overlap")
         location_interval = processes['remove_overlap'].get('location_interval', 0)
         df = remove_overlap(df, config, location_interval, processes['remove_overlap'].get('prefer'))
-        multi_site += df.attrs.get('multi_site_oligos', [])
         record('Remove overlap')
     if processes.get('off_target_pool'):
         logger.info("Limiting probes per off-target gene")
@@ -346,7 +350,6 @@ def post_process(df: pd.DataFrame,
     if "equal_space" in processes and processes['equal_space']:
         logger.info("Equalizing space")
         df = equal_space(df, processes['equal_space'])
-        multi_site += df.attrs.get('multi_site_oligos', [])
         record('Equal spacing')
     if 'sorts' in processes and processes['sorts']:
         logger.info("Sorting the table")
@@ -359,10 +362,10 @@ def post_process(df: pd.DataFrame,
         record('Sort')
     if 'summary' in processes and processes['summary']:
         logger.info("Summary configuration found - will be processed during report generation")
+    # Identical oligos that bind several sites of a target (oligo_sites.py): those of the final table, once each.
+    df = oligo_sites.settle(df)
     df.attrs['post_process_stages'] = stages
     df.attrs['post_process_target_counts'] = target_counts
     if pool_report is not None:
         df.attrs['off_target_pool'] = pool_report
-    if multi_site:
-        df.attrs['multi_site_oligos'] = multi_site
     return df

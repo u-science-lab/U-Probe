@@ -82,6 +82,23 @@ def test_validate_accepts_the_attribute_and_rejects_bad_options():
     assert len(warnings) == 1 and warnings[0].severity == 'warning'
 
 
+def test_target_region_with_the_probe_orientation_is_flagged(caplog):
+    # target_region is the RNA in sense orientation: read as a probe it gives the other strand's value.
+    probe = OLIGOSTAN_OUTPUT[0][0]
+    target = reverse_complement(probe)
+    assert cal_rna_dna_dg37(target) != pytest.approx(cal_rna_dna_dg37(target, 'target'), abs=0.5)
+    for attr, path in (({'target': 'target_region'}, 'attributes.dg.target'),
+                       ({'target': 'target_region', 'sequence': 'probe'}, 'attributes.dg.sequence')):
+        warnings = [f for f in validate_protocol(minimal(**attr)) if f.severity == 'warning' and 'sense' in f.message]
+        assert [f.path for f in warnings] == [path] and 'sequence: target' in warnings[0].suggestion
+    assert not [f for f in validate_protocol(minimal(target='target_region', sequence='target')) if 'sense' in f.message]
+    assert not [f for f in validate_protocol(minimal()) if 'sense' in f.message]  # a probe: the default is right
+    # The run says so too.
+    df = pd.DataFrame({'target_region': [target]})
+    add_attributes(df, {'attributes': {'dg': {'target': 'target_region', 'type': 'rna_dna_dg37'}}}, {})
+    assert 'sequence: target' in caplog.text
+
+
 def test_filters_accept_negative_numbers():
     from uprobe.core.process import filter_table, parse_condition
     assert parse_condition('dg >= -33 & dg <= -31.5') == [('dg', '>=', -33), ('dg', '<=', -31.5)]

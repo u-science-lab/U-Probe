@@ -233,6 +233,13 @@ def build_genome(genome: dict,
             if not _TRANSCRIPT_INDEX_EXISTS[aligner](pointed):
                 raise ValueError(f"indexes.{aligner}_transcript points to {pointed}, where no complete {aligner} "
                                  "index exists; fix the prefix or remove the entry so that U-Probe builds one")
+            # mapped_genes reads each hit's gene from the record name: check the names before any run uses them.
+            from uprobe.core.offtarget import transcript_index_problem
+            problem, note = transcript_index_problem(genome, aligner, pointed)
+            if problem:
+                raise ValueError(problem)
+            if note:
+                log.warning(note)
             log.info(f"Using the existing {aligner} transcriptome index {pointed}")
             continue
         tran_index_dir = root / f"{aligner}_transcript"

@@ -372,8 +372,37 @@ def test_design_code_tm_methods_validate():
         assert not [f for f in validate_protocol(protocol) if f.severity == 'error' and f.path.startswith('attributes')]
     protocol['attributes']['x']['hybridization'] = {'formamide_pct': 30, 'mg_mM': 2, 'na_mM': 300}
     protocol['attributes']['x']['tm_method'] = 'merfish_design'
-    warnings = [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
-    assert len(warnings) == 1 and 'formamide_pct, mg_mM' in warnings[0].message
+    warnings = [f.message for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+    assert len(warnings) == 2 and 'does not use formamide_pct, mg_mM' in warnings[0]
+    assert 'probe_nM not declared' in warnings[1] and 'probe_nM 50' in warnings[1]
+
+
+def test_design_code_tm_methods_without_conditions_warn_about_the_legacy_defaults():
+    # Without a hybridization block these formulas run at U-Probe's PCR defaults (50 mM Na+, 50 nM, no formamide):
+    # 64.86 C for OligoMiner's first example probe, which OligoMiner's own conditions put at 42.85 C.
+    from uprobe.core.attributes import cal_temp_oligominer
+    from uprobe.core.hybridization import TM_DEFAULTS, legacy_formula_warnings, tm_formula_arguments
+    from uprobe.core.validate import validate_protocol
+    seq = next(iter(OLIGOMINER_BED))
+    assert cal_temp_oligominer(seq, **tm_formula_arguments('oligominer', {})) == pytest.approx(64.86, abs=0.01)
+    for method, published in (('oligominer', 'na_mM 390, probe_nM 25, formamide_pct 50'),
+                               ('merfish_design', 'na_mM 300, probe_nM 5')):
+        protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', 'type': 'annealing_temperature',
+                                                              'tm_method': method}}}
+        [warning] = [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        assert warning.severity == 'warning' and 'legacy PCR defaults' in warning.message
+        assert published in warning.message and f'na_mM {TM_DEFAULTS["na_mM"]:g}' in warning.message
+        assert 'hybridization: {' in warning.suggestion
+        assert len(legacy_formula_warnings(protocol)) == 1
+        # Declared conditions (here the published ones, protocol-wide) silence it.
+        protocol['hybridization'] = dict(item.split(' ') for item in published.split(', '))
+        protocol['hybridization'] = {key: float(value) for key, value in protocol['hybridization'].items()}
+        assert not [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        assert legacy_formula_warnings(protocol) == []
+    # multi_padlock_design keeps its legacy defaults without a warning (its protocols always declared them).
+    protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', 'type': 'annealing_temperature',
+                                                          'tm_method': 'multi_padlock_design'}}}
+    assert not [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
     protocol['attributes']['x']['tm_method'] = 'bogus'
     errors = [f for f in validate_protocol(protocol) if f.severity == 'error' and f.path == 'attributes.x.tm_method']
     assert errors and 'merfish_design, oligominer' in errors[0].message

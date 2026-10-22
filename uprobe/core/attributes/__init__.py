@@ -213,6 +213,10 @@ def _add_attributes(
             sequence_of = attr.get("sequence", "probe")
             if sequence_of not in SEQUENCE_OF:
                 raise ValueError(f"attributes.{attr_name}.sequence must be one of {', '.join(SEQUENCE_OF)}, got {sequence_of!r}")
+            if sequence_of == "probe" and target_sense(attr.get("target")):
+                log.warning(f"attributes.{attr_name}: {attr.get('target')} is the target RNA in sense orientation, but "
+                            "sequence: probe (the default) reads it as the DNA probe 5'->3': the dG37 is that of the "
+                            "other strand; set sequence: target")
             df_probes[attr_name] = cached(df_probes[actual_target], lambda seq: cal_rna_dna_dg37(seq, sequence_of))
         elif attr_type == "gc_content":
             # Unrounded: filters compare it with the window bounds (19/30 = 0.633 > 0.63).

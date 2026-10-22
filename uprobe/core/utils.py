@@ -198,9 +198,11 @@ def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, maske
         raw = fa[chrom][start - 1:end].seq
     seq = raw.upper()
     prefix = masked_prefix(raw) if masked == 'drop' else None
+    mask_marks = False  # the mask marks a base of the region
     if prefix is not None and mask is not None:
         import numpy as np
         flags = mask.flags(chrom, start, end)
+        mask_marks = bool(flags.any())
         prefix = np.concatenate(([0], np.cumsum(((np.diff(prefix) > 0) | flags[:len(raw)]))))
     windows, skipped = [], 0
     for n, (i, stop, tem) in enumerate(iter_target_windows(seq, min_length, step, overlap), start=1):
@@ -214,6 +216,12 @@ def extract_fasta(fasta_path, target, min_length, overlap=None, step=None, maske
             log.warning(f"{target} has no soft-masked (lowercase) base: if the FASTA is not repeat-masked, "
                         "masked: drop only skips windows with N (use a soft-masked genome, e.g. "
                         "`uprobe genome fetch --soft-masked`)")
+        elif raw == seq and not mask_marks:
+            elsewhere = (f"; the mask has no interval on {chrom} at all (its chromosomes: "
+                         f"{', '.join(sorted(mask.chromosomes())[:5]) or 'none'}): check its chromosome names"
+                         if chrom not in mask.chromosomes() else "")
+            log.warning(f"{target} has no soft-masked (lowercase) base and the mask {mask.path} marks none of it"
+                        f"{elsewhere}: masked: drop only skips windows with N here")
         log.info(f"{target}: masked: drop skipped {skipped} of {skipped + len(windows)} windows "
                  "with a soft-masked or N base")
     return windows

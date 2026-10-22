@@ -36,6 +36,10 @@ TM_METHODS = ('primer3', 'multi_padlock_design', 'merfish_design', 'oligominer')
 TM_FORMULA_FIELDS = {'multi_padlock_design': ('na_mM', 'mg_mM', 'probe_nM', 'formamide_pct'),
                      'merfish_design': ('na_mM', 'probe_nM'),
                      'oligominer': ('na_mM', 'probe_nM', 'formamide_pct')}
+# The conditions of the design code each of these formulas comes from: without declared fields the formula
+# runs at U-Probe's legacy PCR defaults (TM_DEFAULTS), far from them (OligoMiner's example probe: 64.86 vs 42.85 °C).
+TM_FORMULA_CONDITIONS = {'merfish_design': ("the MERFISH design code's 66-76 °C window", {'na_mM': 300, 'probe_nM': 5}),
+                         'oligominer': ("OligoMiner's defaults", {'na_mM': 390, 'probe_nM': 25, 'formamide_pct': 50})}
 PRIMER3_ARGUMENTS = {'na_mM': 'mv_conc', 'mg_mM': 'dv_conc', 'dntp_mM': 'dntp_conc', 'probe_nM': 'dna_conc'}
 # primer3 lowers Tm by (2.88 - 0.453 * GC fraction) °C per mol/l formamide
 # (Blake & Delcourt 1996, Nucleic Acids Res 24:2095-2103,
@@ -135,6 +139,38 @@ def unused_fields(method, conditions):
     if method not in TM_FORMULA_FIELDS or method == 'multi_padlock_design':
         return []
     return [key for key in conditions if key in TM_DEFAULTS and key not in TM_FORMULA_FIELDS[method]]
+
+
+def legacy_formula_fields(method, conditions):
+    """Message when the formula of ``method`` (merfish_design, oligominer) uses fields that ``conditions`` do not
+    declare, so that U-Probe's legacy PCR defaults apply to them; '' otherwise."""
+    if method not in TM_FORMULA_CONDITIONS:
+        return ''
+    missing = [key for key in TM_FORMULA_FIELDS[method] if key not in conditions]
+    if not missing:
+        return ''
+    source, published = TM_FORMULA_CONDITIONS[method]
+    legacy = ', '.join(f'{key} {TM_DEFAULTS[key]:g}' for key in missing)
+    return (f'tm_method {method} uses {", ".join(TM_FORMULA_FIELDS[method])}; {", ".join(missing)} not declared '
+            f'(hybridization block or this attribute\'s override), so U-Probe\'s legacy PCR defaults apply ({legacy}), '
+            f'not {source} ({", ".join(f"{key} {value:g}" for key, value in published.items())})')
+
+
+def legacy_formula_warnings(protocol):
+    """legacy_formula_fields of every annealing_temperature attribute of the protocol, named by attribute."""
+    messages = []
+    for name, attr in (protocol.get('attributes') or {}).items():
+        if isinstance(attr, dict) and attr.get('tm_method') in TM_FORMULA_CONDITIONS:
+            message = legacy_formula_fields(tm_method(attr, f'attributes.{name}'), resolve_conditions(protocol, name))
+            if message:
+                messages.append(f'attributes.{name}: {message}')
+    return messages
+
+
+def formula_hint(method):
+    """A hybridization override with the design code's conditions, for messages."""
+    source, published = TM_FORMULA_CONDITIONS[method]
+    return f'hybridization: {{{", ".join(f"{key}: {value:g}" for key, value in published.items())}}}   # on the attribute: {source}'
 
 
 def multi_padlock_design_arguments(conditions):

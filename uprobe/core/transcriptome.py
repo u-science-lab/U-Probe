@@ -9,8 +9,10 @@ genome. The entry keeps everything it derives (the GTF, transcript.fa with the
 ``<gene_id>_<transcript_id>`` record names the off-target search reads, and the indexes) in its own
 directory (``index_dir``), not next to the FASTA, and can point at indexes that already exist.
 """
+import filecmp
 import os
 import re
+import shutil
 import typing as T
 from pathlib import Path
 
@@ -145,6 +147,63 @@ def _gtf_lines(seqid, length, record, transcript_id, gene_id) -> T.List[str]:
     return lines
 
 
+def _check_existing_indexes(existing_indexes, genes, transcript_path: Path):
+    """An --existing-index must exist, and a transcriptome one must name its records <gene_id>_<transcript_id>
+    with the gene ids written to the annotation: mapped_genes reads each hit's gene from the record name."""
+    from .offtarget import index_record_names, record_gene_problem
+    from .tools import _GENOME_INDEX_EXISTS, _TRANSCRIPT_INDEX_EXISTS
+    problems = []
+    for key, value in (existing_indexes or {}).items():
+        aligner, _, kind = key.partition('_')
+        exists = (_GENOME_INDEX_EXISTS if kind == 'genome' else _TRANSCRIPT_INDEX_EXISTS).get(aligner)
+        if exists is None or not exists(Path(value)):
+            log.warning(f'indexes.{key}: no complete {aligner} index found at the prefix {value}; runs that '
+                        'search it will fail until it exists')
+            continue
+        if kind != 'transcript' or aligner == 'blast':  # mapped_genes searches bowtie / bowtie2 indexes
+            continue
+        try:
+            names = index_record_names(aligner, value)
+        except RuntimeError as exc:
+            log.warning(f'indexes.{key}: the record names of {value} are not checked: {exc}')
+            continue
+        if names is None:
+            log.warning(f'indexes.{key}: {aligner}-inspect is not on PATH, so the record names of {value} are not '
+                        'checked; they must be <gene_id>_<transcript_id> as in transcript.fa')
+            continue
+        problem = record_gene_problem(names, genes, f'--existing-index {key}={value}',
+                                      f'Leave out --existing-index {key} so that U-Probe builds the index from the '
+                                      f'transcript.fa it writes ({transcript_path}), or build yours from that file.')
+        if problem:
+            problems.append(problem)
+    if problems:
+        raise TranscriptomeError('\n'.join(problems))
+
+
+def _same_content(a: Path, b: Path) -> bool:
+    return a.is_file() and b.is_file() and a.stat().st_size == b.stat().st_size and filecmp.cmp(a, b, shallow=False)
+
+
+def _stale_indexes(root: Path, link: Path, fasta: Path, transcript_path: Path, new_transcripts: Path,
+                   existing_indexes) -> T.List[Path]:
+    """The index folders of the entry (``root``) that were built from sequences a new ``genome add`` replaces.
+
+    <aligner>_transcript/ holds indexes of transcript.fa, <aligner>_genome/ and jf_genome/ those of the FASTA;
+    a folder is stale when its source changes content. Indexes given with --existing-index are not U-Probe's.
+    """
+    from .genome_fetch import _DERIVED
+    pointed = {Path(str(value)).resolve().parent for value in (existing_indexes or {}).values()}
+    changed = {'transcript': transcript_path.is_file() and not _same_content(transcript_path, new_transcripts),
+               'genome': (link.is_symlink() or link.exists()) and not _same_content(link, fasta)}
+    stale = []
+    for folder in _DERIVED:
+        kind = 'transcript' if folder.endswith('_transcript') else 'genome'
+        path = root / folder
+        if path.is_dir() and changed[kind] and path.resolve() not in pointed:
+            stale.append(path)
+    return stale
+
+
 def add_transcriptome(name: str, fasta: T.Union[str, Path], records: T.Union[str, Path],
                       out_dir: T.Union[str, Path] = 'genomes', genomes_yaml: T.Union[str, Path] = 'genomes.yaml',
                       *, index_dir: T.Optional[T.Union[str, Path]] = None,
@@ -261,8 +320,16 @@ def add_transcriptome(name: str, fasta: T.Union[str, Path], records: T.Union[str
         entry['indexes'] = {key: str(Path(value).resolve()) for key, value in existing_indexes.items()}
     result = {'name': name, 'entry': entry, 'summary': summary, 'directory': directory,
               'genomes_yaml': genomes_yaml, 'changed': False}
+    try:
+        _check_existing_indexes(existing_indexes, genes, transcript_path)
+    except TranscriptomeError:
+        if not dry_run:
+            for written in (transcript_path, gtf_path):
+                Path(str(written) + '.tmp').unlink(missing_ok=True)
+        raise
     if dry_run:
         return result
+    stale = _stale_indexes(root, link, fasta, transcript_path, Path(str(transcript_path) + '.tmp'), existing_indexes)
     os.replace(str(gtf_path) + '.tmp', gtf_path)
     os.replace(str(transcript_path) + '.tmp', transcript_path)
     if link.is_symlink() or link.exists():
@@ -270,15 +337,13 @@ def add_transcriptome(name: str, fasta: T.Union[str, Path], records: T.Union[str
     try:
         link.symlink_to(fasta)
     except OSError:
-        import shutil
         shutil.copyfile(fasta, link)
-    for key, value in (existing_indexes or {}).items():
-        from .tools import _GENOME_INDEX_EXISTS, _TRANSCRIPT_INDEX_EXISTS
-        aligner, _, kind = key.partition('_')
-        exists = (_GENOME_INDEX_EXISTS if kind == 'genome' else _TRANSCRIPT_INDEX_EXISTS).get(aligner)
-        if exists is None or not exists(Path(value)):
-            log.warning(f'indexes.{key}: no complete {aligner} index found at the prefix {value}; runs that '
-                        'search it will fail until it exists')
+    for path in stale:
+        shutil.rmtree(path)
+    if stale:
+        log.warning(f"The sequences changed since the last `genome add {name}`: removed the indexes built from the "
+                    f"previous ones ({', '.join(p.name for p in stale)}); runs rebuild those they need")
+    result['removed_indexes'] = [str(p) for p in stale]
     result['changed'] = update_genomes_yaml(genomes_yaml, name, entry)
     log.info(f"Transcriptome '{name}' is registered in {genomes_yaml}")
     return result

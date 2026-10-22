@@ -459,6 +459,13 @@ OLIGOSTAN_SALT_M = 0.115
 SEQUENCE_OF = ('probe', 'target')
 
 
+def target_sense(column) -> bool:
+    """True for an attribute target that holds the target RNA in sense orientation: target_region or a layout part
+    of the window (target_parts.<name>), not a probe or its parts (rna_dna_dg37 needs sequence: target there)."""
+    column = str(column or '').replace(':', '.')
+    return column == 'target_region' or column.startswith('target_parts.')
+
+
 def cal_rna_dna_dg37(seq: str, sequence_of='probe', salt_M=OLIGOSTAN_SALT_M):
     """RNA/DNA hybrid dG37 (kcal/mol, more negative is more stable) as the Oligostan script computes it.
 
