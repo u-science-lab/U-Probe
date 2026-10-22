@@ -590,6 +590,7 @@ def generate_target_seqs(
                         step: t.Optional[int] = None,
                         transcripts='all',
                         masked='keep',
+                        mask=None,
                         df_gtf: t.Optional[pd.DataFrame] = None,
                          ):
     """Candidate windows of the targets; RNA_SOURCES describes what each RNA source extracts.
@@ -599,7 +600,7 @@ def generate_target_seqs(
     record them per target (select_transcripts, with the ids of all
     transcripts that have such features for 'all'). A target with one
     selected transcript is tiled along its spliced sequence (SPLICED_SOURCES).
-    For source genome, ``masked`` ('keep' or 'drop') is passed to extract_fasta.
+    For source genome, ``masked`` ('keep' or 'drop') and ``mask`` (a RepeatMask) are passed to extract_fasta.
     ``df_gtf`` is the GTF as read_gtf parses it with gene_name and transcript_id,
     if the caller has it already; it is not modified.
     """
@@ -627,7 +628,7 @@ def generate_target_seqs(
     elif source == 'genome':
         data_list = []
         for target in targets:
-            seq_list = extract_fasta(fasta_path, target, min_length, step=step, masked=masked)
+            seq_list = extract_fasta(fasta_path, target, min_length, step=step, masked=masked, mask=mask)
             data_list.extend(seq_list)
         data = pd.DataFrame(data_list, columns=['probe_id', 'target', 'sub_region', 'target_region'])
         return data

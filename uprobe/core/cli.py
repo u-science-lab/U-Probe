@@ -370,6 +370,9 @@ def _validate_and_normalize_protocol(protocol_config: dict, genome: dict = None)
                              f"got {region['masked']!r}")
         if region.get('source', 'genome') != 'genome' and region['masked'] != 'keep':
             log.warning('extracts.target_region.masked applies to source: genome; it is ignored for gene targets')
+    if 'mask' in region and (not isinstance(region['mask'], str) or not region['mask'].strip()):
+        raise ValueError(f"extracts.target_region.mask must be the path of a BED file or a soft-masked FASTA, "
+                         f"got {region['mask']!r}")
     if 'layout' in region:
         from .layout import compile_layout
         compile_layout(region['layout'], region['length'])
@@ -1172,6 +1175,83 @@ def genome_fetch(species, release, division, out, genomes, name, align_index, je
         click.echo(f"# Build indices with: uprobe build-index -p <protocol.yaml> -g {genomes} "
                    "(or re-run with --build-index).")
     click.echo(_dump_yaml({result['name']: result['entry']}), nl=False)
+
+
+@genome.command(name='add')
+@click.argument('name')
+@click.option('--transcriptome', 'fasta', required=True, type=click.Path(exists=True, dir_okay=False),
+              help='Transcriptome FASTA, one record per transcript (plain text; the header up to the first '
+                   'space is the transcript id).')
+@click.option('--records', required=True, type=click.Path(exists=True, dir_okay=False),
+              help='Transcript table (TSV, or CSV when named .csv) with the transcript id and gene name, and '
+                   'optionally gene id, tags (MANE_Select, Ensembl_canonical) and CDS start/end in the transcript.')
+@click.option('--out', '-o', default='./genomes', type=click.Path(file_okay=False),
+              help='Directory for the files derived from the inputs; the entry gets a sub-directory. '
+                   '[default: ./genomes]')
+@click.option('--genomes', '-g', default='genomes.yaml', type=click.Path(dir_okay=False),
+              help='genomes.yaml to create or update. [default: genomes.yaml]')
+@click.option('--index-dir', type=click.Path(file_okay=False),
+              help='Directory for the indexes, jellyfish files and transcript.fa. [default: the entry directory]')
+@click.option('--existing-index', 'existing', multiple=True, metavar='ALIGNER_KIND=PREFIX',
+              help='Use an index that already exists, e.g. bowtie_transcript=/data/bowtie/transcripts (the prefix '
+                   'given to bowtie); it is never rebuilt. Repeatable.')
+@click.option('--transcript-column', help='Table column with the transcript ids (FASTA record names).')
+@click.option('--gene-column', help='Table column with the gene names that targets are written with.')
+@click.option('--gene-id-column', help='Table column with gene ids. [default: the gene name]')
+@click.option('--tag-column', help='Table column with comma-separated GTF tags, e.g. MANE_Select,Ensembl_canonical.')
+@click.option('--mane-column', help='Table column that marks MANE Select transcripts (1/true/yes, or a value '
+                                    'containing "Select").')
+@click.option('--canonical-column', help='Table column that marks Ensembl canonical transcripts (1/true/yes).')
+@click.option('--unlisted', type=click.Choice(['skip', 'include']), default='skip',
+              help='FASTA records missing from the table: leave them out of the annotation and the off-target '
+                   'index, or keep each as a gene of its own. [default: skip]')
+@click.option('--align-index', help='Comma-separated aligners for the entry, e.g. "bowtie". Only the indexes a '
+                                    'protocol searches are built. [default: bowtie2, plus bowtie if installed]')
+@click.option('--jellyfish/--no-jellyfish', default=None, help='Enable kmer_count for the entry. [default: off]')
+@click.option('--species', help='Species recorded in the entry.')
+@click.option('--dry-run', is_flag=True, help='Read the inputs and print the entry, write nothing.')
+def genome_add(name, fasta, records, out, genomes, index_dir, existing, transcript_column, gene_column,
+               gene_id_column, tag_column, mane_column, canonical_column, unlisted, align_index, jellyfish, species,
+               dry_run):
+    """
+    Register a transcriptome FASTA and a transcript table as a genomes.yaml entry.
+
+    Every FASTA record becomes a single-exon transcript of a synthetic GTF carrying the table's gene names, gene
+    ids and MANE_Select / Ensembl_canonical tags, so source: mRNA with transcripts: mane works and the
+    transcriptome off-target search finds every transcript. Derived files and indexes go to the entry's own
+    directory (or --index-dir), not next to your FASTA. Only the indexes a protocol searches are built, by
+    `uprobe run` or `uprobe build-index`; --existing-index points at one that is already built.
+
+    Example: uprobe genome add human_tx --transcriptome transcripts.fa --records transcripts.tsv --align-index bowtie
+    """
+    from .transcriptome import TranscriptomeError, add_transcriptome
+    aligners = [a.strip() for a in align_index.split(',') if a.strip()] if align_index else None
+    pointers = {}
+    for item in existing:
+        key, sep, prefix = item.partition('=')
+        if not sep or not prefix:
+            raise click.UsageError(f'--existing-index {item!r}: write ALIGNER_KIND=PREFIX, e.g. bowtie_transcript=/path/prefix')
+        pointers[key.strip()] = prefix.strip()
+    try:
+        result = add_transcriptome(
+            name, fasta, records, out_dir=out, genomes_yaml=genomes, index_dir=index_dir, existing_indexes=pointers,
+            align_index=aligners, jellyfish=jellyfish, unlisted=unlisted, species=species, dry_run=dry_run,
+            transcript_column=transcript_column, gene_column=gene_column, gene_id_column=gene_id_column,
+            tag_column=tag_column, mane_column=mane_column, canonical_column=canonical_column)
+    except TranscriptomeError as e:
+        log.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        log.error(f"Adding the transcriptome failed: {e}")
+        sys.exit(1)
+    summary = result['summary']
+    if dry_run:
+        click.echo("# Dry run: nothing was written.")
+    else:
+        click.echo(f"# Registered in {result['genomes_yaml']}; use `genome: {name}` in your protocol.")
+    click.echo(f"# {summary['transcripts']:,} transcripts of {summary['genes']:,} genes "
+               f"({summary['unlisted']:,} FASTA records not in the table).")
+    click.echo(_dump_yaml({name: result['entry']}), nl=False)
 
 
 @genome.command(name='list')

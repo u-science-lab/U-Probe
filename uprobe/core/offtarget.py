@@ -43,8 +43,10 @@ the target's sequence are not counted either and are listed in
 ``<attribute>_copies``.
 """
 import functools
+import os
 import re
 import shutil
+import subprocess
 from collections import defaultdict
 from pathlib import Path
 
@@ -96,7 +98,8 @@ def bowtie_unavailable(genome) -> str:
     if genome.get('fasta') and not shutil.which('bowtie-build'):
         from .tools import _bowtie_index_exists
         fasta = Path(genome['fasta'])
-        if not _bowtie_index_exists(fasta.parent / 'bowtie_transcript' / fasta.stem):
+        from .genome_paths import index_prefix
+        if not _bowtie_index_exists(index_prefix(genome, 'bowtie', 'transcript')):
             return 'its transcriptome index is not built and bowtie-build is not on PATH'
     return ''
 
@@ -206,6 +209,65 @@ class GeneAnnotation:
     def target_keys(self, target) -> set:
         """Genes of a target given by gene name (or gene id)."""
         return set(self.keys_by_name.get(str(target), ())) | {str(target)}
+
+
+# -- an index that U-Probe did not build ---------------------------------------
+
+# Tools that list the record names of an index (``-n``).
+_INSPECT_TOOLS = {'bowtie': 'bowtie-inspect', 'bowtie2': 'bowtie2-inspect'}
+
+
+def index_record_names(aligner: str, index_prefix) -> list:
+    """Record names of a Bowtie or Bowtie2 index (``<aligner>-inspect -n``), each up to its first
+    whitespace as the aligners report hits; None when the inspect tool is not on PATH."""
+    tool = shutil.which(_INSPECT_TOOLS.get(aligner, ''))
+    if not tool:
+        return None
+    files = sorted(Path(str(index_prefix)).parent.glob(Path(str(index_prefix)).name + '.*'))
+    stamp = tuple((str(f), f.stat().st_mtime_ns, f.stat().st_size) for f in files)
+    return list(_inspect_names(tool, str(index_prefix), stamp))
+
+
+@functools.lru_cache(maxsize=8)
+def _inspect_names(tool: str, prefix: str, stamp: tuple) -> tuple:
+    result = subprocess.run([tool, '-n', prefix], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f'{os.path.basename(tool)} -n {prefix} failed: {result.stderr.strip()[:300]}')
+    return tuple(line.split()[0] for line in result.stdout.splitlines() if line.strip())
+
+
+def record_gene_problem(names, genes, what: str, remedy: str) -> str:
+    """Why the record names of a transcriptome index do not give the genes ``genes`` ('' if they do).
+
+    mapped_genes reads a hit's gene from its record name, ``<gene_id>_<transcript_id>``, up to the
+    first '_' (attributes.transcript_gene). A record named otherwise counts as a gene of its own (an
+    isoform of the target becomes an off-target gene) or is merged with others (NM_000003.1 -> NM).
+    """
+    names = list(names)
+    wrong = [name for name in names if name.split('_')[0] not in genes]
+    if not wrong:
+        return ''
+    examples = ', '.join(f"{name} -> gene {name.split('_')[0]!r}" for name in wrong[:4])
+    return (f'{what}: {len(wrong):,} of {len(names):,} records are not named <gene_id>_<transcript_id> after the '
+            f"genome's annotation (e.g. {examples}). mapped_genes reads each hit's gene from the record name up to "
+            f"the first '_', so it would count wrong off-target genes. {remedy}")
+
+
+def transcript_index_problem(genome: dict, aligner: str, prefix) -> tuple:
+    """(error, note) of the transcriptome index at ``prefix`` given under ``indexes``: error '' when its records
+    name the genes of the genome's GTF; note why they were not checked (no GTF, no ``<aligner>-inspect``)."""
+    from .genome_paths import index_root
+    what = f'indexes.{aligner}_transcript ({prefix})'
+    annotation = GeneAnnotation.from_gtf(genome.get('gtf'))
+    if not annotation.names:
+        return '', f'{what}: the GTF is not readable, so the record names of the index are not checked'
+    names = index_record_names(aligner, prefix)
+    if names is None:
+        return '', (f'{what}: {aligner}-inspect is not on PATH, so the record names of the index are not checked; '
+                    "they must be <gene_id>_<transcript_id> of the genome's GTF")
+    remedy = (f"Remove indexes.{aligner}_transcript so that U-Probe builds the index from {index_root(genome)}/"
+              "transcript.fa, or build yours from that file (its records are named so).")
+    return record_gene_problem(names, set(annotation.names), what, remedy), ''
 
 
 # -- off-target lists --------------------------------------------------------
@@ -356,9 +418,11 @@ class OffTargetCounter:
 
     def _transcript_fasta(self, aligner: str) -> Path:
         """transcript.fa of the <aligner>_transcript index, extracted again if it is gone."""
+        from .genome_paths import index_root
         from .tools import transcript_fasta
         fasta = Path(self.genome['fasta'])
-        path = transcript_fasta(fasta, fasta.parent / f'{aligner}_transcript')
+        root = index_root(self.genome)
+        path = transcript_fasta(fasta, root / f'{aligner}_transcript', root)
         if not path.is_file() or path.stat().st_size == 0:
             from .gen.fun import extract_trans_seqs
             log.info(f'exempt_copies needs the transcript sequences; extracting {path}')

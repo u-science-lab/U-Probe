@@ -29,7 +29,8 @@ from types import SimpleNamespace
 import yaml
 
 from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expression_references, probe_index_nodes
-from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, tm_method,
+from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, formula_hint,
+                            legacy_formula_fields, resolve_conditions, tm_method, unused_fields,
                             validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
@@ -50,19 +51,19 @@ OPTIONAL_KEYS = (
     'species', 'probe_type', 'probe_name', 'probetype',  # read by the HTTP task API
 )
 SOURCES = ('genome', 'mRNA', 'exon', 'CDS', 'UTR')
-REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts', 'masked')
+REGION_KEYS = ('source', 'length', 'step', 'overlap', 'layout', 'transcripts', 'masked', 'mask')
 PART_KEYS = ('template', 'parts', 'expr', 'length')
 LEGACY_TARGET_NAMES = ('gene_id', 'gene', 'gene_name')
 # Attribute types dispatched by attributes.add_attributes -> accepted aligners (the first is suggested).
 ATTRIBUTE_TYPES = {
     'gc_content': None, 'annealing_temperature': None, 'length': None,
-    'fold_score': None, 'self_match': None, 'blocks': None,
+    'fold_score': None, 'self_match': None, 'blocks': None, 'rna_dna_dg37': None,
     'mapped_sites': ('bowtie2',), 'mapped_genes': MAPPED_GENES_ALIGNERS, 'kmer_count': ('jellyfish',),
     'difference': None,
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -138,6 +139,8 @@ TRANSCRIPTS_HINT = ('transcripts: mane   # all (default): every transcript; cano
 KMER_STRAND_HINT = ("strand: sense   # both (default): canonical k-mers, both strands; sense: the k-mers as "
                     "written on the FASTA's forward strand (OligoMiner, PaintSHOP); antisense: their reverse "
                     "complements")
+MASK_HINT = ('mask: repeats.bed   # BED (chrom, start, end; 0-based, genome coordinates) of the repeats, or a '
+             'FASTA of soft-masked loci named chrom:start-end; used with masked: drop')
 MASKED_HINT = ('masked: drop   # skip source: genome windows with a soft-masked (lowercase) or N base; '
                'keep (default) upper-cases them')
 COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
@@ -283,6 +286,7 @@ class _Validator:
         self.source = None
         self.layout = None  # compile_layout result
         self.lengths = None  # (min, max) length of extracted target regions
+        self.mask = None  # the RepeatMask of extracts.target_region.mask
         self.genome_targets, self.direct_targets = [], {}
         self.target_names: T.List[str] = []
         self.target_paths: T.Dict[str, tuple] = {}
@@ -350,6 +354,7 @@ class _Validator:
         self.check_top_level()
         self.check_extracts()
         self.check_targets()
+        self.check_mask_targets()
         self.check_probes()
         self.check_encoding()
         self.check_hybridization()
@@ -423,6 +428,7 @@ class _Validator:
             self.source = source
         self.check_transcripts(region, path)
         self.check_masked(region, path)
+        self.check_mask(region, path)
         if region.get('length') is None:
             self.error(path + ('length',), 'missing `length`',
                        'length: 40   # positive integer, or an inclusive range: [38, 42]')
@@ -471,6 +477,44 @@ class _Validator:
         elif value != 'keep' and self.source is not None and self.source != 'genome':
             self.warning(path + ('masked',), 'masked applies to source: genome and is ignored for gene targets',
                          'remove masked')
+
+    def check_mask(self, region, path):
+        if 'mask' not in region:
+            return
+        value = region['mask']
+        if not isinstance(value, str) or not value.strip():
+            self.error(path + ('mask',), f'mask must be the path of a BED file or a soft-masked FASTA, got {value!r}',
+                       MASK_HINT)
+            return
+        if self.source is not None and self.source != 'genome':
+            self.warning(path + ('mask',), 'mask applies to source: genome and is ignored for gene targets',
+                         'remove mask')
+            return
+        if region.get('masked') != 'drop':
+            self.warning(path + ('mask',), 'mask only has an effect with masked: drop',
+                         'masked: drop   # skip the windows that contain a masked base')
+        from .utils import RepeatMask
+        try:
+            mask = RepeatMask(value)
+        except (OSError, ValueError) as exc:
+            self.error(path + ('mask',), f'cannot read the mask {value}: {exc}', MASK_HINT)
+            return
+        self.mask = mask
+
+    def check_mask_targets(self):
+        """The mask's chromosome names against the targets' (no genome needed): a mask on other names masks nothing."""
+        if self.mask is None:
+            return
+        chromosomes = sorted({m[1] for m in (REGION_RE.match(str(t)) for t in self.genome_targets) if m})
+        named = sorted(self.mask.chromosomes())
+        missing = [chrom for chrom in chromosomes if chrom not in named]
+        if missing:
+            listed = (f'its chromosomes are {", ".join(named[:5])}{", ..." if len(named) > 5 else ""}' if named
+                      else 'it has no interval at all')
+            self.warning(('extracts', 'target_region', 'mask'),
+                         f'the mask has no interval on {", ".join(missing)}, the chromosome(s) of the targets; '
+                         f'{listed}: no window there would be masked',
+                         'name the chromosomes as the targets and the genome FASTA do (chr1 vs 1)')
 
     # -- targets ---------------------------------------------------------
     def check_targets(self):
@@ -784,9 +828,21 @@ class _Validator:
         for name, attr in (attributes.items() if isinstance(attributes, dict) else []):
             if isinstance(attr, dict) and 'tm_method' in attr:
                 try:
-                    tm_method(attr, f'attributes.{name}')
+                    method = tm_method(attr, f'attributes.{name}')
+                    try:
+                        conditions = resolve_conditions(self.protocol, name)
+                    except ValueError:
+                        conditions = None  # the hybridization block itself is reported below
+                    ignored = unused_fields(method, conditions) if conditions is not None else []
+                    if ignored:
+                        self.warning(('attributes', name, 'tm_method'),
+                                     f'tm_method {method} does not use {", ".join(ignored)}, declared for this attribute',
+                                     'remove the field(s) or choose another tm_method')
+                    legacy = legacy_formula_fields(method, conditions) if conditions is not None else ''
+                    if legacy:
+                        self.warning(('attributes', name, 'tm_method'), legacy, formula_hint(method))
                 except ValueError as exc:
-                    hint = (f'tm_method: {TM_METHODS[1]}   # or {TM_METHODS[0]} (the default)'
+                    hint = (f'tm_method: {TM_METHODS[1]}   # or {", ".join(TM_METHODS[2:])}, {TM_METHODS[0]} (the default)'
                             if 'must be one of' in str(exc) else 'remove it')
                     self.error(('attributes', name, 'tm_method'), str(exc), hint)
                 attr = {key: value for key, value in attr.items() if key != 'tm_method'}
@@ -857,6 +913,7 @@ class _Validator:
             return  # generated attributes are only checked against the genome config
         columns = self.sequence_columns()
         index_nodes = probe_index_nodes(protocol.get('probes'))
+        from .attributes import target_sense
         for name, attr in self.attributes.items():
             path = ('attributes', name)
             if not isinstance(attr, dict):
@@ -869,6 +926,12 @@ class _Validator:
                                  _did_you_mean(option, ATTRIBUTE_KEYS, 'known options'))
             kind = attr.get('type')
             kind = str(kind).lower() if kind else None
+            if 'locus_only' in attr and kind != 'kmer_count':
+                self.warning(path + ('locus_only',), 'attribute option \'locus_only\' only applies to kmer_count and is ignored',
+                             'remove it')
+            if 'sequence' in attr and kind != 'rna_dna_dg37':
+                self.warning(path + ('sequence',), 'attribute option \'sequence\' only applies to rna_dna_dg37 and is ignored',
+                             'remove it')
             if kind is None:
                 self.error(path + ('type',), 'missing attribute `type`', 'valid types: ' + ', '.join(ATTRIBUTE_TYPES))
             elif kind not in ATTRIBUTE_TYPES:
@@ -883,6 +946,20 @@ class _Validator:
                                f'aligner: {aligners[0]}')
                 elif kind == 'mapped_genes':
                     self._check_mapped_genes(path, attr)
+                elif kind == 'rna_dna_dg37' and attr.get('sequence', 'probe') not in ('probe', 'target'):
+                    self.error(path + ('sequence',), f'sequence must be probe or target, got {attr["sequence"]!r}',
+                               'sequence: target   # the attribute\'s target is the RNA in sense orientation; '
+                               'probe (default): it is the DNA probe 5\'->3\'')
+                elif kind == 'rna_dna_dg37' and target_sense(attr.get('target')) and attr.get('sequence', 'probe') == 'probe':
+                    self.warning(path + (('sequence',) if 'sequence' in attr else ('target',)),
+                                 f'{attr["target"]} is the target RNA in sense orientation, but with sequence: probe '
+                                 '(the default) rna_dna_dg37 reads its target as the DNA probe 5\'->3\': the value is '
+                                 'that of the other strand, not of the probe on this target',
+                                 'sequence: target   # reverse-complements the RNA first, as Oligostan does; or point '
+                                 'target at the probe or its binding part')
+                elif kind == 'kmer_count' and 'locus_only' in attr and not isinstance(attr['locus_only'], bool):
+                    self.error(path + ('locus_only',), f'locus_only must be true or false, got {attr["locus_only"]!r}',
+                               'locus_only: true   # count only the candidates\' k-mers, in one pass over the genome')
                 elif kind == 'kmer_count' and attr.get('strand', 'both') not in STRANDS:
                     self.error(path + ('strand',), f'strand must be one of {", ".join(STRANDS)}, got '
                                f'{attr["strand"]!r}', KMER_STRAND_HINT)
@@ -1366,11 +1443,17 @@ class _Validator:
                     self.warning((name, 'align_index', i), f'{" and ".join(missing)} not found on PATH; indexing and '
                                  f'aligning with {aligner} will fail',
                                  f'install it, e.g. conda install -c bioconda {ALIGN_PACKAGES[aligner]}', doc)
+        self.check_index_locations(name, entry, doc)
         attributes = protocol.get('attributes')
         needs = {'bowtie2': [], 'bowtie': [], 'jellyfish': []}
         for attr_name, attr in (attributes.items() if isinstance(attributes, dict) else []):
             aligners = ATTRIBUTE_TYPES.get(str(attr.get('type', '')).lower()) if isinstance(attr, dict) else None
-            if aligners:
+            if aligners and isinstance(attr, dict) and attr.get('locus_only') is True and attr.get('type') == 'kmer_count':
+                # Counts from the FASTA in one pass: no jellyfish: true index, only the program.
+                if not shutil.which('jellyfish'):
+                    self.warning(('attributes', attr_name), 'jellyfish is not on PATH; kmer_count with locus_only '
+                                 'will fail', 'install it, e.g. conda install -c bioconda kmer-jellyfish', doc)
+            elif aligners:
                 needs[attr.get('aligner') if attr.get('aligner') in aligners else aligners[0]].append(attr_name)
         enabled = {'bowtie2': 'bowtie2' in align, 'bowtie': 'bowtie' in align,
                    'jellyfish': entry.get('jellyfish', False) is True}
@@ -1395,6 +1478,53 @@ class _Validator:
                              'install it, e.g. conda install -c bioconda jellyfish', doc)
         if self.lookup_targets and files_ok:
             self.check_targets_in_genome(entry)
+
+    def check_index_locations(self, name, entry, doc):
+        """index_dir and indexes of a genome entry (see genome_paths)."""
+        from .genome_paths import KINDS
+        if 'index_dir' in entry and (not isinstance(entry['index_dir'], str) or not entry['index_dir'].strip()):
+            self.error((name, 'index_dir'), f'index_dir must be a directory path, got {entry["index_dir"]!r}',
+                       'index_dir: /path/to/indexes   # instead of next to the FASTA', doc)
+        if 'indexes' not in entry:
+            return
+        indexes = entry['indexes']
+        if not isinstance(indexes, dict):
+            self.error((name, 'indexes'), 'indexes must map <aligner>_<kind> to the prefix of an existing index',
+                       'indexes:\n  bowtie_transcript: /path/to/prefix', doc)
+            return
+        from .tools import _GENOME_INDEX_EXISTS, _TRANSCRIPT_INDEX_EXISTS
+        for key, prefix in indexes.items():
+            aligner, _, kind = str(key).partition('_')
+            if kind not in KINDS or aligner not in ALIGN_INDEXES:
+                self.error((name, 'indexes', key), f'unknown index {key!r}: use <aligner>_<kind> with kind '
+                           f'{" or ".join(KINDS)}, e.g. bowtie_transcript', 'indexes:\n  bowtie_transcript: /path/to/prefix', doc)
+            elif not isinstance(prefix, str) or not prefix.strip():
+                self.error((name, 'indexes', key), f'{key} must be the prefix of an index, got {prefix!r}',
+                           'bowtie_transcript: /path/to/prefix   # as given to bowtie', doc)
+            else:
+                exists = (_GENOME_INDEX_EXISTS if kind == 'genome' else _TRANSCRIPT_INDEX_EXISTS).get(aligner)
+                if exists is not None and not exists(Path(prefix)):
+                    self.error((name, 'indexes', key), f'no complete {aligner} index at the prefix {prefix}; it is '
+                               'used as it is and never built', 'fix the prefix, or remove the entry so that U-Probe builds one', doc)
+                elif kind == 'transcript' and aligner in MAPPED_GENES_ALIGNERS:
+                    self.check_index_records(name, entry, key, aligner, prefix, doc)
+
+    def check_index_records(self, name, entry, key, aligner, prefix, doc):
+        """The records of a transcriptome index given under indexes must be <gene_id>_<transcript_id> of the
+        entry's GTF: mapped_genes reads each hit's gene from the record name."""
+        from .offtarget import transcript_index_problem
+        try:
+            problem, note = transcript_index_problem(entry, aligner, prefix)
+        except (OSError, RuntimeError) as exc:
+            problem, note = '', f'indexes.{key}: cannot list the records of {prefix}: {exc}'
+        if problem:
+            self.error((name, 'indexes', key), problem,
+                       f'{aligner}-build <index_dir>/transcript.fa {prefix}   # the transcript.fa U-Probe writes '
+                       '(uprobe genome add), whose records are <gene_id>_<transcript_id>', doc)
+        elif note:
+            hint = (f'install {aligner} (its {aligner}-inspect lists the records)' if 'inspect' in note
+                    else 'check the gtf of the entry')
+            self.warning((name, 'indexes', key), note, hint, doc)
 
     def check_targets_in_genome(self, entry):
         if self.source == 'genome':
@@ -1446,13 +1576,16 @@ class _Validator:
                    if m and m[1] in lengths and int(m[3]) <= lengths[m[1]]]
         if not regions:
             return
+        if self.mask is not None and any(self.mask.flags(m[1], int(m[2]), int(m[3])).any() for m in regions):
+            return  # extracts.target_region.mask marks the repeats
         with Fasta(str(fasta)) as fa:
             if any(not fa[m[1]][int(m[2]) - 1:int(m[3])].seq.isupper() for m in regions):
                 return
-        self.warning(('extracts', 'target_region', 'masked'), 'the targets have no soft-masked (lowercase) base: '
-                     'the FASTA looks unmasked, so masked: drop skips only windows with N, not repeats',
+        masks = ' and the mask marks none of their bases' if self.mask is not None else ''
+        self.warning(('extracts', 'target_region', 'masked'), 'the targets have no soft-masked (lowercase) base'
+                     f'{masks}: the FASTA looks unmasked, so masked: drop skips only windows with N, not repeats',
                      'use a soft-masked FASTA, e.g. `uprobe genome fetch --species homo_sapiens --soft-masked` '
-                     'or UCSC hg38.fa')
+                     'or UCSC hg38.fa, or a mask: of the repeats (BED)')
 
     def check_transcripts_in_genome(self, gtf, targets):
         """The transcripts option against the GTF: listed ids, and the tags canonical and mane read."""

@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Any, Optional
 from uprobe.core.utils import get_logger
 from .regions import region_bounds
+from . import oligo_sites
 
 log = get_logger(__name__)
 
@@ -37,6 +38,49 @@ def positions_along_target(df: pd.DataFrame) -> pd.Series:
     return region_bounds(df)['start']
 
 
+def _site_bounds(df: pd.DataFrame) -> pd.DataFrame:
+    """start/end of each candidate along its target."""
+    bounds = pd.DataFrame({'start': positions_along_target(df)})
+    bounds['end'] = bounds['start'] + df[oligo_sites.OLIGO_COLUMN].str.len() - 1
+    return bounds
+
+
+def _collapse_identical_oligos(target_df: pd.DataFrame) -> pd.DataFrame:
+    """One row per distinct oligo of the target (the first site along it), so that an oligo that
+    binds several sites counts once; a no-op without duplicate window sequences.
+
+    Identical windows at one site (shared by several transcripts or exon entries, e.g. with
+    transcripts: all) are one probe too: the kept row lists the transcripts of all of them.
+    """
+    work = target_df.reset_index(drop=True)
+    ids = oligo_sites.oligo_ids(work, ['target'])
+    if ids is None or not ids.duplicated().any():
+        return target_df
+    transcript_col = next((c for c in ('transcript_name', 'transcript_names') if c in work.columns), None)
+    result = oligo_sites.collapse_identical(work, ['target'], _site_bounds(work), transcript_col)
+    log.info(f"equal_space: {len(work) - len(result)} candidate(s) repeat another one's sequence on the same "
+             f"target and were counted once")
+    return result.reset_index(drop=True)
+
+
+def _fill_single_sites(df: pd.DataFrame) -> pd.DataFrame:
+    """n_sites / oligo_sites of rows from targets without repeated oligos (missing after the concat)."""
+    if oligo_sites.N_SITES not in df.columns:
+        return df
+    missing = df[oligo_sites.N_SITES].isna()
+    if missing.any():
+        try:
+            bounds = _site_bounds(df.loc[missing])
+            sites = [f'{int(s)}-{int(e)}' if pd.notna(s) and pd.notna(e) else '' for s, e in
+                     zip(bounds['start'], bounds['end'])]
+        except (ValueError, AttributeError):  # no position or no window sequence: the site is not known
+            sites = [''] * int(missing.sum())
+        df.loc[missing, oligo_sites.SITES] = sites
+        df.loc[missing, oligo_sites.N_SITES] = 1
+    df[oligo_sites.N_SITES] = df[oligo_sites.N_SITES].astype(int)
+    return df
+
+
 def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
     """Keep number_desired probes per target, spread evenly along the target.
 
@@ -54,6 +98,7 @@ def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
     log.info(f"equal_space processing started, there are {len(targets)} targets")
     for target in targets:
         target_df = df[df['target'] == target].copy()
+        target_df = _collapse_identical_oligos(target_df)
         current_count = len(target_df)
         desired = number_desired(config, target)
         if desired is None:
@@ -80,6 +125,8 @@ def equal_space(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
             result_dfs.append(selected_df)
     if result_dfs:
         final_df = pd.concat(result_dfs, ignore_index=True)
+        # The oligos it keeps that bind several sites (none of those it leaves out).
+        final_df = oligo_sites.settle(_fill_single_sites(final_df))
         log.info(f"equal_space processing completed, final number of probes: {len(final_df)}")
         return final_df
     else:

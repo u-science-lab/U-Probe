@@ -18,6 +18,7 @@ from uprobe import __version__
 from ..hybridization import effective_conditions
 from ..offtarget import COPIES_SUFFIX, OFF_TARGETS_SUFFIX, UNEXPRESSED_SUFFIX, parse_gene_hits
 from ..process.equal_space import number_desired
+from ..process.oligo_sites import report_from_table
 
 SUMMARY_FILENAME = "summary.json"
 SUMMARY_SCHEMA_VERSION = 1
@@ -295,6 +296,13 @@ def build_run_summary(protocol: dict, run: dict, output_dir=None) -> dict:
         warnings.append({"code": "fewer_probes_than_requested", "targets": list(short), "counts": short,
                          "message": f"{len(short)} target(s) have fewer probes than requested "
                                     "(post_process.equal_space.number_desired); all their passing probes were kept."})
+    # From the final table's own rows (n_sites, oligo_sites): each kept oligo once, none that a later step left out.
+    multi_site = report_from_table(final) if final is not None else []
+    if multi_site:
+        warnings.append({"code": "multi_site_oligos", "count": len(multi_site), "oligos": multi_site[:50],
+                         "message": f"{len(multi_site)} kept oligo(s) bind several sites of their target (internal "
+                                    "repeats). Each is counted once and occupies all its sites for remove_overlap "
+                                    "and equal_space; the n_sites and oligo_sites columns of the result table list them."})
     off_targets = _off_target_summary(run.get("off_targets"), final)
     missing = {name: entry["missing_from_table"] for name, entry in (off_targets or {}).get("attributes", {}).items()
                if entry.get("missing_from_table")}

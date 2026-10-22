@@ -290,7 +290,7 @@ def test_attribute_types_match_add_attributes():
     ('probe1_part2_kmerCount => 100', "operator '=>'"),
     ('probe1_part2_kmerCount <= 100 | probe1_part2_tm >= 40', 'cannot read'),
     ('probe1_part2_kmerCount <= 1e5', 'read as'),
-    ('probe1_part2_kmerCount >= -5', 'Invalid condition'),
+    ('probe1_part2_kmerCount >= --5', 'Invalid condition'),
 ])
 def test_filter_conditions(dna, condition, message):
     dna['post_process']['filters']['probe1_part2_kmerCount']['condition'] = condition

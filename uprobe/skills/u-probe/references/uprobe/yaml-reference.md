@@ -35,7 +35,25 @@ with one `exon` line per transcript (`1` to its length, `+`, `gene_id`, `gene_na
 `tag "MANE_Select";` or `tag "Ensembl_canonical";` where the table says so), `fasta:` the transcript FASTA
 (records = transcript ids) and `align_index: [bowtie]`; `references/uprobe/workflow.md` (section 1) has the
 script and the sizes. Indexes built earlier are found when `bowtie_transcript/<fasta stem>.*`,
-`transcript.fa` and `jf_genome/` sit next to the FASTA (symlinks work).
+`transcript.fa` and `jf_genome/` sit next to the FASTA (symlinks work). U-Probe versions with
+`uprobe genome add NAME --transcriptome tx.fa --records tx.tsv` write that entry themselves (`uprobe genome
+add --help`); running it again with changed sequences or gene ids removes the indexes of the old ones.
+
+Two optional entry keys move or reuse indexes (versions that have them; `validate` checks both):
+
+```yaml
+  index_dir: /fast/disk/hg38      # <aligner>_genome/, <aligner>_transcript/, jf_genome/, transcript.fa go here
+  indexes:                        # an existing index, used as it is and never built
+    bowtie_transcript: /data/idx/transcripts   # prefix as given to bowtie
+```
+
+A transcriptome index under `indexes` must be built from records named `<gene_id>_<transcript_id>` with
+the GTF's gene ids, i.e. from the `transcript.fa` U-Probe writes: `mapped_genes` takes each hit's gene
+from the record name up to the first `_`. An index of a plain transcript FASTA (records `ENST...`,
+`NM_...`) counts the target's own isoforms as off-target genes and lumps RefSeq records into one gene
+`NM`; `validate`, the run and `genome add --existing-index` stop with an error on it (`bowtie-inspect -n`
+lists the records; without the inspect program `validate` only warns). Build it with
+`bowtie-build <index_dir>/transcript.fa <prefix>`, or leave the key out.
 
 `uprobe genome fetch` writes such entries plus a `source` record. With `--soft-masked` it fetches Ensembl's
 soft-masked FASTA (`dna_sm`: repeats in lowercase; default name suffix `_sm`). Every template can use it: the
@@ -76,7 +94,10 @@ extracts:
 `masked: drop` (source `genome` only) skips every window with a soft-masked (lowercase) or N base, as
 OligoMiner mines a repeat-masked genome; the other windows keep their `probe_id`. It needs a soft-masked
 FASTA (`uprobe genome fetch --soft-masked`, UCSC `hg38.fa`); the run log and `validate --check-targets`
-warn when a target has no lowercase base. `keep` upper-cases the windows and ignores masking.
+warn when a target has no lowercase base. `keep` upper-cases the windows and ignores masking. Versions with
+`mask: repeats.bed` (BED, 0-based, genome coordinates; or a FASTA of soft-masked loci named `chr:s-e`) drop
+the windows with a base in it too, so an unmasked FASTA works; its chromosome names must be those of the
+targets (`chr1` vs `1`: `validate` warns, otherwise nothing is masked).
 
 | `source` | Windows come from |
 | --- | --- |
@@ -163,8 +184,9 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | --- | --- | --- |
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
-| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method: multi_padlock_design` = the HybISS design code's formula (Sugimoto 1996 NN, `16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide; no dNTP term), for windows published under it |
+| `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method: multi_padlock_design` = the HybISS design code's formula (Sugimoto 1996 NN, `16.6 log10([Na+] + 3.795 sqrt[Mg2+])`, -0.72 °C per % formamide; no dNTP term), for windows published under it; versions that have them: `merfish_design` (MERFISH code; uses `na_mM`, `probe_nM`: 300 mM, 5 nM for its 66-76 °C window) and `oligominer` (uses `na_mM`, `probe_nM`, `formamide_pct`: its defaults 390 mM, 25 nM, 50%), which take undeclared fields at the PCR defaults (50 mM, 50 nM, 0%; `validate` warns), so declare them |
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
+| `rna_dna_dg37` (versions that have it) | Oligostan's RNA/DNA ΔG°37 (kcal/mol, more negative = more stable) of the probe read 5'->3' | `sequence`: `probe` (default; `target` = the probe or its binding part) or `target` (`target` = `target_region` or a `target_parts` part, the RNA in sense orientation, reverse-complemented first); `target_region` with `sequence: probe` gives the other strand's value (`validate` warns) |
 | `self_match` | number of 4-mer pairs between the sequence and its reverse complement (crude self-complementarity); lower is better | - |
 | `mapped_genes` | distinct genes with a site in the transcriptome, the target included | `aligner` (required: `bowtie` or `bowtie2`), `max_mismatches` (bowtie: 0-3, default 2), `strand` (`both` default, `sense`, `antisense`), `exempt_copies`, `threads` |
 | `mapped_sites` | list of genome sites in `<attr>`, their count in `<attr>_num` (Bowtie2 `--very-sensitive-local -k 100`, both strands: at most 100; `<attr>_num == 1` is OligoMiner's Unique Mode) | `aligner: bowtie2` (required), `threads` |
@@ -275,8 +297,9 @@ post_process:
   sorts: {is_ascending: [target_mapped_genes], is_descending: []}
 ```
 
-- `condition`: `<column> <op> <number>` joined by `&`; ops `<=`, `>=`, `<`, `>`, `==`; numbers in plain,
-  non-negative decimal (no `-`, no `1e-5`, no `|`/or: use separate filters). A condition on a column that
+- `condition`: `<column> <op> <number>` joined by `&`; ops `<=`, `>=`, `<`, `>`, `==`; numbers in plain
+  decimal (no `1e-5`, no `|`/or: use separate filters); versions with `rna_dna_dg37` also accept a sign
+  (`dg37 >= -33`), older ones reject it. A condition on a column that
   does not exist is **silently skipped** at run time (`validate` reports it).
 - `remove_overlap`: per target, visits candidates by position (`target_start` in RNA mode) and keeps
   one when it starts more than `location_interval` nt after the end of the last kept one. It packs from
@@ -286,12 +309,17 @@ post_process:
   ranges are not a way to fill the count"). It is first-fit: it never looks back, so when the passing
   pool is barely enough it leaves no alternative for a weak window. It does not choose between different
   starts, so put quality into `filters`, and add only filters the method publishes (compare the yield with and
-  without any other).
+  without any other). Windows of a target with the same sequence (an internal repeat) are one oligo: kept
+  once, only if none of its sites is within `location_interval` of a kept one, then all its sites count as
+  occupied; the row gets `n_sites`/`oligo_sites` and `summary.json` a `multi_site_oligos` warning (each
+  oligo of the final table once).
 - `off_target_pool`: per target, walks probes in `sorts` order and drops a probe whose off-target gene
   (from `<attr>_off_targets`) is already hit by `max_probes_per_gene` kept probes. `attribute` may be a
   list. Combine with a per-probe filter (e.g. `<= 2`); `<= 1` makes it a no-op (`validate` warns).
 - `equal_space`: keeps `number_desired` per target at evenly spaced ranks along the target (first and
-  last kept); fewer candidates -> all kept, status `partial`. Use with `remove_overlap`.
+  last kept); fewer candidates -> all kept, status `partial`. Use with `remove_overlap`. It ranks each
+  distinct oligo once: without `remove_overlap`, a window that several transcripts share at one position
+  (`transcripts: all`) is one candidate listing all of them.
 - `sorts`: orders the final table (and the pool's ranking). Unknown columns are dropped. Lower is better
   for `fold_score`, `self_match`, `kmer_count` and `mapped_genes`: put them in `is_ascending` (`validate`
   warns when one is in `is_descending`).

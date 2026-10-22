@@ -300,3 +300,109 @@ def test_invalid_tm_method_rejected(attr, message):
         _validate_and_normalize_protocol(copy.deepcopy(protocol))
     errors = [f for f in validate_protocol(protocol) if f.severity == 'error']
     assert [f.path for f in errors] == ['attributes.x.tm_method'] and message in errors[0].message
+
+
+# OligoMiner ExampleFiles/3_probes.bed (github.com/brianbeliveau/OligoMiner @ fcb124f, MIT): the Tm column of
+# the shipped example output, made with the defaults of blockParse.py (-s 390, -c 25, -C 25, -F 50, DNA_NN3).
+OLIGOMINER_BED = {
+    'CCCCATCCTTATTCCCTTTAAGAACGTTCTGATGGGC': 42.85, 'ATAAGTCAGAGCTTTACAGAGGTGTCACCTAACAAAACGC': 42.27,
+    'AATGACTAAGAATCATTCCAAGTGTCACCATCAAGACCACC': 42.24, 'AGGATTATGTCTGTTGCTACTGGGATATCACTGACAAGTCT': 42.12,
+    'TTGAAGCTCATATGTCACACAATCTCCAGAAGGCCT': 42.22, 'ACTACATAGTGCAATTTTAATTCCAACTCGCTCTTTCCCCT': 42.14,
+    'AGACTTTTGCCATTTTCTTCTCATCTTGCTGCAATCATGT': 42.08, 'TCTTACCACATGGCTAATTCAAATTGGGGTTACAACAGTGA': 42.26,
+    'AAAAGATGGACACCCTGAGGTCAATGATTTCCTCCC': 42.63, 'TTACTACAACATGTTATGTTAACCAACCTCCCTAGTCCCGC': 42.87,
+    'GCAATGAGCTCACAGAAGTCAGGATGTGCACAGGCT': 45.79, 'ATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCT': 42.49,
+}
+OLIGOMINER_CONDITIONS = {'na_mM': 390, 'probe_nM': 25, 'formamide_pct': 50}
+
+
+def test_oligominer_tm_reproduces_the_published_example_output():
+    from uprobe.core.attributes import cal_temp_oligominer
+    for seq, tm in OLIGOMINER_BED.items():
+        assert cal_temp_oligominer(seq, **OLIGOMINER_CONDITIONS) == pytest.approx(tm, abs=0.0051)
+    assert math.isnan(cal_temp_oligominer('ACGTNACGT', **OLIGOMINER_CONDITIONS))
+    # The attribute passes the declared conditions; Mg2+ and dNTP are not part of the formula.
+    protocol = tm_protocol({'dntp_mM': 1, 'mg_mM': 5}, tm_method='oligominer', hybridization=OLIGOMINER_CONDITIONS)
+    result = tm_table(protocol, list(OLIGOMINER_BED))
+    assert result['tm'].tolist() == pytest.approx(list(OLIGOMINER_BED.values()), abs=0.0051)
+    assert describe_conditions(protocol) == ['Tm [oligominer] (tm): 390 mM Na+, 25 nM probe, 50% formamide']
+
+
+def test_oligominer_tm_agrees_with_biopython_when_available():
+    mt = pytest.importorskip('Bio.SeqUtils.MeltingTemp')
+    from uprobe.core.attributes import cal_temp_oligominer
+    for seq in OLIGOMINER_BED:
+        reference = mt.chem_correction(round(mt.Tm_NN(seq, nn_table=mt.DNA_NN3, Na=390, dnac1=25, dnac2=25), 2), fmd=50)
+        assert cal_temp_oligominer(seq, **OLIGOMINER_CONDITIONS) == pytest.approx(reference, abs=0.0051)
+
+
+def test_merfish_design_tm_formula():
+    from uprobe.core.attributes import cal_temp_merfish_design
+    seq = 'CCCATCTCAGTCCTTCTCGCGGCCCTCCTG'
+    # Worked by hand from TRDesigner.m GetRegionTm: SantaLucia & Hicks 2004 sums, 0.2 / -5.7 initiation,
+    # no terminal A/T (C ... G), 0.368 (N-1) ln[Na] at 0.3 M, ln(C) of 5 nM (no /4).
+    nn = {'CC': (-8.0, -19.9), 'CA': (-8.5, -22.7), 'AT': (-7.2, -20.4), 'TC': (-8.2, -22.2),
+          'CT': (-7.8, -21.0), 'TG': (-8.5, -22.7), 'GC': (-9.8, -24.4), 'GG': (-8.0, -19.9),
+          'CG': (-10.6, -27.2), 'AG': (-7.8, -21.0), 'GT': (-8.4, -22.4), 'TT': (-7.6, -21.3),
+          'AA': (-7.6, -21.3), 'GA': (-8.2, -22.2), 'AC': (-8.4, -22.4), 'TA': (-7.2, -21.3)}
+    dh = 0.2 + sum(nn[seq[i:i + 2]][0] for i in range(29))
+    ds = -5.7 + sum(nn[seq[i:i + 2]][1] for i in range(29)) + 0.368 * 29 * math.log(0.3)
+    expected = 1000 * dh / (ds + 1.9872 * math.log(5e-9)) - 273.15
+    assert cal_temp_merfish_design(seq, na_mM=300, probe_nM=5) == pytest.approx(expected, abs=1e-9)
+    assert cal_temp_merfish_design(seq.lower().replace('t', 'u'), na_mM=300, probe_nM=5) == pytest.approx(expected)
+    # A terminal A or T adds 2.2 kcal/mol and 6.9 cal/K/mol at that end.
+    a_end = 'A' + seq[1:]
+    dh2 = dh + 2.2 + (nn['AC'][0] - nn['CC'][0])
+    ds2 = ds + 6.9 + (nn['AC'][1] - nn['CC'][1])
+    assert cal_temp_merfish_design(a_end, na_mM=300, probe_nM=5) == pytest.approx(
+        1000 * dh2 / (ds2 + 1.9872 * math.log(5e-9)) - 273.15, abs=1e-9)
+    # The probe concentration enters as C where Primer3 uses C/4, which makes this formula warmer by about 1.4 C
+    # for a 30-mer at 5 nM (the rest is the SantaLucia & Hicks 2004 table, initiation and rounding).
+    protocol = tm_protocol(tm_method='merfish_design', hybridization={'na_mM': 300, 'probe_nM': 5})
+    assert tm_table(protocol, [seq])['tm'].iloc[0] == pytest.approx(expected, abs=1e-9)
+    primer3_tm = cal_temp(seq, mv_conc=300, dv_conc=0, dntp_conc=0, dna_conc=5)
+    assert 1.0 < expected - primer3_tm < 1.8
+    assert describe_conditions(protocol) == ['Tm [merfish_design] (tm): 300 mM Na+, 5 nM probe']
+
+
+def test_design_code_tm_methods_validate():
+    from uprobe.core.validate import validate_protocol
+    for method in ('merfish_design', 'oligominer'):
+        protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', 'type': 'annealing_temperature',
+                                                              'tm_method': method}}}
+        assert not [f for f in validate_protocol(protocol) if f.severity == 'error' and f.path.startswith('attributes')]
+    protocol['attributes']['x']['hybridization'] = {'formamide_pct': 30, 'mg_mM': 2, 'na_mM': 300}
+    protocol['attributes']['x']['tm_method'] = 'merfish_design'
+    warnings = [f.message for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+    assert len(warnings) == 2 and 'does not use formamide_pct, mg_mM' in warnings[0]
+    assert 'probe_nM not declared' in warnings[1] and 'probe_nM 50' in warnings[1]
+
+
+def test_design_code_tm_methods_without_conditions_warn_about_the_legacy_defaults():
+    # Without a hybridization block these formulas run at U-Probe's PCR defaults (50 mM Na+, 50 nM, no formamide):
+    # 64.86 C for OligoMiner's first example probe, which OligoMiner's own conditions put at 42.85 C.
+    from uprobe.core.attributes import cal_temp_oligominer
+    from uprobe.core.hybridization import TM_DEFAULTS, legacy_formula_warnings, tm_formula_arguments
+    from uprobe.core.validate import validate_protocol
+    seq = next(iter(OLIGOMINER_BED))
+    assert cal_temp_oligominer(seq, **tm_formula_arguments('oligominer', {})) == pytest.approx(64.86, abs=0.01)
+    for method, published in (('oligominer', 'na_mM 390, probe_nM 25, formamide_pct 50'),
+                               ('merfish_design', 'na_mM 300, probe_nM 5')):
+        protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', 'type': 'annealing_temperature',
+                                                              'tm_method': method}}}
+        [warning] = [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        assert warning.severity == 'warning' and 'legacy PCR defaults' in warning.message
+        assert published in warning.message and f'na_mM {TM_DEFAULTS["na_mM"]:g}' in warning.message
+        assert 'hybridization: {' in warning.suggestion
+        assert len(legacy_formula_warnings(protocol)) == 1
+        # Declared conditions (here the published ones, protocol-wide) silence it.
+        protocol['hybridization'] = dict(item.split(' ') for item in published.split(', '))
+        protocol['hybridization'] = {key: float(value) for key, value in protocol['hybridization'].items()}
+        assert not [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        assert legacy_formula_warnings(protocol) == []
+    # multi_padlock_design keeps its legacy defaults without a warning (its protocols always declared them).
+    protocol = {**minimal_protocol(), 'attributes': {'x': {'target': 'target_region', 'type': 'annealing_temperature',
+                                                          'tm_method': 'multi_padlock_design'}}}
+    assert not [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+    protocol['attributes']['x']['tm_method'] = 'bogus'
+    errors = [f for f in validate_protocol(protocol) if f.severity == 'error' and f.path == 'attributes.x.tm_method']
+    assert errors and 'merfish_design, oligominer' in errors[0].message
