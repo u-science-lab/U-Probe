@@ -377,6 +377,22 @@ def test_design_code_tm_methods_validate():
     assert 'probe_nM not declared' in warnings[1] and 'probe_nM 50' in warnings[1]
 
 
+def test_buffer_fields_of_the_protocol_block_are_not_reported_with_an_override():
+    # Templates declare the experiment's buffer (formamide, dntp_mM: 0) in the hybridization block and the
+    # design conditions of a published window on the attribute; that the formula ignores the buffer is intended.
+    from uprobe.core.validate import validate_protocol
+    block = {'temperature_c': 37, 'na_mM': 390, 'formamide_pct': 30, 'dntp_mM': 0}
+    for method, design in (('merfish_design', {'na_mM': 300, 'probe_nM': 5}),
+                           ('oligominer', {'na_mM': 390, 'probe_nM': 25, 'formamide_pct': 50})):
+        attr = {'target': 'target_region', 'type': 'annealing_temperature', 'tm_method': method, 'hybridization': design}
+        protocol = {**minimal_protocol(), 'hybridization': dict(block), 'attributes': {'x': attr}}
+        assert not [f for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        # Without an override the block holds the formula's conditions: a field it ignores there is reported.
+        del attr['hybridization']
+        warnings = [f.message for f in validate_protocol(protocol) if f.path == 'attributes.x.tm_method']
+        assert any('does not use' in w and 'dntp_mM' in w for w in warnings), warnings
+
+
 def test_design_code_tm_methods_without_conditions_warn_about_the_legacy_defaults():
     # Without a hybridization block these formulas run at U-Probe's PCR defaults (50 mM Na+, 50 nM, no formamide):
     # 64.86 C for OligoMiner's first example probe, which OligoMiner's own conditions put at 42.85 C.
