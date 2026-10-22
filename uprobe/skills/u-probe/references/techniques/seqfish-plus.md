@@ -178,6 +178,12 @@ Template departures from Eng 2019 (from the template `meta.limitations` and the 
 - [ ] Pool oligo = primer + 4 overhangs with T spacers + target + rc(T7) (133 nt with 28-nt targets);
       each gene's rounds rotate through the 4 slots (`probe_index`).
 - [ ] Highly expressed genes excluded or routed to non-barcoded rounds.
+- [ ] Run last, with the published values (Eng 2019 filters GC only; spacing is not stated, windows must not overlap):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa --gc 0.45 0.65 --min-gap 0 --min-probes 24
+```
 
 ## 9. References
 

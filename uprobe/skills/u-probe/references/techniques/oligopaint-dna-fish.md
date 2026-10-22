@@ -179,7 +179,7 @@ post_process:
 ```
 
 **U-Probe departs** from OligoMiner in these ways:
-1. Tm comes from primer3 (SantaLucia; Blake-Delcourt formamide correction, 0.61-0.72 C per %), not Biopython Tm_NN DNA_NN3 at 0.65 C per %. Oligos near 42 or 47 C can fall on the other side of the window.
+1. Tm comes from primer3 (SantaLucia; Blake-Delcourt formamide correction, 0.61-0.72 C per %), not Biopython Tm_NN DNA_NN3 at 0.65 C per %. Measured on 6,000 random 36-41-mers (GC 35-60 %) under the template's conditions, OligoMiner's value is +1.49 C above U-Probe's (sd 0.35, +0.8 to +2.3; 0.55 C is the strand term, which `probe_nM: 50` removes, the rest the formamide model): 23 % of the windows U-Probe puts in 42-47 C are above 47 C for OligoMiner, and 30 % of the windows OligoMiner accepts are rejected. The template's window is therefore not OligoMiner's. For a set that must meet OligoMiner's window, compute its function on the final table and check it (section 8), or shift the filter by the offset (about 40.5-45.5 C at `probe_nM: 25`: no too-hot window in the same test, 9 % of OligoMiner's accepted windows lost).
 2. Only outputClean's Unique Mode is reproduced, not its LDA Mode, which the 19p13.2 sets of Table S1 used: Unique Mode drops a probe with any second alignment, however weak. There is no structureCheck, which no Beliveau 2018 set used either.
 3. OligoMiner's dictionary records only k-mers seen at least twice and caps counts at 255 (`-L 2 --out-counter-len 1`); neither changes the drop-at->=5 decision.
 4. U-Probe filters all windows first and then tiles greedily, shortest window first. OligoMiner tiles first (blockParse) and filters afterwards, which leaves gaps. U-Probe therefore returns denser sets for the same parameters (1,486 vs 1,313 probes in the locus above).
@@ -187,6 +187,23 @@ post_process:
 
 ## 7. Pitfalls
 
+- **Locus-sized targets do not need genome-scale tables.** `kmer_count` builds a whole-genome Jellyfish table at its first use, and `mapped_sites` needs a whole-genome Bowtie2 index. For a locus of tens of kb only the locus' own 18-mers matter, and `jellyfish count --if` counts just those across the genome in one pass (`--if` restricts counting to the k-mers of a FASTA file, Jellyfish README; the table is MB, not GB). U-Probe 0.3.0 reuses any non-empty file at the index path, so write the restricted table there, in a directory of its own:
+
+```bash
+# per-locus directory: a symlink to the FASTA (and to bowtie2_genome/ if built), so the index is not shared
+mkdir -p locus1/jf_genome && ln -s /data/hg38.fa locus1/hg38.fa
+# the locus' forward-strand 18-mers (cut chr:start-end from the FASTA first: locus.fa)
+python - <<'PY' > locus1/locus_kmers.fa
+seq = ''.join(l.strip() for l in open('locus.fa') if l[0] != '>').upper()
+for i in range(len(seq) - 17):
+    print(f'>{i}\n{seq[i:i + 18]}')
+PY
+# one pass over the genome, forward-strand counts (no -C) of those k-mers only; name = <fasta stem>.k18.stranded.jf
+jellyfish count -m 18 -s 100M -t 8 --if locus1/locus_kmers.fa -o locus1/jf_genome/hg38.k18.stranded.jf locus1/hg38.fa
+```
+
+  Point a `genomes.yaml` entry of its own at `locus1/hg38.fa` and use it only for windows of this locus with `strand: sense` (an antisense or canonical table would need those k-mers too). The counts equal those of the whole-genome table for the locus' k-mers (tested on a synthetic genome with forward, reverse-complement and tandem copies: identical counts, a ten-fold smaller file even there); check that a known repeat of the locus gets a high count. `masked: drop` reads the lowercase letters of the genome FASTA, so take a soft-masked FASTA as published (UCSC `hg38.fa`, Ensembl `dna_sm`) instead of masking a copy yourself, and never write a masked copy of the whole genome for a locus-sized target; with an unmasked FASTA use `masked: keep` and let the k-mer and alignment filters work (next bullet).
+- **Yield before `masked: drop`.** In a repeat-dense locus `masked: drop` can skip most windows (58 % in the locus above) and leave fewer non-overlapping probes than the request. Count the windows it keeps (the unmasked fraction of the locus) against the probes needed before you commit. OligoMiner mines the masked assembly only (`blockParse` upper-cases the sequence and rejects windows with an N, so its masking is by Ns); PaintSHOP's newBalance "can include repeat-masked bases" and lets the user choose whether to allow them, with its k-mer (18-mer count) and Bowtie2 alignment filters doing the work (Hershberg 2021). If the masked set is too sparse, `masked: keep` with the k-mer and alignment filters is that published alternative; report which you used.
 - **Jellyfish indexes.** Each `kmer_len` has its own index, built by the first `kmer_count` that needs it: `<fasta dir>/jf_genome/<fasta stem>.k<k>.jf` (canonical, `strand: both`) or `<stem>.k<k>.stranded.jf` (`strand: sense` or `antisense`). An index left by older versions, `jf_genome/<stem>.jf`, is reused only for the k in its header. Check that a known repeat gets a high count: the 40-mer of an AluJo at chr19:10,000,001-10,000,040 has a maximal 18-mer count of 706 on both strands and 357 on the forward strand.
 - Every start position yields one window per length (7 per bp for 35-41 nt at `step: 1`), and every attribute is computed on every window before the filters. `masked: drop` skips the repeat windows first (58% of them in the locus above), which also spares Bowtie2 its slowest queries. For multi-Mb paints, split the region into targets of a few Mb, or start from a precomputed OligoMiner/PaintSHOP set.
 - An unmasked FASTA (Ensembl `dna`) with `masked: drop` skips no repeat: only the k-mer and alignment filters remove them. Use a soft-masked one.
@@ -207,6 +224,26 @@ post_process:
 - [ ] The homology strand is consistent across the set; over transcribed regions the probe is sense to the RNA, or RNase A is in the protocol.
 - [ ] Primers and readouts are real sequences (no N), unique per sub-pool or segment, absent from the genome, and not complementary to the homologies; T7 promoter present if needed.
 - [ ] Library oligo length is within the synthesis limit (74-120 nt in the cited designs).
+- [ ] Tm under OligoMiner's own function, not only U-Probe's (section 6, departure 1). Write a copy of the final table with its value (`python add_om_tm.py in.tsv with_om_tm.tsv`) and check that column:
+
+```python
+import csv, sys
+from Bio.SeqUtils import MeltingTemp as mt   # OligoMiner blockParse: Tm_NN, DNA_NN3, 390 mM Na+, 25 nM each strand, 0.65 C per % formamide
+rows = list(csv.DictReader(open(sys.argv[1]), delimiter='\t'))
+for r in rows:
+    tm = mt.Tm_NN(r['oligopaint_oligo.homology'], nn_table=mt.DNA_NN3, Na=390, dnac1=25, dnac2=25, saltcorr=5)
+    r['homology_tm_om'] = mt.chem_correction(tm, fmd=50)
+w = csv.DictWriter(open(sys.argv[2], 'w'), fieldnames=list(rows[0]), delimiter='\t')
+w.writeheader()
+w.writerows(rows)
+```
+
+- [ ] Run last, with the file's own values (Balance preset; Coverage 37-42 C and Stringent 47-52 C change `--tm`; no `--transcripts`):
+
+```bash
+python <skill>/scripts/check_probes.py with_om_tm.tsv --sense oligopaint_oligo.homology --gc 0.2 0.8 \
+    --tm 42 47 --tm-column homology_tm_om --min-gap 0
+```
 
 ## 9. References
 

@@ -157,6 +157,13 @@ structure Tm tests; readout design and orthogonality; mature vs precursor miRNA 
 - [ ] Every probe `target_mapped_genes` and `_bt2` = 1 (copies listed and explained).
 - [ ] No run of > 6 identical nt; Tm stated with conditions (2x SSC, 30 % formamide, 37 C).
 - [ ] No readout used in two rounds; T0a variant, dye and round recorded per readout.
+- [ ] Run last (the paper's Tm > 70 C is OligoArray's under unstated conditions and not reproduced: the 47 C floor under buffer A is U-Probe's; GC is not stated; binding 35 nt; probes of a gene do not overlap):
+
+```bash
+python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
+    --transcripts <genome dir>/transcript.fa \
+    --binding primary_probe.binding --tm 47 100 --tm-column binding_tm --min-gap 0 --min-probes 3
+```
 
 ## 9. References
 

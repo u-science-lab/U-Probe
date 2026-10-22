@@ -502,4 +502,6 @@ def test_reference_mouse_gapdh_probes_by_gene_and_by_transcript(tmp_path):
     assert report['gene_expression']['targets']['Gapdh']['value'] == pytest.approx(
         pd.read_csv(salmon / 'expression.tsv', sep='\t').set_index('gene_symbol').tpm['Gapdh'], abs=0.01)
     assert (by_tx.target_mapped_genes <= by_gene.target_mapped_genes).all()
-    assert tx_windows > 1.5 * gene_windows and tx_probes == 48 > gene_probes
+    # 47, not the 48 requested: the template filters GC to 40-60% and keeps 3 nt between sites
+    # (48 with its earlier 2-nt spacing and no GC filter).
+    assert tx_windows > 1.5 * gene_windows and tx_probes == 47 > gene_probes

@@ -201,6 +201,42 @@ def test_install_for_codex_and_claude(tmp_path, monkeypatch):
     assert bad.exit_code == 2 and '--user applies' in bad.output
 
 
+def _check_commands(text):
+    """The check_probes.py command lines of the fenced bash blocks of a reference, continuations joined."""
+    commands = []
+    for block in re.findall(r'```bash\n(.*?)```', text, flags=re.S):
+        joined = re.sub(r'\\\n\s*', ' ', block)
+        commands += [line.strip() for line in joined.splitlines() if 'scripts/check_probes.py' in line]
+    return commands
+
+
+TECHNIQUES = sorted(p for p in (SKILL / 'references' / 'techniques').glob('*.md') if p.name != 'README.md')
+
+
+@pytest.mark.parametrize('path', TECHNIQUES, ids=lambda p: p.name)
+def test_every_technique_checklist_ends_with_a_check_probes_command(path, tmp_path):
+    text = path.read_text(encoding='utf-8')
+    checklist = re.split(r'^## \d+\. (?:Verification checklist|Checklist)\s*$', text, flags=re.M)
+    assert len(checklist) == 2, f'{path.name}: no checklist section'
+    commands = _check_commands(checklist[1].split('\n## ')[0])
+    assert commands, f'{path.name}: the checklist has no check_probes.py command'
+    for command in commands:  # the options must parse with the script's own argument parser
+        tokens = command.replace('<genome dir>', 'genomes').split()
+        assert tokens[:2] == ['python', '<skill>/scripts/check_probes.py'], command
+        args = check_probes.parse_args(tokens[2:])
+        assert args.tsv.endswith('.tsv'), command
+
+
+def test_the_standard_length_recipe_of_troubleshooting_validates_without_warnings(tmp_path):
+    from uprobe.core.validate import validate_files
+    text = (SKILL / 'references' / 'uprobe' / 'troubleshooting.md').read_text(encoding='utf-8')
+    blocks = [b for b in re.findall(r'```yaml\n(.*?)```', text, flags=re.S) if 'prefer: len_off' in b]
+    assert len(blocks) == 1
+    path = tmp_path / 'standard_length_first.yaml'
+    path.write_text(blocks[0], encoding='utf-8')
+    assert [f.message for f in validate_files(path) if f.severity in ('error', 'warning')] == []
+
+
 # -- scripts/check_probes.py on hand-made tables ---------------------------------------------
 
 _rng = random.Random(3)
@@ -294,6 +330,58 @@ def test_check_spacing_of_genomic_windows(tmp_path):
     assert result['failures'] == ['chr1:1-400: smallest gap -5 nt < --min-gap 0']
     unplaced = run_check(tmp_path, rows, '--sense', 'oligo.homology', '--min-gap', '0', columns=columns[:2] + columns[3:])
     assert not unplaced['ok'] and 'cannot check --min-gap' in unplaced['failures'][0]
+
+
+def test_check_per_part_gc_and_tm(tmp_path):
+    # A split unit: a window-level GC passes while one half is AT-rich (SNAIL-style padlock + primer).
+    at, gc_rich = 'ATATTAATTATAATTATATA', 'GCGGCCGCGCGGCCGCGCGC'
+    rows = []
+    for n in range(2):
+        rows.append({'probe_id': f'U_{n}', 'target': 'G', 'target_start': 1 + 40 * n, 'target_end': 40 + 40 * n,
+                     'target_region': at + gc_rich, 'half_a': reverse_complement(at), 'half_b': reverse_complement(gc_rich),
+                     'half_a_tm': 41.5, 'half_b_tm': 66.0})
+    columns = ['probe_id', 'target', 'target_start', 'target_end', 'target_region', 'half_a', 'half_b',
+               'half_a_tm', 'half_b_tm']
+    common = ['--binding', 'half_a', '--binding', 'half_b']
+    whole = run_check(tmp_path, rows, *common, '--gc', '0.3', '1', columns=columns)
+    assert not whole['ok'] and any('half_a outside GC' in f for f in whole['failures'])  # --gc applies to every part
+    ok = run_check(tmp_path, rows, *common, '--part-gc', 'half_b', '0.3', '1', '--part-tm', 'half_b_tm', '55', '70',
+                   columns=columns)
+    assert ok['ok'] and ok['targets']['G']['part_gc']['half_b']['median'] == 1.0
+    bad = run_check(tmp_path, rows, *common, '--part-gc', 'half_a', '0.3', '0.6', '--part-tm', 'half_a_tm', '50', '70',
+                    columns=columns)
+    assert sorted(bad['failures']) == ['G: 2 half_a outside GC 0.3-0.6', 'G: 2 half_a_tm outside Tm 50-70']
+    with pytest.raises(SystemExit, match='no column'):
+        run_check(tmp_path, rows, *common, '--part-gc', 'nope', '0.3', '0.6', columns=columns)
+
+
+def test_check_reports_duplicates_and_multi_site_windows(tmp_path):
+    # Tandem copies: the same 20-mer occurs three times on the transcript but is one oligo.
+    unit = RNA[:20]
+    transcript = RNA[100:130] + unit + RNA[130:150] + unit + RNA[150:170] + unit + RNA[170:200]
+    fasta = tmp_path / 'tx.fa'
+    fasta.write_text(f'>ENSG1_ENST1\n{transcript}\n')
+    other = transcript[0:20]
+    rows = []
+    for n, window in enumerate([unit, unit, other]):  # the table lists the repeated oligo twice
+        start = transcript.find(window)
+        rows.append({'probe_id': f'G_{n}', 'target': 'G', 'target_start': start + 1 + 100 * (n == 1),
+                     'target_end': start + 20 + 100 * (n == 1), 'target_region': window,
+                     'probe': reverse_complement(window), 'probe.binding': reverse_complement(window)})
+    columns = ['probe_id', 'target', 'target_start', 'target_end', 'target_region', 'probe', 'probe.binding']
+    result = run_check(tmp_path, rows, '--transcripts', str(fasta), '--transcript', 'G=ENST1', '--min-gap', '12',
+                       '--min-probes', '3', columns=columns)
+    entry = result['targets']['G']
+    assert entry['probes'] == 3 and entry['distinct_oligos'] == 2 and entry['duplicate_rows'] == 1
+    assert entry['multi_site'][0]['sites'] == 3 and len(entry['multi_site']) == 1
+    assert any('2 distinct oligos' in w for w in result['warnings'])
+    assert any('more than one place' in w for w in result['warnings'])
+    assert any('fewer than --min-probes 3' in f and '2 distinct' in f for f in result['failures'])
+    # --min-gap also looks at every site: the other window lies 9 nt before the first copy (gap 9 < 12).
+    assert any('over all their sites' in f for f in result['failures'])
+    # Without duplicates or repeats nothing is reported.
+    clean = run_check(tmp_path, rows_at([0, 30]))
+    assert 'multi_site' not in clean['targets']['G'] and clean['targets']['G']['distinct_oligos'] == 2
 
 
 def test_check_command_line(tmp_path, capsys):
