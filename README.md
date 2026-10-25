@@ -454,7 +454,7 @@ When `extracts.target_region.transcripts` selects exactly one transcript of a ta
 
 #### Hybridization conditions
 
-By default, Tm is computed under PCR-like conditions (50 mM Na+, 0.6 mM dNTP, 50 nM oligo, no formamide; these match the fisheye reference pipeline). FISH hybridizations usually run in SSC buffer with formamide, so declare the conditions of your experiment with a top-level `hybridization` block:
+By default, Tm is computed under PCR-like conditions (legacy defaults: 50 mM Na+, 0.6 mM dNTP, 50 nM oligo, no formamide). FISH hybridizations usually run in SSC buffer with formamide, so declare the conditions of your experiment with a top-level `hybridization` block:
 
 ```yaml
 hybridization:

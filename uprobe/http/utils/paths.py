@@ -68,13 +68,6 @@ def get_results_dir() -> Path:
     path.mkdir(parents=True, exist_ok=True)
     return path
 
-def get_fisheye_dir() -> Path:
-    """Return the path to the fisheye directory."""
-    config = get_config()
-    if config.has_section("Paths") and config.has_option("Paths", "fisheye_dir"):
-        return Path(config.get("Paths", "fisheye_dir")).expanduser().resolve()
-    return Path("/home/qzhang/fisheye")
-
 # --- Derived Paths ---
 
 def get_public_genomes_dir() -> Path:

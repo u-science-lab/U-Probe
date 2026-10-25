@@ -12,9 +12,9 @@ A protocol may declare the conditions its probes hybridize under::
 
 An ``annealing_temperature`` or ``fold_score`` attribute may carry its own
 ``hybridization`` mapping whose fields override the protocol-level ones.
-Fields left unset keep the legacy values (the fisheye-compatible primer3
-arguments and ViennaRNA's 37 °C), so protocols without the block produce
-unchanged results.
+Fields left unset keep the legacy values (cal_temp's primer3 arguments: 50 mM
+Na+, 0.6 mM dNTP, 50 nM oligo, no formamide; ViennaRNA's 37 °C), so protocols
+without the block produce unchanged results.
 
 An ``annealing_temperature`` attribute computes Tm with primer3 unless it sets
 ``tm_method`` to the formula of a published design code, under the same conditions:

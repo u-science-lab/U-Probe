@@ -60,7 +60,7 @@ def test_summary_matches_result_tables(tmp_path):
     assert summary['protocol_name'] == 'summary_test'
     assert summary['inputs']['requested_targets'] == ['G1', 'G2']
     assert summary['inputs']['valid_targets'] == ['G1', 'G2'] and summary['inputs']['invalid_targets'] == []
-    # No hybridization block: the legacy (fisheye-compatible) Tm conditions are in effect.
+    # No hybridization block: the legacy Tm conditions are in effect.
     assert summary['inputs']['hybridization'] is None
     assert summary['inputs']['hybridization_conditions'] == {'target_tm': TM_DEFAULTS}
     assert summary['inputs']['genome_source'] is None

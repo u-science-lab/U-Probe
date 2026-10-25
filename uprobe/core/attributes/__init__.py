@@ -161,7 +161,7 @@ def _add_attributes(
                 aligner = settings['aligner']
                 assert aligner in genome.get('align_index', []), f"{aligner} must be enabled in genome align_index"
                 fasta_path = Path(genome['fasta'])
-                # fisheye calculates mapped genes against a transcriptome index,
+                # Mapped genes are counted against a transcriptome index,
                 # not against the genomic chromosome index.
                 index_prefix = index_prefix_of(genome, aligner, 'transcript')
                 tmp_dir = tmp_root / attr_name
