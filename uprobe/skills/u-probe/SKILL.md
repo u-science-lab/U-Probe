@@ -192,9 +192,9 @@ padlocks); every non-default choice, template departure and shortfall.
    padlock/RCA units stay strict per unit (`references/concepts/specificity.md`).
 6. "Expressed" means expressed in the user's sample: the expression table with `exempt_copies` and
    `min_fraction_of_target` (level `transcript`) is the starting configuration, not a relaxation.
-   `exempt_copies` exempts only genes that contain most of the target (processed pseudogenes,
-   readthrough genes: they are hit by every probe); paralogs stay counted and copies are named in the
-   report. Without a table every annotated gene counts (`references/concepts/specificity.md`).
+   `exempt_copies` exempts only non-protein-coding genes that contain most of the target (processed
+   pseudogenes, retrocopies: they are hit by every probe); paralogs and protein-coding copies stay
+   counted and copies are named in the report. Without a table every annotated gene counts (`references/concepts/specificity.md`).
 7. Give every Tm with its conditions; a Tm window without them is meaningless
    (`references/concepts/hybridization-and-tm.md`).
 8. U-Probe's output is the source of truth: never hand-edit or retype sequences; after any change

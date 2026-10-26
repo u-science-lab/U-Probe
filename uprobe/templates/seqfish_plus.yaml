@@ -75,10 +75,10 @@ meta:
       source: >-
         U-Probe, as in smfish_stellaris. A false spot needs many probes of the
         set on one RNA; a gene with a transcript holding at least half of the
-        target's 30-mers (a processed pseudogene, a retrocopy, a readthrough
-        gene) is hit by any probe set, so it is listed in
-        target_mapped_genes_copies instead of counted, whatever its
-        expression. Mouse Gapdh (seqFISH+ template, NIH/3T3 expression): 2 of
+        target's 30-mers (a processed pseudogene, a retrocopy) is hit by any
+        probe set, so unless it is protein_coding (GTF gene_biotype/gene_type)
+        it is listed in target_mapped_genes_copies instead of counted, whatever
+        its expression. Mouse Gapdh (seqFISH+ template, NIH/3T3 expression): 2 of
         24 probes without it, 24 with it (44 copies, Gm13394 among them).
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1, no other gene with a site within 2 substitutions (Bowtie 1, exhaustive)"
@@ -186,8 +186,9 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
-    # Copies of the target (processed pseudogenes, retrocopies) are listed in
-    # target_mapped_genes_copies instead of counted (meta.parameter_sources).
+    # Copies of the target that are not protein_coding (processed pseudogenes,
+    # retrocopies) are listed in target_mapped_genes_copies instead of counted
+    # (meta.parameter_sources).
     exempt_copies: {kmer: 30, min_shared: 0.5}
 
 post_process:

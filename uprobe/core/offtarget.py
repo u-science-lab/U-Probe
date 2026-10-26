@@ -50,7 +50,7 @@ import subprocess
 from collections import defaultdict
 from pathlib import Path
 
-from .copies import copies_settings, find_copies
+from .copies import UNKNOWN_BIOTYPE, copies_settings, find_copies
 from .utils import get_logger
 
 log = get_logger(__name__)
@@ -130,7 +130,7 @@ def mapped_genes_settings(attr: dict, where: str = '') -> dict:
 # -- gene names ------------------------------------------------------------
 
 _GTF_ATTRIBUTES = {key: re.compile(rf'(?:^|;)\s*{key}\s+"([^"\r\n]*)"')
-                   for key in ('gene_id', 'gene_name', 'gene', 'transcript_id')}
+                   for key in ('gene_id', 'gene_name', 'gene', 'transcript_id', 'gene_biotype', 'gene_type')}
 _GTF_GENE_NUMBER = re.compile(r'GeneID:(\d+)')
 
 
@@ -141,14 +141,17 @@ def _gtf_attribute(info: str, key: str):
 
 @functools.lru_cache(maxsize=4)
 def _read_genes(path: str, mtime: int, size: int, transcripts: bool = False) -> tuple:
-    """(gene key -> gene name, gene key -> {transcript.fa record: transcript id}) from the GTF's exon lines.
+    """(gene key -> gene name, gene key -> {transcript.fa record: transcript id}, gene key -> biotype)
+    from the GTF's exon lines.
 
     Gene keys are as in transcript.fa records ``{gene_id}_{transcript_id}``:
     the gene id falls back as in gen.fun.read_gtf, which names the records,
-    and the name falls back to the `gene` attribute. The transcripts are
-    read only when asked for (otherwise {}).
+    and the name falls back to the `gene` attribute. The biotype is the
+    `gene_biotype` attribute (Ensembl) or `gene_type` (GENCODE); genes with
+    neither are left out. The transcripts are read only when asked for
+    (otherwise {}).
     """
-    names, records = {}, defaultdict(dict)
+    names, records, biotypes = {}, defaultdict(dict), {}
     with open(path) as f:
         for line in f:
             fields = line.split('\t', 8)
@@ -165,19 +168,25 @@ def _read_genes(path: str, mtime: int, size: int, transcripts: bool = False) -> 
             key = gene_id.split('_')[0]  # as attributes.transcript_gene
             if not names.get(key):
                 names[key] = _gtf_attribute(info, 'gene_name') or _gtf_attribute(info, 'gene')
+            if key not in biotypes:
+                biotype = _gtf_attribute(info, 'gene_biotype') or _gtf_attribute(info, 'gene_type')
+                if biotype:
+                    biotypes[key] = biotype
             if transcripts:
                 transcript_id = _gtf_attribute(info, 'transcript_id')
                 if transcript_id is not None:
                     records[key][f'{gene_id}_{transcript_id}'] = transcript_id
-    return names, dict(records)
+    return names, dict(records), biotypes
 
 
 class GeneAnnotation:
-    """Names (and, if read, transcripts) of the transcriptome's genes, to label off-targets and recognize the target."""
+    """Names, biotypes (and, if read, transcripts) of the transcriptome's genes, to label off-targets,
+    recognize the target and tell which copies exempt_copies may exempt."""
 
-    def __init__(self, names: dict, transcripts: dict = None):
+    def __init__(self, names: dict, transcripts: dict = None, biotypes: dict = None):
         self.names = names
         self.transcripts = transcripts or {}  # gene key -> {transcript.fa record: transcript id}
+        self.biotypes = biotypes or {}  # gene key -> GTF gene_biotype / gene_type
         self.keys_by_name = defaultdict(set)
         for key, name in names.items():
             if name:
@@ -430,7 +439,8 @@ class OffTargetCounter:
         return path
 
     def _copies(self, df, pairs, target_keys: dict, sequence_hits: dict, settings: dict):
-        """({(target, gene key): shared fraction} of the hit genes that copy their target, report) or ({}, None)."""
+        """({(target, gene key): shared fraction} of the hit genes that copy their target and are exempt, report)
+        or ({}, None); see copies.find_copies."""
         options = settings.get('exempt_copies')
         if not options:
             return {}, None
@@ -439,17 +449,35 @@ class OffTargetCounter:
             candidates[target].update(key for key in sequence_hits.get(sequence, {}) if key not in target_keys[target])
         candidates = {target: genes for target, genes in candidates.items() if genes}
         if not candidates:
-            return {}, {'targets_without_sequence': [], 'seconds': 0.0}
-        return find_copies(df, candidates, self._transcript_fasta(settings['aligner']), options)
+            return {}, {'not_exempt': {}, 'targets_without_sequence': [], 'seconds': 0.0}
+        return find_copies(df, candidates, self._transcript_fasta(settings['aligner']), options,
+                           self.annotation.biotypes)
 
     def _copy_stats(self, attr_name: str, options: dict, copies: dict, copied: set, report: dict) -> dict:
-        """summary.json entries of exempt_copies: the copies of each target with their shares; logs them."""
+        """summary.json entries of exempt_copies: the exempt copies of each target with their shares, and the
+        copies not exempt for their biotype (copies_not_exempt); logs them."""
         label = self.annotation.label
         by_target = {}
         for (target, key), share in sorted(copies.items(), key=lambda item: (item[0][0], -item[1], label(item[0][1]))):
             by_target.setdefault(target, {})[label(key)] = round(share, 3)
         stats = {'exempt_copies': options, 'copy_genes': len(copied), 'copies': by_target,
                  'copies_seconds': report['seconds']}
+        not_exempt = {}
+        for (target, key), (share, reason) in sorted(report['not_exempt'].items(),
+                                                     key=lambda item: (item[0][0], -item[1][0], label(item[0][1]))):
+            not_exempt.setdefault(target, {})[label(key)] = {'share': round(share, 3), 'not_exempt': reason}
+        if not_exempt:
+            stats['copies_not_exempt'] = not_exempt
+            kept = '; '.join(f'{target}: ' + ', '.join(f'{name} ({entry["share"]:.2f}, {entry["not_exempt"]})'
+                                                        for name, entry in list(genes.items())[:5])
+                             for target, genes in list(not_exempt.items())[:5])
+            log.info(f'{attr_name}: {len(report["not_exempt"])} copy pair(s) stay counted, as only copies that are '
+                     f'not protein_coding are exempt (exempt_copies): {kept}')
+        untyped = {key for (_, key), (_, reason) in report['not_exempt'].items() if reason == UNKNOWN_BIOTYPE}
+        if untyped:
+            log.warning(f'{attr_name}: exempt_copies does not exempt {len(untyped)} copy gene(s) whose biotype the GTF '
+                        f'does not give (no gene_biotype or gene_type), so they count: '
+                        f'{", ".join(sorted(label(key) for key in untyped)[:_MISSING_EXAMPLES])}')
         unknown = report['targets_without_sequence']
         if unknown:
             stats['targets_without_sequence'] = unknown
@@ -458,8 +486,8 @@ class OffTargetCounter:
         examples = '; '.join(f'{target}: ' + ', '.join(f'{name} ({share:.2f})' for name, share in list(genes.items())[:5])
                              for target, genes in list(by_target.items())[:5])
         log.info(f'{attr_name}: {len(copied)} off-target gene(s) contain at least {options["min_shared"]:g} of the '
-                 f'{options["kmer"]}-mers of a target and are not counted for it (exempt_copies, '
-                 f'{report["seconds"]:g} s)' + (f': {examples}' if examples else ''))
+                 f'{options["kmer"]}-mers of a target, are not protein_coding and are not counted for it '
+                 f'(exempt_copies, {report["seconds"]:g} s)' + (f': {examples}' if examples else ''))
         return stats
 
     def _hit_values(self, records: dict) -> dict:
@@ -486,8 +514,9 @@ class OffTargetCounter:
 
         ``sequence_hits`` maps each sequence of ``df[column]`` to {gene key: fewest mismatches or None}.
         The count includes the target's own genes; another gene does not count
-        when it copies the target (exempt_copies), when the expression table
-        puts it below the target's threshold (see _thresholds) or, with
+        when it copies the target and is not protein_coding (exempt_copies),
+        when the expression table puts it below the target's threshold (see
+        _thresholds) or, with
         gene_expression.absent: ignore, when the table does not list it.
         For a table of transcripts, ``transcript_hits`` maps each sequence to
         the transcript.fa records it hits, and an off-target gene's value is

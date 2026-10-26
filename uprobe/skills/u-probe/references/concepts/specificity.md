@@ -126,7 +126,8 @@ and duplicated loci also contain the target.
 Mechanism: if a gene contains most of the target's sequence, every window of the target also lies in
 it; no probe choice can avoid it, and counting it removes all probes. Decide instead:
 - `exempt_copies` (k = 30, `min_shared` 0.5): genes with a transcript holding >= half of the target's
-  30-mers are listed in `<attr>_copies` and not counted. It exempts only such near-identical copies (every
+  30-mers are listed in `<attr>_copies` and not counted, unless they are `protein_coding` (GTF biotype;
+  e.g. mouse Ifit3b, 62.5% of Ifit3) or have no biotype. It exempts only such near-identical copies (every
   probe of the set hits them anyway); it does not exempt paralogs or genes that share some windows, and
   it does not say that a copy is silent. Do not drop it "to tell the target from its paralogs": the paralogs
   stay counted with it. README shares: EEF1A1P5 holds 81% of the EEF1A1

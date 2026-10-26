@@ -50,10 +50,10 @@ meta:
       value: "{kmer: 30, min_shared: 0.5}"
       source: >-
         U-Probe. A gene with a transcript holding at least half of the target
-        mRNA's 30-mers (a processed pseudogene, a readthrough or overlapping
-        gene) is hit by any probe set, so it is listed in
-        target_mapped_genes_copies instead of counted; it needs no expression
-        table.
+        mRNA's 30-mers (a processed pseudogene, a non-coding overlapping
+        gene) is hit by any probe set, so unless it is protein_coding (GTF
+        gene_biotype/gene_type) it is listed in target_mapped_genes_copies
+        instead of counted; it needs no expression table.
     - parameter: extracts.target_region.length
       value: 20
       source: >-
@@ -199,9 +199,9 @@ attributes:
     aligner: bowtie
     max_mismatches: 2
     strand: sense   # sites where target_region occurs, which rc(target_region) binds
-    # Genes that copy the target (processed pseudogenes, readthrough genes) are
-    # listed in target_mapped_genes_copies instead of counted; no expression
-    # table is needed.
+    # Genes that copy the target and are not protein_coding (processed
+    # pseudogenes, retrocopies) are listed in target_mapped_genes_copies
+    # instead of counted; no expression table is needed.
     exempt_copies: {kmer: 30, min_shared: 0.5}   # a gene holding half the target's 30-mers is hit by any probe set
 
 post_process:

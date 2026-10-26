@@ -1,7 +1,7 @@
 """Off-target genes that copy the target: the ``exempt_copies`` option of mapped_genes.
 
-A processed pseudogene, retrocopy or readthrough gene can contain most of the
-target's sequence, so every probe of the target also hits it. Counting such a
+A processed pseudogene or a retrocopy can contain most of the target's
+sequence, so every probe of the target also hits it. Counting such a
 copy as an off-target leaves the target with few or no probes, although
 probe sets for these targets work in practice. A ``mapped_genes`` attribute
 can exempt copies::
@@ -16,10 +16,16 @@ can exempt copies::
 
 An off-target gene is a copy of a target when one of its transcripts contains,
 in the same orientation, at least ``min_shared`` of the distinct k-mers
-(``kmer`` nt) of the target's sequence. A copy is not counted; the attribute
-lists it in ``<attribute>_copies``. Paralogs share far fewer exact k-mers
+(``kmer`` nt) of the target's sequence. A copy is exempt only when its GTF
+biotype (``gene_biotype``, or ``gene_type`` in GENCODE) is not
+``protein_coding``: a processed or unprocessed pseudogene, a lncRNA retrocopy.
+An exempt copy is not counted; the attribute lists it in ``<attribute>_copies``.
+A protein-coding copy is a separately quantified transcript, and binding it is
+a real off-target (mouse Ifit3b holds 62.5% of the 30-mers of Ifit3), so it
+stays counted and the report lists it as not exempt; so does a copy whose
+biotype the GTF does not give. Most paralogs share far fewer exact k-mers
 (ACTG1 contains 5% of the 30-mers of ACTB's mRNA, 7% of those of its coding
-sequence) and stay counted.
+sequence) and are no copies at all.
 
 The target's sequence is what its candidate windows cover, placed by
 ``target_start``/``target_end``: for ``source: mRNA``, ``exon``, ``CDS`` or
@@ -43,6 +49,8 @@ DEFAULT_KMER = 30
 DEFAULT_MIN_SHARED = 0.5
 MIN_KMER, MAX_KMER = 12, 32  # a k-mer is packed into 64 bits, 2 per base
 OPTIONS = ('kmer', 'min_shared')
+NEVER_EXEMPT = 'protein_coding'  # the biotype of copies that stay counted
+UNKNOWN_BIOTYPE = 'unknown_biotype'
 
 # Bases (DNA or RNA, any case) -> 0-3; everything else -> 4, which ends a k-mer.
 _CODE = np.full(256, 4, dtype=np.uint8)
@@ -267,12 +275,17 @@ def copy_fractions(sequences: dict, candidates: dict, records, k: int = DEFAULT_
     return result
 
 
-def find_copies(df: pd.DataFrame, candidates: dict, transcript_fasta, settings: dict, column: str = 'target_region'):
-    """({(target, gene): share} of the copies among the candidates, report).
+def find_copies(df: pd.DataFrame, candidates: dict, transcript_fasta, settings: dict, biotypes: dict,
+                column: str = 'target_region'):
+    """({(target, gene): share} of the exempt copies among the candidates, report).
 
     ``candidates`` maps each target to the off-target genes its sequences
-    hit; ``settings`` is copies_settings(). The report lists the targets
-    whose windows give no k-mer (they get no copies) and the seconds taken.
+    hit; ``settings`` is copies_settings(); ``biotypes`` maps gene -> GTF
+    biotype. Only copies whose biotype is known and not protein_coding are
+    exempt. The report lists the other copies under ``not_exempt``
+    ({(target, gene): (share, 'protein_coding' or 'unknown_biotype')}), the
+    targets whose windows give no k-mer (they get no copies) and the seconds
+    taken.
     """
     started = time.perf_counter()
     sequences = target_sequences(df, column)
@@ -280,5 +293,14 @@ def find_copies(df: pd.DataFrame, candidates: dict, transcript_fasta, settings: 
     shares = copy_fractions(sequences, candidates, read_transcripts(transcript_fasta, genes), settings['kmer'])
     unknown = sorted(target for target, hit in candidates.items()
                      if hit and not len(kmer_set(sequences.get(target, b''), settings['kmer'])))
-    copies = {pair: share for pair, share in shares.items() if share >= settings['min_shared']}
-    return copies, {'targets_without_sequence': unknown, 'seconds': round(time.perf_counter() - started, 2)}
+    copies, not_exempt = {}, {}
+    for (target, gene), share in shares.items():
+        if share < settings['min_shared']:
+            continue
+        biotype = biotypes.get(gene)
+        if biotype and biotype != NEVER_EXEMPT:
+            copies[(target, gene)] = share
+        else:
+            not_exempt[(target, gene)] = (share, biotype or UNKNOWN_BIOTYPE)
+    return copies, {'not_exempt': not_exempt, 'targets_without_sequence': unknown,
+                    'seconds': round(time.perf_counter() - started, 2)}

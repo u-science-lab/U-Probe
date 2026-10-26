@@ -25,6 +25,7 @@ SETTINGS = {'aligner': 'bowtie', 'strand': 'sense', 'max_mismatches': 2}
 # lncRNAs embed Gapdh segments; its expression lies on T2B, which the probes do not hit.
 GENES = {'G1': ('Gapdh', ['T1A', 'T1B']), 'G2': ('Lnc', ['T2A', 'T2B']), 'G3': ('Para', ['T3A', 'T3B']),
          'G4': ('Pseudo', ['T4A', 'T4B']), 'G5': ('Other', ['T5A'])}
+BIOTYPES = {'G2': 'lncRNA', 'G4': 'processed_pseudogene'}  # the others are protein_coding
 # Versioned, as salmon lists Ensembl transcripts; T4A and T5A are missing.
 TRANSCRIPT_TPM = {'T1A.2': 1500, 'T1B.1': 500, 'T2A.1': 0, 'T2B.3': 50, 'T3A.1': 30, 'T3B.1': 0, 'T4B.1': 5}
 # The same sample by gene: the sums over each gene's transcripts.
@@ -56,7 +57,7 @@ def gene_hits():
 def gtf(tmp_path):
     path = tmp_path / 'genome.gtf'
     path.write_text(''.join(f'1\ttest\texon\t1\t100\t.\t+\t.\tgene_id "{gene}"; transcript_id "{transcript}"; '
-                            f'gene_name "{name}";\n'
+                            f'gene_name "{name}"; gene_biotype "{BIOTYPES.get(gene, "protein_coding")}";\n'
                             for gene, (name, transcripts) in GENES.items() for transcript in transcripts))
     return path
 
@@ -459,9 +460,13 @@ def test_reference_mouse_gapdh_probes_by_gene_and_by_transcript(tmp_path):
     # The hit genes with all their transcripts: the GTF and transcript.fa (for exempt_copies) they need.
     genes = {record.split('_')[0] for hit in transcript_hits.values() for record in hit}
     subset = records[records.gene_id.str.split('.').str[0].isin(genes)]
+    # A gene's biotype is that of its canonical transcript (records.tsv gives transcript biotypes).
+    canonical = subset[subset.ensembl_canonical == 1]
+    biotype = dict(zip(canonical.gene_id, canonical.biotype))
     (tmp_path / 'genome.gtf').write_text(''.join(
         f'1\tt\texon\t1\t9\t.\t+\t.\tgene_id "{g.split(".")[0]}"; transcript_id "{t.split(".")[0]}"; '
-        f'gene_name "{name}";\n' for t, g, name in zip(subset.transcript_id, subset.gene_id, subset.gene_symbol)))
+        f'gene_name "{name}"; gene_biotype "{biotype.get(g, "protein_coding")}";\n'
+        for t, g, name in zip(subset.transcript_id, subset.gene_id, subset.gene_symbol)))
     wanted = {record_of[t] for t in subset.transcript_id}
     with open(transcriptome / 'sequences.fa') as f, open(tmp_path / 'transcript.fa', 'w') as out:
         keep = False

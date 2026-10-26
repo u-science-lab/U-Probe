@@ -121,7 +121,7 @@ report the yield of each change, and do not fill the count with a different leng
 
 | Stage that removed most | Likely cause | Fix (keep the method's specificity rule) |
 | --- | --- | --- |
-| `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true` (copies only; paralogs stay counted); `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
+| `Filters` (off-target) | processed pseudogenes/retrocopies that copy the target; paralogs sharing the CDS; unexpressed genes counted | `exempt_copies: true` (non-protein-coding copies only; paralogs and protein-coding copies stay counted); `gene_expression` with your sample's table (+ `min_fraction_of_target: 0.05`); `source: mRNA` (UTRs diverge more than CDS); see `references/concepts/specificity.md` |
 | `Filters` (Tm/GC) | window computed under other conditions or formula, or too narrow for the region's GC | check `inputs.hybridization_conditions`; formamide entry below; reproduce the published window under its own conditions and formula (`tm_method`); do not stretch it, and do not change lengths set by the method |
 | `Remove overlap` | short target: few non-overlapping sites; repeats; first-fit packing | lower `location_interval` to the method's smallest published value (smFISH: 3 nt Raj, 2 nt Stellaris), longer region (`mRNA` not `CDS`), amplified methods for very short RNAs (`references/concepts/targets-and-isoforms.md`); the repeat and packing entries below |
 | `Off-target pool limit` | many probes share one off-target gene | expected; it trades count for cleanliness |

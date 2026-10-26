@@ -140,7 +140,7 @@ of the shortest isoform; `remove_overlap: 0` forbids overlapping pairs (stricter
   (padlock site + gap + primer site) with `strand: sense` and keeps `target_mapped_genes <= 1`
   (no other gene carries the window). Because one unit is enough for a spot, do not tolerate
   off-target genes per pair as smFISH does; use `gene_expression` to ignore unexpressed genes and
-  `exempt_copies` for pseudogenes/readthrough copies (`references/concepts/specificity.md`).
+  `exempt_copies` for pseudogene/retrocopy copies (`references/concepts/specificity.md`).
 - Second failure mode: intermolecular cross-pairing (primer of gene A splinting the padlock of
   gene B on a neighboring molecule) gives a wrong code. Gene-specific splint codes (1,022-,
   64- and 2,766-gene sets) reduce it; the 2018 constant splint (ACATTA/TAATGT) does not.
