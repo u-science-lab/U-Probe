@@ -499,7 +499,7 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
     log.info(f"extract transcript sequences from: {gtf_path}, {fa_path}")
     fa = Fasta(str(fa_path))
     try:
-        # Match fisheye: identify transcripts by gene_id and transcript_id,
+        # Identify transcripts by gene_id and transcript_id,
         # and write FASTA headers as >{gene_id}_{transcript_id}.
         exons_df = read_gtf(gtf_path, filter_by_type='exon', extract_fields=["gene_id", "transcript_id"])
         # NCBI primary chromosome names such as NC_000067.7 contain underscores.
@@ -537,7 +537,7 @@ def extract_trans_seqs(gtf_path, fa_path, output_fa_path):
         seq_dict = {}
         fasta_keys = set(fa.keys())
         for key_, [chrom, strand, exons] in list(trans.items()):
-            # fisheye accepts both GTF/FASTA naming conventions (1 vs chr1).
+            # Accept both GTF/FASTA naming conventions (1 vs chr1).
             chrom = str(chrom)
             chrom_candidates = [chrom]
             if chrom.startswith('chr'):

@@ -17,7 +17,7 @@ def read_sam_align_blocks(
         ) -> t.Iterable[Block]:
     """Yield all Bowtie2 alignments grouped by query name.
 
-    This intentionally mirrors fisheye: no MAPQ filter is applied.  The
+    No MAPQ filter is applied.  The
     mapped-gene metric is the number of genes among all alignments reported by
     Bowtie2 (up to the ``-k`` limit), not the number of uniquely mapped genes.
     """
@@ -179,7 +179,6 @@ def cal_kmer_count(outdir: str,
 
 def transcript_gene(ref_name: str) -> str:
     """Gene of a ``transcript.fa`` record named ``{gene_id}_{transcript_id}``."""
-    # Keep this extraction identical to fisheye/primer_design/seq_features.py.
     return ref_name.split("_")[0]
 
 def gene_hits_of(transcript_hits: t.Mapping[str, t.Optional[int]]) -> t.Dict[str, t.Optional[int]]:
@@ -202,7 +201,7 @@ def bowtie2_gene_hits(
     """Genes hit by each query among Bowtie2's local alignments (up to ``-k 100``).
 
     The Bowtie2 index must be built from ``transcript.fa`` whose record names
-    follow fisheye's ``{gene_id}_{transcript_id}`` convention.  Multiple
+    follow the ``{gene_id}_{transcript_id}`` convention.  Multiple
     transcript hits from the same gene therefore contribute one mapped gene.
     Returns query -> {gene: None}: local alignments may be clipped, so they
     carry no mismatch count comparable to :func:`bowtie_gene_hits`.
@@ -241,7 +240,7 @@ def count_n_bowtie2_aligned_genes(
         name: str,
         index_prefix: str,
         threads: int = 10):
-    """Count distinct genes hit by each query, matching fisheye semantics."""
+    """Count distinct genes hit by each query."""
     hits = bowtie2_gene_hits(outdir, recname2seq, name, index_prefix, threads)
     return {rec_name: len(genes) for rec_name, genes in hits.items()}
 
@@ -322,7 +321,7 @@ def self_match(probe: str, min_match = 4):
 
 def cal_temp(seq: str, mv_conc=50, dv_conc=0, dntp_conc=0.6, dna_conc=50,
              formamide_conc=0): # Tm
-    """Defaults are the reaction conditions matching the fisheye reference output.
+    """Defaults are the legacy reaction conditions: 50 mM Na+, no Mg2+, 0.6 mM dNTP, 50 nM oligo, no formamide.
 
     Protocol ``hybridization`` conditions override them (mM, mM, mM, nM and
     mol/l formamide); see uprobe.core.hybridization.

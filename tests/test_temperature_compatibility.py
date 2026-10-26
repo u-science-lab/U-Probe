@@ -18,7 +18,7 @@ def function(path, name, namespace):
     return namespace[name]
 
 class TemperatureCompatibilityTests(unittest.TestCase):
-    def test_fisheye_values_and_precision_reach_attribute_table(self):
+    def test_legacy_tm_values_and_precision_reach_attribute_table(self):
         # The names _add_attributes reads: the Tm path takes cal_temp unless an attribute
         # sets tm_method, as the attribute below does not.
         namespace = dict(primer3=primer3, pd=pd, secrets=secrets, tempfile=tempfile, Path=Path,
@@ -36,7 +36,7 @@ class TemperatureCompatibilityTests(unittest.TestCase):
                 result = add(pd.DataFrame({'target_region':[sequence]}), {'attributes':{'tm':{'target':'target_region','type':'annealing_temperature'}}}, {})
                 self.assertEqual(result['tm'].iloc[0], expected)
 
-    def test_known_fisheye_temperature(self):
+    def test_known_legacy_temperature(self):
         calc = function(ROOT/'uprobe/core/attributes/_attributes.py', 'cal_temp', dict(primer3=primer3))
         self.assertAlmostEqual(calc('GTATGACAATGAA'), 27.278686288556173, places=10)
 
