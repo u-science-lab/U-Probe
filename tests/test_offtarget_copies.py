@@ -1,4 +1,5 @@
-"""exempt_copies: off-target genes that copy most of the target's sequence are not counted."""
+"""exempt_copies: off-target genes that copy most of the target's sequence, and are not protein-coding, are not counted."""
+import logging
 import os
 import random
 import shutil
@@ -158,6 +159,13 @@ def test_near_identical_copy_is_a_copy_and_a_paralog_is_not():
 # -- counting ------------------------------------------------------------------------
 
 GENES = {'ENSG1': 'ACTB', 'ENSG2': 'ACTG1', 'ENSG3': 'POTEF', 'ENSG4': 'ACTBP2'}
+BIOTYPES = {'ENSG1': 'gene_biotype "protein_coding"; ', 'ENSG2': 'gene_biotype "protein_coding"; ',
+            'ENSG3': 'gene_biotype "protein_coding"; ', 'ENSG4': 'gene_biotype "processed_pseudogene"; '}
+
+
+def write_gtf(path, biotypes=BIOTYPES):
+    path.write_text(''.join(f'1\ttest\texon\t1\t100\t.\t+\t.\tgene_id "{gene}"; transcript_id "T{i}"; '
+                            f'gene_name "{name}"; {biotypes[gene]}\n' for i, (gene, name) in enumerate(GENES.items())))
 
 
 @pytest.fixture
@@ -169,9 +177,7 @@ def genome(tmp_path):
                    'ENSG3_T3': random_sequence(rng, 500), 'ENSG4_T4': substitute_every(target, 150, rng),
                    'ENSG4_T5': random_sequence(rng, 300)}
     (tmp_path / 'transcript.fa').write_text(''.join(f'>{name}\n{seq}\n' for name, seq in transcripts.items()))
-    lines = [f'1\ttest\texon\t1\t100\t.\t+\t.\tgene_id "{gene}"; transcript_id "T{i}"; gene_name "{name}";\n'
-             for i, (gene, name) in enumerate(GENES.items())]
-    (tmp_path / 'genome.gtf').write_text(''.join(lines))
+    write_gtf(tmp_path / 'genome.gtf')
     return {'fasta': str(tmp_path / 'genome.fa'), 'gtf': str(tmp_path / 'genome.gtf'), 'align_index': ['bowtie'],
             'target': target}
 
@@ -198,6 +204,7 @@ def test_copies_are_listed_and_not_counted(genome, caplog):
     assert stats['exempt_copies'] == {'kmer': 30, 'min_shared': 0.5} and stats['copy_genes'] == 1
     assert list(stats['copies']) == ['ACTB'] and 0.75 < stats['copies']['ACTB']['ACTBP2'] < 0.85
     assert stats['off_target_genes'] == 3 and 'targets_without_sequence' not in stats
+    assert 'copies_not_exempt' not in stats
     assert '1 off-target gene(s) contain at least 0.5 of the 30-mers of a target' in caplog.text
     assert f'ACTB: ACTBP2 ({stats["copies"]["ACTB"]["ACTBP2"]:.2f})' in caplog.text
     summary = build_run_summary({'name': 'x'}, {'final': df.iloc[[0]], 'off_targets': report})
@@ -206,6 +213,48 @@ def test_copies_are_listed_and_not_counted(genome, caplog):
     protocol = {'extracts': {'target_region': {}}, 'attributes': {'hits': {'target': 'target_region'}}}
     assert ordered_columns(['hits_copies', 'target_region', 'hits', 'hits_off_targets'], protocol) == [
         'target_region', 'hits', 'hits_copies', 'hits_off_targets']
+
+
+def test_protein_coding_copy_is_not_exempt(genome, caplog):
+    # A protein-coding gene holding most of the target is a real off-target (mouse Ifit3b of Ifit3).
+    write_gtf(Path(genome['gtf']), {**BIOTYPES, 'ENSG4': 'gene_biotype "protein_coding"; '})
+    df, hits, first, second = candidates(genome['target'])
+    report = {}
+    OffTargetCounter({}, genome, report).annotate(df, 'hits', 'target_region', hits, SETTINGS)
+    rows = df.set_index('target_region')
+    assert rows.hits[first] == 4 and rows.hits_off_targets[first] == 'ACTBP2:0, ACTG1:1, POTEF:2'
+    assert rows.hits[second] == 2 and set(df.hits_copies) == {''}
+    stats = report['attributes']['hits']
+    assert stats['copies'] == {} and stats['copy_genes'] == 0
+    entry = stats['copies_not_exempt']['ACTB']['ACTBP2']
+    assert entry['not_exempt'] == 'protein_coding' and 0.75 < entry['share'] < 0.85
+    assert 'stay counted' in caplog.text and 'ACTBP2 (0.' in caplog.text
+    summary = build_run_summary({'name': 'x'}, {'final': df, 'off_targets': report})
+    assert summary['off_targets']['attributes']['hits']['copies_not_exempt']['ACTB']['ACTBP2'] == entry
+
+
+def test_pseudogene_copy_by_gencode_gene_type_is_exempt(genome):
+    write_gtf(Path(genome['gtf']), {**BIOTYPES, 'ENSG4': 'gene_type "unprocessed_pseudogene"; '})
+    df, hits, first, _ = candidates(genome['target'])
+    report = {}
+    OffTargetCounter({}, genome, report).annotate(df, 'hits', 'target_region', hits, SETTINGS)
+    rows = df.set_index('target_region')
+    assert rows.hits[first] == 3 and rows.hits_copies[first] == 'ACTBP2:0'
+    assert list(report['attributes']['hits']['copies']['ACTB']) == ['ACTBP2']
+
+
+def test_copy_of_unknown_biotype_is_not_exempt_and_warned(genome, caplog):
+    write_gtf(Path(genome['gtf']), {**BIOTYPES, 'ENSG4': ''})
+    df, hits, first, _ = candidates(genome['target'])
+    report = {}
+    with caplog.at_level(logging.WARNING):
+        OffTargetCounter({}, genome, report).annotate(df, 'hits', 'target_region', hits, SETTINGS)
+    assert df.set_index('target_region').hits[first] == 4 and set(df.hits_copies) == {''}
+    stats = report['attributes']['hits']
+    assert stats['copies_not_exempt']['ACTB']['ACTBP2']['not_exempt'] == 'unknown_biotype'
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert 'does not exempt 1 copy gene(s) whose biotype the GTF does not give' in warnings[0]
 
 
 def test_copies_come_before_expression(genome, tmp_path):
@@ -294,7 +343,8 @@ def test_add_attributes_exempts_a_planted_copy(tmp_path, monkeypatch):
     transcripts.update({f'GR{i}_T{i}': random_sequence(rng, 600) for i in range(5)})
     (tmp_path / 'transcript.fa').write_text(''.join(f'>{n}\n{s}\n' for n, s in transcripts.items()))
     (tmp_path / 'genome.gtf').write_text(''.join(
-        f'1\tt\texon\t1\t9\t.\t+\t.\tgene_id "{n.split("_")[0]}"; transcript_id "x"; gene_name "{n.split("_")[0][1:]}";\n'
+        f'1\tt\texon\t1\t9\t.\t+\t.\tgene_id "{n.split("_")[0]}"; transcript_id "x"; gene_name "{n.split("_")[0][1:]}"; '
+        f'gene_biotype "{"processed_pseudogene" if n.startswith("GCOPY") else "protein_coding"}";\n'
         for n in transcripts))
     build_transcripts_index(tmp_path / 'genome.gtf', tmp_path / 'genome.fa', tmp_path / 'bowtie_transcript',
                             threads=1, aligner='bowtie')

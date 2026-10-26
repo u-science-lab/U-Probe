@@ -247,7 +247,8 @@ attributes:
   (with `gene_expression`), `<attr>_hit_transcripts` (with `level: transcript`), `<attr>_copies` (with
   `exempt_copies`). `<attr> <= 1` = no counted off-target gene.
 - `exempt_copies`: a gene with a transcript containing >= `min_shared` of the target's distinct
-  `kmer`-mers (same orientation, exact) is not counted (listed in `_copies`). `kmer` 12-32. The
+  `kmer`-mers (same orientation, exact) is not counted (listed in `_copies`), unless its GTF
+  `gene_biotype`/`gene_type` is `protein_coding` or missing (`copies_not_exempt` in summary.json). `kmer` 12-32. The
   target's sequence is read from its windows: keep `step` <= window length.
 
 ## hybridization

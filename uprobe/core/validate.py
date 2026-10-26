@@ -143,7 +143,8 @@ MASK_HINT = ('mask: repeats.bed   # BED (chrom, start, end; 0-based, genome coor
              'FASTA of soft-masked loci named chrom:start-end; used with masked: drop')
 MASKED_HINT = ('masked: drop   # skip source: genome windows with a soft-masked (lowercase) or N base; '
                'keep (default) upper-cases them')
-COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults\n'
+COPIES_SNIPPET = ('exempt_copies:      # or exempt_copies: true for these defaults; only copies whose GTF '
+                  'gene_biotype/gene_type is not protein_coding are exempt\n'
                   '  kmer: 30          # k-mer length, 12-32\n'
                   '  min_shared: 0.5   # share of the target\'s k-mers that one transcript of a copy contains')
 OTP_SNIPPET = ('avoid_otp:\n'
