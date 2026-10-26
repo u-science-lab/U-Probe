@@ -472,7 +472,7 @@ class OffTargetCounter:
                                                         for name, entry in list(genes.items())[:5])
                              for target, genes in list(not_exempt.items())[:5])
             log.info(f'{attr_name}: {len(report["not_exempt"])} copy pair(s) stay counted, as only copies that are '
-                     f'not protein_coding are exempt (exempt_copies): {kept}')
+                     f'not coding are exempt (exempt_copies): {kept}')
         untyped = {key for (_, key), (_, reason) in report['not_exempt'].items() if reason == UNKNOWN_BIOTYPE}
         if untyped:
             log.warning(f'{attr_name}: exempt_copies does not exempt {len(untyped)} copy gene(s) whose biotype the GTF '
@@ -486,7 +486,7 @@ class OffTargetCounter:
         examples = '; '.join(f'{target}: ' + ', '.join(f'{name} ({share:.2f})' for name, share in list(genes.items())[:5])
                              for target, genes in list(by_target.items())[:5])
         log.info(f'{attr_name}: {len(copied)} off-target gene(s) contain at least {options["min_shared"]:g} of the '
-                 f'{options["kmer"]}-mers of a target, are not protein_coding and are not counted for it '
+                 f'{options["kmer"]}-mers of a target, are not coding and are not counted for it '
                  f'(exempt_copies, {report["seconds"]:g} s)' + (f': {examples}' if examples else ''))
         return stats
 
