@@ -156,7 +156,7 @@ One change per run. Too few probes: report the shortfall of the run that follows
 rules, then follow `top_removal_stage` into `references/uprobe/troubleshooting.md` ("Too few probes").
 Relax in this order, one step per run, each reported with its yield: region (`CDS` -> `mRNA`), missing
 expression settings (step 4), spacing down to the method's smallest published value, Tm/GC within
-published ranges. Never change the set's geometry (length, arms) to fill the count, relax the off-target
+published ranges. Never leave the method's published geometry (lengths, arms) to fill the count, relax the off-target
 rule of a single-unit method (HCR, padlock/RCA), or loosen a filter the references do not justify.
 
 ### 10. Deliver
