@@ -130,6 +130,43 @@ report the yield of each change, and do not fill the count with a different leng
 Count which filter fails: rerun with `--raw`, load `*_raw.xlsx` (`pandas.read_excel`) and evaluate each
 condition separately per target.
 
+### Keep the rules, change the selection
+
+When a set is short, change how windows are chosen, never the limits they must meet.
+
+1. **Published limits stay fixed.** Loosening one (GC, gap, Tm floor, pool cap) to fill the count usually
+   costs more probes than it wins, and a check against the loosened protocol still passes. Verify with
+   `check_probes.py` and the source's values, not the protocol's. Still short after 2-4: deliver fewer
+   probes and report it; single mRNAs are detected with sets well under 48 (Raj A et al. 2008 Nat Methods 5:877).
+2. **Short targets: vary the length, select the tiling as a set.** Where the method publishes a length
+   range, let a site's length vary inside it to bring GC or Tm into the window (standard length where it
+   passes: next section), at the smallest published gap (`remove_overlap.location_interval`).
+   Variable-length designers pick the non-overlapping set as a whole by dynamic programming (Oligostan,
+   Tsanov N et al. 2016 NAR 44:e165; OligoMiner, Beliveau BJ et al. 2018 PNAS 115:E2183). `remove_overlap`
+   is first-fit from the 5' end: with one length it already finds the most windows, with a `length` or
+   `layout` range it can find fewer. Then select on the raw table: rerun with `--raw`, keep the rows that
+   pass every published filter, and per target take the largest set that keeps the gap (sort by end;
+   `best[i] = max(best[i-1], best[j] + 1)`, `j` the last window ending a gap before `i` starts; break ties
+   toward the standard length). Write the chosen rows of U-Probe's table to a TSV, never retyped, and check
+   it with `check_probes.py --min-gap`.
+3. **Expressed paralogs and pseudogenes: cap probes per off-target gene while selecting.** One off-target
+   probe gives no spot, several on one off-target transcript do (Raj 2008), so a per-probe pass is not
+   enough. On many-probe methods (SKILL.md rule 5) set `off_target_pool: {attribute: target_mapped_genes,
+   max_probes_per_gene: N}` with `gene_expression`: it counts only expressed genes and caps per target
+   before `equal_space` picks the final set. Rank divergent sites first (`sorts: {is_ascending:
+   [target_mapped_genes]}`; `source: mRNA` so the UTRs are candidates). Fix `N` before the run and never
+   raise it to fill the count. The pool runs after `remove_overlap`, so a window it drops is not replaced
+   by an overlapping one; when you select on the raw table (2), apply the cap inside the selection: drop
+   the capped windows and select again until the set respects it. Check: count each gene of
+   `<attr>_off_targets` per target in the final TSV.
+4. **Tm windows: at their own conditions, per half.** Nearest-neighbour Tm moves strongly with [Na+] and
+   strand concentration (SantaLucia J Jr 1998 PNAS 95:1460; Owczarzy R et al. 2004 Biochemistry 43:3537),
+   so a window holds only at the salt, oligo concentration and formamide its source states with it:
+   compute it there with the attribute's own `hybridization:` (and `tm_method` for a named formula), not
+   under the experiment's buffer. In split units (padlock + primer, split initiators) each half must meet
+   it: one `annealing_temperature` attribute per half, filtered per half, checked with `--part-tm`.
+   Lengthen a low half within its published range (a `layout` with ranges) before accepting a low Tm.
+
 ### Length ranges are not a way to fill the count
 
 `length: [min, max]` makes a window of every length at every start, and `remove_overlap` keeps the
