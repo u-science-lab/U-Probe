@@ -11,7 +11,8 @@ import pytest
 
 from uprobe.core import copies
 from uprobe.core.attributes import add_attributes
-from uprobe.core.copies import copies_settings, copy_fractions, kmer_set, read_transcripts, target_sequences
+from uprobe.core.copies import (coding_biotype, copies_settings, copy_fractions, kmer_set, read_transcripts,
+                                target_sequences)
 from uprobe.core.offtarget import OffTargetCounter
 from uprobe.core.report.formatting import ordered_columns
 from uprobe.core.report.run_summary import build_run_summary
@@ -442,3 +443,11 @@ def test_reference_mouse_gapdh_retrocopy_is_exempt():
           f'{seconds:.1f} s')
     assert 0.7 < shares['Gapdh', 'Gm13394'] < 0.8  # a retrocopy: 76% of Gapdh's 30-mers
     assert shares['Actb', 'Actg1'] < 0.1
+
+
+@pytest.mark.parametrize('biotype, coding', [('protein_coding', True), ('TR_C_gene', True), ('IG_C_gene', True),
+                                             ('TR_V_gene', True), ('TR_V_pseudogene', False),
+                                             ('processed_pseudogene', False), ('lncRNA', False)])
+def test_coding_biotypes_stay_counted(biotype, coding):
+    # Expressed IG/TR segments are coding (mouse Trbc2 for Trbc1); their pseudogenes are not.
+    assert coding_biotype(biotype) is coding

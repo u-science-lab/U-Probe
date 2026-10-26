@@ -17,8 +17,11 @@ can exempt copies::
 An off-target gene is a copy of a target when one of its transcripts contains,
 in the same orientation, at least ``min_shared`` of the distinct k-mers
 (``kmer`` nt) of the target's sequence. A copy is exempt only when its GTF
-biotype (``gene_biotype``, or ``gene_type`` in GENCODE) is not
-``protein_coding``: a processed or unprocessed pseudogene, a lncRNA retrocopy.
+biotype (``gene_biotype``, or ``gene_type`` in GENCODE) is not coding: a
+processed or unprocessed pseudogene, a lncRNA retrocopy. Coding means
+``protein_coding`` or an expressed immunoglobulin or T-cell receptor segment
+(``IG_C_gene``, ``TR_C_gene``, ...; mouse Trbc2 for Trbc1); their pseudogenes
+stay eligible.
 An exempt copy is not counted; the attribute lists it in ``<attribute>_copies``.
 A protein-coding copy is a separately quantified transcript, and binding it is
 a real off-target (mouse Ifit3b holds 62.5% of the 30-mers of Ifit3), so it
@@ -40,6 +43,7 @@ genes' transcripts are read from ``transcript.fa``, the FASTA the
 transcriptome index is built from; only genes the alignment hit are read.
 """
 import numbers
+import re
 import time
 
 import numpy as np
@@ -49,7 +53,7 @@ DEFAULT_KMER = 30
 DEFAULT_MIN_SHARED = 0.5
 MIN_KMER, MAX_KMER = 12, 32  # a k-mer is packed into 64 bits, 2 per base
 OPTIONS = ('kmer', 'min_shared')
-NEVER_EXEMPT = 'protein_coding'  # the biotype of copies that stay counted
+_SEGMENT = re.compile(r'(IG|TR)_[A-Z]+_gene')  # Ensembl's expressed IG/TR segments
 UNKNOWN_BIOTYPE = 'unknown_biotype'
 
 # Bases (DNA or RNA, any case) -> 0-3; everything else -> 4, which ends a k-mer.
@@ -275,15 +279,20 @@ def copy_fractions(sequences: dict, candidates: dict, records, k: int = DEFAULT_
     return result
 
 
+def coding_biotype(biotype: str) -> bool:
+    """True for the biotypes whose copies stay counted: protein_coding and IG/TR segments."""
+    return biotype == 'protein_coding' or bool(_SEGMENT.fullmatch(biotype))
+
+
 def find_copies(df: pd.DataFrame, candidates: dict, transcript_fasta, settings: dict, biotypes: dict,
                 column: str = 'target_region'):
     """({(target, gene): share} of the exempt copies among the candidates, report).
 
     ``candidates`` maps each target to the off-target genes its sequences
     hit; ``settings`` is copies_settings(); ``biotypes`` maps gene -> GTF
-    biotype. Only copies whose biotype is known and not protein_coding are
-    exempt. The report lists the other copies under ``not_exempt``
-    ({(target, gene): (share, 'protein_coding' or 'unknown_biotype')}), the
+    biotype. Only copies whose biotype is known and not coding (coding_biotype)
+    are exempt. The report lists the other copies under ``not_exempt``
+    ({(target, gene): (share, their biotype or 'unknown_biotype')}), the
     targets whose windows give no k-mer (they get no copies) and the seconds
     taken.
     """
@@ -298,7 +307,7 @@ def find_copies(df: pd.DataFrame, candidates: dict, transcript_fasta, settings: 
         if share < settings['min_shared']:
             continue
         biotype = biotypes.get(gene)
-        if biotype and biotype != NEVER_EXEMPT:
+        if biotype and not coding_biotype(biotype):
             copies[(target, gene)] = share
         else:
             not_exempt[(target, gene)] = (share, biotype or UNKNOWN_BIOTYPE)
