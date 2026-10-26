@@ -152,13 +152,12 @@ technique checklist and `references/uprobe/workflow.md` (section 8).
 
 ### 9. Report, then relax
 
-One change per run. Too few probes: first report the shortfall of the run that follows the method's
-published rules, then follow `top_removal_stage` into `references/uprobe/troubleshooting.md` ("Too
-few probes"). Relax in this order, one step per run, each reported with its yield: region (`CDS` ->
-`mRNA`), missing expression settings (step 4), spacing down to the method's smallest published value,
-Tm/GC within published ranges. Never change the set's geometry (length, arms) to fill the count,
-relax the off-target rule of a single-unit method (HCR, padlock/RCA), or loosen a filter the
-references do not justify.
+One change per run. Too few probes: report the shortfall of the run that follows the method's published
+rules, then follow `top_removal_stage` into `references/uprobe/troubleshooting.md` ("Too few probes").
+Relax in this order, one step per run, each reported with its yield: region (`CDS` -> `mRNA`), missing
+expression settings (step 4), spacing down to the method's smallest published value, Tm/GC within
+published ranges. Never change the set's geometry (length, arms) to fill the count, relax the off-target
+rule of a single-unit method (HCR, padlock/RCA), or loosen a filter the references do not justify.
 
 ### 10. Deliver
 
@@ -202,7 +201,8 @@ padlocks); every non-default choice, template departure and shortfall.
    off-target search (`references/uprobe/workflow.md`).
 9. Report shortfalls before changing anything: name each target with fewer probes than requested and
    why; never pad a set with probes that fail the method's rules, nor fill the count with a length,
-   spacing or window outside the published ones (rule 3; `references/uprobe/troubleshooting.md`).
+   spacing, pool cap or Tm window outside the published ones (rule 3); still short, deliver fewer
+   (`references/uprobe/troubleshooting.md`, "Keep the rules, change the selection").
 10. Add no hard filter the method does not publish (composition, structure, position, coverage, extra
     Tm bands): validated sets violate them and first-fit packing then leaves weak windows. If you add
     one, compare yield and picked windows with and without it, and say so.
