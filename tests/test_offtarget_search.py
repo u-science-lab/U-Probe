@@ -205,7 +205,7 @@ def test_mapped_genes_settings_reject(attr, message):
 
 def test_mapped_genes_settings_defaults():
     assert mapped_genes_settings({'aligner': 'bowtie'}) == {'aligner': 'bowtie', 'strand': 'both', 'max_mismatches': 2,
-                                                             'exempt_copies': None}
+                                                             'exempt_copies': None, 'oligos': None, 'max_gap': None}
     assert mapped_genes_settings({'aligner': 'bowtie2'})['max_mismatches'] is None
     assert mapped_genes_settings({'aligner': 'bowtie2', 'exempt_copies': True})['exempt_copies'] == {
         'kmer': 30, 'min_shared': 0.5}

@@ -181,9 +181,9 @@ padlocks); every non-default choice, template departure and shortfall.
    the stated conditions is a check or a floor: never derive a length from a Tm you chose; reproduce a
    published Tm window under its own conditions and formula (per-attribute `hybridization:` and
    `tm_method:`; `references/techniques/`, `references/concepts/hybridization-and-tm.md`).
-4. Windows of ~30 nt or less need an exhaustive off-target search: `mapped_genes` with
-   `aligner: bowtie`, `max_mismatches: 2`, `strand: sense`; Bowtie2 cannot align < 22 nt and misses
-   sites up to 30 nt; never write your own aligner (`references/concepts/specificity.md`).
+4. Windows of ~30 nt or less need an exhaustive off-target search: `mapped_genes` with `aligner: bowtie`,
+   `max_mismatches: 2`, `strand: sense` (Bowtie2 cannot align < 22 nt, misses sites up to 30 nt); never write your
+   own aligner; units of several oligos (HCR v3, SNAIL, MiP-seq) search each oligo with `oligos:` (`references/concepts/specificity.md`).
 5. A near-match (<= 2 substitutions) in another expressed gene excludes the probe
    (`target_mapped_genes <= 1` as a filter, not a score); only many-probe methods (smFISH, smiFISH,
    MERFISH, seqFISH+, Oligopaint) may add the pool rule (`off_target_pool`); HCR pairs and

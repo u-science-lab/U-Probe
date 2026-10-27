@@ -71,6 +71,15 @@ meta:
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: U-Probe approximation of target specificity; not specified by Choi 2018.
+    - parameter: attributes.target_mapped_genes.oligos
+      value: "[left, right]: each 25-nt half searched on its own, within 2 substitutions; a gene counts when both halves have a site on one of its transcripts"
+      source: >-
+        Choi 2018: amplification needs both probes of a pair bound next to
+        each other, as only then are the two initiator halves colocalized; a
+        lone probe bound elsewhere starts no amplification (automatic
+        background suppression). The off-target to avoid is therefore a
+        transcript that both halves bind, each within the mismatch limit,
+        rather than a 52-nt window within 2 substitutions in total.
     - parameter: post_process.equal_space.number_desired
       value: 20
       source: Choi 2018 (20 probe pairs per target for quantitative imaging; see meta.limitations)
@@ -102,7 +111,7 @@ meta:
       imaging).
     - "TODO: verify GC, Tm and homopolymer criteria for HCR v3 probes; none are given in Choi 2018, so no GC filter is applied and Tm has only a floor at the hybridization temperature (parameter_sources)."
   replace:
-    - "genome: a genome name from your genomes.yaml (hg38 here)"
+    - "genome: a genome name from your genomes.yaml (hg38 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (GAPDH, ACTB here)"
     - "encoding: per gene, the halves and spacers of its HCR amplifier; targets imaged together need different amplifiers (B1 and B2 here)"
 
@@ -190,17 +199,17 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    # The 52-nt window of a probe pair: a single 25-nt probe cannot trigger
-    # amplification. Bowtie2 also reports partial matches (about 25 nt or
-    # more), indels and sites with 3 or more mismatches, which a search within
-    # 2 substitutions cannot see, but it is a heuristic that reports at most
-    # 100 alignments: on the Ensembl 113 human transcriptome it flagged 99% of
-    # random 52-nt windows of mRNAs that have a site within 2 substitutions in
-    # another gene, and listed 94% of those genes per window. For an exhaustive
-    # search of those sites, add bowtie to the genome's align_index and set
-    # aligner: bowtie, max_mismatches: 2.
-    aligner: bowtie2
+    # A probe pair gives a signal only where both halves bind (Choi 2018), so
+    # each 25-nt half is searched on its own with Bowtie 1, every site within
+    # 2 substitutions, and an off-target gene counts when both halves have a
+    # site on one of its transcripts (meta.parameter_sources). A search of the
+    # whole 52-nt window within 2 substitutions would count the mismatches of
+    # both halves together and miss a transcript where each half has 2.
+    # Needs bowtie in the genome's align_index.
+    aligner: bowtie
+    max_mismatches: 2   # per half
     strand: sense   # sites where target_region occurs, which the probes bind
+    oligos: [left, right]   # the layout parts the odd and even probes bind
 
 post_process:
   filters:

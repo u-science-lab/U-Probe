@@ -37,7 +37,7 @@ U-Probe README measurements (Ensembl 113 human transcriptome):
 Rule: windows <= 30 nt -> `aligner: bowtie`, `max_mismatches: 2` (the templates' choice). Windows
 >= 40 nt -> Bowtie2 also finds partial matches and indels but is a heuristic (it misses 1-3 % of the
 windows with a <= 2-substitution site in another gene); where the unit of signal is the whole window
-(HCR pairs, SNAIL and padlock sites) the exhaustive substitution search is the decisive check, so Bowtie 1 alone
+(HCR pairs, SNAIL and padlock sites) the exhaustive substitution search (per oligo for units of several oligos, below) is the decisive check, so Bowtie 1 alone
 is a sound default there (it also spares the Bowtie2 transcriptome index, the slowest build of an RNA run),
 and Bowtie2 is an optional second attribute for indels and one-half matches. For 28-30-nt
 windows, extrapolating the numbers above, a 3-substitution site can still have its Tm above the
@@ -179,8 +179,15 @@ within 2 substitutions, `target_mapped_genes <= 1`; never exempt paralogs.
   searches the 40-nt window only locally).
 - Per-pair rule, HCR v3: the initiator is split between two probes and amplification needs both bound
   next to each other (Choi HMT et al. 2018 Development 145:dev165753, doi:10.1242/dev.165753). A lone
-  probe is suppressed, but a pair that binds an off-target site grows an amplified polymer. Search the
-  whole pair window (e.g. 52 nt) and keep it free of off-targets.
+  probe is suppressed, but a pair that binds an off-target site grows an amplified polymer.
+- Units of several oligos (HCR v3 pairs; SNAIL padlock + primer, Wang X et al. 2018 Science
+  361:eaat5691, doi:10.1126/science.aat5691; MiP-seq padlock + RCA primer): search each oligo's site
+  on its own and count a gene when every oligo has a site on one of its transcripts, each within the
+  mismatch limit: `oligos: [left, right]` (layout parts; `[[arm5_site, arm3_site], primer_site]` joins
+  a padlock's two arm sites into one oligo), with `aligner: bowtie`. A search of the whole window
+  within 2 substitutions counts the mismatches of all oligos together and passes an RNA where each
+  half has 2. `max_gap: <nt>` also requires the sites to lie next to each other on the off-target
+  (unset: anywhere on one transcript, the conservative choice).
 - DNA FISH: scattered single off-target probes give diffuse background; many probes landing in one
   off-target region form a false focus. `avoid_otp` (DNA mode, `mapped_sites`) removes probes whose
   off-target genome hits cluster.
@@ -211,8 +218,9 @@ ES et al. 2001 Nature 409:860, doi:10.1038/35057062), and repeats also occur in 
 | --- | --- | --- | --- | --- | --- | --- |
 | smFISH 18-22 nt | `target_region`, `sense` | bowtie, 2 | `<= 1` | recommended (+ fraction 0.05) | `exempt_copies` | optional |
 | MERFISH / seqFISH+ 28-30 nt | `target_region`, `sense` | bowtie, 2 (3 defensible) | `<= 1` | recommended | `exempt_copies` | optional |
-| HCR v3 pair 52 nt | whole pair window, `sense` | Bowtie 1 alone, 2 (exhaustive within the radius; Bowtie2 only as an optional second attribute for indels and partial matches) | `<= 1` | recommended | report copies | no |
-| Padlock / SNAIL 30-46 nt | whole site, `sense`; plus the junction (`padlock_iss`) or the arm site (`double_hyb_rca`) | bowtie (<= 30 nt) / Bowtie2 | `<= 1` on each | recommended | report copies | no |
+| HCR v3 pair 52 nt | `target_region` with `oligos: [left, right]`, `sense` | Bowtie 1, 2 per half (Bowtie2 only as an optional second attribute for indels and partial matches) | `<= 1` | recommended | report copies | no |
+| SNAIL, MiP-seq (padlock + primer) | `target_region` with `oligos` (one per oligo), `sense` | Bowtie 1, 2 per oligo | `<= 1` | recommended | report copies | no |
+| Padlock 30-40 nt (one oligo) | whole site, `sense`; plus the junction (`padlock_iss`) or the arm site (`double_hyb_rca`) | bowtie (<= 30 nt) / Bowtie2 | `<= 1` on each | recommended | report copies | no |
 | Oligopaint 35-41 nt | homology, windows from a soft-masked genome (`masked: drop`) | `kmer_count` (k 18, `strand: sense`) + `mapped_sites` | `kmer_count <= 4`, `<attr>_num == 1` | n/a | n/a | `avoid_otp` |
 
 "Report copies": with single-unit methods every probe of a copied target also detects an expressed

@@ -6,8 +6,8 @@ import pandas as pd
 from ._attributes import *
 from ..genome_paths import index_prefix as index_prefix_of, index_root
 from ..hybridization import resolve_conditions, tm_arguments, tm_formula_arguments, tm_method
-from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, mapped_genes_settings,
-                         short_for_bowtie2)
+from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, check_oligo_parts,
+                         mapped_genes_settings, short_for_bowtie2)
 from ..utils import get_logger, reverse_complement
 
 log = get_logger(__name__)
@@ -33,6 +33,29 @@ def locus_kmer_index(fasta, sequences, kmer_len, threads, size, canonical, direc
     build_jf_index(str(fasta), kmer_len, str(index), threads, size or str(max(1_000_000, 2 * kmers)),
                    canonical=canonical, only_kmers_in=str(locus_fasta))
     return index
+
+
+UNIT_SEPARATOR = '+'
+
+
+def _oligo_units(df, protocol, attr_name, target, oligos):
+    """Add a column of per-row tuples of oligo binding sites (layout parts, joined per oligo); return its name."""
+    from ..layout import compile_layout
+    where = f'attributes.{attr_name}'
+    region = (protocol.get('extracts') or {}).get('target_region') or {}
+    if target != 'target_region' or 'layout' not in region:
+        raise ValueError(f'{where}.oligos needs target: target_region with extracts.target_region.layout, '
+                         f'whose parts name the oligos\' binding sites')
+    names, _ = compile_layout(region['layout'], region.get('length'))
+    check_oligo_parts(oligos, names, f'{where}.')
+    columns = [[f'target_parts.{name}' for name in group] for group in oligos]
+    missing = [column for group in columns for column in group if column not in df.columns]
+    if missing:
+        raise ValueError(f'{where}.oligos: the candidates have no column {", ".join(missing)}')
+    column = f'__{attr_name}_units'
+    df[column] = [tuple(''.join(row[c] for c in group) for group in columns)
+                  for row in df[[c for group in columns for c in group]].to_dict('records')]
+    return column
 
 
 TM_FORMULAS = {"multi_padlock_design": cal_temp_multi_padlock_design,
@@ -173,6 +196,22 @@ def _add_attributes(
                     off_targets = OffTargetCounter(protocol, genome, report)
                 # A table of transcripts (gene_expression.level: transcript) needs the transcripts hit.
                 by_transcript = off_targets.transcript_level
+                if settings['oligos'] is not None:
+                    # Units of several oligos: each oligo's site searched on its own (offtarget module doc).
+                    unit_column = _oligo_units(df_probes, protocol, attr_name, actual_target, settings['oligos'])
+                    unit_hits = bowtie_unit_hits(
+                        str(tmp_dir), df_probes[unit_column], task_id, str(index_prefix),
+                        settings['max_mismatches'], attr_threads, settings['strand'], settings['max_gap'])
+                    transcript_hits = {UNIT_SEPARATOR.join(unit): records for unit, records in unit_hits.items()}
+                    sequence_hits = {key: gene_hits_of(records) for key, records in transcript_hits.items()}
+                    df_probes[unit_column] = df_probes[unit_column].map(UNIT_SEPARATOR.join)
+                    off_targets.annotate(df_probes, attr_name, unit_column, sequence_hits, settings,
+                                         transcript_hits if by_transcript else None)
+                    del df_probes[unit_column]
+                    stats = off_targets.report.get('attributes', {}).get(attr_name)
+                    if stats is not None:
+                        stats.update(oligos=[list(names) for names in settings['oligos']], max_gap=settings['max_gap'])
+                    continue
                 if aligner == "bowtie":
                     hits = (bowtie_transcript_hits if by_transcript else bowtie_gene_hits)(
                         str(tmp_dir), recname2seq, task_id, str(index_prefix),
