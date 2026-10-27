@@ -213,7 +213,7 @@ What to edit:
   5 nM U-Probe puts the whole windows of its 2,766 located preselected mouse pairs at 72-87 C (1st-99th
   percentile), so no window can meet 56-70 C; the halves, which hybridize as separate oligos, centre on
   Wang 2018's designed 60 C (Shi 2023 set: median 59.1 C). GC does fit the window (all 32.6-70.7 %;
-  12.5 % of pairs have a half outside 30-70 %), so GC is filtered on the window.
+  12.5 % of pairs have a half outside 30-70 %), so a GC filter belongs on the window (snippet below).
 - Tm formula: Picky's is not stated. U-Probe computes Primer3 (SantaLucia 1998 parameters and salt
   correction); Biopython's `Tm_NN` (DNA_NN3, 5 nM oligo and target) reads the same halves about 1 C
   higher (Shi 2023 set: both halves within 56-70 C in 87.0 % vs 78.7 %). A half within 1 C of a bound
