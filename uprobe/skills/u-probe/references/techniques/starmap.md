@@ -136,9 +136,10 @@ of the shortest isoform; `remove_overlap: 0` forbids overlapping pairs (stricter
   transcript, at the right spacing). A padlock alone is never circularized (no splint) and a
   primer alone has no circle to prime, so single-oligo off-target binding gives no signal
   (Wang 2018, Fig. 1C-D: mismatched pairs give no labeling).
-- Hence the unit of off-target search is the whole window: the template maps `target_region`
-  (padlock site + gap + primer site) with `strand: sense` and keeps `target_mapped_genes <= 1`
-  (no other gene carries the window). Because one unit is enough for a spot, do not tolerate
+- Hence the unit of off-target search is the pair: the template searches the padlock site and
+  the primer site on their own (`oligos: [padlock_site, primer_site]`, Bowtie 1, each within 2
+  substitutions, `strand: sense`) and keeps `target_mapped_genes <= 1` (no other gene has a
+  transcript both oligos bind). Because one unit is enough for a spot, do not tolerate
   off-target genes per pair as smFISH does; use `gene_expression` to ignore unexpressed genes and
   `exempt_copies` for pseudogene/retrocopy copies (`references/concepts/specificity.md`).
 - Second failure mode: intermolecular cross-pairing (primer of gene A splinting the padlock of
@@ -146,7 +147,7 @@ of the shortest isoform; `remove_overlap: 0` forbids overlapping pairs (stricter
   64- and 2,766-gene sets) reduce it; the 2018 constant splint (ACATTA/TAATGT) does not.
 - Neither Wang 2018 nor PLUS states a specificity criterion beyond Picky's design.
   **U-Probe departs:** specificity is the U-Probe approximation `target_mapped_genes <= 1`
-  (Bowtie2 local search by default, which can miss some sites; see section 7).
+  (each oligo within 2 substitutions; needs `bowtie` in the genome's `align_index`).
 
 ## 6. U-Probe template
 
@@ -184,7 +185,8 @@ attributes:
     type: annealing_temperature
     hybridization: {na_mM: 300, mg_mM: 0, dntp_mM: 0, probe_nM: 5, formamide_pct: 0}   # Ren 2025 design conditions
   tm_balance: {type: difference, of: [padlock_tm, primer_tm]}          # |padlock_tm - primer_tm|
-  target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
+  target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2,
+                        strand: sense, oligos: [padlock_site, primer_site]}   # each oligo on its own
 post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}
@@ -200,9 +202,9 @@ What to edit:
   `A{s}TA{binding}AATTATTAC{bc}CATACACTAAAGATA`, primer `{binding}TA{s_rc}TTATCTT` with a 5-nt
   `bc` (6 SEDAL rounds) and a separate 3-nt splint code `s`; codes can come from
   `uprobe generate-barcodes`.
-- Exhaustive off-target search: add `bowtie` to the genome's `align_index`, then set
-  `aligner: bowtie` and `max_mismatches: 2` (Bowtie2 flagged 97-99% of 40-46-nt windows that
-  have a <=2-substitution site in another gene; README).
+- Off-target search: the template needs `bowtie` in the genome's `align_index` (Bowtie 1,
+  exhaustive within 2 substitutions per oligo); a search of the whole window would count the
+  mismatches of both oligos together.
 - Half Tm: each half is filtered to 56-70 C computed at Ren 2025's design conditions, 300 mM Na+ and
   5 nM per oligo with no formamide, through an attribute-level `hybridization` override that declares
   every Tm field (`na_mM`, `mg_mM`, `dntp_mM`, `probe_nM`, `formamide_pct`). The window is therefore
@@ -262,8 +264,8 @@ post_process:
   you will hybridize at; the half Tm filters stay at the design conditions.
 - The gap is `[1, 2]`: abutting sites (the 0 the text allows) leave the padlock's ligated ends and
   the primer's 3' end no room between the two duplexes, and no published pair uses them.
-- Bowtie2 is a heuristic with at most 100 alignments: windows in repeats can pass with
-  `target_mapped_genes <= 1`; prefer `aligner: bowtie` when the index exists.
+- Bowtie 1 searches substitutions only: add a Bowtie2 attribute on `target_region` if indels or
+  partial matches matter for your target.
 - No fold or self-complementarity filter is applied; a padlock whose binding part pairs with its
   own backbone or with the primer tail will not hybridize/ligate as intended. Ren 2025 drops strong
   NUPACK secondary structures and BLASTs each probe against the minus strand of the whole pool

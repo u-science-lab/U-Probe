@@ -87,8 +87,11 @@ Community tools disagree on filters Choi 2018 never set; none is canonical:
 
 - Unit of specificity = the pair. One probe alone does not amplify, so a 25-nt off-target match of
   one probe matters little. A pair that binds an off-target RNA side by side DOES amplify, and every
-  amplified pair is a bright dot in dHCR, so each 52-nt window must be unique among expressed RNAs.
-  This is stricter than smFISH, where one off-target probe is invisible.
+  amplified pair is a bright dot in dHCR, so no expressed off-target RNA may hold both halves, each
+  within 2 substitutions. The template searches each 25-nt half on its own (`oligos: [left, right]`):
+  a search of the whole 52-nt window within 2 substitutions would count the mismatches of both halves
+  together and pass an RNA where each half has 2. This is stricter than smFISH, where one off-target
+  probe is invisible.
 - Paralogs and pseudogenes: put pairs in UTRs or divergent regions; check `target_mapped_genes_off_targets`.
 - Cross-talk between targets: only through amplifier choice; B1-B5 are orthogonal.
 
@@ -112,7 +115,8 @@ probes:
   probe_even: {template: "{binding}{spacer}{initiator}", ...}   # binding = rc(target_parts['right'])
 hybridization: {temperature_c: 37, na_mM: 975, probe_nM: 4, formamide_pct: 30, dntp_mM: 0}   # 5x SSC
 attributes:
-  target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
+  target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2,
+                        strand: sense, oligos: [left, right]}   # each half within 2 substitutions
 post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}
@@ -127,19 +131,17 @@ What to edit:
   the table in section 2 (the template ships B1 and B2 only).
 - `equal_space.number_desired`: 20 for qHCR; 25-30+ for dHCR (all passing pairs if fewer).
 - Add `gene_expression` so only expressed off-target genes remove pairs.
-- Off-target search: prefer `bowtie` in `align_index` and `aligner: bowtie`, `max_mismatches: 2` on the pair
-  window (exhaustive within 2 substitutions; the template's Bowtie2 is a heuristic and also builds a
-  Bowtie2 transcriptome index, the slowest step of a run). A pair amplifies only when both halves bind
-  side by side, so a whole-window search with Bowtie 1 is the check that matters; Bowtie2 additionally
-  flags partial (one-half) matches and indels and drops pairs that could not amplify there (the QA run
-  kept the same pairs, `references/uprobe/template-qa.md`).
+- Off-target search: the template needs `bowtie` in `align_index` (Bowtie 1, exhaustive within 2
+  substitutions per half). A pair amplifies only when both halves bind, so the per-half search
+  (`oligos`) is the check that matters; `max_gap: <nt>` additionally requires the two sites to lie
+  next to each other on the off-target RNA (unset: anywhere on one transcript, the conservative
+  choice). A second Bowtie2 attribute on the whole window can add indels and partial matches.
 
 Template departures:
 - Spacing: not a departure; `location_interval: 2` keeps pairs at least 2 nt apart, as in the Choi
   2018 sets (the community tools in section 3 use 3 nt).
-- Off-targets: Bowtie2 local on the 52-nt window (heuristic, <= 100 alignments; flagged 99 % of windows
-  with a <= 2-substitution site in another gene). It also counts partial matches of ~25 nt, i.e. one
-  half: conservative, it drops pairs that could not amplify on that gene.
+- Off-targets: each half searched with Bowtie 1 within 2 substitutions; an off-target gene counts
+  when both halves have a site on one of its transcripts (Choi 2018 states no search criterion).
 - No GC or homopolymer filter (as Choi 2018); `odd_tm` and `even_tm` have a floor at the 37 C
   hybridization temperature under the template's conditions (5x SSC, 30 % formamide, 4 nM). The 224
   halves of the Choi 2018 human sets have 29.7-73.0 C under them (5th percentile 37.8 C); the floor

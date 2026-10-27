@@ -76,6 +76,13 @@ meta:
     - parameter: post_process.filters.target_mapped_genes
       value: "<= 1"
       source: U-Probe approximation of target specificity; Wang 2018 names Picky 2.2 without further criteria.
+    - parameter: attributes.target_mapped_genes.oligos
+      value: "[padlock_site, primer_site]: each oligo's site searched on its own, within 2 substitutions; a gene counts when both have a site on one of its transcripts"
+      source: >-
+        Wang 2018: the padlock is circularized and amplified only when padlock
+        and primer hybridize to the same RNA molecule, so a lone oligo bound
+        elsewhere gives no product. The off-target to avoid is a transcript
+        both oligos bind, each within the mismatch limit.
     - parameter: post_process.filters.padlock_tm and primer_tm, attributes.padlock_tm/primer_tm.hybridization
       value: "each half 56-70 C at 300 mM Na+ and 5 nM per oligo, no formamide (Primer3), not under the hybridization block"
       source: >-
@@ -148,7 +155,7 @@ meta:
     - "TODO: verify the minimum spacing between probe pairs; regions are only required not to overlap here."
     - "TODO: verify the 2018 backbone (Table S1 was not accessible); Wang 2018 used a 5-nt barcode within a 35-nt coding space, whereas the 64-gene STARmap PLUS set used here repeats a 3-nt code. The 2,766-gene STARmap PLUS set uses a different backbone with an 8 + 6 split."
   replace:
-    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "genome: a genome name from your genomes.yaml (mm10 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (Aldoc here)"
     - "encoding: per gene, the 3-nt SEDAL code (AAA is the published ALDOC code of the 64-gene set, an example only)"
 
@@ -234,16 +241,16 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    # The 40-46-nt region that padlock and primer bind together. Bowtie2 also
-    # reports partial matches (about 25 nt or more), indels and sites with 3 or
-    # more mismatches, which a search within 2 substitutions cannot see, but it
-    # is a heuristic that reports at most 100 alignments: on the Ensembl 113
-    # human transcriptome it flagged 97-99% of random 40- and 46-nt windows of
-    # mRNAs that have a site within 2 substitutions in another gene, and listed
-    # 87-90% of those genes per window. For an exhaustive search of those sites,
-    # add bowtie to the genome's align_index and set aligner: bowtie, max_mismatches: 2.
-    aligner: bowtie2
+    # SNAIL amplifies only where padlock and primer bind the same RNA molecule
+    # (Wang 2018), so each oligo's 19-25-nt site is searched on its own with
+    # Bowtie 1, every site within 2 substitutions, and an off-target gene
+    # counts when both have a site on one of its transcripts. A search of the
+    # whole window within 2 substitutions would count the mismatches of both
+    # oligos together. Needs bowtie in the genome's align_index.
+    aligner: bowtie
+    max_mismatches: 2   # per oligo
     strand: sense   # sites where target_region occurs, which the probes bind
+    oligos: [padlock_site, primer_site]
 
 post_process:
   filters:

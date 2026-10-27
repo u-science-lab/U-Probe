@@ -67,6 +67,14 @@ meta:
         The 5' end of the RCA initiator primer is complementary to the 3' end
         of the targeting sequence (12-16 bp), and the 3' end is complementary
         to the padlock probe (Wu 2023 Methods)
+    - parameter: attributes.target_mapped_genes.oligos
+      value: "[[arm5_site, arm3_site], primer_site]: the padlock's 26-nt site and the primer's 13-nt site searched on their own, within 2 substitutions each; a gene counts when both have a site on one of its transcripts"
+      source: >-
+        Wu 2023 Methods: the RCA initiator primer binds the RNA next to the
+        padlock and the padlock itself, so Phi29 amplifies a circle only where
+        both oligos sit on one RNA. The off-target to avoid is a transcript
+        both oligos bind, each within the mismatch limit; the paper's own
+        specificity criteria are not stated (meta.limitations).
     - parameter: post_process.filters.near_5p (target_start) and post_process.equal_space
       value: "2 sites per gene, starting within the first 1,000 nt of the RNA"
       source: >-
@@ -106,7 +114,7 @@ meta:
     - The published primers are 25 nt (247 of 432) or 26 nt (185); the template builds the 25-nt majority form, and the 26-nt one differs by one C (see parameter_sources).
     - "TODO: verify Tm/GC/specificity criteria; the paper used a self-developed probe searching program and states none, so only the U-Probe specificity approximation (mapped_genes <= 1) and a Tm floor taken from the published units (parameter_sources) are applied."
   replace:
-    - "genome: a genome name from your genomes.yaml (mm10 here)"
+    - "genome: a genome name from your genomes.yaml (mm10 here); its align_index must include bowtie (Bowtie 1) for target_mapped_genes"
     - "targets: your gene names (Th here)"
     - "encoding: per gene, the 3-nt barcodes B1 and B2 (GAG/CAT are from the published Th-1-PLP-1, an example only)"
 
@@ -188,16 +196,15 @@ attributes:
   target_mapped_genes:
     target: target_region
     type: mapped_genes
-    # The 40-nt window that padlock and primer bind together. Bowtie2 also
-    # reports partial matches (about 25 nt or more), indels and sites with 3 or
-    # more mismatches, which a search within 2 substitutions cannot see, but it
-    # is a heuristic that reports at most 100 alignments: on the Ensembl 113
-    # human transcriptome it flagged 97% of random 40-nt windows of mRNAs that
-    # have a site within 2 substitutions in another gene, and listed 87% of
-    # those genes per window. For an exhaustive search of those sites, add
-    # bowtie to the genome's align_index and set aligner: bowtie, max_mismatches: 2.
-    aligner: bowtie2
+    # Phi29 amplifies only circles that sit on the RNA together with the RCA
+    # primer, so the padlock's 26-nt site (both arms) and the primer's 13-nt
+    # site are searched on their own with Bowtie 1, every site within 2
+    # substitutions, and an off-target gene counts when both have a site on
+    # one of its transcripts. Needs bowtie in the genome's align_index.
+    aligner: bowtie
+    max_mismatches: 2   # per oligo
     strand: sense   # sites where target_region occurs, which the probes bind
+    oligos: [[arm5_site, arm3_site], primer_site]   # padlock, RCA primer
 
 post_process:
   filters:
