@@ -279,8 +279,10 @@ def test_hybridization_checks(dna):
 def test_attribute_types_match_add_attributes():
     from uprobe.core.attributes import _add_attributes
     source = inspect.getsource(_add_attributes)
+    from uprobe.core.composition import COMPOSITION_TYPES
     for kind in ATTRIBUTE_TYPES:
-        assert f'"{kind}"' in source
+        # the composition types are dispatched together, through COMPOSITION_TYPES
+        assert f'"{kind}"' in source or kind in COMPOSITION_TYPES
 
 
 # -- post_process and summary -------------------------------------------
