@@ -232,7 +232,7 @@ of 28 C on both arms and the primer site comes from the published units, not fro
   Do not add a 37 C floor on `arm_5_tm`/`arm_3_tm`: it rejects what the published sets contain and can leave
   few or no units on the reference transcript. The 28 C floor is the weakest tail of the
   published units, the position cap (`near_5p`, `target_start <= 1000`) U-Probe's reading of "close to the 5'
-  end"; compare the yield with and without either (SKILL.md rule 10).
+  end"; report either with its yield when you apply it.
 - Bowtie2 reports at most 100 alignments; windows in repeats or gene families may be under-counted.
 - The primer's spacer base is the *sense* nt 27, so it cannot pair with nt 27; it is a spacer, not
   an extra binding base. If you write primers by hand, keep this (25 nt, the published majority),

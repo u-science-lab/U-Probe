@@ -270,7 +270,7 @@ not move starts (see "Overlapping or clustered probes").
   between different starts: put quality into `filters`, and prefer a method's published criteria to extra ones.
   If you must choose among overlapping candidates by an objective (balanced halves, GC nearest a target), rank them
   yourself on the raw table (`--raw`) and verify the pick with `check_probes.py`, instead of adding a filter that
-  the method does not publish; compare the yield and the picks with and without any extra filter.
+  the method does not publish (SKILL.md rule 10).
 - Probes cluster in one region: the rest of the target failed filters (check positions of the raw
   candidates); `equal_space` spaces by rank among survivors, not by distance.
 
