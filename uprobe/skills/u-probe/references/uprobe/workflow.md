@@ -200,20 +200,20 @@ for each `mapped_genes` attribute `<attr>_off_targets` (`GENE:mismatches, ...`) 
 the target) when a kept oligo binds several sites. Rows are in `sorts` order, not along the target: sort by
 `target`, `target_start` to see the tiling.
 
-## 7. Report, then relax
+## 7. Report, then change the selection (never the rules)
 
 Change one thing at a time and rerun into a new `-o`. Typical loop:
 1. Run with the method's published rules, the sample's expression table, `min_fraction_of_target` and
    `exempt_copies` already in place (they are the specificity model, not relaxations). If a target has fewer
    probes than requested, write the shortfall down first (probes, requested, `top_removal_stage`).
-2. Look at `top_removal_stage`, then `references/uprobe/troubleshooting.md` ("Too few probes"). Relax in this
-   order, one step per run, each reported with its yield: widen the region (`CDS` -> `mRNA`), then Tm/GC
-   windows within published ranges, then `location_interval` down to the method's smallest published value.
-   Add the expression settings of step 1 first if they were missing. Do not relax specificity
-   (`max_mismatches`, `<= 1`) for single-probe-signal methods, and do not change the standard length or arm
-   lengths of the set to fill the count.
-3. Never loosen a filter you cannot justify from `references/concepts/` or the technique file, and do not add
-   a hard filter the method does not publish; if you do, compare the yield with and without it.
+2. Look at `top_removal_stage`, then `references/uprobe/troubleshooting.md` ("Too few probes"). Use only
+   the levers of SKILL.md step 9, one per run, each reported with its yield: the expression settings of step 1
+   if they were missing; a longer region (`CDS` -> `mRNA`) or one shared by the isoforms to count;
+   `location_interval` down to the method's smallest published value; another length only at sites where
+   the standard one fails, inside the published range.
+3. The user's rules and the method's published rules stay fixed (SKILL.md rule 10): no wider Tm/GC window,
+   no other tool's preset, no looser specificity than SKILL.md rule 5 allows, no unpublished extra filter.
+   Still short: deliver the best set that meets every rule and report the shortfall and its cause.
 
 ## 8. Check before delivering
 

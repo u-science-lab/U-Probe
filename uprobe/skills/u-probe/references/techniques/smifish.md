@@ -48,7 +48,7 @@ FLAP                     3'-dye[ FLAP 28   ]dye-5'
 | Affinity | dG37 of the RNA/DNA duplex in [-36, -28] kcal/mol (Fig. 1A). Set-level rule: Oligostan.r tries each target dG from -36 to -28 in 0.5 steps, keeps the probes within +-1 kcal/mol of it (score 1 - 0.1 x \|dG - target\| >= 0.9) and takes the target that leaves the most probes (or a fixed one, e.g. -32) | dG = sum of 16 dinucleotide values over the probe 5'->3' minus a 0.115 M salt term, no initiation or formamide term; U-Probe's `rna_dna_dg37` (section 6) | Tsanov 2016 Fig. 1A; Oligostan.r |
 | dG vs Tm design | dG-based sets beat Tm-based sets; 3 of 7 Tm-designed sets gave no signal | | Tsanov 2016 Suppl. Table 1 |
 | GC | 40-60 % | | Oligostan |
-| Sequence rules | "PNAS rules" (Xu 2009) on the probe: 1 A < 28 %; 2 no AAAA; 3 C 22-28 %; 4 no CCCC; 5 no 4 C in any 6 consecutive nt within the first 12; Oligostan script default 1, 2, 4 (its documentation says all 5) | relax in order 3, 5, 1, 2, 4 | Oligostan; Xu 2009, doi:10.1073/pnas.0812506106 |
+| Sequence rules | "PNAS rules" (Xu 2009) on the probe: 1 A < 28 %; 2 no AAAA; 3 C 22-28 %; 4 no CCCC; 5 no 4 C in any 6 consecutive nt within the first 12; Oligostan script default 1, 2, 4 (its documentation says all 5) | default 1, 2, 4; all five when the user follows the documentation. Hard filters: never drop one to fill the count (SKILL.md rule 10) | Oligostan; Xu 2009, doi:10.1073/pnas.0812506106 |
 | Repeats | <= 10 % RepeatMasker-masked | | Oligostan |
 | Spacing | >= 2 nt | | Oligostan |
 | Probes per RNA | 12-48; 24 "a good compromise between cost and signal quality" | tested 12, 24, 45 | Tsanov 2016 |
@@ -63,14 +63,15 @@ Later protocols changed the probes:
 | Protocol | Gene-specific part | FLAP | Buffer | Probe dose |
 | --- | --- | --- | --- | --- |
 | Tsanov 2016 (cells) | 26-32 nt, dG-matched (Oligostan) | X/Y/Z, 3' | 15 % FA, 1x SSC | ~80 nM total |
-| Querido 2020 (hTR, 451 nt) | relaxed: >= 23 nt, GC up to 85 %, 15 probes | Y, 3' | 15 % FA, 1x SSC | 80 nM |
+| Querido 2020 (hTR, 451 nt) | >= 23 nt, GC up to 85 %, 15 probes (for that RNA) | Y, 3' | 15 % FA, 1x SSC | 80 nM |
 | Calvo 2021 (arthropod embryos) | 20 nt, Stellaris designer, <= 48 | X, 5' | 10 % FA, 2x SSC | 80 nM, 37 C 14 h |
 | Bouchet 2023 (Drosophila) | 20 nt, GC > 40 %, <= 48 | X, 5' | 10 % FA, 2x SSC, 5 % DS | 0.4-2 uM |
 
 ## 4. Target region
 
 - Oligostan: "We usually use only the coding sequence and exclude the UTR"; add UTRs when the CDS is
-  short (< 500 bp). Querido 2020 relaxed length and GC for a 451-nt RNA.
+  short (< 500 bp). Querido 2020's length and GC (table above) belong to that protocol: use them only
+  when the user chooses it, not to fill a short Tsanov-style set.
 - In U-Probe: `source: CDS`, `transcripts: mane`; switch to `source: mRNA` for short-CDS genes or
   when fewer than 24 probes pass.
 - Isoforms and introns: as in `smfish.md` section 4.
@@ -78,8 +79,8 @@ Later protocols changed the probes:
 ## 5. Specificity
 
 - As in smFISH, a spot needs many primaries on one RNA; a single off-target primary is not detected.
-  Longer gene-specific parts (26-32 nt) bind more stably than 20-mers, so check off-targets with
-  more mismatches than for 20-mers (Bowtie 1 within 2-3 substitutions, plus an expression table).
+  The protocol keeps the templates' off-target rule (Bowtie 1 within 2 substitutions, plus an expression
+  table; SKILL.md rules 4-5); a stricter search is not a published smiFISH rule (SKILL.md rule 10).
 - Abundant paralogs/pseudogenes remove probes, as in smFISH; use `exempt_copies` and `gene_expression`.
 - The FLAP must not bind the transcriptome or the gene-specific parts; X, Y, Z were designed for that.
   Do not invent a new FLAP without screening it.
@@ -131,7 +132,8 @@ How it departs from Oligostan (say so to the user):
   probes: run the protocol with a few targets (band `T-1` to `T+1`), keep the run with the most probes and
   report T. `length: [26, 32]` makes every length, and `remove_overlap` keeps the shortest passing window
   at each start (Oligostan takes the length nearest the target); both stay inside the band.
-- PNAS rules 2 and 4 are filters; rules 1 (A < 28 %), 3 and 5 need a post-filter on the TSV, e.g.
+- PNAS rules 2 and 4 are filters; rule 1 (A < 28 %, part of the default) and rules 3 and 5 (when all five
+  apply) need a post-filter on the TSV before `equal_space` picks the set, e.g. on a `--raw` run
   `b = df['primary.binding']; df = df[b.str.count('A') / b.str.len() < 0.28]`.
 - The script's dG table is not cited to Wu 2002 in the code and was not checked against the published
   tables; compare with Oligostan output for critical genes.
@@ -153,7 +155,7 @@ How it departs from Oligostan (say so to the user):
 - [ ] Gene-specific parts 26-32 nt (or the user's chosen 20-nt variant), rc of the RNA.
 - [ ] dG37 (`rna_dna_dg37` on the binding part) of every gene-specific part in [-36, -28] and within +-1 kcal/mol of one target dG T (section 6); T reported.
 - [ ] FLAP-binding site = rc(chosen FLAP), at the agreed end; total length <= 60 nt.
-- [ ] 24 probes per RNA (12-48), gaps >= 2 nt; GC 40-60 %; no AAAA / CCCC in the probe.
+- [ ] 24 probes per RNA (12-48), gaps >= 2 nt; GC 40-60 %; PNAS rules 1, 2, 4 (A < 28 %, no AAAA / CCCC; also 3 and 5 if all five apply).
 - [ ] `target_mapped_genes` = 1 or explained; one FLAP (and dye) per gene imaged together.
 - [ ] Pre-annealing and buffer plan stated (15 % formamide, 1x SSC, 37 C).
 - [ ] Run last, with the file's own values (the dG window of Fig. 1A; with T = -32, `--range dg37 -33 -31` checks the band):

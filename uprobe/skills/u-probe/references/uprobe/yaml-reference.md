@@ -334,8 +334,8 @@ post_process:
   whose halves' Tm match best; keeping a standard length: `references/uprobe/troubleshooting.md`, "Length
   ranges are not a way to fill the count"). It is first-fit: it never looks back, so when the passing
   pool is barely enough it leaves no alternative for a weak window. It does not choose between different
-  starts, so put quality into `filters`, and add only filters the method publishes (compare the yield with and
-  without any other). Windows of a target with the same sequence (an internal repeat) are one oligo: kept
+  starts, so put quality into `filters`, and add only filters the method publishes
+  (SKILL.md rule 10). Windows of a target with the same sequence (an internal repeat) are one oligo: kept
   once, only if none of its sites is within `location_interval` of a kept one, then all its sites count as
   occupied; the row gets `n_sites`/`oligo_sites` and `summary.json` a `multi_site_oligos` warning (each
   oligo of the final table once).

@@ -58,12 +58,12 @@ Homology selection. Tm values compare only under the same conditions.
 | Homology length, Oligopaints 2012 | 32 | nt | Beliveau 2012, doi:10.1073/pnas.1213818110 |
 | OligoMiner Coverage / Balance / Stringent | 26-32 / 36-41 / 40-46 | nt | Beliveau 2018 Fig. 2A, doi:10.1073/pnas.1714530115 |
 | **Protocols disagree:** Balance length | 36-41 (Fig. 2A; Table S1, the imaged sets; blockParse default `-l 36`) vs 35-41 (main text; the genome-wide hg38 Balance set OligoMiner hosts, `hg38b.tar.gz`, whose probes are 35-41 nt with 35 the most common length; PaintSHOP Table 1). The template follows the hosted set | nt | Beliveau 2018; Hershberg 2021, doi:10.1038/s41592-021-01187-3 |
-| PaintSHOP newBalance | 30-37, Tm 42-47 C, may include repeat-masked bases | nt | Hershberg 2021 |
+| PaintSHOP newBalance | 30-37, Tm 42-47 C, may include repeat-masked bases (another preset, not a fallback for Balance) | nt | Hershberg 2021 |
 | ORCA / chromatin tracing | 40 | nt | Mateo 2019, doi:10.1038/s41586-019-1035-4; Mateo 2021, doi:10.1038/s41596-020-00478-x |
 | Tm window, Coverage / Balance / Stringent | 37-42 / 42-47 / 47-52 (390 mM Na+, 50% formamide, 25 nM each strand, Biopython DNA_NN3, 0.65 C per % formamide; U-Probe `tm_method: oligominer`) | C | Beliveau 2018 Fig. 2A; blockParse.py, probeTm.py |
 | Hybridization temperature per preset | 37 / 42 / 47 (the Tm window is [T_hyb, T_hyb + 5]) | C | Beliveau 2018 Fig. 2A |
 | Tm, other designs | 75-90 (OligoArray, 32-mers; 34.2-49.7 when recomputed for PaintSHOP); >65 (ORCA, conditions not stated) | C | Beliveau 2012; Hershberg 2021 Table 1; Mateo 2021 |
-| GC | 20-80 (blockParse default, ORCA); 35-80 (2012) | % | Beliveau 2012, 2018; Mateo 2021 |
+| GC | 20-80 (blockParse default, ORCA; the template's default); 35-80 (2012 design) | % | Beliveau 2012, 2018; Mateo 2021 |
 | Prohibited runs | AAAAA, TTTTT, CCCCC, GGGGG and any N (blockParse); 2012: >=5 A/T or >=4 G/C | - | blockParse.py; Beliveau 2012 |
 | Spacing between probes | 0 (blockParse -S); >=10 (2012) | nt | blockParse.py; Beliveau 2012 |
 | Repeat masking | candidates are mined from the repeat-masked assembly (UCSC, RepeatMasker; blockParse rejects every window with an N); the Bowtie2 index and Jellyfish dictionary are built from the unmasked one | - | Beliveau 2018 Methods; OligoMiner README; blockParse.py |
@@ -71,6 +71,10 @@ Homology selection. Tm values compare only under the same conditions.
 | Alignment filter | Bowtie2 `--very-sensitive-local -k 2` (Unique Mode, UM; the README uses `-k 100`) or `--local -D 20 -R 3 -N 1 -L 20 -i C,4 --score-min G,1,4 -k 2` (LDA Mode, LDM). UM keeps probes that aligned with no `XS:i` tag, i.e. without a second alignment; LDM (models at 32-57 C, 5-C steps; class "binds" = duplex probability >= 0.2; reject at predicted probability >= 0.5) | - | Beliveau 2018 Methods; outputClean.py |
 | Secondary structure (optional) | NUPACK structureCheck (dna1998, at -T + 0.65 C per % formamide); keep probes whose probability of being linear is above -t (default 0.1) at -T (default 47 C). Not applied to any Beliveau 2018 set (Table S1) | - | structureCheck.py |
 | Repeat homology (ORCA) | <14 nt to RepBase repeats; <12 nt to any barcode | nt | Mateo 2019, 2021 |
+
+The template's values (Balance: 35-41 nt, Tm 42-47 C, GC 20-80 %) are the default. The other rows are
+other designs, not a menu: use one only when the user chooses that design, never to fill a short set
+(SKILL.md rule 10).
 
 Density, library and wet lab.
 
@@ -190,13 +194,13 @@ post_process:
 ## 7. Pitfalls
 
 - **Locus-sized targets do not need genome-scale k-mer tables.** Without `locus_only`, `kmer_count` builds a whole-genome Jellyfish table at its first use (GBs for a mammalian genome). With `locus_only: true`, as in the template, it counts only the candidates' k-mers, in one pass over the genome FASTA, with the same counts; check that a known repeat of the locus gets a high count. A genome-wide table pays off only when many runs or a whole-chromosome paint reuse it (`locus_only: false`, `jellyfish: true`). `mapped_sites` still needs the whole-genome Bowtie2 index: share one built index through `indexes:` in `genomes.yaml` rather than building it again. Never write a masked copy of the whole genome: take a soft-masked FASTA as published (UCSC `hg38.fa`, Ensembl `dna_sm`), or give an unmasked one a repeat `mask` (section 4).
-- **Yield before `masked: drop`.** In a repeat-dense locus `masked: drop` can skip most windows (58 % in the locus above) and leave fewer non-overlapping probes than the request. Count the windows it keeps (the unmasked fraction of the locus) against the probes needed before you commit. OligoMiner mines the masked assembly only (`blockParse` upper-cases the sequence and rejects windows with an N, so its masking is by Ns); PaintSHOP's newBalance "can include repeat-masked bases" and lets the user choose whether to allow them, with its k-mer (18-mer count) and Bowtie2 alignment filters doing the work (Hershberg 2021). If the masked set is too sparse, `masked: keep` with the k-mer and alignment filters is that published alternative; report which you used.
+- **Yield before `masked: drop`.** In a repeat-dense locus `masked: drop` can skip most windows (58 % in the locus above) and leave fewer non-overlapping probes than the request. Count the windows it keeps (the unmasked fraction of the locus) against the probes needed before you commit. OligoMiner mines the masked assembly only (`blockParse` upper-cases the sequence and rejects windows with an N, so its masking is by Ns); PaintSHOP's newBalance "can include repeat-masked bases" and lets the user choose whether to allow them, with its k-mer (18-mer count) and Bowtie2 alignment filters doing the work (Hershberg 2021). If the masked set is too sparse, report the shortfall; `masked: keep` with the k-mer and alignment filters is PaintSHOP's published alternative, for the user to choose; report which you used.
 - **Jellyfish indexes** (without `locus_only`). Each `kmer_len` has its own index, built by the first `kmer_count` that needs it: `jf_genome/<fasta stem>.k<k>.jf` (canonical, `strand: both`) or `<stem>.k<k>.stranded.jf` (`strand: sense` or `antisense`), next to the FASTA or in the entry's `index_dir`. An index left by older versions, `jf_genome/<stem>.jf`, is reused only for the k in its header. Either way, check that a known repeat gets a high count: the 40-mer of an AluJo at chr19:10,000,001-10,000,040 has a maximal 18-mer count of 706 on both strands and 357 on the forward strand.
 - Every start position yields one window per length (7 per bp for 35-41 nt at `step: 1`), and every attribute is computed on every window before the filters. `masked: drop` skips the repeat windows first (58% of them in the locus above), which also spares Bowtie2 its slowest queries. For multi-Mb paints, split the region into targets of a few Mb, or start from a precomputed OligoMiner/PaintSHOP set.
 - An unmasked FASTA (Ensembl `dna`) with `masked: drop` and no `mask` skips no repeat: only the k-mer and alignment filters remove them. Use a soft-masked one, or add a RepeatMasker `mask`.
 - Templates ship with N primers; ordering them as-is gives an unamplifiable library.
 - Tm windows from OligoArray (75-90 C) or ORCA (>65 C) do not transfer to 50% formamide conditions; recompute the Tm under the declared conditions. OligoMiner's preset windows hold under its own formula (`tm_method: oligominer`), not under Primer3's.
-- Too few probes give dim or missing spots. A 5-kb target at 5 probes/kb has only 25 probes; use Coverage settings, denser tiling or signal amplification, or enlarge the target.
+- Too few probes give dim or missing spots. A 5-kb target at 5 probes/kb has only 25 probes: enlarge the target or add signal amplification, and report the shortfall; another preset (Coverage) only if the user chooses it.
 - RNA labelling by antisense probes (section 4) and segmental duplications (k-mer counts of 2-4; `homology_sites_num` > 1 removes those Bowtie2 finds) are the usual sources of a second, false spot.
 - `avoid_otp` without a `mapped_sites` attribute is skipped (with an error in the log); `uprobe validate` also flags it.
 

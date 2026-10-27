@@ -39,7 +39,7 @@ Copy this checklist into your notes and tick it off:
 - [ ] 6. uprobe run --json into a fresh output directory (after step 5)
 - [ ] 7. Inspect summary.json and the *_probes.tsv
 - [ ] 8. Verify with check_probes.py (the method's own values), then the technique checklist
-- [ ] 9. Report the shortfall, then relax one step per run
+- [ ] 9. Short: report it, then only the allowed levers, one per run; never relax a rule
 - [ ] 10. Deliver in the requested format, with the run's provenance
 ```
 
@@ -150,14 +150,15 @@ Then confirm strand, transcript (`chosen_by`), empty `<attr>_off_targets` with `
 `_unexpressed` named, counts, Tm/GC under the declared conditions and spacing; finish with the
 technique checklist and `references/uprobe/workflow.md` (section 8).
 
-### 9. Report, then relax
+### 9. Too few probes: change the selection, not the rules
 
-One change per run. Too few probes: report the shortfall of the run that follows the method's published
-rules, then follow `top_removal_stage` into `references/uprobe/troubleshooting.md` ("Too few probes").
-Relax in this order, one step per run, each reported with its yield: region (`CDS` -> `mRNA`), missing
-expression settings (step 4), spacing down to the method's smallest published value, Tm/GC within
-published ranges. Never leave the method's published geometry (lengths, arms) to fill the count, relax the off-target
-rule of a single-unit method (HCR, padlock/RCA), or loosen a filter the references do not justify.
+Report the shortfall of the run that keeps every hard rule (rule 10), per target with `top_removal_stage`
+(`references/uprobe/troubleshooting.md`, "Too few probes"); then only these levers, one per run, with yields:
+1. Specificity settings left out in step 4: expression table, `exempt_copies` (rule 6).
+2. A longer region (`CDS` -> `mRNA`: Stellaris, Oligostan add UTRs) or one shared by the isoforms to count.
+3. Spacing down to the method's smallest published value (smFISH: 3 nt Raj 2008, 2 nt Stellaris).
+4. Another length only at sites where the standard one fails, inside the published range.
+5. Fewer probes: deliver the best set that meets every hard rule; report the shortfall and its cause.
 
 ### 10. Deliver
 
@@ -169,19 +170,17 @@ padlocks); every non-default choice, template departure and shortfall.
 
 ## Core rules
 
-1. A probe binds its reverse complement: an RNA probe's binding part is `rc(target_region)` and
-   readout sites are rc of the labelled oligo; only cDNA padlock arms carry the RNA sense
-   (`references/concepts/probe-architecture.md`).
+1. A probe binds its reverse complement: an RNA probe's binding part is `rc(target_region)`, readout
+   sites rc of the labelled oligo; only cDNA padlock arms carry the RNA sense (`references/concepts/probe-architecture.md`).
 2. Design on the reference transcript (`transcripts: mane` in human, `canonical` elsewhere) unless
    the user names isoforms; not the longest isoform and not `all`, which add alternative exons, 3'
    ends and retained introns the reference mRNA lacks. Isoform coverage only breaks ties; a reference
    transcript at ~0 TPM stays the design transcript (`references/concepts/targets-and-isoforms.md`).
-3. Geometry comes from the method: use the technique file's published windows (binding and arm
-   length, GC, spacing, probes per target, formamide) and design conditions; do not widen them by
-   default and state every departure. Tm under the stated conditions is a check or a floor: never
-   derive a length from a Tm you chose, and reproduce a published Tm window under its own conditions
-   and formula (per-attribute `hybridization:` and `tm_method:`; else measure the offset). If the
-   count falls short, see rule 9 (`references/techniques/`, `references/concepts/hybridization-and-tm.md`).
+3. Geometry comes from the method: the technique file's published windows (binding and arm length,
+   GC, spacing, probes per target, formamide) and design conditions are hard rules (rule 10). Tm under
+   the stated conditions is a check or a floor: never derive a length from a Tm you chose; reproduce a
+   published Tm window under its own conditions and formula (per-attribute `hybridization:` and
+   `tm_method:`; `references/techniques/`, `references/concepts/hybridization-and-tm.md`).
 4. Windows of ~30 nt or less need an exhaustive off-target search: `mapped_genes` with
    `aligner: bowtie`, `max_mismatches: 2`, `strand: sense`; Bowtie2 cannot align < 22 nt and misses
    sites up to 30 nt; never write your own aligner (`references/concepts/specificity.md`).
@@ -194,18 +193,18 @@ padlocks); every non-default choice, template departure and shortfall.
    `exempt_copies` exempts only non-protein-coding genes that contain most of the target (processed
    pseudogenes, retrocopies: they are hit by every probe); paralogs and protein-coding copies stay
    counted and copies are named in the report. Without a table every annotated gene counts (`references/concepts/specificity.md`).
-7. Give every Tm with its conditions; a Tm window without them is meaningless
-   (`references/concepts/hybridization-and-tm.md`).
+7. Give every Tm with its conditions; a Tm window without them is meaningless (`references/concepts/hybridization-and-tm.md`).
 8. U-Probe's output is the source of truth: never hand-edit or retype sequences; after any change
    (trim, flank, readout swap) re-run U-Probe or re-check with `scripts/check_probes.py` and the
    off-target search (`references/uprobe/workflow.md`).
-9. Report shortfalls before changing anything: name each target with fewer probes than requested and
-   why; never pad a set with probes that fail the method's rules, nor fill the count with a length,
-   spacing, pool cap or Tm window outside the published ones (rule 3); still short, deliver fewer
-   (`references/uprobe/troubleshooting.md`, "Keep the rules, change the selection").
-10. Add no hard filter the method does not publish (composition, structure, position, coverage, extra
-    Tm bands): validated sets violate them and first-fit packing then leaves weak windows. If you add
-    one, compare yield and picked windows with and without it, and say so.
+9. Report shortfalls before changing anything (target, probes vs request, cause); never pad a set with
+   probes that fail a hard rule (`references/uprobe/troubleshooting.md`, "Keep the rules, change the selection").
+10. Do not relax: the user's rules and the chosen method's published rules (length, arms, GC, Tm or dG,
+    sequence rules, spacing, off-target rule) are hard constraints. Do not loosen one, or take another
+    method's or tool's preset (another length range or GC window), unless the user asks; other sources in
+    a technique file are context, not a menu. Add no check the method does not publish (more mismatches,
+    composition, structure, position, coverage, Tm bands; validated sets violate them), never trade one
+    against a published rule; an unmet request gets the best compliant set and its shortfall (step 9).
 
 ## Where to read what
 

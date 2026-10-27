@@ -143,7 +143,7 @@ substitutions), not BLAST on RefSeq; add `exempt_copies` to tolerate own pseudog
 ones. No hairpin/dimer screen, no all-four-bases test.
 
 **U-Probe cannot:** generate or assign codes (checksum, DNABarcodes, colour balance); convert
-codes to SOLiD dibase barcodes; relax the Tm floor per gene (run short genes in a second protocol);
+codes to SOLiD dibase barcodes; apply ExSeq's per-gene Tm floor (55 C, 52 C for genes with < 6 probes; section 3) in one protocol (run those genes in a second protocol);
 add the 5' phosphate (order /5Phos/); anything of expansion (LabelX, gels, passivation), sequencing
 or decoding (ExSeqProcessing).
 

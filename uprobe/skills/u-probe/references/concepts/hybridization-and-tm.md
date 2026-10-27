@@ -88,7 +88,7 @@ stability, how U-Probe computes Tm, and how to place a Tm window relative to the
 
 At 50% formamide and 30-70% GC, U-Probe's Tm is 2 °C lower to 0.3 °C higher than under the 0.65 rule
 (lower for AT-rich windows: 0.691 vs 0.65 °C/% at 30% GC). A window published under the 0.65 rule,
-applied to U-Probe Tm, is off by up to ~2 °C; widen it by that much or note it. OligoMiner: Beliveau BJ et al. 2018 PNAS 115:E2183,
+applied to U-Probe Tm, is off by up to ~2 °C: reproduce it with `tm_method: oligominer` rather than widen it, or note the offset. OligoMiner: Beliveau BJ et al. 2018 PNAS 115:E2183,
 doi:10.1073/pnas.1714530115 (`blockParse` defaults 36-41 nt, Tm 42-47 °C, 390 mM Na+, 50% formamide).
 
 Typical values (U-Probe/Primer3, median of random 45%-GC windows, 50 nM probe):

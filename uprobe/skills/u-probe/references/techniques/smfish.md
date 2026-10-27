@@ -30,7 +30,7 @@ RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48
 | --- | --- | --- | --- |
 | Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48; Suppl. Fig. 4 labels these "20 bp") | | Raj 2008 Suppl. Methods and probe list, doi:10.1038/nmeth.1253 |
 | Length (Stellaris) | 18-22 nt, typically 20; 18-19 nt in GC-rich regions, 21-22 nt in AT-rich regions | | Biosearch designer FAQ / blog |
-| GC | "as close to 45 % as possible" (dynamic programming); the Actb set actually spans 35-80 % (mean 56 %) | a target, no hard window | Raj 2008 |
+| GC | "as close to 45 % as possible" (dynamic programming); no window. The spread of one published set (Actb: 35-80 %, mean 56 %) is not a filter window | a target, no hard window | Raj 2008 |
 | GC (Stellaris) | **40-60 %** ("the limits of the design tool"); skewed-GC stretches are skipped | filter it: a position-based tiling never centres GC | Xiao 2023 RNA 29:1274, Methods "Oligo design and purchase", doi:10.1261/rna.079591.123 |
 | Tm | no value: "similar melting temperatures" (Stellaris designer); none in Raj | | Xiao 2023 |
 | Spacing | >= 3 nt (Raj 2008); at least 2 nt, default 2, may be 1 (Stellaris designer, Xiao 2023; CAL Fluor Red 635 needs 2) | use **3 nt**: it satisfies both | Raj 2008 Suppl.; Biosearch blog; Xiao 2023 |
@@ -108,11 +108,12 @@ sites fall short, report the shortfall first; then take another length only wher
 
 Template departures:
 - Off-targets: Bowtie 1 within 2 substitutions (>= 18 of 20 nt). The Stellaris "> 16 nt" rule also
-  catches 17-nt matches; `max_mismatches: 3` comes closer. Off-targets are counted per probe, not
+  catches 17-nt matches; the template keeps 2 substitutions (SKILL.md rules 4, 10), not a stricter
+  search of your own. Off-targets are counted per probe, not
   per off-target gene across the set (`off_target_pool` is the opt-in for that).
 - GC: filtered to the Stellaris designer's 40-60 % (Xiao 2023); not optimized toward Raj's 45 %,
-  because `equal_space` picks 48 by position: check the median GC of the final set (Raj's own Actb set
-  has 35-80 % GC, so the window is the designer's, not Raj's).
+  because `equal_space` picks 48 by position: check the median GC of the final set. 40-60 % is the
+  default; Raj gives no window, so do not widen it to the spread of Raj's sets (SKILL.md rule 10).
 - Spacing: 3 nt (Raj), which also meets the designer's 2 nt.
 - Tm: a floor at the hybridization temperature, `probe_tm >= 37` under 2x SSC, 10 % formamide and
   2.6 nM per oligo (125 nM for 48). Neither Raj nor Stellaris states one; the 480 Raj 2008 probes
