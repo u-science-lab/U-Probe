@@ -96,19 +96,22 @@ def test_tm_window_applied_only_when_verified(name):
     if not verified:
         assert not any('hybridization' in attr for attr in attributes.values())
         return
-    name = window['attribute']
     design = {key: value for key, value in window['conditions'].items() if key in HYBRIDIZATION_FIELDS}
-    assert attributes[name]['hybridization'] == design
-    method = attributes[name].get('tm_method')
-    if method in TM_FORMULA_CONDITIONS:
-        # A design code's formula (MERFISH, OligoMiner) reads only its own fields, all set to the window's
-        # conditions; the block's buffer (formamide, dNTPs) does not enter it.
-        assert tm_formula_arguments(method, resolve_conditions(protocol, name)) == design
-        assert set(design) == set(TM_FORMULA_FIELDS[method])
-    else:
-        assert effective_conditions(protocol)[name] == {**TM_DEFAULTS, **design}
     low, high = window['value']
-    assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
+    # A window on the parts of a split unit (STARmap's two halves) names each part's attribute.
+    for name in window.get('attributes') or [window['attribute']]:
+        assert attributes[name]['hybridization'] == design
+        method = attributes[name].get('tm_method')
+        if method in TM_FORMULA_CONDITIONS:
+            # A design code's formula (MERFISH, OligoMiner) reads only its own fields, all set to the window's
+            # conditions; the block's buffer (formamide, dNTPs) does not enter it.
+            assert tm_formula_arguments(method, resolve_conditions(protocol, name)) == design
+            assert set(design) == set(TM_FORMULA_FIELDS[method])
+        else:
+            # Primer3 reads every Tm field: all are declared, so none comes from the block.
+            assert set(design) == set(TM_DEFAULTS)
+            assert effective_conditions(protocol)[name] == design
+        assert protocol['post_process']['filters'][name]['condition'] == f'{name} >= {low} & {name} <= {high}'
 
 
 def test_published_tm_windows_use_their_design_code_formula():
@@ -469,9 +472,33 @@ def test_starmap_forbids_abutting_sites():
     assert parts['gap']['length'] == [1, 2]
     targets, _ = design('starmap', SEQ[:60], {'code': 'AAA'})
     assert set(targets['target_parts.gap.length']) == {1, 2}
-    # The designed 60 °C of the halves is recorded, not applied (the paper's conditions are unknown).
+
+
+def test_starmap_half_tm_uses_the_published_design_conditions():
+    # Ren et al. 2025 (Nat Protoc): Tm 56-70 C "at oligo concentration of 5 nM and at salt concentration of
+    # 300 mM", applied to each half; the hybridization buffer (2x SSC, 10% formamide, 100 nM) does not enter it.
+    protocol = load_template('starmap')
     window = protocol['meta']['tm_window']
-    assert (window['applied'], window['value']) == (False, 60)
+    assert (window['applied'], window['value'], window['attributes']) == (True, [56, 70], ['padlock_tm', 'primer_tm'])
+    design = {'na_mM': 300, 'mg_mM': 0, 'dntp_mM': 0, 'probe_nM': 5, 'formamide_pct': 0}
+    # Zeng et al. 2023 ALDOC_01/ALDOC_11: halves of 21 and 20 nt.
+    halves = pd.DataFrame({'padlock.binding': ['ACGAGAATGCCCTTATCCTGG'], 'primer.binding': ['ACCCTTGTCAACCTTGATGC']})
+
+    def half_tms(protocol):
+        attributes = {k: protocol['attributes'][k] for k in ('padlock_tm', 'primer_tm')}
+        result = add_attributes(halves.copy(), {**protocol, 'attributes': attributes}, {})
+        return result['padlock_tm'][0], result['primer_tm'][0]
+
+    published = half_tms(protocol)
+    assert effective_conditions(protocol)['padlock_tm'] == design
+    assert published == pytest.approx((59.50, 58.13), abs=0.01)
+    assert all(56 <= tm <= 70 for tm in published)
+    # Another buffer or probe concentration in the hybridization block leaves the half Tm unchanged.
+    protocol['hybridization'].update(na_mM=1000, mg_mM=10, probe_nM=1, formamide_pct=50)
+    assert half_tms(protocol) == published
+    filters = _validate_and_normalize_protocol(load_template('starmap'))['post_process']['filters']
+    assert filters['padlock_tm']['condition'] == 'padlock_tm >= 56 & padlock_tm <= 70'
+    assert filters['primer_tm']['condition'] == 'primer_tm >= 56 & primer_tm <= 70'
 
 
 def test_validate_checks_difference_attributes_and_prefer():
@@ -486,13 +513,11 @@ def test_validate_checks_difference_attributes_and_prefer():
 
 
 def test_starmap_chooses_the_layout_of_each_site_by_tm_balance(tmp_path, monkeypatch):
-    # The published halves are 19-25 nt each, Tm-matched (median difference 0.9 C) around 58 C under
-    # the template's conditions; remove_overlap kept the shortest layout, 19 + 1 + 20 nt, everywhere.
+    # The published halves are 19-25 nt each, Tm-matched (median difference 0.9 C); remove_overlap
+    # kept the shortest layout, 19 + 1 + 20 nt, everywhere.
     monkeypatch.chdir(tmp_path)
     protocol = _validate_and_normalize_protocol(load_template('starmap'))
     filters = protocol['post_process']['filters']
-    assert filters['padlock_tm']['condition'] == 'padlock_tm >= 50 & padlock_tm <= 65'
-    assert filters['primer_tm']['condition'] == 'primer_tm >= 50 & primer_tm <= 65'
     assert protocol['post_process']['remove_overlap']['prefer'] == 'tm_balance'
     protocol['attributes'] = {k: v for k, v in protocol['attributes'].items() if v['type'] in OFFLINE_TYPES | {'difference'}}
     protocol['post_process']['filters'] = {k: filters[k] for k in ('padlock_tm', 'primer_tm')}
