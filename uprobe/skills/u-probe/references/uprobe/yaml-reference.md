@@ -188,6 +188,9 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | --- | --- | --- |
 | `gc_content` | GC fraction 0-1 | - |
 | `length` | sequence length | - |
+| `base_fraction` | fraction 0-1 of the sequence's bases that are one of `bases` (`bases: GC` = `gc_content`) | `bases` (required: `A`, `C`, `GC`, ...; U counts as T), `positions` |
+| `max_homopolymer` | longest run of one base of `bases` (default any base), e.g. `<= 3` = no AAAA | `bases`, `positions` |
+| `max_window_count` | highest count of `bases` in any `window` consecutive bases lying within `positions` | `bases`, `window` (required), `positions` |
 | `annealing_temperature` | Tm (°C), primer3 SantaLucia NN + salt correction | `hybridization` override; `tm_method` (below) for a window published under a design code's formula |
 | `fold_score` | **-MFE** (kcal/mol, >= 0) of the sequence folded as RNA by ViennaRNA at `temperature_c`; higher = more structure, so lower is better (filter `<=`, sort ascending) | `hybridization` (only `temperature_c` used) |
 | `rna_dna_dg37` | Oligostan's RNA/DNA ΔG°37 (kcal/mol, more negative = more stable) of the probe read 5'->3' (smiFISH, Tsanov 2016: 16 dinucleotide values plus a 0.115 M salt term, 37 °C, no `hybridization`) | `sequence`: `probe` (default; `target` = the probe or its binding part) or `target` (`target` = `target_region` or a `target_parts` part, the RNA in sense orientation, reverse-complemented first); `target_region` with `sequence: probe` gives the other strand's value, up to 8.8 kcal/mol off (`validate` and the run warn) |
@@ -197,6 +200,22 @@ Each attribute adds a column named after it, computed on `target` (a sequence co
 | `kmer_count` | highest genome count among the sequence's k-mers (Jellyfish); 0 if shorter than k; lower is better | `aligner: jellyfish` (required), `kmer_len` (35; each k has its own index `jf_genome/<stem>.k<k>.jf`), `strand` (`both`, the default: canonical k-mers, both strands; `sense`: the k-mers as written, counted on the FASTA's forward strand, as OligoMiner's dictionary; `antisense`: their reverse complements; `sense` and `antisense` read `jf_genome/<stem>.k<k>.stranded.jf`), `size` (hash, `1G`), `threads`; genome `jellyfish: true`. `locus_only: true`: count only the candidates' k-mers (both strands listed) with `jellyfish count --if` in one pass over the genome FASTA, into a temporary table that is not kept; same counts, no genome-wide table, no `jellyfish: true` (Jellyfish 2 on `PATH`); for locus-sized DNA targets |
 | `difference` | `|a - b|` of two attributes defined before it, e.g. the Tm of two probe halves; no `target` | `of: [a, b]` (required) |
 | `blocks` | legacy; do not use | - |
+
+`positions: [start, end]` (composition types): 1-based, inclusive, from the 5' end of the sequence
+as written (a probe part: the probe 5'->3'); negative counts from the 3' end (`[-12, -1]` = the last 12 nt);
+clipped to the sequence. The Xu 2009 rules (doi:10.1073/pnas.0812506106) on a binding part, as filters:
+
+```yaml
+attributes:
+  a_frac:   {target: primary.binding, type: base_fraction, bases: A}       # rule 1: a_frac < 0.28
+  a_run:    {target: primary.binding, type: max_homopolymer, bases: A}     # rule 2: a_run <= 3
+  c_frac:   {target: primary.binding, type: base_fraction, bases: C}       # rule 3: 0.22-0.28
+  c_run:    {target: primary.binding, type: max_homopolymer, bases: C}     # rule 4: c_run <= 3
+  c_5prime: {target: primary.binding, type: max_window_count, bases: C, window: 6, positions: [1, 12]}  # rule 5: <= 3
+```
+
+Filter composition rules as attributes (or `sequence_pattern`), not on the output TSV: filters run
+before `remove_overlap`, which then packs only passing windows.
 
 `threads` (aligner and Jellyfish attributes): default `uprobe run --threads` (10); set it on an attribute
 only to override the run's value.

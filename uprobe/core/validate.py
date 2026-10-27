@@ -32,6 +32,7 @@ from .gen.expression import CONTEXT_NAMES, PROBE_INDEX, check_expression, expres
 from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_tm_window, formula_hint,
                             legacy_formula_fields, resolve_conditions, tm_method, unused_fields,
                             validate_protocol_hybridization)
+from .composition import COMPOSITION_OPTIONS, COMPOSITION_TYPES, composition_settings
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
                         MAX_MISMATCHES_LIMIT, STRANDS, mapped_genes_settings)
@@ -59,11 +60,12 @@ ATTRIBUTE_TYPES = {
     'gc_content': None, 'annealing_temperature': None, 'length': None,
     'fold_score': None, 'self_match': None, 'blocks': None, 'rna_dna_dg37': None,
     'mapped_sites': ('bowtie2',), 'mapped_genes': MAPPED_GENES_ALIGNERS, 'kmer_count': ('jellyfish',),
-    'difference': None,
+    'difference': None, 'base_fraction': None, 'max_homopolymer': None, 'max_window_count': None,
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only',
+                  'bases', 'window', 'positions')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -84,6 +86,10 @@ BOWTIE_INSTALL = 'conda install -c bioconda bowtie'
 TARGET_COLUMNS = ('probe_id', 'target', 'sub_region', 'start', 'end', 'target_start', 'target_end',
                   'exon_name', 'utr_name', 'transcript_names', 'n_trans', 'layout_id', 'target_region')
 OTP_COLUMNS = ('on_target', 'off_target', 'target_ratio')
+COMPOSITION_HINT = ('e.g. the Xu 2009 rules on a probe part:\n'
+                    'a_frac: {target: primary.binding, type: base_fraction, bases: A}\n'
+                    'c_run: {target: primary.binding, type: max_homopolymer, bases: C}\n'
+                    'c_5prime: {target: primary.binding, type: max_window_count, bases: C, window: 6, positions: [1, 12]}')
 IUPAC = set('ACGTURYSWKMBDHVN')
 REGION_RE = REGION_PATTERN
 DRY_RUN_TARGETS = 200
@@ -938,6 +944,16 @@ class _Validator:
             if 'sequence' in attr and kind != 'rna_dna_dg37':
                 self.warning(path + ('sequence',), 'attribute option \'sequence\' only applies to rna_dna_dg37 and is ignored',
                              'remove it')
+            for option in ('bases', 'window', 'positions'):
+                if option in attr and option not in COMPOSITION_OPTIONS.get(kind, ()):
+                    applies = ', '.join(k for k, options in COMPOSITION_OPTIONS.items() if option in options)
+                    self.warning(path + (option,), f'attribute option {option!r} only applies to {applies} and is ignored',
+                                 'remove it')
+            if kind in COMPOSITION_TYPES:
+                try:
+                    composition_settings(kind, attr, f'attributes.{name}')
+                except ValueError as exc:
+                    self.error(path, str(exc), COMPOSITION_HINT)
             if kind is None:
                 self.error(path + ('type',), 'missing attribute `type`', 'valid types: ' + ', '.join(ATTRIBUTE_TYPES))
             elif kind not in ATTRIBUTE_TYPES:

@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from ._attributes import *
+from ..composition import COMPOSITION_TYPES, composition_function, composition_settings
 from ..genome_paths import index_prefix as index_prefix_of, index_root
 from ..hybridization import resolve_conditions, tm_arguments, tm_formula_arguments, tm_method
 from ..offtarget import (BOWTIE2_LOCAL_MIN_LENGTH, STRAND_OPTIONS, OffTargetCounter, mapped_genes_settings,
@@ -222,6 +223,9 @@ def _add_attributes(
             # Unrounded: filters compare it with the window bounds (19/30 = 0.633 > 0.63).
             vals = cached(df_probes[actual_target], cal_gc_content)
             df_probes[attr_name] = vals
+        elif attr_type in COMPOSITION_TYPES:
+            settings = composition_settings(attr_type, attr, f"attributes.{attr_name}")
+            df_probes[attr_name] = cached(df_probes[actual_target], composition_function(attr_type, settings))
         elif attr_type == "length":
             df_probes[attr_name] = df_probes[actual_target].str.len().astype("Int64")
         elif attr_type == "fold_score":
