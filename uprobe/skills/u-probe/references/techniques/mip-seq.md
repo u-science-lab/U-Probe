@@ -133,13 +133,14 @@ discriminate a SNV; validate with wild-type/mutant controls.
   next to the circle. An unligated padlock is not amplified; a primer alone has no circle; the 11-nt
   tail alone (Tm about 30 C under the hybridization conditions, primer3 estimate) does not hold the
   primer at 37 C without its RNA part. An off-target is therefore a transcript holding the 26-nt arm
-  site and the primer site together. The template maps the whole 40-nt `target_region` (the union).
+  site and the primer site together. The template searches the padlock's 26-nt site and the
+  primer's 13-nt site on their own, each within 2 substitutions, and counts a gene when both have a
+  site on one of its transcripts (`oligos: [[arm5_site, arm3_site], primer_site]`).
 - Short arms help: a mismatch in a 13-nt arm with Tm near the 37 C hybridization strongly reduces
   binding; junction mismatches also reduce ligation (limited with SplintR, see section 3).
-- Bowtie2 on 40-nt windows (template default): flagged 97% of random 40-nt mRNA windows that have a
-  site within 2 substitutions in another gene and listed 87% of those genes; it also reports partial
-  matches (about 25 nt or more, e.g. the arm site alone), which is conservative. For an exhaustive
-  search within 2 substitutions use `aligner: bowtie` (Bowtie 1, needs `bowtie` in `align_index`).
+- The per-oligo search needs `aligner: bowtie` (Bowtie 1, `bowtie` in `align_index`): exhaustive
+  within 2 substitutions per oligo. A search of the whole 40-nt window would count the mismatches of
+  both oligos together. A second Bowtie2 attribute on the window can add indels and partial matches.
 - Expression-aware counting: add `gene_expression` so unexpressed off-target genes are not counted;
   add `exempt_copies` for pseudogene-rich targets. Repeats: a window in a repeat hits many genes and
   is removed by `<= 1`.
@@ -191,7 +192,7 @@ What to edit:
 - Primer length: 25 nt here; for the 26-nt form write `"{binding}{gap_base}CAGGCTCCACTA"`.
 - Optional Tm/GC filters on `arm_5_tm`, `arm_3_tm`, `primer_tm`, `target_gc` (reported, not
   filtered): none are published, so choose them yourself and say so.
-- `aligner: bowtie` + `max_mismatches: 2` for an exhaustive off-target search.
+- Off-target search: `aligner: bowtie`, `max_mismatches: 2` per oligo, with `oligos` (template).
 - Sequential dilution (section 2): move the anchor sites into `encoding`, the same values for every
   gene of a set; choosing which (highly expressed) genes go to which set is up to you:
 
@@ -233,7 +234,7 @@ of 28 C on both arms and the primer site comes from the published units, not fro
   few or no units on the reference transcript. The 28 C floor is the weakest tail of the
   published units, the position cap (`near_5p`, `target_start <= 1000`) U-Probe's reading of "close to the 5'
   end"; report either with its yield when you apply it.
-- Bowtie2 reports at most 100 alignments; windows in repeats or gene families may be under-counted.
+- A unit in a repeat or gene family hits many genes; Bowtie 1 lists them all and `<= 1` removes it.
 - The primer's spacer base is the *sense* nt 27, so it cannot pair with nt 27; it is a spacer, not
   an extra binding base. If you write primers by hand, keep this (25 nt, the published majority),
   add a C after it (26 nt) or use C alone (published variants).

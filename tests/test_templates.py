@@ -317,6 +317,12 @@ def test_off_target_search_sees_the_template_sequences(name):
             continue
         # target_region, or a layout part of it, is the RNA sequence; the probes bind where it occurs.
         assert attr['strand'] == 'sense'
+        if 'oligos' in attr:
+            # Units of several oligos: each oligo's site within 2 substitutions, with Bowtie 1.
+            assert attr['target'] == 'target_region' and attr['aligner'] == 'bowtie' and attr['max_mismatches'] == 2
+            parts = [name for oligo in attr['oligos'] for name in ([oligo] if isinstance(oligo, str) else oligo)]
+            assert set(parts) <= set(region['layout']['parts']) and 'gap' not in parts
+            continue
         if attr['target'] == 'target_region':
             shortest = normalize_sampling(region['length'])[0]
         else:

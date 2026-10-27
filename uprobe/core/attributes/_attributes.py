@@ -1,4 +1,5 @@
 import math
+from collections import defaultdict
 import os
 import typing as t
 import primer3
@@ -278,8 +279,8 @@ def bowtie_transcript_hits(
     return _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand,
                         lambda ref_name: ref_name)
 
-def _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand, key):
-    """query -> {key(transcript.fa record): fewest mismatches} of Bowtie 1's alignments."""
+def _bowtie_alignments(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand):
+    """Yield (query, strand, transcript.fa record, 0-based offset, mismatches) of Bowtie 1's alignments."""
     fa_path = f"{outdir}/{name}.fa"
     with open(fa_path, "w") as f:
         for rec_name, seq in recname2seq.items():
@@ -288,7 +289,6 @@ def _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, thread
            "--suppress", "5,6,7"] + STRAND_OPTIONS[strand] + [str(index_prefix), fa_path]
     log_file = f"{outdir}/{name}.bowtie.log"
     log.info(f"Call cmd: {' '.join(cmd)} 2> {log_file}")
-    hits = {rec_name: {} for rec_name in recname2seq}
     with open(log_file, "w") as err:
         # Stream the output: with -a, repeat-like queries can have many alignments.
         proc = subp.Popen(cmd, stdout=subp.PIPE, stderr=err, text=True)
@@ -296,16 +296,104 @@ def _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, thread
             # query, strand, reference, offset, mismatches (e.g. "3:G>T,10:A>C")
             fields = line.rstrip("\n").split("\t")
             mismatches = len(fields[4].split(",")) if len(fields) > 4 and fields[4] else 0
-            found = hits[fields[0]]
-            hit = key(fields[2])
-            if mismatches < found.get(hit, max_mismatches + 1):
-                found[hit] = mismatches
+            yield fields[0], fields[1], fields[2], int(fields[3]), mismatches
         returncode = proc.wait()
     if returncode != 0:
         with open(log_file) as f:
             log.error(f.read())
         raise subp.CalledProcessError(returncode, cmd)
+
+def _bowtie_hits(outdir, recname2seq, name, index_prefix, max_mismatches, threads, strand, key):
+    """query -> {key(transcript.fa record): fewest mismatches} of Bowtie 1's alignments."""
+    hits = {rec_name: {} for rec_name in recname2seq}
+    for query, _, ref_name, _, mismatches in _bowtie_alignments(outdir, recname2seq, name, index_prefix,
+                                                                max_mismatches, threads, strand):
+        found = hits[query]
+        hit = key(ref_name)
+        if mismatches < found.get(hit, max_mismatches + 1):
+            found[hit] = mismatches
     return hits
+
+def bowtie_unit_hits(
+        outdir: str,
+        units: t.Iterable[t.Tuple[str, ...]],
+        name: str,
+        index_prefix: str,
+        max_mismatches: int = 2,
+        threads: int = 10,
+        strand: str = 'both',
+        max_gap: t.Optional[int] = None,
+        ) -> t.Dict[t.Tuple[str, ...], t.Dict[str, int]]:
+    """Transcripts on which every oligo of a unit has a site within ``max_mismatches`` substitutions.
+
+    A unit is a tuple of binding sequences, one per oligo, all in the same
+    orientation (e.g. layout parts of target_region); each is searched on its
+    own with Bowtie 1 (``-v max_mismatches -a``). The longest oligo of a unit
+    (the first of equal length) is its anchor; the other oligos keep only sites
+    on the transcripts their anchors hit, so that short oligos with thousands
+    of sites stay cheap. With ``max_gap``, a transcript counts only if each
+    other oligo has a site on the anchor site's strand that does not overlap it
+    and lies at most ``max_gap`` nt from it; without, any sites on the
+    transcript count. Returns unit -> {transcript.fa record: mismatches of the
+    unit's worst oligo there (the fewest over its placements)}.
+    """
+    units = list(dict.fromkeys(tuple(unit) for unit in units))
+    anchors = {unit: max(range(len(unit)), key=lambda i: (len(unit[i]), -i)) for unit in units}
+    # sequence -> {record: [(strand, offset, mismatches)]}
+    sites = {}
+
+    def search(sequences, label, keep=None):
+        queries = {str(i): seq for i, seq in enumerate(sequences)}
+        for seq in sequences:
+            sites[seq] = {}
+        for query, aln_strand, ref_name, offset, mismatches in _bowtie_alignments(
+                outdir, queries, f"{name}_{label}", index_prefix, max_mismatches, threads, strand):
+            seq = queries[query]
+            if keep is None or ref_name in keep[seq]:
+                sites[seq].setdefault(ref_name, []).append((aln_strand, offset, mismatches))
+
+    search(list(dict.fromkeys(unit[anchors[unit]] for unit in units)), "anchors")
+    keep = defaultdict(set)
+    for unit in units:
+        refs = sites[unit[anchors[unit]]].keys()
+        for i, seq in enumerate(unit):
+            if i != anchors[unit] and seq not in sites:
+                keep[seq].update(refs)
+    others = [seq for seq in keep if keep[seq]]
+    for seq in keep:
+        sites[seq] = {}
+    if others:
+        search(others, "oligos", keep)
+
+    result = {}
+    for unit in units:
+        anchor = anchors[unit]
+        anchor_sites = sites[unit[anchor]]
+        found = {}
+        for ref_name, placements in anchor_sites.items():
+            other_sites = [sites[seq].get(ref_name) for i, seq in enumerate(unit) if i != anchor]
+            if not all(other_sites):
+                continue
+            if max_gap is None:
+                found[ref_name] = max(min(m for _, _, m in placed) for placed in [placements] + other_sites)
+                continue
+            length = len(unit[anchor])
+            others_lengths = [len(seq) for i, seq in enumerate(unit) if i != anchor]
+            best = None
+            for aln_strand, start, mismatches in placements:
+                worst = mismatches
+                for placed, other_length in zip(other_sites, others_lengths):
+                    near = [m for s, p, m in placed if s == aln_strand
+                            and 0 <= max(p - (start + length), start - (p + other_length)) <= max_gap]
+                    if not near:
+                        break
+                    worst = max(worst, min(near))
+                else:
+                    best = worst if best is None else min(best, worst)
+            if best is not None:
+                found[ref_name] = best
+        result[unit] = found
+    return result
 
 def self_match(probe: str, min_match = 4):
     length = len(probe)

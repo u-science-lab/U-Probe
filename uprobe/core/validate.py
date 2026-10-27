@@ -34,7 +34,7 @@ from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_
                             validate_protocol_hybridization)
 from .layout import compile_layout, validate_layout_references
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
-                        MAX_MISMATCHES_LIMIT, STRANDS, mapped_genes_settings)
+                        MAX_MISMATCHES_LIMIT, STRANDS, check_oligo_parts, mapped_genes_settings)
 from .process import parse_condition
 from .sampling import normalize_sampling
 from .utils import MASKED_OPTIONS, REGION_PATTERN
@@ -63,7 +63,8 @@ ATTRIBUTE_TYPES = {
 }
 ATTRIBUTE_ALIASES = {'n_mapped_genes': 'mapped_genes'}
 ATTRIBUTE_KEYS = ('target', 'type', 'aligner', 'threads', 'kmer_len', 'size', 'hybridization',
-                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only')
+                  'max_mismatches', 'strand', 'exempt_copies', 'tm_method', 'of', 'sequence', 'locus_only',
+                  'oligos', 'max_gap')
 POST_PROCESS_KEYS = ('filters', 'sorts', 'avoid_otp', 'remove_overlap', 'off_target_pool', 'equal_space', 'summary')
 DNA_ONLY_STEPS = ('avoid_otp',)
 SORT_KEYS = ('is_ascending', 'is_descending')
@@ -1016,12 +1017,36 @@ class _Validator:
         if attr['aligner'] == 'bowtie2' and 'max_mismatches' in attr:
             self.warning(path + ('max_mismatches',), 'max_mismatches only applies to aligner: bowtie and is ignored',
                          'aligner: bowtie   # every site within max_mismatches substitutions (Bowtie 1)')
+        if 'oligos' in attr or 'max_gap' in attr:
+            self._check_oligos(path, attr)
         step = self.region().get('step')
         if attr.get('exempt_copies') and self.lengths and type(step) is int and step > self.lengths[1]:
             self.warning(path + ('exempt_copies',), f'extracts.target_region.step {step} leaves gaps between the '
                          f'windows of at most {self.lengths[1]} nt, and exempt_copies reads the target\'s sequence '
                          'from the windows: k-mers across the gaps are unknown, so copies are judged on part of the '
                          'target or not found', f'step: {self.lengths[1]}   # or less, so the windows cover the target')
+
+    def _check_oligos(self, path, attr):
+        hint = ('oligos: [left, right]   # layout parts, one per oligo; [arm5_site, arm3_site] joins adjacent '
+                'parts into one oligo')
+        option = 'oligos' if 'oligos' in attr else 'max_gap'
+        try:
+            settings = mapped_genes_settings({key: attr[key] for key in ('aligner', 'oligos', 'max_gap')
+                                              if key in attr})
+        except ValueError as exc:
+            self.error(path + (option,), str(exc), hint if option == 'oligos' else
+                       'max_gap: 10   # nt between the oligos\' sites on an off-target, with oligos')
+            return
+        if attr.get('target') == 'target_region' and self.layout is None and 'layout' in self.region():
+            return  # the layout's own error is reported
+        if attr.get('target') != 'target_region' or self.layout is None:
+            self.error(path + ('oligos',), 'oligos needs target: target_region with extracts.target_region.layout, '
+                       "whose parts name the oligos' binding sites", 'target: target_region\n' + hint)
+            return
+        try:
+            check_oligo_parts(settings['oligos'], self.layout[0])
+        except ValueError as exc:
+            self.error(path + ('oligos',), str(exc), hint)
 
     # -- gene_expression ---------------------------------------------------
     def check_gene_expression(self, protocol):

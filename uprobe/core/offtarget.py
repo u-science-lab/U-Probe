@@ -42,6 +42,31 @@ and ``<attribute>_hit_transcripts`` lists them with their values. With
 ``exempt_copies`` (see uprobe.core.copies), off-target genes that copy most of
 the target's sequence are not counted either and are listed in
 ``<attribute>_copies``.
+
+Units of several oligos. Where a signal needs several oligos bound together on
+one RNA (the two probes of an HCR v3 split-initiator pair, Choi et al. 2018; a
+SNAIL padlock and primer, Wang et al. 2018; a MiP-seq padlock and RCA primer),
+a single oligo bound elsewhere gives no signal, and searching the whole window
+counts the mismatches of all oligos together. ``oligos`` searches each oligo's
+binding site of the ``target_region`` layout on its own instead::
+
+    target_mapped_genes:
+      target: target_region
+      type: mapped_genes
+      aligner: bowtie
+      max_mismatches: 2        # per oligo
+      strand: sense
+      oligos: [left, right]    # layout parts; [arm5_site, arm3_site] joins adjacent parts into one oligo
+      max_gap: 10              # optional: the sites lie at most 10 nt apart
+
+A gene then counts when, on one of its transcripts, every oligo has a site
+within ``max_mismatches`` substitutions (and, with ``max_gap``, on the same
+strand, not overlapping and at most ``max_gap`` nt from the site of the unit's
+longest oligo). Without ``max_gap`` any sites on the same transcript count,
+which includes every placement a unit can bind in. The mismatches listed in
+``<attribute>_off_targets`` are those of the unit's worst oligo. It needs
+``aligner: bowtie``: the longest oligo of each unit is searched first, and the
+others only keep sites on the transcripts it hits.
 """
 import functools
 import os
@@ -105,11 +130,51 @@ def bowtie_unavailable(genome) -> str:
     return ''
 
 
+def oligos_setting(value, prefix: str = '') -> tuple:
+    """The ``oligos`` option as a tuple of tuples of layout part names (one per oligo), or None.
+
+    Each item is a part name or a list of part names joined into one oligo's
+    binding site (e.g. a padlock's two arm sites); at least two oligos.
+    """
+    if value is None:
+        return None
+    hint = 'e.g. [left, right] or [[arm5_site, arm3_site], primer_site]'
+    if not isinstance(value, list) or len(value) < 2:
+        raise ValueError(f'{prefix}oligos must list at least two oligos (layout part names), {hint}; got {value!r}')
+    oligos = []
+    for item in value:
+        names = [item] if isinstance(item, str) else item
+        if not isinstance(names, list) or not names or not all(isinstance(name, str) and name for name in names):
+            raise ValueError(f'{prefix}oligos: each oligo is a layout part name or a list of them, {hint}; '
+                             f'got {item!r}')
+        oligos.append(tuple(names))
+    used = [name for names in oligos for name in names]
+    if len(set(used)) != len(used):
+        raise ValueError(f'{prefix}oligos names a layout part more than once: {value!r}')
+    return tuple(oligos)
+
+
+def check_oligo_parts(oligos, layout_names, prefix: str = '') -> None:
+    """Raise ValueError unless every part of ``oligos`` is a layout part and each oligo's parts are adjacent,
+    in the order of the layout template ``layout_names``."""
+    for names in oligos:
+        missing = [name for name in names if name not in layout_names]
+        if missing:
+            raise ValueError(f'{prefix}oligos: {", ".join(map(repr, missing))} is not a part of '
+                             f'extracts.target_region.layout (parts: {", ".join(layout_names)})')
+        positions = [layout_names.index(name) for name in names]
+        if positions != list(range(positions[0], positions[0] + len(names))):
+            raise ValueError(f'{prefix}oligos: the parts of one oligo must be adjacent and in layout order, got '
+                             f'{list(names)!r} (layout: {", ".join(layout_names)})')
+
+
 def mapped_genes_settings(attr: dict, where: str = '') -> dict:
-    """Return {aligner, strand, max_mismatches, exempt_copies} of a mapped_genes attribute.
+    """Return {aligner, strand, max_mismatches, exempt_copies, oligos, max_gap} of a mapped_genes attribute.
 
     Raises ValueError starting with the option name (after ``where.``);
-    ``max_mismatches`` is None for bowtie2, ``exempt_copies`` None when off.
+    ``max_mismatches`` is None for bowtie2, ``exempt_copies`` None when off,
+    ``oligos`` None for one search of the whole sequence (see oligos_setting),
+    ``max_gap`` None for sites anywhere on the same transcript.
     """
     prefix = f'{where}.' if where else ''
     aligner = attr.get('aligner')
@@ -124,8 +189,19 @@ def mapped_genes_settings(attr: dict, where: str = '') -> dict:
         if type(max_mismatches) is not int or not 0 <= max_mismatches <= MAX_MISMATCHES_LIMIT:
             raise ValueError(f'{prefix}max_mismatches must be an integer from 0 to {MAX_MISMATCHES_LIMIT}, '
                              f'got {max_mismatches!r}')
+    oligos = oligos_setting(attr.get('oligos'), prefix)
+    if oligos is not None and aligner != 'bowtie':
+        raise ValueError(f'{prefix}oligos needs aligner: bowtie (each oligo is searched within max_mismatches '
+                         f'substitutions; Bowtie2 cannot align sequences shorter than {BOWTIE2_LOCAL_MIN_LENGTH} nt)')
+    max_gap = attr.get('max_gap')
+    if max_gap is not None:
+        if type(max_gap) is not int or max_gap < 0:
+            raise ValueError(f'{prefix}max_gap must be a non-negative integer (nt), got {max_gap!r}')
+        if oligos is None:
+            raise ValueError(f'{prefix}max_gap only applies with oligos')
     return {'aligner': aligner, 'strand': strand, 'max_mismatches': max_mismatches,
-            'exempt_copies': copies_settings(attr.get('exempt_copies'), f'{prefix}exempt_copies')}
+            'exempt_copies': copies_settings(attr.get('exempt_copies'), f'{prefix}exempt_copies'),
+            'oligos': oligos, 'max_gap': max_gap}
 
 
 # -- gene names ------------------------------------------------------------
