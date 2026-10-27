@@ -46,7 +46,7 @@ one) is parsing the GTF, once for target validation and extraction; the design i
 | `merfish` | GAPDH, TFRC, EEF2 (HeLa) | 37, 92, 76 of 92 | 32 s | Filters (GC, Tm) | GAPDH's 1,285-nt mRNA holds at most 42 non-overlapping 30-mers; Tm then by Primer3 (below for the design code's formula) |
 | `seqfish_plus` | Gapdh, Tfrc, Eef2 (NIH/3T3, mouse) | 24/24 each | 21 s | Filters (off-target) | Gapdh's copies (Gm13394 and 43 others) exempt; without `exempt_copies` Gapdh keeps 2 |
 | `padlock_iss` | Pvalb, Gad2, Aldoc (mouse) | 5/5 each | 21 s | Filters | target Tm 65-73 C (multi_padlock_design) |
-| `starmap` | Aldoc, Pvalb, Gad2 (mouse) | 4/4 each | 24 s | Remove overlap | sites of 19-25 nt, gaps of 1 and 2 nt; halves 54.7-64.9 C, differing by 0.1 C (median) |
+| `starmap` | Aldoc, Pvalb, Gad2 (mouse) | 4/4 each | 24 s | Remove overlap | sites of 19-25 nt, gaps of 1 and 2 nt; halves 54.7-64.9 C under the buffer, differing by 0.1 C (median). Measured with the earlier 50-65 C half filter; the template now filters 56-70 C at 300 mM / 5 nM (not re-run) |
 | `mipseq` | Pvalb, Gad2, Aldoc (mouse) | 2/2 each | 20 s | Filters (`near_5p`) | arms and primer site 29.1-50.1 C (floor 28) |
 | `oligopaint` | chr19:10,000,001-10,200,000 as two 100-kb targets | 749 + 737 (7.4 per kb) | 32 s | Filters | largest gap 5.3 kb; OligoMiner's hosted hg38 set has 6.6 per kb here; report 1.2 MB; Tm then by Primer3 (below for OligoMiner's formula) |
 | `double_hyb_rca` | GAPDH, TFRC, EEF2 (HeLa) | 11, 5, 21 (no request) | 32 s | Filters (Tm 35-45 C) | `step: 20` (a 40-nt window every 20 nt) leaves few candidates; the technique file suggests `step: 1` |
@@ -95,8 +95,11 @@ above).
   hybridization temperature (4% of the Raj 2008 probes and 8% of the Choi 2018 pairs are below it),
   MiP-seq arms and primer site at least 28 C (2% of the published units are below it). `hcr_v3` and
   `mipseq` filter no GC. AT-rich regions therefore give fewer probes.
-- `starmap` keeps halves of 50-65 C and, at each start, the split whose halves' Tm match best
-  (`remove_overlap.prefer: tm_balance`); it does not aim at Picky's designed 60 C.
+- `starmap` keeps halves of 56-70 C computed at Ren 2025's design conditions (300 mM Na+, 5 nM per
+  oligo, no formamide; an attribute-level `hybridization` override, so the buffer does not move it)
+  and, at each start, the split whose halves' Tm match best (`remove_overlap.prefer: tm_balance`).
+  Both halves of about four in five published pairs pass (Shi 2023 set: 78.7 %); AT- or GC-rich
+  stretches give fewer pairs.
 - `merfish` requests more probes than short genes hold; report the shortfall
   (`fewer_probes_than_requested`) or use the iteration order of SKILL.md step 9. `merfish`,
   `seqfish_plus` and `smfish_stellaris` exempt copies of the target: name the genes listed in
@@ -109,8 +112,9 @@ values from its technique file (the same commands end each technique checklist),
 protocol you just wrote: a filter written too loosely then verifies itself. `--min-probes` counts distinct
 oligos; `--part-gc COLUMN MIN MAX` and `--part-tm COLUMN MIN MAX` check one part (a half of a split unit)
 with its own window, `--range COLUMN MIN MAX` any numeric column. The Tm columns of `merfish`,
-`oligopaint` and `padlock_iss` are computed with their design code's formula (`tm_method`), so their
-published windows are checked as they stand.
+`oligopaint` and `padlock_iss` are computed with their design code's formula (`tm_method`), and those of
+`starmap` (`padlock_tm`, `primer_tm`) at the published design conditions, so their published windows
+are checked as they stand.
 
 | Template | Options |
 | --- | --- |
@@ -119,7 +123,7 @@ published windows are checked as they stand.
 | `merfish` | `--gc 0.43 0.63 --tm 66 76 --tm-column binding_tm --min-gap 0 --min-probes 48` |
 | `seqfish_plus` | `--gc 0.45 0.65 --min-gap 0 --min-probes 24` |
 | `padlock_iss` | `--sense padlock.arm_5 --sense padlock.arm_3 --tm 65 75 --tm-column target_tm --min-gap 15 --min-probes 5` |
-| `starmap` | `--min-gap 0 --min-probes 3 --part-gc target_region 0.30 0.70 --part-tm padlock_tm 50 65 --part-tm primer_tm 50 65 --part-gc padlock.binding 0.30 0.70 --part-gc primer.binding 0.30 0.70` |
+| `starmap` | `--min-gap 0 --min-probes 3 --part-gc target_region 0.30 0.70 --part-tm padlock_tm 56 70 --part-tm primer_tm 56 70 --part-gc padlock.binding 0.30 0.70 --part-gc primer.binding 0.30 0.70` |
 | `mipseq` | `--binding padlock.arm_5 --binding padlock.arm_3 --binding rca_primer.binding --tm 28 100 --min-gap 0 --min-probes 2` |
 | `oligopaint` | `--sense oligopaint_oligo.homology --gc 0.2 0.8 --tm 42 47 --tm-column homology_tm --min-gap 0`; no `--transcripts` |
 | `double_hyb_rca` | `--binding circle_probe.part1 --binding circle_probe.part3 --binding amp_probe.part2 --tm 35 45 --min-gap 0` |

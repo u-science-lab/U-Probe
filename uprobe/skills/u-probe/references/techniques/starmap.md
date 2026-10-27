@@ -90,8 +90,8 @@ SEDAL-read code, "s" the splint code):
 | Window (padlock + gap + primer site) | 40-46 | nt | Wang 2018 SM, doi:10.1126/science.aat5691 |
 | Each half | 19-25 (text says 20-25; Fig. S1A and all published sets 19-25) | nt | Wang 2018 SM; Zeng 2023 Supp Table 1 |
 | Gap between halves | 0-2 stated (2018), 1-2 (Ren 2025); 1 (1,286) or 2 (2,892) in every located published pair, never 0 | nt | Wang 2018 SM; Ren 2025; this KB, 4,178 pairs |
-| Half Tm | 60 designed, halves Tm-matched (Picky 2.2; salt/oligo conditions not stated). Recomputed at 2x SSC, 10% FA, 100 nM: median 58.0, 5th-95th percentile 53.4-63.9 (8,444 published halves); the two halves of a pair differ by a median 1.0 C (p90 3.1) | C | Wang 2018 Fig. S1A; this KB |
-| Window GC, Tm (2025) | GC 30-70 %, Tm 56-70 C "at oligo concentration of 5 nM" and "salt concentration of 300 mM" (Picky's salt term: [Na+]; no formamide given), set on the 40-46-nt hybridization sequences, which are then divided into two segments "ensuring the optimal matching of Tm between these segments" (checked in the author manuscript, PMC12648639). No per-half GC or Tm window is published (section 6) | %, C | Ren 2025, "Padlock and primer probe design"; Chou 2010 |
+| Half Tm | 60 designed, halves Tm-matched (Picky 2.2; Wang 2018 states no conditions). Ren 2025: Tm 56-70 C "at oligo concentration of 5 nM" and "salt concentration of 300 mM" (Picky's salt term: [Na+]; no formamide). Applied to each half (below). At 300 mM / 5 nM (Primer3) the 4,086 Shi 2023 pairs have halves of median 59.1 C (5th-95th percentile 54.5-65.0), both halves within 56-70 C in 78.7 %; the two halves of a pair differ by a median 1.0 C (p90 3.1, 8,444 published halves) | C | Wang 2018 Fig. S1A; Ren 2025, "Padlock and primer probe design"; Chou 2010; this KB |
+| Window GC (2025) | GC 30-70 %, set with the Tm on the 40-46-nt hybridization sequences, which are then divided into two segments "ensuring the optimal matching of Tm between these segments" (checked in the author manuscript, PMC12648639). GC is applied to the window; the Tm, which no 40-46-nt window can meet (72-87 C at 300 mM / 5 nM), to each half (section 6) | % | Ren 2025, "Padlock and primer probe design" |
 | Splint overlap | 6 + 6 (2018, 1,022, 64-gene sets); 8 + 6 (2,766-gene set) | nt | Fig. S1A; supp tables |
 | Splint Tm | below room temperature | C | Wang 2018 Fig. S1A |
 | Pairs per gene | 4 (2018, 1,022, 64-gene); 2 (2,766-gene); 3-6 kept, > 6 designed as filtering removes 10-20 % (Ren 2025) | pairs | supp tables; Ren 2025 |
@@ -179,13 +179,16 @@ probes:
     ...  binding: {expr: "rc(target_parts['primer_site'])"}; code_rc: rc(encoding code)
 hybridization: {temperature_c: 40, na_mM: 390, probe_nM: 100, formamide_pct: 10, dntp_mM: 0}
 attributes:
-  padlock_tm: {target: padlock.binding, type: annealing_temperature}   # primer_tm alike
+  padlock_tm:                                                          # primer_tm alike
+    target: padlock.binding
+    type: annealing_temperature
+    hybridization: {na_mM: 300, mg_mM: 0, dntp_mM: 0, probe_nM: 5, formamide_pct: 0}   # Ren 2025 design conditions
   tm_balance: {type: difference, of: [padlock_tm, primer_tm]}          # |padlock_tm - primer_tm|
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie2, strand: sense}
 post_process:
   filters:
     target_mapped_genes: {condition: target_mapped_genes <= 1}
-    padlock_tm: {condition: padlock_tm >= 50 & padlock_tm <= 65}      # primer_tm alike
+    padlock_tm: {condition: padlock_tm >= 56 & padlock_tm <= 70}      # primer_tm alike
   remove_overlap: {location_interval: 0, prefer: tm_balance}           # best Tm-matched split per start
   equal_space: {number_desired: 4}
 ```
@@ -200,25 +203,31 @@ What to edit:
 - Exhaustive off-target search: add `bowtie` to the genome's `align_index`, then set
   `aligner: bowtie` and `max_mismatches: 2` (Bowtie2 flagged 97-99% of 40-46-nt windows that
   have a <=2-substitution site in another gene; README).
-- Tm-balanced halves: the template keeps halves of 50-65 C (both halves of 96.8% of the 9,910
-  published pairs lie there under its conditions) and, at each start, the split with the smallest
-  `tm_balance` (`remove_overlap.prefer`), as Picky picked the best Tm match. Narrow the window to your
-  conditions if you change `probe_nM`.
-- Probe concentration: `probe_nM: 100` is Wang 2018's; use 1 or 5 nM for a PLUS-style hybridization,
-  which lowers every Tm by 6.4 or 4.2 C.
-- Ren 2025 windows (checked here on the 2,766 located preselected mouse pairs): GC applies to the
-  whole window (all 32.6-70.7 %; 12.5 % of pairs have a half outside 30-70 %). Do not filter a
-  whole-window Tm at 56-70: with an attribute-level `hybridization: {na_mM: 300, probe_nM: 5,
-  formamide_pct: 0}` U-Probe puts these windows at 72-87 C (1st-99th percentile), so Picky's Tm is on
-  another scale. Their halves run hotter: under the template's conditions 50-65 C keeps both halves
-  of 80.5 % of the pairs, 50-70 C 97.3 % (not a published rule).
+- Half Tm: each half is filtered to 56-70 C computed at Ren 2025's design conditions, 300 mM Na+ and
+  5 nM per oligo with no formamide, through an attribute-level `hybridization` override that declares
+  every Tm field (`na_mM`, `mg_mM`, `dntp_mM`, `probe_nM`, `formamide_pct`). The window is therefore
+  independent of the hybridization block: keep it when you change the buffer or `probe_nM`. At each
+  start the template keeps the split with the smallest `tm_balance` (`remove_overlap.prefer`), as
+  Picky picked the best Tm match.
+- Why per half: Ren 2025 states GC and Tm for the 40-46-nt hybridization sequence, but at 300 mM /
+  5 nM U-Probe puts the whole windows of its 2,766 located preselected mouse pairs at 72-87 C (1st-99th
+  percentile), so no window can meet 56-70 C; the halves, which hybridize as separate oligos, centre on
+  Wang 2018's designed 60 C (Shi 2023 set: median 59.1 C). GC does fit the window (all 32.6-70.7 %;
+  12.5 % of pairs have a half outside 30-70 %), so GC is filtered on the window.
+- Tm formula: Picky's is not stated. U-Probe computes Primer3 (SantaLucia 1998 parameters and salt
+  correction); Biopython's `Tm_NN` (DNA_NN3, 5 nM oligo and target) reads the same halves about 1 C
+  higher (Shi 2023 set: both halves within 56-70 C in 87.0 % vs 78.7 %). A half within 1 C of a bound
+  passes or fails depending on the formula; do not shift the window to chase either.
+- Probe concentration: `probe_nM: 100` is Wang 2018's; use 1 or 5 nM for a PLUS-style hybridization.
+  It changes only attributes without their own override (e.g. a `fold_score` or extra Tm you add), not
+  the half Tm filters.
 - Each half must hybridize on its own (the padlock half and the primer half are separate oligos that
   bind the RNA before ligation), yet a whole-window GC filter lets an AT-rich half through when the other
   half is GC-rich. Two checks, both on the half and not on the window: the half Tm filters of the
-  template (`padlock_tm`, `primer_tm`, U-Probe's window, computed under the hybridization block, so
-  state `probe_nM`), and the per-half GC the template only reports (`padlock_gc`, `primer_gc`).
-  A half outside 30-70 % GC is a review flag, not a published rule: published pairs have such halves
-  (12.5 %), so do not turn it into a hard filter without comparing the yield (SKILL.md rule 10);
+  template (`padlock_tm`, `primer_tm`, 56-70 C at 300 mM / 5 nM), and the per-half GC the template only
+  reports (`padlock_gc`, `primer_gc`).
+  A half outside 30-70 % GC is a review flag: published pairs have such halves (12.5 %), and it is not
+  a published rule, so do not turn it into a hard filter (SKILL.md rule 10);
   when a unit is flagged, take the alternative split of the same start (`prefer: tm_balance` already
   ranks them by matched Tm) or another site. The `check_probes.py` command at the end of section 8
   lists them per half.
@@ -229,7 +238,7 @@ attributes:
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.30 & target_gc <= 0.70}
-    padlock_tm: {condition: padlock_tm >= 50 & padlock_tm <= 70}   # primer_tm alike
+    padlock_tm: {condition: padlock_tm >= 56 & padlock_tm <= 70}   # primer_tm alike, at 300 mM / 5 nM
 ```
 
 ## 7. Pitfalls
@@ -243,14 +252,14 @@ post_process:
 - Without `prefer`, `remove_overlap` keeps the first candidate at each start: the shortest split,
   19 + 1 + 20 nt, for every unit. The published pairs vary: each site 19-25 nt (19-21 in 69%), the
   window 40-46 nt and the gap 2 nt in 72%; the template's `prefer: tm_balance` lets them vary too.
-- The designed 60 C Tm was computed by Picky under unstated conditions, so the template records it and
-  does not aim at it. Under the hybridization block (2x SSC, 10% formamide, 100 nM) the published halves
-  sit at 58.0 C (median; 5th-95th percentile 53.5-63.3), which is close but not the same quantity; the
-  50-65 C filters keep both halves of 96.8% of the pairs. Do not filter at exactly 60.
+- The half Tm window is a design convention at fixed conditions (300 mM Na+, 5 nM, Ren 2025), not a
+  prediction for your buffer. Do not recompute it under the hybridization block (2x SSC, 10% formamide,
+  100 nM gives about 1 C lower; 1 nM another 6 C lower) and do not filter at exactly Wang 2018's
+  designed 60 C.
 - Probe concentration differs between the protocols: 100 nM per oligo overnight (Wang 2018, the
-  template's `probe_nM`), 1 nM for 36 h (STARmap PLUS, whose 64-gene backbone the template uses) and
-  5 nM for 24-36 h (Shi 2023). Tm follows: the same halves are 6.4 C lower at 1 nM and 4.2 C lower at
-  5 nM, so set `probe_nM` to what you will hybridize at before judging any Tm window.
+  template's `probe_nM`), 1 nM for 36 h (STARmap PLUS, whose 64-gene backbone the template uses),
+  5 nM for 24-36 h (Shi 2023), and 100 nM or 1-5 nM above 100 genes (Ren 2025). Set `probe_nM` to what
+  you will hybridize at; the half Tm filters stay at the design conditions.
 - The gap is `[1, 2]`: abutting sites (the 0 the text allows) leave the padlock's ligated ends and
   the primer's 3' end no room between the two duplexes, and no published pair uses them.
 - Bowtie2 is a heuristic with at most 100 alignments: windows in repeats can pass with
@@ -274,16 +283,17 @@ post_process:
       off-target lists empty.
 - [ ] 4 pairs per gene (3-6 in Ren 2025; 2 for very large panels), non-overlapping, on the transcript
       you mean to count; `summary.json` status `ok` and no `fewer_probes_than_requested` warning.
-- [ ] Half Tms reported at the probe concentration you will use and reasonably balanced (published
-      pairs differ by ~1 C); no strong hairpins in either oligo, no heterodimers within the pool.
-- [ ] Run last, with the published values (window GC 30-70 % from Ren 2025; half Tm 50-65 C is the
-      template's calibration under its conditions, not Picky's 56-70 at 5 nM / 300 mM; the per-half GC
-      lines list halves outside 30-70 % for review). With the template's attribute names:
+- [ ] Each half's Tm 56-70 C at 300 mM Na+ / 5 nM (`padlock_tm`, `primer_tm`) and the halves
+      balanced (published pairs differ by ~1 C); no strong hairpins in either oligo, no heterodimers
+      within the pool.
+- [ ] Run last, with the published values (window GC 30-70 % and half Tm 56-70 C at 300 mM / 5 nM
+      from Ren 2025; the `padlock_tm` and `primer_tm` columns are computed at those conditions; the
+      per-half GC lines list halves outside 30-70 % for review). With the template's attribute names:
 
 ```bash
 python <skill>/scripts/check_probes.py results/run1/<name>_<time>_probes.tsv --summary results/run1/summary.json \
     --transcripts <genome dir>/transcript.fa --min-gap 0 --min-probes 3 --part-gc target_region 0.30 0.70 \
-    --part-tm padlock_tm 50 65 --part-tm primer_tm 50 65 --part-gc padlock.binding 0.30 0.70 --part-gc primer.binding 0.30 0.70
+    --part-tm padlock_tm 56 70 --part-tm primer_tm 56 70 --part-gc padlock.binding 0.30 0.70 --part-gc primer.binding 0.30 0.70
 ```
 
 ## 9. References
