@@ -123,7 +123,7 @@ window at several positions, and one oligo binds every copy. U-Probe treats it a
   them, counts distinct oligos (`--min-probes`) and checks `--min-gap` over all their sites (from
   `oligo_sites`, or from the transcript with `--transcripts`).
 - A multi-site oligo adds signal per probe (it binds several copies); report them, and keep the others
-  as the evenly spread set. A shortfall in distinct oligos is reported before any relaxation
+  as the evenly spread set. A shortfall in distinct oligos is reported before any change of selection
   (`references/uprobe/troubleshooting.md`, "Repeats inside the target").
 
 ## Exon-exon junction windows
@@ -173,8 +173,9 @@ yields 48 smFISH probes. For short or crowded targets, in this order:
    set (`references/uprobe/troubleshooting.md`, "Length ranges are not a way to fill the count"); take
    another length only at sites where the standard one fails, and only inside the method's published range.
 3. Rescue specificity losses legitimately: expression table, `exempt_copies` (`references/concepts/specificity.md`).
-4. Accept fewer probes if the method tolerates it (state the expected dimmer spots), or switch to an
-   amplified method (HCR, padlock/RCA; `references/techniques/`) for very short RNAs.
+4. Accept fewer probes if the method tolerates it (state the expected dimmer spots), or suggest an
+   amplified method (HCR, padlock/RCA; `references/techniques/`) for very short RNAs: switch only if the
+   user agrees. Never fill the count by loosening a published rule (SKILL.md rule 10).
 
 ## Common goals -> region
 

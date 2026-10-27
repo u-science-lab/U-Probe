@@ -41,7 +41,8 @@ windows with a <= 2-substitution site in another gene); where the unit of signal
 is a sound default there (it also spares the Bowtie2 transcriptome index, the slowest build of an RNA run),
 and Bowtie2 is an optional second attribute for indels and one-half matches. For 28-30-nt
 windows, extrapolating the numbers above, a 3-substitution site can still have its Tm above the
-hybridization temperature, so `max_mismatches: 3` is defensible (derived, not from a paper).
+hybridization temperature; `max_mismatches: 3` would be a derived screen, not a published rule: keep 2
+unless the user asks (SKILL.md rule 10).
 
 ## Substitutions, indels and partial matches
 
