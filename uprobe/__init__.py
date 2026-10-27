@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = ["UProbeAPI", "__version__"]
 
