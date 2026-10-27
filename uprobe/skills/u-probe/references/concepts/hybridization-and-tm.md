@@ -195,5 +195,12 @@ reproduce a protocol (MERFISH 43-63%, Moffitt et al. 2016; seqFISH+ 45-65%, Eng 
   doi:10.1093/nar/gkl655); a T run in the probe (A run in `target_region`) can bind the poly(A) tail of
   every mRNA; homopolymers make register-shifted (slipped) partial duplexes possible. Filter
   `target_region` for A runs when the probe is `rc(target_region)`.
+- Base-composition rules (a base's share, a run of one base, a base count in a window of part of the
+  probe) are attributes: `base_fraction`, `max_homopolymer`, `max_window_count`
+  (`references/uprobe/yaml-reference.md`), filtered like any other. Example: the Xu 2009 rules
+  (A < 28 %, no AAAA, C 22-28 %, no CCCC, no 4 C in any 6 nt within the first 12; Xu Q et al. 2009 PNAS
+  106:2289, doi:10.1073/pnas.0812506106), which Oligostan applies to smiFISH probes
+  (`references/techniques/smifish.md`). Filters run before `remove_overlap`, so express such rules as
+  filters rather than screening the output table afterwards.
 - Dinucleotide repeats and other low-complexity windows hit many loci; they are handled by the
   off-target search or `kmer_count` (`references/concepts/specificity.md`).
