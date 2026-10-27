@@ -111,18 +111,29 @@ attributes:
   target_gc: {target: target_region, type: gc_content}
   dg37: {target: primary.binding, type: rna_dna_dg37}   # the probe 5'->3' (sequence: probe, the default)
   binding_tm: {target: primary.binding, type: annealing_temperature}   # reported, not filtered
+  # Xu 2009 ("PNAS") rules on the probe's binding part, 5'->3' (c_frac and c_5prime are for rules 3 and 5)
+  a_frac: {target: primary.binding, type: base_fraction, bases: A}
+  a_run: {target: primary.binding, type: max_homopolymer, bases: A}
+  c_frac: {target: primary.binding, type: base_fraction, bases: C}
+  c_run: {target: primary.binding, type: max_homopolymer, bases: C}
+  c_5prime: {target: primary.binding, type: max_window_count, bases: C, window: 6, positions: [1, 12]}
   target_mapped_genes: {target: target_region, type: mapped_genes, aligner: bowtie, max_mismatches: 2,
                         strand: sense, exempt_copies: {kmer: 30, min_shared: 0.5}}
 post_process:
   filters:
     target_gc: {condition: target_gc >= 0.40 & target_gc <= 0.60}
     dg37: {condition: dg37 >= -33 & dg37 <= -31}   # one target dG (-32) +- 1, inside [-36, -28]
-    pnas_rules_2_4: {type: sequence_pattern, target: primary.binding, exclude_patterns: [AAAA, CCCC]}
+    pnas_rule_1: {condition: a_frac < 0.28}                      # A < 28 %
+    pnas_rule_2: {condition: a_run <= 3}                         # no AAAA
+    pnas_rule_4: {condition: c_run <= 3}                         # no CCCC
+    # Only when all five rules of the Oligostan documentation apply:
+    # pnas_rule_3: {condition: c_frac >= 0.22 & c_frac <= 0.28}  # C 22-28 %
+    # pnas_rule_5: {condition: c_5prime <= 3}                    # no 4 C in any 6 nt of positions 1-12
     target_mapped_genes: {condition: target_mapped_genes <= 1}
   remove_overlap: {location_interval: 2}
   equal_space: {number_desired: 24}
   sorts: {is_ascending: [target_mapped_genes]}
-summary: {report_name: rna_report, attributes: [target_gc, dg37, binding_tm, target_mapped_genes]}
+summary: {report_name: rna_report, attributes: [target_gc, dg37, a_frac, c_frac, binding_tm, target_mapped_genes]}
 ```
 
 How it departs from Oligostan (say so to the user):
@@ -132,9 +143,13 @@ How it departs from Oligostan (say so to the user):
   probes: run the protocol with a few targets (band `T-1` to `T+1`), keep the run with the most probes and
   report T. `length: [26, 32]` makes every length, and `remove_overlap` keeps the shortest passing window
   at each start (Oligostan takes the length nearest the target); both stay inside the band.
-- PNAS rules 2 and 4 are filters; rule 1 (A < 28 %, part of the default) and rules 3 and 5 (when all five
-  apply) need a post-filter on the TSV before `equal_space` picks the set, e.g. on a `--raw` run
-  `b = df['primary.binding']; df = df[b.str.count('A') / b.str.len() < 0.28]`.
+- The PNAS rules are attributes on `primary.binding`, read 5'->3' (`base_fraction`, `max_homopolymer`,
+  `max_window_count`; `positions: [1, 12]` = the probe's first 12 nt), each with a filter. The protocol
+  applies the Oligostan script's default, rules 1, 2 and 4; for the five of its documentation (when the
+  user asks for them) enable the commented `pnas_rule_3` and `pnas_rule_5` lines. Filters run before
+  `remove_overlap`, so overlap removal packs only probes that pass; do not screen the TSV afterwards, which
+  leaves gaps where a failing probe displaced a passing neighbour. Never drop one to fill the count
+  (SKILL.md rule 10).
 - The script's dG table is not cited to Wu 2002 in the code and was not checked against the published
   tables; compare with Oligostan output for critical genes.
 - RepeatMasker masking is not applied; the off-target search removes most repeat windows.
@@ -155,7 +170,7 @@ How it departs from Oligostan (say so to the user):
 - [ ] Gene-specific parts 26-32 nt (or the user's chosen 20-nt variant), rc of the RNA.
 - [ ] dG37 (`rna_dna_dg37` on the binding part) of every gene-specific part in [-36, -28] and within +-1 kcal/mol of one target dG T (section 6); T reported.
 - [ ] FLAP-binding site = rc(chosen FLAP), at the agreed end; total length <= 60 nt.
-- [ ] 24 probes per RNA (12-48), gaps >= 2 nt; GC 40-60 %; PNAS rules 1, 2, 4 (A < 28 %, no AAAA / CCCC; also 3 and 5 if all five apply).
+- [ ] 24 probes per RNA (12-48), gaps >= 2 nt; GC 40-60 %; PNAS rules 1, 2, 4 as filters on the binding part (A < 28 %, no AAAA / CCCC; also 3 and 5 if all five apply, section 6).
 - [ ] `target_mapped_genes` = 1 or explained; one FLAP (and dye) per gene imaged together.
 - [ ] Pre-annealing and buffer plan stated (15 % formamide, 1x SSC, 37 C).
 - [ ] Run last, with the file's own values (the dG window of Fig. 1A; with T = -32, `--range dg37 -33 -31` checks the band):
