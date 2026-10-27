@@ -2,7 +2,8 @@
 
 A ``mapped_genes`` attribute aligns a sequence to the transcriptome index built
 from ``transcript.fa`` (records ``{gene_id}_{transcript_id}``) and counts the
-distinct genes it hits::
+distinct genes it hits, the target counting once even when several gene ids
+carry its name (copies on assembly patches or alternate haplotypes)::
 
     target_mapped_genes:
       target: target_region
@@ -513,7 +514,9 @@ class OffTargetCounter:
         """Write <attr_name>, <attr_name>_off_targets and, as configured, _unexpressed, _hit_transcripts and _copies.
 
         ``sequence_hits`` maps each sequence of ``df[column]`` to {gene key: fewest mismatches or None}.
-        The count includes the target's own genes; another gene does not count
+        The count includes the target once, however many gene ids carry its
+        name (e.g. copies of the gene on assembly patches or alternate
+        haplotypes, which have gene ids of their own); another gene does not count
         when it copies the target and is not protein_coding (exempt_copies),
         when the expression table puts it below the target's threshold (see
         _thresholds) or, with
@@ -542,9 +545,10 @@ class OffTargetCounter:
             count, counted, below, copy_hits, valued = 0, [], [], [], []
             if by_transcript and sequence not in hit_values:
                 hit_values[sequence] = self._hit_values(transcript_hits.get(sequence, {}))
+            own = sequence_hits.get(sequence, {}).keys() & target_keys[target]
+            count += bool(own)  # the target is one gene, whatever number of gene ids carry its name
             for key, mismatches in sequence_hits.get(sequence, {}).items():
-                if key in target_keys[target]:
-                    count += 1
+                if key in own:
                     continue
                 hit.add(key)
                 if (target, key) in copies:

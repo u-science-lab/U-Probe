@@ -189,6 +189,20 @@ def test_target_counts_even_when_unexpressed(gtf, tmp_path):
     assert df.hits_unexpressed[0] == 'ACTG1:0'
 
 
+def test_target_with_several_gene_ids_counts_once(tmp_path):
+    # ENSG8 is ACTB again under a gene id of its own, as a copy on an assembly patch is.
+    gtf = tmp_path / 'patch.gtf'
+    gtf.write_text(''.join(f'1\ttest\texon\t1\t100\t.\t+\t.\tgene_id "{gene}"; transcript_id "T{i}"; '
+                           f'gene_name "{name}";\n'
+                           for i, (gene, name) in enumerate({'ENSG1': 'ACTB', 'ENSG8': 'ACTB',
+                                                             'ENSG2': 'ACTG1'}.items())))
+    df = pd.DataFrame({'target': ['ACTB', 'ACTB', 'ACTB', 'ACTG1'], 'seq': ['S1', 'S2', 'S3', 'S1']})
+    sequence_hits = {'S1': {'ENSG1': 0, 'ENSG8': 0}, 'S2': {'ENSG1': 0, 'ENSG8': 0, 'ENSG2': 1}, 'S3': {'ENSG8': 0}}
+    OffTargetCounter({}, {'gtf': str(gtf)}).annotate(df, 'hits', 'seq', sequence_hits, SETTINGS)
+    assert df.hits.tolist() == [1, 2, 1, 2]  # the target once; for ACTG1 both ACTB ids are off-target genes
+    assert df.hits_off_targets.tolist() == ['', 'ACTG1:1', '', 'ACTB(ENSG1):0, ACTB(ENSG8):0']
+
+
 def test_threshold_relative_to_the_target(gtf, table, caplog):
     # GAPDH is neither annotated nor in the table: only min_value applies to its off-targets.
     df = pd.DataFrame({'target': ['ACTB', 'GAPDH'], 'seq': ['S1', 'S1']})

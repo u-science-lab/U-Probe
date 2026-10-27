@@ -255,7 +255,9 @@ not move starts (see "Overlapping or clustered probes").
   - `strand: both` (default) also counts transcripts antisense to the target, which the probe cannot
     bind: set `sense` for `target_region`.
 - Check: a correct RNA design has `binding == rc(target_region)` and `target_mapped_genes >= 1` on every
-  row (the own gene), except literal-sequence targets absent from the annotation.
+  row (the own gene), except literal-sequence targets absent from the annotation. The own gene
+  counts once even when copies of it on assembly patches or alternate haplotypes carry other gene
+  ids under the same name, so do not regroup those ids or relax a `<= 1` filter for them.
 
 ## Overlapping or clustered probes
 
