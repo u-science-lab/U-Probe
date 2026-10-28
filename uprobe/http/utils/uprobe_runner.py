@@ -28,7 +28,9 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
     try:
         print("UPROBE_TASK_START")
         print(f"task_id={task_id} user={username} threads={threads} output_dir={output_dir}")
-        protocol_dict = yaml.safe_load(protocol_yaml) or {}
+        from uprobe.http.utils.target_inputs import normalize_target_inputs
+        protocol_dict = normalize_target_inputs(yaml.safe_load(protocol_yaml))
+        protocol_yaml = yaml.safe_dump(protocol_dict, allow_unicode=True, sort_keys=False)
         from uprobe.http.utils.paths import get_genomes_yaml, get_user_genomes_yaml
         merged_genomes = {}
         public_yaml = get_genomes_yaml()

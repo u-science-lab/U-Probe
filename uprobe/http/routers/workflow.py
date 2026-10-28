@@ -133,7 +133,11 @@ async def submit_task(
 ):
     try:
         contents = await file.read()
-        yaml_content = yaml.safe_load(contents)
+        from uprobe.http.utils.target_inputs import normalize_target_inputs
+        try:
+            yaml_content = normalize_target_inputs(yaml.safe_load(contents))
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
         from uprobe.core.sampling import normalize_sampling
         region = yaml_content.get('extracts', {}).get('target_region', {})
         try:
