@@ -1,3 +1,4 @@
+import re
 import time
 import typing as T
 from datetime import datetime
@@ -28,6 +29,12 @@ from .tools import build_genome, indexes_used
 from .utils import RepeatMask, get_logger
 
 log = get_logger(__name__)
+
+
+def _file_stem(name) -> str:
+    """The protocol name as the start of an output file name: anything but word characters,
+    dots and hyphens (path separators included) becomes `_`, and leading dots are dropped."""
+    return re.sub(r"[^\w.-]", "_", str(name)).lstrip(".") or "probes"
 
 
 class InvalidTargetsError(ValueError):
@@ -317,7 +324,7 @@ class UProbeAPI:
         df_final = add_attributes(df_probes, self.protocol, self.genome, self.off_target_report, threads)
         self._report_raw_data = df_final.copy(deep=True)
         time_str = time.strftime("%Y%m%d_%H%M%S")
-        name = self.protocol.get("name", "probes")
+        name = _file_stem(self.protocol.get("name", "probes"))
         self._csv_filename = f"{name}_{time_str}.xlsx"
         # Plain-text copy of the final table for scripts and agents.
         tsv_path = self.output_dir / f"{name}_{time_str}_probes.tsv"
@@ -536,7 +543,7 @@ class UProbeAPI:
         """Generate one standalone report, including empty-result diagnostics."""
         if not generate_html:
             return {"html_reports": []}
-        name = self.protocol.get("name", "probes")
+        name = _file_stem(self.protocol.get("name", "probes"))
         time_str = time.strftime("%Y%m%d_%H%M%S")
         output_path = self.output_dir / f"{name}_report{report_suffix}_{time_str}.html"
         path = save_html_report(
