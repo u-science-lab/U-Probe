@@ -7,6 +7,7 @@ import traceback
 import yaml
 from uprobe.http.utils.result_archive import RESULT_SUFFIXES, restrict_result_archive
 from uprobe.http.utils.workflow_outcome import workflow_failure
+from uprobe.http.utils.task_errors import task_error_message
 
 def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, output_dir: str, threads: int, raw_csv: bool, continue_invalid_targets: bool, log_path: str) -> dict:
     # An absolute Python executable does not activate its Conda toolchain.
@@ -49,7 +50,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
         (out_dir / "merged_genomes.yaml").write_text(yaml.dump(merged_genomes, default_flow_style=False, sort_keys=False, allow_unicode=True), encoding="utf-8")
         from uprobe.core.api import UProbeAPI
         api = UProbeAPI(protocol_config=protocol_dict, genomes_config=merged_genomes, output_dir=out_dir)
-        api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads)
+        api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads, skip_target_validation=True)
         failure = workflow_failure(getattr(api, 'summary', None))
         if failure:
             return {"ok": False, "error": failure, "validation_failed": (getattr(api, 'summary', None) or {}).get('status') == 'no_valid_targets'}
@@ -66,13 +67,13 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
                     zf.write(p, p.name)
         restrict_result_archive(zip_path)
         return {"ok": True, "zip_name": zip_name, "xlsx_files": xlsx_files, "html_files": html_files, "no_filtered_probes": getattr(api, "no_filtered_probes", False), "raw_file": getattr(api, "raw_file", None)}
-    except Exception:
+    except Exception as error:
         tb = traceback.format_exc()
         try:
             print(tb, file=sys.stderr)
         except Exception:
             pass
-        return {"ok": False, "error": tb}
+        return {"ok": False, "error": task_error_message(error)}
     finally:
         sys.stdout = old_out
         sys.stderr = old_err

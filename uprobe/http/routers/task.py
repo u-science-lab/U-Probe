@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from typing import Union, List, Optional, Dict, Any, Literal
 from datetime import datetime
 import asyncio
@@ -19,6 +19,7 @@ import functools
 from uprobe.http.utils.process_pool import get_process_pool
 from uprobe.http.utils.result_archive import restrict_result_archive
 from uprobe.http.utils.workflow_outcome import stored_workflow_failure
+from uprobe.http.utils.task_errors import public_task_error, task_error_message, PUBLIC_ERRORS
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.http.utils.paths import get_data_dir, get_tasks_dir, get_results_dir
 from uprobe.http.utils.agent_store import atomic_write_json, file_lock
@@ -118,6 +119,10 @@ class TaskRead(TaskBase):
     raw_file: Optional[str] = None
     paused_from: Optional[Literal["pending", "running"]] = None
     phase: Optional[Literal['queued', 'validating', 'designing', 'validation_failed']] = None
+
+    @field_serializer('error_message')
+    def serialize_error_message(self, value):
+        return public_task_error(value)
 
 # --- Helper Function ---
 def find_task_by_id(username: str, task_id: str) -> Optional[TaskRead]:
@@ -446,7 +451,7 @@ async def _run_uprobe_task(username: str, task_id: str):
             logging.info(f"Task {task_id} was cancelled or removed from queue.")
             return
         task.status = "running"
-        task.phase = 'validating'
+        task.phase = 'designing'
         task.progress = 10
         task.updated_at = datetime.now()
         update_task_in_db(username, task)
@@ -537,7 +542,7 @@ async def _run_uprobe_task(username: str, task_id: str):
                 err = (result or {}).get("error") if isinstance(result, dict) else "Unknown error"
                 task.status = "failed"
                 task.progress = 0
-                task.error_message = err or "\n".join(tail_buf)
+                task.error_message = public_task_error(err or "")
                 task.phase = 'validation_failed' if (result or {}).get('validation_failed') else None
                 task.updated_at = datetime.now()
                 update_task_in_db(username, task)
@@ -547,7 +552,7 @@ async def _run_uprobe_task(username: str, task_id: str):
             if zip_path is None or not zip_path.exists():
                 task.status = "failed"
                 task.progress = 0
-                task.error_message = "Workflow finished but zip archive is missing.\n\nLog tail:\n" + "\n".join(tail_buf)
+                task.error_message = PUBLIC_ERRORS['results']
                 task.updated_at = datetime.now()
                 update_task_in_db(username, task)
                 return
@@ -565,7 +570,7 @@ async def _run_uprobe_task(username: str, task_id: str):
             logging.error(f"Task {task_id} failed: {str(e)}")
             task.status = "failed"
             task.progress = 0
-            task.error_message = f"Internal server error: {str(e)}"
+            task.error_message = task_error_message(e)
             task.phase = None
             task.updated_at = datetime.now()
             update_task_in_db(username, task)

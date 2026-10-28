@@ -1,0 +1,91 @@
+barcodes:
+  count: 4
+  barcodes:
+    BC1:
+      length_range:
+      - 1
+      - 5
+      description: Gene barcode, 1-5 nt
+    BC2:
+      length: 6
+      description: Padlock 5-prime terminal sequence
+    BC3:
+      length: 12
+      description: Padlock backbone sequence
+    BC4:
+      length: 6
+      description: Padlock 3-prime terminal sequence
+extracts:
+  target_region:
+    source: CDS
+    length:
+    - 40
+    - 46
+    step: 1
+    layout:
+      template: '{arm5}{gap}{arm3}'
+      parts:
+        arm5:
+          length:
+          - 19
+          - 25
+        gap:
+          length:
+          - 0
+          - 2
+        arm3:
+          length:
+          - 19
+          - 25
+probes:
+  pad_probe:
+    template: '{part1}{part2}{part3}{part4}{part5}'
+    modifications:
+      5prime: phosphate
+      3prime: hydroxyl
+    parts:
+      part1:
+        expr: encoding[target]['BC2']
+      part2:
+        expr: rc(target_parts['arm5'])
+      part3:
+        expr: encoding[target]['BC1']
+      part4:
+        expr: encoding[target]['BC3']
+      part5:
+        expr: encoding[target]['BC4']
+  primer_probe:
+    template: '{arm5}{arm3}'
+    parts:
+      arm5:
+        expr: rc(target_parts['arm3'])
+      arm3:
+        expr: rc(pad_probe.part1) + rc(pad_probe.part5)
+attributes:
+  target_length:
+    target: target_region
+    type: length
+  target_gc:
+    target: target_region
+    type: gc_content
+  target_tm:
+    target: target_region
+    type: annealing_temperature
+  arm5_tm:
+    target: target_parts.arm5
+    type: annealing_temperature
+  arm3_tm:
+    target: target_parts.arm3
+    type: annealing_temperature
+post_process:
+  filters:
+    target_length:
+      condition: target_length >= 40 & target_length <= 46
+    target_gc:
+      condition: target_gc >= 0.3 & target_gc <= 0.7
+    target_tm:
+      condition: target_tm >= 56 & target_tm <= 70
+    arm5_tm:
+      condition: arm5_tm >= 60
+    arm3_tm:
+      condition: arm3_tm >= 60

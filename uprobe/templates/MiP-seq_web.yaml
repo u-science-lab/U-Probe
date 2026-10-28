@@ -1,0 +1,104 @@
+extracts:
+  target_region:
+    source: exon
+    length: 40
+    step: 1
+probes:
+  mRNA:
+    template: '{part1}{part2}{part3}'
+    parts:
+      part1:
+        expr: target_region[0:13]
+      part2:
+        expr: target_region[13:26]
+      part3:
+        expr: target_region[27:40]
+  pad_probe:
+    template: '{part1}{part2}{part3}'
+    parts:
+      part1:
+        length: 13
+        expr: rc(target_region[0:13])
+      part2:
+        template: '{barcode1}A{barcode2}'
+        parts:
+          barcode1:
+            expr: encoding[target]['BC1']
+          barcode2:
+            expr: encoding[target]['BC2']
+      part3:
+        length: 13
+        expr: rc(target_region[13:26])
+  amp_probe:
+    template: '{part1}{part2}{part3}'
+    parts:
+      part1:
+        expr: rc(target_region[27:40])
+      part2:
+        expr: target_region[26]
+      part3:
+        expr: rc(pad_probe.part2.barcode2)[:-2]
+attributes:
+  target_fold_score:
+    target: target_region
+    type: fold_score
+  amp_fold_score:
+    target: amp_probe
+    type: fold_score
+  pad_fold_score:
+    target: pad_probe
+    type: fold_score
+  amp_self_match:
+    target: amp_probe
+    type: self_match
+  pad_self_match:
+    target: pad_probe
+    type: self_match
+  target_mapped_genes:
+    target: target_region
+    type: mapped_genes
+    aligner: bowtie2
+  mRNA_part1_tm:
+    target: mRNA.part1
+    type: annealing_temperature
+  mRNA_part2_tm:
+    target: mRNA.part2
+    type: annealing_temperature
+  mRNA_part3_tm:
+    target: mRNA.part3
+    type: annealing_temperature
+  target_GC_content:
+    target: target_region
+    type: gc_content
+post_process:
+  filters:
+    target_fold_score:
+      condition: target_fold_score <= 10
+    target_mapped_genes:
+      condition: target_mapped_genes <= 4
+    mRNA_part1_tm:
+      condition: mRNA_part1_tm >= 36 & mRNA_part1_tm <= 44
+    mRNA_part2_tm:
+      condition: mRNA_part2_tm >= 36 & mRNA_part2_tm <= 44
+    mRNA_part3_tm:
+      condition: mRNA_part3_tm >= 36 & mRNA_part3_tm <= 44
+    pad_5prime_gc_exclusion:
+      type: sequence_pattern
+      target: pad_probe
+      exclude_patterns:
+      - ^[GC]{2}
+    pad_3prime_gc_exclusion:
+      type: sequence_pattern
+      target: pad_probe
+      exclude_patterns:
+      - '[GC]{2}$'
+  sorts:
+    is_ascending:
+    - target_mapped_genes
+    - pad_fold_score
+    - pad_self_match
+    - amp_fold_score
+    - amp_self_match
+    - target_fold_score
+    is_descending:
+    - n_trans

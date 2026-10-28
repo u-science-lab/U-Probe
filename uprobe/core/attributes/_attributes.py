@@ -69,7 +69,9 @@ def bowtie2_align_se_sen(
         if log_file:
             # print log file
             with open(log_file) as f:
-                log.error(f.read())
+                diagnostic = f.read()
+                log.error(diagnostic)
+                e.tool_diagnostic = diagnostic
         raise
     return sam_path
 

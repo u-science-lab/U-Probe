@@ -9,21 +9,8 @@ def workflow_failure(summary):
     status = summary.get('status')
     if status not in {'no_valid_targets', 'no_target_sequences', 'no_probes_constructed', 'error'}:
         return None
-    message = summary.get('message') or f'Workflow stopped: {status}.'
-    inputs = summary.get('inputs') or {}
-    if inputs.get('genome'):
-        message += f" Genome: {inputs['genome']}."
-    invalid = inputs.get('invalid_targets') or []
-    if invalid:
-        message += ' Targets not found: ' + ', '.join(map(str, invalid)) + '.'
-    advice = {
-        'no_valid_targets': 'Check the selected species/genome and exact gene names (including case) or transcript IDs against its annotation.',
-        'no_target_sequences': 'Check target coordinates, extraction source, region length and transcript selection.',
-        'no_probes_constructed': 'Check probe expressions, required encoding keys and barcode sequences.',
-    }
-    if status in advice:
-        message += ' ' + advice[status]
-    return message
+    from uprobe.http.utils.task_errors import PUBLIC_ERRORS
+    return PUBLIC_ERRORS.get(status, PUBLIC_ERRORS['unknown'])
 
 
 def stored_workflow_failure(directory: Path):

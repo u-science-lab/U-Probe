@@ -296,7 +296,7 @@ class UProbeAPI:
         return probe_df
 
     def post_process_probes(self, df_probes: pd.DataFrame, raw_csv: bool = False,
-                            threads: int = 10) -> pd.DataFrame:
+                            threads: int = 10, skip_target_validation: bool = False) -> pd.DataFrame:
         """Add the attributes, post-process and save the tables.
 
         ``threads`` is used by the aligner and Jellyfish steps of attributes that
@@ -368,7 +368,7 @@ class UProbeAPI:
             self.output_files.update(xlsx=xlsx, tsv=tsv)
             return df_final
 
-    def _number_final_probes(self, df: pd.DataFrame, threads: int = 10) -> pd.DataFrame:
+    def _number_final_probes(self, df: pd.DataFrame, threads: int = 10, skip_target_validation: bool = False) -> pd.DataFrame:
         """Rebuild the probes that read probe_index with the final probe numbers.
 
         The final probes of each target are numbered 0, 1, 2, ... along the
@@ -432,7 +432,7 @@ class UProbeAPI:
         return xlsx_name, tsv_path.name if with_tsv else None
 
     def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False,
-                     threads: int = 10) -> pd.DataFrame:
+                     threads: int = 10, skip_target_validation: bool = False) -> pd.DataFrame:
         """Run all steps and write summary.json, also after early exits and errors.
 
         ``threads`` is used to build the indexes and by every attribute that sets
@@ -442,7 +442,7 @@ class UProbeAPI:
         self.summary = None
         self.target_validation = None
         try:
-            result = self._run_workflow(run, raw_csv, continue_on_invalid_targets, threads)
+            result = self._run_workflow(run, raw_csv, continue_on_invalid_targets, threads, skip_target_validation)
         except Exception as error:
             run['error'] = error
             self._write_run_summary(run)
@@ -450,7 +450,7 @@ class UProbeAPI:
         self._write_run_summary(run)
         return result
 
-    def _run_workflow(self, run: dict, raw_csv: bool, continue_on_invalid_targets: bool, threads: int) -> pd.DataFrame:
+    def _run_workflow(self, run: dict, raw_csv: bool, continue_on_invalid_targets: bool, threads: int, skip_target_validation: bool = False) -> pd.DataFrame:
         log.info("--- Starting U-Probe Workflow ---")
         genome_targets, direct_targets = self._parse_targets()
         run['requested_targets'] = genome_targets + list(direct_targets)
@@ -464,7 +464,7 @@ class UProbeAPI:
         # target stops the run at once, unless continue_on_invalid_targets skips it.
         run['step'] = 'validate_targets'
         source = self.protocol['extracts']['target_region']['source']
-        if source != 'genome':
+        if source != 'genome' and not skip_target_validation:
             if not self.validate_targets(continue_on_invalid=continue_on_invalid_targets):
                 log.error("Workflow halted due to target validation failure.")
                 run['status'] = 'no_valid_targets'

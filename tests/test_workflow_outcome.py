@@ -9,8 +9,8 @@ from uprobe.http.utils.workflow_outcome import workflow_failure, stored_workflow
 def test_early_exit_is_failure_with_reason(status):
     message = workflow_failure({'status': status, 'message': 'Stopped before report.',
                                 'inputs': {'genome': 'hg19', 'invalid_targets': ['Cd4']}})
-    assert 'Stopped before report.' in message
-    assert 'hg19' in message and 'Cd4' in message
+    assert 'Stopped before report.' not in message
+    assert 'hg19' not in message and 'Cd4' not in message
 
 
 @pytest.mark.parametrize('status', ['ok', 'partial', 'no_probes'])
@@ -24,7 +24,7 @@ def test_historical_summary_and_missing_summary(tmp_path):
     path.write_text('{bad json')
     assert stored_workflow_failure(tmp_path) is None
     path.write_text(json.dumps({'status': 'no_valid_targets', 'inputs': {'invalid_targets': ['Cd4']}}))
-    assert 'including case' in stored_workflow_failure(tmp_path)
+    assert 'No valid targets' in stored_workflow_failure(tmp_path)
 
 
 def test_task_list_repairs_historical_state_before_filtering(tmp_path, monkeypatch):
@@ -46,7 +46,7 @@ def test_task_list_repairs_historical_state_before_filtering(tmp_path, monkeypat
                                         current_user=SimpleNamespace(username='tester')))
     assert len(tasks) == 1 and saved[0].status == 'failed'
     assert tasks[0].result_url is None and tasks[0].progress == 0
-    assert 'exact gene names' in tasks[0].error_message
+    assert 'gene names' in tasks[0].error_message
 
 
 def test_runner_does_not_package_early_exit(tmp_path, monkeypatch):
