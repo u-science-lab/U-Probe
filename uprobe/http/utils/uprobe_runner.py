@@ -6,6 +6,7 @@ import os
 import traceback
 import yaml
 from uprobe.http.utils.result_archive import RESULT_SUFFIXES, restrict_result_archive
+from uprobe.http.utils.workflow_outcome import workflow_failure
 
 def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, output_dir: str, threads: int, raw_csv: bool, continue_invalid_targets: bool, log_path: str) -> dict:
     # An absolute Python executable does not activate its Conda toolchain.
@@ -47,8 +48,13 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
         from uprobe.core.api import UProbeAPI
         api = UProbeAPI(protocol_config=protocol_dict, genomes_config=merged_genomes, output_dir=out_dir)
         api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads)
+        failure = workflow_failure(getattr(api, 'summary', None))
+        if failure:
+            return {"ok": False, "error": failure, "validation_failed": (getattr(api, 'summary', None) or {}).get('status') == 'no_valid_targets'}
         xlsx_files = [p.name for p in out_dir.glob("*.xlsx")]
         html_files = [p.name for p in out_dir.glob("*.html")]
+        if not any(p.is_file() and p.suffix in RESULT_SUFFIXES for p in out_dir.iterdir()):
+            return {"ok": False, "error": "Workflow finished without result files. Check the workflow summary and task configuration."}
         zip_name = f"{task_id}_results.zip"
         zip_path = out_dir / zip_name
         import zipfile

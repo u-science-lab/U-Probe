@@ -18,6 +18,7 @@ from collections import deque
 import functools
 from uprobe.http.utils.process_pool import get_process_pool
 from uprobe.http.utils.result_archive import restrict_result_archive
+from uprobe.http.utils.workflow_outcome import stored_workflow_failure
 from uprobe.http.routers.auth import get_current_active_user, User
 from uprobe.http.utils.paths import get_data_dir, get_tasks_dir, get_results_dir
 from uprobe.http.utils.agent_store import atomic_write_json, file_lock
@@ -116,6 +117,7 @@ class TaskRead(TaskBase):
     no_filtered_probes: bool = False
     raw_file: Optional[str] = None
     paused_from: Optional[Literal["pending", "running"]] = None
+    phase: Optional[Literal['queued', 'validating', 'designing', 'validation_failed']] = None
 
 # --- Helper Function ---
 def find_task_by_id(username: str, task_id: str) -> Optional[TaskRead]:
@@ -166,6 +168,7 @@ def reset_stuck_tasks_on_startup():
                 modified = False
                 for task_dict in tasks:
                     was_active = task_dict.get("status") == "running"
+                    was_active = was_active or (task_dict.get('status') == 'pending' and task_dict.get('phase') == 'queued')
                     was_active = was_active or (
                         task_dict.get("status") == "paused"
                         and task_dict.get("paused_from") == "running"
@@ -175,6 +178,8 @@ def reset_stuck_tasks_on_startup():
                         task_dict["progress"] = 0
                         task_dict["description"] = (task_dict.get("description") or "") + " [System restarted, task failed]"
                         task_dict["paused_from"] = None
+                        task_dict['phase'] = None
+                        task_dict['error_message'] = 'Server restarted before this task finished. Run the saved task again from the Tasks page.'
                         modified = True
                 if modified:
                     save_user_tasks(username, tasks)
@@ -196,6 +201,15 @@ async def get_tasks(
     tasks_dicts = load_user_tasks(current_user.username)
     filtered_tasks = [TaskRead(**t) for t in tasks_dicts]
     for task in filtered_tasks:
+        if task.status == "completed":
+            failure = stored_workflow_failure(get_results_dir() / task.id)
+            if failure:
+                task.status = "failed"
+                task.progress = 0
+                task.error_message = failure
+                task.result_url = None
+                task.updated_at = datetime.now()
+                update_task_in_db(current_user.username, task)
         if task.status == "completed" and not task.no_filtered_probes:
             directory = get_results_dir() / task.id
             log_path = directory / "run.log"
@@ -406,6 +420,7 @@ async def run_task(
     # Keep pending status, update time to indicate queue entry
     task.status = "pending"
     task.updated_at = datetime.now()
+    task.phase = 'queued'
     update_task_in_db(current_user.username, task)
     
     # Run uprobe task asynchronously
@@ -431,6 +446,7 @@ async def _run_uprobe_task(username: str, task_id: str):
             logging.info(f"Task {task_id} was cancelled or removed from queue.")
             return
         task.status = "running"
+        task.phase = 'validating'
         task.progress = 10
         task.updated_at = datetime.now()
         update_task_in_db(username, task)
@@ -444,7 +460,7 @@ async def _run_uprobe_task(username: str, task_id: str):
                 log_path.touch(exist_ok=True)
             except Exception:
                 pass
-            task.progress = 30
+            task.progress = 10
             update_task_in_db(username, task)
             from uprobe.http.utils.uprobe_runner import run_uprobe_workflow
             loop = asyncio.get_running_loop()
@@ -494,6 +510,11 @@ async def _run_uprobe_task(username: str, task_id: str):
                                             clean_line = re.sub(r'^[a-zA-Z0-9_.]+\s+[A-Z]+\s+@\s+\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}:\s*', '', line)
                                             logging.info(f"[{task_id}] {clean_line}")
                                             p = _progress_from_line(line)
+                                            if 'UPROBE_VALIDATION_PASSED' in line or 'Target validation successful' in line:
+                                                current_task = find_task_by_id(username, task_id)
+                                                if current_task and current_task.status == 'running':
+                                                    current_task.phase = 'designing'
+                                                    update_task_in_db(username, current_task)
                                             if p and p > last_progress[0] and p < 100:
                                                 last_progress[0] = p
                                                 current_task = find_task_by_id(username, task_id)
@@ -517,6 +538,7 @@ async def _run_uprobe_task(username: str, task_id: str):
                 task.status = "failed"
                 task.progress = 0
                 task.error_message = err or "\n".join(tail_buf)
+                task.phase = 'validation_failed' if (result or {}).get('validation_failed') else None
                 task.updated_at = datetime.now()
                 update_task_in_db(username, task)
                 return
@@ -530,6 +552,7 @@ async def _run_uprobe_task(username: str, task_id: str):
                 update_task_in_db(username, task)
                 return
             task.status = "completed"
+            task.phase = None
             task.no_filtered_probes = result.get("no_filtered_probes", False)
             task.raw_file = result.get("raw_file")
             task.progress = 100
@@ -543,6 +566,7 @@ async def _run_uprobe_task(username: str, task_id: str):
             task.status = "failed"
             task.progress = 0
             task.error_message = f"Internal server error: {str(e)}"
+            task.phase = None
             task.updated_at = datetime.now()
             update_task_in_db(username, task)
 
