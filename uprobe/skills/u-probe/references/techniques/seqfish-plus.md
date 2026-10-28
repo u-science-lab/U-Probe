@@ -55,7 +55,7 @@ Readout probe: 15 nt, 5' amine coupled to NHS-ester dye (Alexa 647, Cy3B, Alexa 
 | Tm window | none given | Eng 2019 filters GC only | Eng 2019 |
 | Off-target (per probe) | BLAST 15-nt match to another gene = hit; drop probe if summed expected off-target copy number > 10,000 FPKM | ENCODE mouse RNA-seq | Eng 2019 |
 | Probe-probe cross-hyb. | drop probes sharing >= 17 nt (from the larger probe set) | | Eng 2019 |
-| Spacing | not stated; RNA SPOTs: no two probes within 2 nt | | Eng 2017, doi:10.1038/nmeth.4500 |
+| Spacing | not stated by Eng 2019; RNA SPOTs: no two probes within 2 nt, which the template applies | | Eng 2017, doi:10.1038/nmeth.4500 |
 | Probes per gene | 24; genes with < 24 dropped | | Eng 2019; Cai protocol, doi:10.1038/protex.2019.019 |
 | Readout sites | 4 x 15 nt (one per barcoding round) | rc of readout probes | Eng 2019 |
 | Readout design | random 15-mers, GC 40-60 %, BLAST vs transcriptome, no 10-nt contiguous match between readouts; 240 readouts | | Eng 2019 |
@@ -126,7 +126,7 @@ post_process:
     target_gc: {condition: target_gc >= 0.45 & target_gc <= 0.65}
     homopolymers: {type: sequence_pattern, target: target_region, exclude_patterns: [AAAAA, TTTTT, CCCCC, GGGGG]}
     target_mapped_genes: {condition: target_mapped_genes <= 1}   # Bowtie 1, <= 2 mismatches
-  remove_overlap: {location_interval: 0}
+  remove_overlap: {location_interval: 2}   # RNA SPOTs (Eng 2017): no two probes within 2 nt
   equal_space: {number_desired: 24}
 ```
 
@@ -142,7 +142,7 @@ What to edit:
   round sits in every slot on a quarter of the probes. The final TSV has a `probe_index` column.
 - Add `gene_expression` (your sample's table, e.g. TPM >= 1) so unexpressed off-target genes do not
   count; this is the closest U-Probe gets to the expression-weighted 10,000-FPKM rule.
-- Optional: `remove_overlap: {location_interval: 2}` to follow the RNA SPOTs spacing.
+- Spacing: `remove_overlap: {location_interval: 2}` keeps the RNA SPOTs gap of 2 nt between probes; a gap of 0 is not a published value.
 - `genome` needs `bowtie` in `align_index` (20-30-nt windows; Bowtie2 misses many hits).
 
 Template departures from Eng 2019 (from the template `meta.limitations` and the literature):

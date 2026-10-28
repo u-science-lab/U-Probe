@@ -163,7 +163,7 @@ at most about (L + g) / (w + g) non-overlapping windows, before filters remove s
 | smFISH 20 nt, gap 2 (Stellaris default) | 22 | 48 | ~1,050 nt |
 | MERFISH 30 nt, gap 0 | 30 | 92 | ~2,760 nt |
 | HCR v3 pair 52 nt, gap 3 | 55 | 20 pairs | ~1,100 nt |
-| seqFISH+ 28 nt, gap 0 | 28 | 24 | ~670 nt |
+| seqFISH+ 28 nt, gap 2 | 30 | 24 | ~720 nt |
 
 Filters (specificity, Tm, GC) typically remove a sizeable share of positions, so a ~1-kb mRNA rarely
 yields 48 smFISH probes. For short or crowded targets, in this order:
