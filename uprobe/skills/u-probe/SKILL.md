@@ -202,9 +202,10 @@ padlocks); every non-default choice, template departure and shortfall.
 10. Do not relax: the user's rules and the chosen method's published rules (length, arms, GC, Tm or dG,
     sequence rules, spacing, off-target rule) are hard constraints. Do not loosen one, or take another
     method's or tool's preset (another length range or GC window), unless the user asks; other sources in
-    a technique file are context, not a menu. Add no check the method does not publish (more mismatches,
-    composition, structure, position, coverage, Tm bands; validated sets violate them), never trade one
-    against a published rule; an unmet request gets the best compliant set and its shortfall (step 9).
+    a technique file are context, not a menu. Add no check the method does not publish (composition,
+    structure, position, coverage, Tm bands; validated sets violate them) or trade one against a
+    published rule. The off-target search of rules 4 and 5 (each oligo, up to 2 substitutions) defines
+    "unique" for every method; it is no added check. An unmet request gets the best compliant set + step 9.
 
 ## Where to read what
 
