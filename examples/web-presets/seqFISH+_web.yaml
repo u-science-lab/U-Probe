@@ -1,0 +1,28 @@
+barcodes:
+  count: 4
+  barcodes:
+    BC1: {length: 15, description: "Panel readout 1"}
+    BC2: {length: 15, description: "Panel readout 2"}
+    BC3: {length: 15, description: "Panel readout 3"}
+    BC4: {length: 15, description: "Panel readout 4"}
+# Research template: replace all N readout placeholders with the selected panel.
+# Primary oligo layout follows Lohoff 2022; readout slots do not rotate here.
+extracts:
+  target_region: {source: CDS, length: 28, step: 1}
+probes:
+  primary_probe:
+    template: '{primer}{readout1}T{readout2}T{binding}T{readout3}T{readout4}{t7}'
+    parts:
+      primer: {template: GTCTTATCATGTGCCTTTCCT, parts: {}}
+      readout1: {expr: "encoding[target]['BC1']"}
+      readout2: {expr: "encoding[target]['BC2']"}
+      binding: {expr: 'rc(target_region)'}
+      readout3: {expr: "encoding[target]['BC3']"}
+      readout4: {expr: "encoding[target]['BC4']"}
+      t7: {template: CCCTATAGTGAGTCGTATTA, parts: {}}
+attributes:
+  target_gc: {target: target_region, type: gc_content}
+post_process:
+  filters:
+    target_gc: {condition: 'target_gc >= 0.45 & target_gc <= 0.65'}
+    homopolymers: {type: sequence_pattern, target: target_region, exclude_patterns: [AAAAA, TTTTT, CCCCC, GGGGG]}

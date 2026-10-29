@@ -16,7 +16,7 @@ def test_web_presets_are_not_library_templates():
 
 def test_web_preset_copies_parse_and_have_probes():
     files = sorted(PRESETS.glob('*.yaml'))
-    assert [f.name for f in files] == ['MiP-seq_web.yaml', 'STARmap_web.yaml']
+    assert [f.name for f in files] == ['ExSeq_web.yaml', 'MERFISH_web.yaml', 'MiP-seq_web.yaml', 'Oligo-LiveFISH_web.yaml', 'OpenFISH_web.yaml', 'PRISM_web.yaml', 'RAEFISH_web.yaml', 'STARmap_web.yaml', 'TDDN-FISH_web.yaml', 'seqFISH+_web.yaml']
     for file in files:
         config = yaml.safe_load(file.read_text(encoding='utf-8'))
         assert isinstance(config.get('probes'), dict), file.name

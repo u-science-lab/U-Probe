@@ -1,0 +1,32 @@
+# PRISM V01, listed mouse padlock. Barcode segments must come from a matched panel.
+barcodes:
+  count: 4
+  barcodes:
+    BC1: {length: 20, description: "PRISM panel G segment"}
+    BC2: {length: 20, description: "PRISM panel R segment"}
+    BC3: {length: 20, description: "PRISM panel B segment"}
+    BC4: {length: 20, description: "PRISM panel Y segment"}
+extracts:
+  target_region: {source: mRNA, length: 40, step: 1}
+probes:
+  pad_probe:
+    template: "{arm5}TC{g}{r}{b}{y}{arm3}"
+    modifications: {5prime: phosphate}
+    parts:
+      arm5: {expr: "rc(target_region[0:20])"}
+      g: {expr: "encoding[target]['BC1']"}
+      r: {expr: "encoding[target]['BC2']"}
+      b: {expr: "encoding[target]['BC3']"}
+      y: {expr: "encoding[target]['BC4']"}
+      arm3: {expr: "rc(target_region[20:40])"}
+# Historical V01 precursor Tm bounds; source does not specify its Tm model.
+# U-Probe computes an approximation using its configured hybridization conditions.
+attributes:
+  target_tm: {target: target_region, type: annealing_temperature}
+post_process:
+  filters:
+    target_tm: {condition: "target_tm >= 65 & target_tm <= 75"}
+    target_g_run:
+      type: sequence_pattern
+      target: target_region
+      exclude_patterns: ['GGGGG']

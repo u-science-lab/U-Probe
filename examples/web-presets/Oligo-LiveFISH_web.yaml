@@ -1,0 +1,19 @@
+# Research-only guide assembly from a prevalidated 20 nt target strand.
+# The engine does not perform PAM scanning,
+# strand selection or Cas-OFFinder filtering. Supply a validated guide externally.
+# DNA alphabet represents the RNA construct; U and labeling require conversion.
+extracts:
+  target_region: {source: genome, length: 20, step: 1}
+probes:
+  crrna:
+    template: '{spacer}{common}'
+    parts:
+      spacer: {expr: 'rc(target_region)'}
+      common: {template: GTTTAAGAGCTATGCTGTTTTG, parts: {}}
+attributes:
+  spacer_gc: {target: crrna.spacer, type: gc_content}
+post_process:
+  filters:
+    spacer_gc: {condition: 'spacer_gc >= 0.35 & spacer_gc <= 0.80'}
+    # V01 non-repetitive guide rules; target the transcribed spacer.
+    spacer_motifs: {type: sequence_pattern, target: crrna.spacer, exclude_patterns: ['^(?!G)', TTTT, GGGGGGGGGG, CTCGAG, 'GCT[ACGT]AGC', 'CCA[ACGT]{6}TGG']}
