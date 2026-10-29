@@ -50,7 +50,7 @@ def run_uprobe_workflow(*, protocol_yaml: str, username: str, task_id: str, outp
         (out_dir / "merged_genomes.yaml").write_text(yaml.dump(merged_genomes, default_flow_style=False, sort_keys=False, allow_unicode=True), encoding="utf-8")
         from uprobe.core.api import UProbeAPI
         api = UProbeAPI(protocol_config=protocol_dict, genomes_config=merged_genomes, output_dir=out_dir)
-        api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads, skip_target_validation=True)
+        api.run_workflow(raw_csv=raw_csv, continue_on_invalid_targets=continue_invalid_targets, threads=threads)
         failure = workflow_failure(getattr(api, 'summary', None))
         if failure:
             return {"ok": False, "error": failure, "validation_failed": (getattr(api, 'summary', None) or {}).get('status') == 'no_valid_targets'}
