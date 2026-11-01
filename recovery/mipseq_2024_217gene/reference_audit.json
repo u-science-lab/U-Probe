@@ -1,0 +1,72 @@
+{
+  "source_url": "https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41551-024-01205-7/MediaObjects/41551_2024_1205_MOESM5_ESM.xlsx",
+  "workbook_sha256": "95397f9a35c68a8018089454a07e9bcd50ce7243f4d65dd5039541b883c4fdfe",
+  "source_sheet": "Fig 3",
+  "targets": 217,
+  "raw_oligos": 868,
+  "valid_oligos": 868,
+  "valid_pairs": 434,
+  "sequence_lengths": {
+    "58": 434,
+    "25": 249,
+    "26": 185
+  },
+  "rca_spacer_counts": {
+    "C": 88,
+    "GC": 37,
+    "TC": 52,
+    "AC": 49,
+    "CC": 47,
+    "A": 66,
+    "G": 55,
+    "T": 40
+  },
+  "role_normalizations": [
+    {
+      "source_row": 20,
+      "original_name": "Nts-1-PLP-2",
+      "normalization": "RCA role normalized: 25-nt RCA suffix, adjacent matching padlock prefix, no padlock backbone"
+    },
+    {
+      "source_row": 598,
+      "original_name": "Junb-2-PLP-1",
+      "normalization": "RCA role normalized: 25-nt RCA suffix, adjacent matching padlock prefix, no padlock backbone"
+    }
+  ],
+  "name_whitespace": [
+    {
+      "source_row": 53,
+      "original_name": "Oxt-2-PLP-1\n",
+      "normalization": "Outer whitespace ignored for name parsing; original retained"
+    },
+    {
+      "source_row": 276,
+      "original_name": "Lhx8-1-RCA-2 ",
+      "normalization": "Outer whitespace ignored for name parsing; original retained"
+    },
+    {
+      "source_row": 278,
+      "original_name": "Lhx8-2-RCA-2 ",
+      "normalization": "Outer whitespace ignored for name parsing; original retained"
+    },
+    {
+      "source_row": 400,
+      "original_name": "Otp-1-RCA-2 ",
+      "normalization": "Outer whitespace ignored for name parsing; original retained"
+    },
+    {
+      "source_row": 402,
+      "original_name": "Otp-2-RCA-2 ",
+      "normalization": "Outer whitespace ignored for name parsing; original retained"
+    }
+  ],
+  "unindexed_pair": {
+    "gene": "Syt1",
+    "source_rows": [
+      91,
+      92
+    ]
+  },
+  "unresolved_reference_records": 0,
+  "pair_evidence": "Adjacent padlock/RCA rows share the name prefix; 58-nt padlock and 25/26-nt RCA structures validated; no sequence rewritten."
+}

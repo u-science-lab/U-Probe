@@ -1,0 +1,21 @@
+barcodes:
+  count: 1
+  barcodes:
+    BC1: {length: 30, description: "Panel readout matching T0"}
+# Research-only schematic: orientation and disulfide position require checking
+# against Supplementary Data 1; N is a 30 nt panel-specific readout placeholder.
+# TDDN components and fluorophore probes are not designed by this template.
+extracts:
+  target_region: {source: mRNA, length: 35, step: 1}
+probes:
+  primary_probe:
+    template: '{binding}{readout}'
+    parts:
+      binding: {expr: 'rc(target_region)'}
+      readout: {expr: "encoding[target]['BC1']"}
+# Descriptive measurement; source supplies no GC threshold.
+attributes:
+  target_gc: {target: target_region, type: gc_content}
+post_process:
+  filters:
+    homopolymers: {type: sequence_pattern, target: target_region, exclude_patterns: [AAAAAAA, TTTTTTT, CCCCCCC, GGGGGGG]}

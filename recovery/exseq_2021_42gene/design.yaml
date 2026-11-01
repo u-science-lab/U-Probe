@@ -1,0 +1,875 @@
+name: ExSeq_2021_42gene_unfiltered_candidate_recovery
+genome: mm10
+targets:
+- PVALB
+- GAD2
+- CHODL
+- PARM1
+- SEZ6
+- ALCAM
+- PDE1A
+- FEZF2
+- MEF2C
+- NPAS1
+- NTS
+- LDB2
+- CDH9
+- PCDH8
+- SYNDIG1
+- SEMA3E
+- DLX1
+- LHX6
+- NR2F2
+- MPPED1
+- GRIN3A
+- GRM5
+- KCNIP4
+- THSD7A
+- KCNK2
+- GALNT14
+- FAM19A2
+- PROX1
+- ELFN1
+- RORB
+- UNC13C
+- FOXP2
+- SLC32A1
+- SATB2
+- TNNI3K
+- B3GALT1
+- ANKRD55
+- LINGO2
+- SV2C
+- KCNMB2
+- CUX2
+- ANK1
+encoding:
+  PVALB:
+    variants:
+    - solid: AGCGCCA
+      illumina: CGATAAA
+    - solid: AGCGACA
+      illumina: CGATCAC
+    - solid: AGCTTCA
+      illumina: CGATGAG
+    - solid: AGCCGCA
+      illumina: CGATTAT
+    - solid: CTAACCA
+      illumina: CGATACC
+    - solid: CTATACA
+      illumina: CGATCCG
+    - solid: CTAATCA
+      illumina: CGATGCT
+    - solid: CTAAGCA
+      illumina: CGATTCA
+    variant_count: 8
+  GAD2:
+    variants:
+    - solid: ATTTCCC
+      illumina: ATCAAAA
+    - solid: ATTAACC
+      illumina: ATCACAC
+    - solid: ATTGTCC
+      illumina: ATCAGAG
+    - solid: ATTGGCC
+      illumina: ATCATAT
+    - solid: CGGTCCC
+      illumina: ATCAACC
+    - solid: CGGTACC
+      illumina: ATCACCG
+    - solid: CGGATCC
+      illumina: ATCAGCT
+    - solid: CGGAGCC
+      illumina: ATCATCA
+    variant_count: 8
+  CHODL:
+    variants:
+    - solid: AACCCCT
+      illumina: GATCAAA
+    - solid: AACCACT
+      illumina: GATCCAC
+    - solid: AACCTCT
+      illumina: GATCGAG
+    - solid: AACGGCT
+      illumina: GATCTAT
+    - solid: CCATCCT
+      illumina: GATCACC
+    - solid: CCAAACT
+      illumina: GATCCCG
+    - solid: CCATTCT
+      illumina: GATCGCT
+    - solid: CCAAGCT
+      illumina: GATCTCA
+    variant_count: 8
+  PARM1:
+    variants:
+    - solid: ACTACCG
+      illumina: TCGGAAA
+    - solid: ACTCACG
+      illumina: TCGGCAC
+    - solid: ACTATCG
+      illumina: TCGGGAG
+    - solid: ACTCGCG
+      illumina: TCGGTAT
+    - solid: CAGCCCG
+      illumina: TCGGACC
+    - solid: CAGTACG
+      illumina: TCGGCCG
+    - solid: CAGGTCG
+      illumina: TCGGGCT
+    - solid: CAGTGCG
+      illumina: TCGGTCA
+    variant_count: 8
+  SEZ6:
+    variants:
+    - solid: AACTCCG
+      illumina: TAGCAAA
+    - solid: AACAACG
+      illumina: TAGCCAC
+    - solid: AACGTCG
+      illumina: TAGCGAG
+    - solid: AACGGCG
+      illumina: TAGCTAT
+    - solid: CCACCCG
+      illumina: TAGCACC
+    - solid: CCAGACG
+      illumina: TAGCCCG
+    - solid: CCAATCG
+      illumina: TAGCGCT
+    - solid: CCATGCG
+      illumina: TAGCTCA
+    variant_count: 8
+  ALCAM:
+    variants:
+    - solid: ACTGCCT
+      illumina: GCTGAAA
+    - solid: ACTCACT
+      illumina: GCTGCAC
+    - solid: ACTTTCT
+      illumina: GCTGGAG
+    - solid: ACTAGCT
+      illumina: GCTGTAT
+    - solid: CAGTCCT
+      illumina: GCTGACC
+    - solid: CAGCACT
+      illumina: GCTGCCG
+    - solid: CAGTTCT
+      illumina: GCTGGCT
+    - solid: CAGCGCT
+      illumina: GCTGTCA
+    variant_count: 8
+  PDE1A:
+    variants:
+    - solid: ACTTCCC
+      illumina: ACCGAAA
+    - solid: ACTAACC
+      illumina: ACCGCAC
+    - solid: ACTGTCC
+      illumina: ACCGGAG
+    - solid: ACTTGCC
+      illumina: ACCGTAT
+    - solid: CAGGCCC
+      illumina: ACCGACC
+    - solid: CAGAACC
+      illumina: ACCGCCG
+    - solid: CAGTTCC
+      illumina: ACCGGCT
+    - solid: CAGGGCC
+      illumina: ACCGTCA
+    variant_count: 8
+  FEZF2:
+    variants:
+    - solid: ATTACCG
+      illumina: TTGAAAA
+    - solid: ATTGACG
+      illumina: TTGACAC
+    - solid: ATTCTCG
+      illumina: TTGAGAG
+    - solid: ATTAGCG
+      illumina: TTGATAT
+    - solid: CGGTCCG
+      illumina: TTGAACC
+    - solid: CGGAACG
+      illumina: TTGACCG
+    - solid: CGGGTCG
+      illumina: TTGAGCT
+    - solid: CGGTGCG
+      illumina: TTGATCA
+    variant_count: 8
+  MEF2C:
+    variants:
+    - solid: ATTACCT
+      illumina: GTTAAAA
+    - solid: ATTAACT
+      illumina: GTTACAC
+    - solid: ATTTTCT
+      illumina: GTTAGAG
+    - solid: ATTGGCT
+      illumina: GTTATAT
+    - solid: CGGACCT
+      illumina: GTTAACC
+    - solid: CGGAACT
+      illumina: GTTACCG
+    - solid: CGGTTCT
+      illumina: GTTAGCT
+    - solid: CGGAGCT
+      illumina: GTTATCA
+    variant_count: 8
+  NPAS1:
+    variants:
+    - solid: AACTCCC
+      illumina: AACCAAA
+    - solid: AACGACC
+      illumina: AACCCAC
+    - solid: AACATCC
+      illumina: AACCGAG
+    - solid: AACTGCC
+      illumina: AACCTAT
+    - solid: CCACCCC
+      illumina: AACCACC
+    - solid: CCACACC
+      illumina: AACCCCG
+    - solid: CCAGTCC
+      illumina: AACCGCT
+    - solid: CCATGCC
+      illumina: AACCTCA
+    variant_count: 8
+  NTS:
+    variants:
+    - solid: ATGAGGG
+      illumina: ATGCAAA
+    - solid: ATGGTGG
+      illumina: ATGCCAC
+    - solid: ATGGAGG
+      illumina: ATGCGAG
+    - solid: ATGGCGG
+      illumina: ATGCTAT
+    - solid: CGTTGGG
+      illumina: ATGCACC
+    - solid: CGTCTGG
+      illumina: ATGCCCG
+    variant_count: 6
+  LDB2:
+    variants:
+    - solid: AAACGGC
+      illumina: TACAAAA
+    - solid: AAAGTGC
+      illumina: TACACAC
+    - solid: AAAAAGC
+      illumina: TACAGAG
+    - solid: AAATCGC
+      illumina: TACATAT
+    - solid: CCCGGGC
+      illumina: TACAACC
+    - solid: CCCATGC
+      illumina: TACACCG
+    - solid: CCCTAGC
+      illumina: TACAGCT
+    - solid: CCCCCGC
+      illumina: TACATCA
+    variant_count: 8
+  CDH9:
+    variants:
+    - solid: ACCATTC
+      illumina: GCCAAAA
+    - solid: ACCCGTC
+      illumina: GCCACAC
+    - solid: ACCGCTC
+      illumina: GCCAGAG
+    - solid: ACCTATC
+      illumina: GCCATAT
+    - solid: CAAATTC
+      illumina: GCCAACC
+    - solid: CAAGGTC
+      illumina: GCCACCG
+    - solid: CAAACTC
+      illumina: GCCAGCT
+    - solid: CAATATC
+      illumina: GCCATCA
+    variant_count: 8
+  PCDH8:
+    variants:
+    - solid: ATCATTT
+      illumina: ATTGAAA
+    - solid: ATCTGTT
+      illumina: ATTGCAC
+    - solid: ATCACTT
+      illumina: ATTGGAG
+    - solid: ATCCATT
+      illumina: ATTGTAT
+    - solid: CGACTTT
+      illumina: ATTGACC
+    - solid: CGAAGTT
+      illumina: ATTGCCG
+    - solid: CGATCTT
+      illumina: ATTGGCT
+    - solid: CGACATT
+      illumina: ATTGTCA
+    variant_count: 8
+  SYNDIG1:
+    variants:
+    - solid: AAGCGGG
+      illumina: AAGGAAA
+    - solid: AAGTTGG
+      illumina: AAGGCAC
+    - solid: AAGTAGG
+      illumina: AAGGGAG
+    - solid: AAGCCGG
+      illumina: AAGGTAT
+    - solid: CCTCGGG
+      illumina: AAGGACC
+    - solid: CCTGTGG
+      illumina: AAGGCCG
+    - solid: CCTAAGG
+      illumina: AAGGGCT
+    - solid: CCTCCGG
+      illumina: AAGGTCA
+    variant_count: 8
+  SEMA3E:
+    variants:
+    - solid: ATGCAAT
+      illumina: TTTCAAA
+    - solid: ATGACAT
+      illumina: TTTCCAC
+    - solid: ATGAGAT
+      illumina: TTTCGAG
+    - solid: ATGCTAT
+      illumina: TTTCTAT
+    - solid: CGTTAAT
+      illumina: TTTCACC
+    - solid: CGTCCAT
+      illumina: TTTCCCG
+    - solid: CGTCGAT
+      illumina: TTTCGCT
+    - solid: CGTGTAT
+      illumina: TTTCTCA
+    variant_count: 8
+  DLX1:
+    variants:
+    - solid: ACAGGGC
+      illumina: TCCCAAA
+    - solid: ACAGTGC
+      illumina: TCCCCAC
+    - solid: ACAGAGC
+      illumina: TCCCGAG
+    - solid: ACAGCGC
+      illumina: TCCCTAT
+    - solid: CACTGGC
+      illumina: TCCCACC
+    - solid: CACGTGC
+      illumina: TCCCCCG
+    - solid: CACGAGC
+      illumina: TCCCGCT
+    - solid: CACCCGC
+      illumina: TCCCTCA
+    variant_count: 8
+  LHX6:
+    variants:
+    - solid: AAAAAAG
+      illumina: GAGAAAA
+    - solid: AAATCAG
+      illumina: GAGACAC
+    - solid: AAAGGAG
+      illumina: GAGAGAG
+    - solid: AAATTAG
+      illumina: GAGATAT
+    - solid: CCCGAAG
+      illumina: GAGAACC
+    - solid: CCCGCAG
+      illumina: GAGACCG
+    - solid: CCCCGAG
+      illumina: GAGAGCT
+    - solid: CCCATAG
+      illumina: GAGATCA
+    variant_count: 8
+  NR2F2:
+    variants:
+    - solid: ATCCTTC
+      illumina: GTCGAAA
+    - solid: ATCAGTC
+      illumina: GTCGCAC
+    - solid: ATCTCTC
+      illumina: GTCGGAG
+    - solid: ATCCATC
+      illumina: GTCGTAT
+    - solid: CGAATTC
+      illumina: GTCGACC
+    - solid: CGAGGTC
+      illumina: GTCGCCG
+    - solid: CGACCTC
+      illumina: GTCGGCT
+    - solid: CGACATC
+      illumina: GTCGTCA
+    variant_count: 8
+  MPPED1:
+    variants:
+    - solid: ACCCTTT
+      illumina: ACTAAAA
+    - solid: ACCTGTT
+      illumina: ACTACAC
+    - solid: ACCCCTT
+      illumina: ACTAGAG
+    - solid: ACCAATT
+      illumina: ACTATAT
+    - solid: CAACTTT
+      illumina: ACTAACC
+    - solid: CAAGGTT
+      illumina: ACTACCG
+    - solid: CAAACTT
+      illumina: ACTAGCT
+    - solid: CAATATT
+      illumina: ACTATCA
+    variant_count: 8
+  GRIN3A:
+    variants:
+    - solid: ACGCAAT
+      illumina: TCTTAAA
+    - solid: ACGGCAT
+      illumina: TCTTCAC
+    - solid: ACGTGAT
+      illumina: TCTTGAG
+    - solid: ACGTTAT
+      illumina: TCTTTAT
+    - solid: CATAAAT
+      illumina: TCTTACC
+    - solid: CATACAT
+      illumina: TCTTCCG
+    - solid: CATAGAT
+      illumina: TCTTGCT
+    - solid: CATCTAT
+      illumina: TCTTTCA
+    variant_count: 8
+  GRM5:
+    variants:
+    - solid: AAGGGGA
+      illumina: GAAGAAA
+    - solid: AAGATGA
+      illumina: GAAGCAC
+    - solid: AAGTAGA
+      illumina: GAAGGAG
+    - solid: AAGCCGA
+      illumina: GAAGTAT
+    - solid: CCTAGGA
+      illumina: GAAGACC
+    - solid: CCTGTGA
+      illumina: GAAGCCG
+    - solid: CCTGAGA
+      illumina: GAAGGCT
+    - solid: CCTACGA
+      illumina: GAAGTCA
+    variant_count: 8
+  KCNIP4:
+    variants:
+    - solid: ACATGGT
+      illumina: CCTCAAA
+    - solid: ACAATGT
+      illumina: CCTCCAC
+    - solid: ACAAAGT
+      illumina: CCTCGAG
+    - solid: ACAGCGT
+      illumina: CCTCTAT
+    - solid: CACAGGT
+      illumina: CCTCACC
+    - solid: CACCTGT
+      illumina: CCTCCCG
+    - solid: CACTAGT
+      illumina: CCTCGCT
+    - solid: CACGCGT
+      illumina: CCTCTCA
+    variant_count: 8
+  THSD7A:
+    variants:
+    - solid: AGTGTTC
+      illumina: GGCCAAA
+    - solid: AGTGGTC
+      illumina: GGCCCAC
+    - solid: AGTGCTC
+      illumina: GGCCGAG
+    - solid: AGTAATC
+      illumina: GGCCTAT
+    - solid: CTGTTTC
+      illumina: GGCCACC
+    - solid: CTGCGTC
+      illumina: GGCCCCG
+    - solid: CTGCCTC
+      illumina: GGCCGCT
+    - solid: CTGCATC
+      illumina: GGCCTCA
+    variant_count: 8
+  KCNK2:
+    variants:
+    - solid: ATCCTTG
+      illumina: CTGGAAA
+    - solid: ATCAGTG
+      illumina: CTGGCAC
+    - solid: ATCCCTG
+      illumina: CTGGGAG
+    - solid: ATCTATG
+      illumina: CTGGTAT
+    - solid: CGACTTG
+      illumina: CTGGACC
+    - solid: CGACGTG
+      illumina: CTGGCCG
+    - solid: CGACCTG
+      illumina: CTGGGCT
+    - solid: CGAAATG
+      illumina: CTGGTCA
+    variant_count: 8
+  GALNT14:
+    variants:
+    - solid: AGGTAAT
+      illumina: TGTAAAA
+    - solid: AGGGCAT
+      illumina: TGTACAC
+    - solid: AGGCGAT
+      illumina: TGTAGAG
+    - solid: AGGTTAT
+      illumina: TGTATAT
+    - solid: CTTCAAT
+      illumina: TGTAACC
+    - solid: CTTCCAT
+      illumina: TGTACCG
+    - solid: CTTGGAT
+      illumina: TGTAGCT
+    - solid: CTTATAT
+      illumina: TGTATCA
+    variant_count: 8
+  FAM19A2:
+    variants:
+    - solid: ATAAAAG
+      illumina: GTGTAAA
+    - solid: ATAACAG
+      illumina: GTGTCAC
+    - solid: ATACGAG
+      illumina: GTGTGAG
+    - solid: ATAATAG
+      illumina: GTGTTAT
+    - solid: CGCGAAG
+      illumina: GTGTACC
+    - solid: CGCACAG
+      illumina: GTGTCCG
+    - solid: CGCGGAG
+      illumina: GTGTGCT
+    - solid: CGCATAG
+      illumina: GTGTTCA
+    variant_count: 8
+  PROX1:
+    variants:
+    - solid: ACAGAAA
+      illumina: ACACAAA
+    - solid: ACAGCAA
+      illumina: ACACCAC
+    - solid: ACACGAA
+      illumina: ACACGAG
+    - solid: ACAGTAA
+      illumina: ACACTAT
+    - solid: CACCAAA
+      illumina: ACACACC
+    - solid: CACGCAA
+      illumina: ACACCCG
+    - solid: CACCGAA
+      illumina: ACACGCT
+    - solid: CACGTAA
+      illumina: ACACTCA
+    variant_count: 8
+  ELFN1:
+    variants:
+    - solid: AAGTAAC
+      illumina: CACGAAA
+    - solid: AAGCCAC
+      illumina: CACGCAC
+    - solid: AAGCGAC
+      illumina: CACGGAG
+    - solid: AAGCTAC
+      illumina: CACGTAT
+    - solid: CCTTAAC
+      illumina: CACGACC
+    - solid: CCTCCAC
+      illumina: CACGCCG
+    - solid: CCTCGAC
+      illumina: CACGGCT
+    - solid: CCTCTAC
+      illumina: CACGTCA
+    variant_count: 8
+  RORB:
+    variants:
+    - solid: AGGAGGG
+      illumina: AGGAAAA
+    - solid: AGGGTGG
+      illumina: AGGACAC
+    - solid: AGGCAGG
+      illumina: AGGAGAG
+    - solid: AGGACGG
+      illumina: AGGATAT
+    - solid: CTTCGGG
+      illumina: AGGAACC
+    - solid: CTTTTGG
+      illumina: AGGACCG
+    - solid: CTTTAGG
+      illumina: AGGAGCT
+    - solid: CTTCCGG
+      illumina: AGGATCA
+    variant_count: 8
+  UNC13C:
+    variants:
+    - solid: AATCTTC
+      illumina: GACTAAA
+    - solid: AATCGTC
+      illumina: GACTCAC
+    - solid: AATACTC
+      illumina: GACTGAG
+    - solid: AATCATC
+      illumina: GACTTAT
+    - solid: CCGATTC
+      illumina: GACTACC
+    - solid: CCGGGTC
+      illumina: GACTCCG
+    - solid: CCGGCTC
+      illumina: GACTGCT
+    - solid: CCGTATC
+      illumina: GACTTCA
+    variant_count: 8
+  FOXP2:
+    variants:
+    - solid: ACCTTTA
+      illumina: TCAAAAA
+    - solid: ACCCGTA
+      illumina: TCAACAC
+    - solid: ACCGCTA
+      illumina: TCAAGAG
+    - solid: ACCCATA
+      illumina: TCAATAT
+    - solid: CAATTTA
+      illumina: TCAAACC
+    - solid: CAACGTA
+      illumina: TCAACCG
+    - solid: CAAACTA
+      illumina: TCAAGCT
+    - solid: CAACATA
+      illumina: TCAATCA
+    variant_count: 8
+  SLC32A1:
+    variants:
+    - solid: AGTGTTT
+      illumina: AGTCAAA
+    - solid: AGTCGTT
+      illumina: AGTCCAC
+    - solid: AGTTCTT
+      illumina: AGTCGAG
+    - solid: AGTAATT
+      illumina: AGTCTAT
+    - solid: CTGCTTT
+      illumina: AGTCACC
+    - solid: CTGTGTT
+      illumina: AGTCCCG
+    - solid: CTGACTT
+      illumina: AGTCGCT
+    - solid: CTGGATT
+      illumina: AGTCTCA
+    variant_count: 8
+  SATB2:
+    variants:
+    - solid: ATCTTTA
+      illumina: TTAGAAA
+    - solid: ATCTGTA
+      illumina: TTAGCAC
+    - solid: ATCTCTA
+      illumina: TTAGGAG
+    - solid: ATCGATA
+      illumina: TTAGTAT
+    - solid: CGACTTA
+      illumina: TTAGACC
+    - solid: CGAGGTA
+      illumina: TTAGCCG
+    - solid: CGAGCTA
+      illumina: TTAGGCT
+    - solid: CGAAATA
+      illumina: TTAGTCA
+    variant_count: 8
+  TNNI3K:
+    variants:
+    - solid: ACCATTG
+      illumina: CCGAAAA
+    - solid: ACCGGTG
+      illumina: CCGACAC
+    - solid: ACCACTG
+      illumina: CCGAGAG
+    - solid: ACCCATG
+      illumina: CCGATAT
+    - solid: CAACTTG
+      illumina: CCGAACC
+    - solid: CAATGTG
+      illumina: CCGACCG
+    - solid: CAAGCTG
+      illumina: CCGAGCT
+    - solid: CAAGATG
+      illumina: CCGATCA
+    variant_count: 8
+  B3GALT1:
+    variants:
+    - solid: AATTTTT
+      illumina: AATTAAA
+    - solid: AATGGTT
+      illumina: AATTCAC
+    - solid: AATACTT
+      illumina: AATTGAG
+    - solid: AATTATT
+      illumina: AATTTAT
+    - solid: CCGATTT
+      illumina: AATTACC
+    - solid: CCGCGTT
+      illumina: AATTCCG
+    - solid: CCGACTT
+      illumina: AATTGCT
+    - solid: CCGTATT
+      illumina: AATTTCA
+    variant_count: 8
+  ANKRD55:
+    variants:
+    - solid: ATGGAAC
+      illumina: CTCCAAA
+    - solid: ATGACAC
+      illumina: CTCCCAC
+    - solid: ATGAGAC
+      illumina: CTCCGAG
+    - solid: ATGTTAC
+      illumina: CTCCTAT
+    - solid: CGTGAAC
+      illumina: CTCCACC
+    - solid: CGTTCAC
+      illumina: CTCCCCG
+    - solid: CGTGGAC
+      illumina: CTCCGCT
+    - solid: CGTATAC
+      illumina: CTCCTCA
+    variant_count: 8
+  LINGO2:
+    variants:
+    - solid: ATAGGGC
+      illumina: TTCTAAA
+    - solid: ATAATGC
+      illumina: TTCTCAC
+    - solid: ATATAGC
+      illumina: TTCTGAG
+    - solid: ATAGCGC
+      illumina: TTCTTAT
+    - solid: CGCTGGC
+      illumina: TTCTACC
+    - solid: CGCGTGC
+      illumina: TTCTCCG
+    - solid: CGCTAGC
+      illumina: TTCTGCT
+    - solid: CGCTCGC
+      illumina: TTCTTCA
+    variant_count: 8
+  SV2C:
+    variants:
+    - solid: AGTCTTG
+      illumina: CGGCAAA
+    - solid: AGTAGTG
+      illumina: CGGCCAC
+    - solid: AGTCCTG
+      illumina: CGGCGAG
+    - solid: AGTCATG
+      illumina: CGGCTAT
+    - solid: CTGCTTG
+      illumina: CGGCACC
+    - solid: CTGGGTG
+      illumina: CGGCCCG
+    - solid: CTGTCTG
+      illumina: CGGCGCT
+    - solid: CTGTATG
+      illumina: CGGCTCA
+    variant_count: 8
+  KCNMB2:
+    variants:
+    - solid: AATGTTG
+      illumina: CAGTAAA
+    - solid: AATCGTG
+      illumina: CAGTCAC
+    - solid: AATCCTG
+      illumina: CAGTGAG
+    - solid: AATAATG
+      illumina: CAGTTAT
+    - solid: CCGTTTG
+      illumina: CAGTACC
+    - solid: CCGTGTG
+      illumina: CAGTCCG
+    - solid: CCGCCTG
+      illumina: CAGTGCT
+    - solid: CCGGATG
+      illumina: CAGTTCA
+    variant_count: 8
+  CUX2:
+    variants:
+    - solid: AGCTCCG
+      illumina: TGGTAAA
+    - solid: AGCTACG
+      illumina: TGGTCAC
+    - solid: AGCGTCG
+      illumina: TGGTGAG
+    - solid: AGCGGCG
+      illumina: TGGTTAT
+    - solid: CTATCCG
+      illumina: TGGTACC
+    - solid: CTAAACG
+      illumina: TGGTCCG
+    - solid: CTATTCG
+      illumina: TGGTGCT
+    - solid: CTACGCG
+      illumina: TGGTTCA
+    variant_count: 8
+  ANK1:
+    variants:
+    - solid: AATCTTA
+      illumina: TAATAAA
+    - solid: AATGGTA
+      illumina: TAATCAC
+    - solid: AATTCTA
+      illumina: TAATGAG
+    - solid: AATGATA
+      illumina: TAATTAT
+    - solid: CCGCTTA
+      illumina: TAATACC
+    - solid: CCGGGTA
+      illumina: TAATCCG
+    - solid: CCGCCTA
+      illumina: TAATGCT
+    - solid: CCGGATA
+      illumina: TAATTCA
+    variant_count: 8
+extracts:
+  target_region:
+    source: mRNA
+    length: 32
+    step: 1
+    transcripts: all
+probes:
+  padlock:
+    template: '{arm5}AAA{solid}TCTCGGGAACGCTGAAGACGGC{illumina}AAA{arm3}'
+    modifications:
+      5prime: phosphate
+      3prime: hydroxyl
+    parts:
+      arm5:
+        expr: rc(target_region[0:16])
+      solid:
+        expr: encoding[target]['variants'][probe_index % encoding[target]['variant_count']]['solid']
+      illumina:
+        expr: encoding[target]['variants'][probe_index % encoding[target]['variant_count']]['illumina']
+      arm3:
+        expr: rc(target_region[16:32])
+attributes: {}
+post_process: {}
+recovery_execution:
+  encoding_variants: cartesian
+  transcript_policy: Each annotated isoform separately through UProbeAPI; exact S9 RefSeq versions are
+    not present in the local GENCODE annotation.
+  candidate_policy: All ACGT 32-mer windows, deduplicated by gene and sequence, crossed with every public
+    gene-specific physical barcode pair. No reference binding arms or oligos are inputs.
+  paper_qc: Reject homopolymers longer than 4, arm GC outside 40-65%, temperature criterion, significant
+    hairpin/dimer, and off-target BLAST hits longer than 12 nt spanning the junction by at least 3 nt
+    each side. Advance 5 nt beyond a passing window; otherwise advance 1 nt.
+  final_selection: 'Not executed: original RefSeq versions, adaptive Tm details, significant secondary-structure
+    thresholds, historical BLAST database and random selection seed are unavailable. Paper randomly selects
+    up to 8 probes per gene.'

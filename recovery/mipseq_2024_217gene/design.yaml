@@ -1,0 +1,6123 @@
+name: mipseq_2024_217gene_recovery
+genome: mm10
+targets:
+- Th
+- Sst
+- Prlr
+- Trh
+- Nts
+- Cartpt
+- Gabbr1
+- Gal
+- Dst
+- Ecel1
+- Gad2
+- Snap25
+- Oxt
+- Avp
+- Gad1
+- Pmch
+- Scg2
+- S100a10
+- Dclk1
+- Thra
+- Syt11
+- Syp
+- Syt1
+- Ddc
+- Tac1
+- Npy
+- Crh
+- Calcr
+- Pomc
+- Oprl1
+- Hap1
+- Gria2
+- Calb2
+- Reln
+- Gabrg2
+- Ndrg4
+- Stmn2
+- Ntsr2
+- Enkur
+- Foxj1
+- Crhr1
+- Crhr2
+- Esr1
+- Gabrg1
+- Galr1
+- Galr2
+- Glra3
+- Grpr
+- Igf1r
+- Igf2r
+- Lepr
+- Mc4r
+- Npy1r
+- Ntsr1
+- Oprd1
+- Oxtr
+- Pgr
+- Sgk1
+- Tacr1
+- Tacr3
+- Trhr
+- Penk
+- Vgf
+- Gnrh1
+- Tac2
+- Cck
+- Ucn3
+- Pnoc
+- Lhx8
+- Ptgs1
+- Ptges
+- Ptgs2
+- Pdyn
+- Esrrg
+- Thrb
+- Chrm3
+- Sstr4
+- Gpr165
+- Lhx6
+- Slc6a2
+- Slc17a7
+- Slc32a1
+- Slc17a6
+- Slc18a2
+- Slco1a4
+- Tlr2
+- Ebf1
+- Aif1
+- Pdgfra
+- Ly6h
+- Cd24a
+- Fcer1g
+- Angpt1
+- Fabp7
+- Selplg
+- Myh11
+- Ugt8a
+- Aqp4
+- Mbp
+- Otp
+- Abcc9
+- Adamtsl3
+- Adarb2
+- Adgrl4
+- Adgrv1
+- Airn
+- Apold1
+- Arhgap42
+- Arhgef3
+- Atp13a5
+- Bcl6b
+- Bicc1
+- Bmp6
+- Bnc2
+- C1qa
+- C1qb
+- Car10
+- Ccdc141
+- Ccl3
+- Cdh20
+- Celf3
+- Col1a1
+- Col3a1
+- Col12a1
+- Col23a1
+- Csf1
+- Csf1r
+- Cxcl1
+- Cxcl2
+- Cxcl10
+- Diaph3
+- Egfl7
+- Ephb1
+- Epn2
+- Fxyd5
+- Gabrb3
+- Glis3
+- Glra2
+- Gm3764
+- Gria1
+- Grm3
+- Hmgb2
+- Icam1
+- Ifit1
+- Igf2
+- Igfbp2
+- Inpp5d
+- Irf1
+- Junb
+- Kctd16
+- Kdm6b
+- Kif11
+- Kifc1
+- Laptm5
+- Lgmn
+- Lhx9
+- Lrfn5
+- Mctp1
+- Mecom
+- Mef2c
+- Megf11
+- Mgp
+- Mki67
+- Mpped1
+- Msra
+- Nap1l5
+- Neto1
+- Nfkbia
+- Nfkbiz
+- Nhsl1
+- Nkx2-1
+- Nr4a1
+- Nrg1
+- Nwd2
+- Osmr
+- Oxr1
+- Pcdh11x
+- Pde1c
+- Pde5a
+- Pde8b
+- Pdgfrb
+- Pgm2l1
+- Plpp3
+- Pou2f2
+- Ptch1
+- Ptprb
+- Rfx4
+- Rgs6
+- Rnf220
+- Rprm
+- Satb2
+- Sele
+- Sfxn5
+- Sh3d19
+- Sidt1
+- Slc4a4
+- Slc6a11
+- Slc6a13
+- Slc7a1
+- Slc7a5
+- Slco1c1
+- Smc2
+- Smc4
+- Thbd
+- Tmem132d
+- Tnc
+- Tnr
+- Top2a
+- Trabd2b
+- Trpc3
+- Unc13c
+- Zbtb18
+- Ccn3
+- Cfap299
+- Dpp10
+- Rasgef1b
+- Sirpa
+encoding:
+  Th:
+    variants:
+    - B1: GAG
+      B2: CAT
+      spacer: A
+    - B1: GAG
+      B2: CAT
+      spacer: C
+    - B1: GAG
+      B2: CAT
+      spacer: G
+    - B1: GAG
+      B2: CAT
+      spacer: T
+    - B1: GAG
+      B2: CAT
+      spacer: AC
+    - B1: GAG
+      B2: CAT
+      spacer: CC
+    - B1: GAG
+      B2: CAT
+      spacer: GC
+    - B1: GAG
+      B2: CAT
+      spacer: TC
+    variant_count: 8
+  Sst:
+    variants:
+    - B1: AAA
+      B2: GCT
+      spacer: A
+    - B1: AAA
+      B2: GCT
+      spacer: C
+    - B1: AAA
+      B2: GCT
+      spacer: G
+    - B1: AAA
+      B2: GCT
+      spacer: T
+    - B1: AAA
+      B2: GCT
+      spacer: AC
+    - B1: AAA
+      B2: GCT
+      spacer: CC
+    - B1: AAA
+      B2: GCT
+      spacer: GC
+    - B1: AAA
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  Prlr:
+    variants:
+    - B1: AAC
+      B2: TAC
+      spacer: A
+    - B1: AAC
+      B2: TAC
+      spacer: C
+    - B1: AAC
+      B2: TAC
+      spacer: G
+    - B1: AAC
+      B2: TAC
+      spacer: T
+    - B1: AAC
+      B2: TAC
+      spacer: AC
+    - B1: AAC
+      B2: TAC
+      spacer: CC
+    - B1: AAC
+      B2: TAC
+      spacer: GC
+    - B1: AAC
+      B2: TAC
+      spacer: TC
+    variant_count: 8
+  Trh:
+    variants:
+    - B1: ATT
+      B2: TTC
+      spacer: A
+    - B1: ATT
+      B2: TTC
+      spacer: C
+    - B1: ATT
+      B2: TTC
+      spacer: G
+    - B1: ATT
+      B2: TTC
+      spacer: T
+    - B1: ATT
+      B2: TTC
+      spacer: AC
+    - B1: ATT
+      B2: TTC
+      spacer: CC
+    - B1: ATT
+      B2: TTC
+      spacer: GC
+    - B1: ATT
+      B2: TTC
+      spacer: TC
+    variant_count: 8
+  Nts:
+    variants:
+    - B1: TTA
+      B2: CCG
+      spacer: A
+    - B1: TTA
+      B2: CCG
+      spacer: C
+    - B1: TTA
+      B2: CCG
+      spacer: G
+    - B1: TTA
+      B2: CCG
+      spacer: T
+    - B1: TTA
+      B2: CCG
+      spacer: AC
+    - B1: TTA
+      B2: CCG
+      spacer: CC
+    - B1: TTA
+      B2: CCG
+      spacer: GC
+    - B1: TTA
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Cartpt:
+    variants:
+    - B1: CAT
+      B2: CGT
+      spacer: A
+    - B1: CAT
+      B2: CGT
+      spacer: C
+    - B1: CAT
+      B2: CGT
+      spacer: G
+    - B1: CAT
+      B2: CGT
+      spacer: T
+    - B1: CAT
+      B2: CGT
+      spacer: AC
+    - B1: CAT
+      B2: CGT
+      spacer: CC
+    - B1: CAT
+      B2: CGT
+      spacer: GC
+    - B1: CAT
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Gabbr1:
+    variants:
+    - B1: TAT
+      B2: CAT
+      spacer: A
+    - B1: TAT
+      B2: CAT
+      spacer: C
+    - B1: TAT
+      B2: CAT
+      spacer: G
+    - B1: TAT
+      B2: CAT
+      spacer: T
+    - B1: TAT
+      B2: CAT
+      spacer: AC
+    - B1: TAT
+      B2: CAT
+      spacer: CC
+    - B1: TAT
+      B2: CAT
+      spacer: GC
+    - B1: TAT
+      B2: CAT
+      spacer: TC
+    variant_count: 8
+  Gal:
+    variants:
+    - B1: AGG
+      B2: ATC
+      spacer: A
+    - B1: AGG
+      B2: ATC
+      spacer: C
+    - B1: AGG
+      B2: ATC
+      spacer: G
+    - B1: AGG
+      B2: ATC
+      spacer: T
+    - B1: AGG
+      B2: ATC
+      spacer: AC
+    - B1: AGG
+      B2: ATC
+      spacer: CC
+    - B1: AGG
+      B2: ATC
+      spacer: GC
+    - B1: AGG
+      B2: ATC
+      spacer: TC
+    variant_count: 8
+  Dst:
+    variants:
+    - B1: TCG
+      B2: GCG
+      spacer: A
+    - B1: TCG
+      B2: GCG
+      spacer: C
+    - B1: TCG
+      B2: GCG
+      spacer: G
+    - B1: TCG
+      B2: GCG
+      spacer: T
+    - B1: TCG
+      B2: GCG
+      spacer: AC
+    - B1: TCG
+      B2: GCG
+      spacer: CC
+    - B1: TCG
+      B2: GCG
+      spacer: GC
+    - B1: TCG
+      B2: GCG
+      spacer: TC
+    variant_count: 8
+  Ecel1:
+    variants:
+    - B1: CCT
+      B2: CGG
+      spacer: A
+    - B1: CCT
+      B2: CGG
+      spacer: C
+    - B1: CCT
+      B2: CGG
+      spacer: G
+    - B1: CCT
+      B2: CGG
+      spacer: T
+    - B1: CCT
+      B2: CGG
+      spacer: AC
+    - B1: CCT
+      B2: CGG
+      spacer: CC
+    - B1: CCT
+      B2: CGG
+      spacer: GC
+    - B1: CCT
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Gad2:
+    variants:
+    - B1: GCA
+      B2: GCA
+      spacer: A
+    - B1: GCA
+      B2: GCA
+      spacer: C
+    - B1: GCA
+      B2: GCA
+      spacer: G
+    - B1: GCA
+      B2: GCA
+      spacer: T
+    - B1: GCA
+      B2: GCA
+      spacer: AC
+    - B1: GCA
+      B2: GCA
+      spacer: CC
+    - B1: GCA
+      B2: GCA
+      spacer: GC
+    - B1: GCA
+      B2: GCA
+      spacer: TC
+    variant_count: 8
+  Snap25:
+    variants:
+    - B1: AAT
+      B2: CCG
+      spacer: A
+    - B1: AAT
+      B2: CCG
+      spacer: C
+    - B1: AAT
+      B2: CCG
+      spacer: G
+    - B1: AAT
+      B2: CCG
+      spacer: T
+    - B1: AAT
+      B2: CCG
+      spacer: AC
+    - B1: AAT
+      B2: CCG
+      spacer: CC
+    - B1: AAT
+      B2: CCG
+      spacer: GC
+    - B1: AAT
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Oxt:
+    variants:
+    - B1: AGA
+      B2: TGA
+      spacer: A
+    - B1: AGA
+      B2: TGA
+      spacer: C
+    - B1: AGA
+      B2: TGA
+      spacer: G
+    - B1: AGA
+      B2: TGA
+      spacer: T
+    - B1: AGA
+      B2: TGA
+      spacer: AC
+    - B1: AGA
+      B2: TGA
+      spacer: CC
+    - B1: AGA
+      B2: TGA
+      spacer: GC
+    - B1: AGA
+      B2: TGA
+      spacer: TC
+    variant_count: 8
+  Avp:
+    variants:
+    - B1: TTA
+      B2: TTG
+      spacer: A
+    - B1: TTA
+      B2: TTG
+      spacer: C
+    - B1: TTA
+      B2: TTG
+      spacer: G
+    - B1: TTA
+      B2: TTG
+      spacer: T
+    - B1: TTA
+      B2: TTG
+      spacer: AC
+    - B1: TTA
+      B2: TTG
+      spacer: CC
+    - B1: TTA
+      B2: TTG
+      spacer: GC
+    - B1: TTA
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Gad1:
+    variants:
+    - B1: TAG
+      B2: CCG
+      spacer: A
+    - B1: TAG
+      B2: CCG
+      spacer: C
+    - B1: TAG
+      B2: CCG
+      spacer: G
+    - B1: TAG
+      B2: CCG
+      spacer: T
+    - B1: TAG
+      B2: CCG
+      spacer: AC
+    - B1: TAG
+      B2: CCG
+      spacer: CC
+    - B1: TAG
+      B2: CCG
+      spacer: GC
+    - B1: TAG
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Pmch:
+    variants:
+    - B1: ACT
+      B2: TCC
+      spacer: A
+    - B1: ACT
+      B2: TCC
+      spacer: C
+    - B1: ACT
+      B2: TCC
+      spacer: G
+    - B1: ACT
+      B2: TCC
+      spacer: T
+    - B1: ACT
+      B2: TCC
+      spacer: AC
+    - B1: ACT
+      B2: TCC
+      spacer: CC
+    - B1: ACT
+      B2: TCC
+      spacer: GC
+    - B1: ACT
+      B2: TCC
+      spacer: TC
+    variant_count: 8
+  Scg2:
+    variants:
+    - B1: ACA
+      B2: GCT
+      spacer: A
+    - B1: ACA
+      B2: GCT
+      spacer: C
+    - B1: ACA
+      B2: GCT
+      spacer: G
+    - B1: ACA
+      B2: GCT
+      spacer: T
+    - B1: ACA
+      B2: GCT
+      spacer: AC
+    - B1: ACA
+      B2: GCT
+      spacer: CC
+    - B1: ACA
+      B2: GCT
+      spacer: GC
+    - B1: ACA
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  S100a10:
+    variants:
+    - B1: TAA
+      B2: TCA
+      spacer: A
+    - B1: TAA
+      B2: TCA
+      spacer: C
+    - B1: TAA
+      B2: TCA
+      spacer: G
+    - B1: TAA
+      B2: TCA
+      spacer: T
+    - B1: TAA
+      B2: TCA
+      spacer: AC
+    - B1: TAA
+      B2: TCA
+      spacer: CC
+    - B1: TAA
+      B2: TCA
+      spacer: GC
+    - B1: TAA
+      B2: TCA
+      spacer: TC
+    variant_count: 8
+  Dclk1:
+    variants:
+    - B1: AAA
+      B2: CCA
+      spacer: A
+    - B1: AAA
+      B2: CCA
+      spacer: C
+    - B1: AAA
+      B2: CCA
+      spacer: G
+    - B1: AAA
+      B2: CCA
+      spacer: T
+    - B1: AAA
+      B2: CCA
+      spacer: AC
+    - B1: AAA
+      B2: CCA
+      spacer: CC
+    - B1: AAA
+      B2: CCA
+      spacer: GC
+    - B1: AAA
+      B2: CCA
+      spacer: TC
+    variant_count: 8
+  Thra:
+    variants:
+    - B1: ACT
+      B2: CGT
+      spacer: A
+    - B1: ACT
+      B2: CGT
+      spacer: C
+    - B1: ACT
+      B2: CGT
+      spacer: G
+    - B1: ACT
+      B2: CGT
+      spacer: T
+    - B1: ACT
+      B2: CGT
+      spacer: AC
+    - B1: ACT
+      B2: CGT
+      spacer: CC
+    - B1: ACT
+      B2: CGT
+      spacer: GC
+    - B1: ACT
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Syt11:
+    variants:
+    - B1: AAC
+      B2: CAG
+      spacer: A
+    - B1: AAC
+      B2: CAG
+      spacer: C
+    - B1: AAC
+      B2: CAG
+      spacer: G
+    - B1: AAC
+      B2: CAG
+      spacer: T
+    - B1: AAC
+      B2: CAG
+      spacer: AC
+    - B1: AAC
+      B2: CAG
+      spacer: CC
+    - B1: AAC
+      B2: CAG
+      spacer: GC
+    - B1: AAC
+      B2: CAG
+      spacer: TC
+    variant_count: 8
+  Syp:
+    variants:
+    - B1: AAC
+      B2: ACC
+      spacer: A
+    - B1: AAC
+      B2: ACC
+      spacer: C
+    - B1: AAC
+      B2: ACC
+      spacer: G
+    - B1: AAC
+      B2: ACC
+      spacer: T
+    - B1: AAC
+      B2: ACC
+      spacer: AC
+    - B1: AAC
+      B2: ACC
+      spacer: CC
+    - B1: AAC
+      B2: ACC
+      spacer: GC
+    - B1: AAC
+      B2: ACC
+      spacer: TC
+    variant_count: 8
+  Syt1:
+    variants:
+    - B1: ATA
+      B2: TGC
+      spacer: A
+    - B1: ATA
+      B2: TGC
+      spacer: C
+    - B1: ATA
+      B2: TGC
+      spacer: G
+    - B1: ATA
+      B2: TGC
+      spacer: T
+    - B1: ATA
+      B2: TGC
+      spacer: AC
+    - B1: ATA
+      B2: TGC
+      spacer: CC
+    - B1: ATA
+      B2: TGC
+      spacer: GC
+    - B1: ATA
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Ddc:
+    variants:
+    - B1: AAA
+      B2: GGT
+      spacer: A
+    - B1: AAA
+      B2: GGT
+      spacer: C
+    - B1: AAA
+      B2: GGT
+      spacer: G
+    - B1: AAA
+      B2: GGT
+      spacer: T
+    - B1: AAA
+      B2: GGT
+      spacer: AC
+    - B1: AAA
+      B2: GGT
+      spacer: CC
+    - B1: AAA
+      B2: GGT
+      spacer: GC
+    - B1: AAA
+      B2: GGT
+      spacer: TC
+    variant_count: 8
+  Tac1:
+    variants:
+    - B1: AAT
+      B2: CAC
+      spacer: A
+    - B1: AAT
+      B2: CAC
+      spacer: C
+    - B1: AAT
+      B2: CAC
+      spacer: G
+    - B1: AAT
+      B2: CAC
+      spacer: T
+    - B1: AAT
+      B2: CAC
+      spacer: AC
+    - B1: AAT
+      B2: CAC
+      spacer: CC
+    - B1: AAT
+      B2: CAC
+      spacer: GC
+    - B1: AAT
+      B2: CAC
+      spacer: TC
+    variant_count: 8
+  Npy:
+    variants:
+    - B1: AGG
+      B2: TGG
+      spacer: A
+    - B1: AGG
+      B2: TGG
+      spacer: C
+    - B1: AGG
+      B2: TGG
+      spacer: G
+    - B1: AGG
+      B2: TGG
+      spacer: T
+    - B1: AGG
+      B2: TGG
+      spacer: AC
+    - B1: AGG
+      B2: TGG
+      spacer: CC
+    - B1: AGG
+      B2: TGG
+      spacer: GC
+    - B1: AGG
+      B2: TGG
+      spacer: TC
+    variant_count: 8
+  Crh:
+    variants:
+    - B1: AGA
+      B2: GGA
+      spacer: A
+    - B1: AGA
+      B2: GGA
+      spacer: C
+    - B1: AGA
+      B2: GGA
+      spacer: G
+    - B1: AGA
+      B2: GGA
+      spacer: T
+    - B1: AGA
+      B2: GGA
+      spacer: AC
+    - B1: AGA
+      B2: GGA
+      spacer: CC
+    - B1: AGA
+      B2: GGA
+      spacer: GC
+    - B1: AGA
+      B2: GGA
+      spacer: TC
+    variant_count: 8
+  Calcr:
+    variants:
+    - B1: TAG
+      B2: TTG
+      spacer: A
+    - B1: TAG
+      B2: TTG
+      spacer: C
+    - B1: TAG
+      B2: TTG
+      spacer: G
+    - B1: TAG
+      B2: TTG
+      spacer: T
+    - B1: TAG
+      B2: TTG
+      spacer: AC
+    - B1: TAG
+      B2: TTG
+      spacer: CC
+    - B1: TAG
+      B2: TTG
+      spacer: GC
+    - B1: TAG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Pomc:
+    variants:
+    - B1: CAA
+      B2: CAA
+      spacer: A
+    - B1: CAA
+      B2: CAA
+      spacer: C
+    - B1: CAA
+      B2: CAA
+      spacer: G
+    - B1: CAA
+      B2: CAA
+      spacer: T
+    - B1: CAA
+      B2: CAA
+      spacer: AC
+    - B1: CAA
+      B2: CAA
+      spacer: CC
+    - B1: CAA
+      B2: CAA
+      spacer: GC
+    - B1: CAA
+      B2: CAA
+      spacer: TC
+    variant_count: 8
+  Oprl1:
+    variants:
+    - B1: AGC
+      B2: GGC
+      spacer: A
+    - B1: AGC
+      B2: GGC
+      spacer: C
+    - B1: AGC
+      B2: GGC
+      spacer: G
+    - B1: AGC
+      B2: GGC
+      spacer: T
+    - B1: AGC
+      B2: GGC
+      spacer: AC
+    - B1: AGC
+      B2: GGC
+      spacer: CC
+    - B1: AGC
+      B2: GGC
+      spacer: GC
+    - B1: AGC
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Hap1:
+    variants:
+    - B1: TCT
+      B2: TCG
+      spacer: A
+    - B1: TCT
+      B2: TCG
+      spacer: C
+    - B1: TCT
+      B2: TCG
+      spacer: G
+    - B1: TCT
+      B2: TCG
+      spacer: T
+    - B1: TCT
+      B2: TCG
+      spacer: AC
+    - B1: TCT
+      B2: TCG
+      spacer: CC
+    - B1: TCT
+      B2: TCG
+      spacer: GC
+    - B1: TCT
+      B2: TCG
+      spacer: TC
+    variant_count: 8
+  Gria2:
+    variants:
+    - B1: TTA
+      B2: CTT
+      spacer: A
+    - B1: TTA
+      B2: CTT
+      spacer: C
+    - B1: TTA
+      B2: CTT
+      spacer: G
+    - B1: TTA
+      B2: CTT
+      spacer: T
+    - B1: TTA
+      B2: CTT
+      spacer: AC
+    - B1: TTA
+      B2: CTT
+      spacer: CC
+    - B1: TTA
+      B2: CTT
+      spacer: GC
+    - B1: TTA
+      B2: CTT
+      spacer: TC
+    variant_count: 8
+  Calb2:
+    variants:
+    - B1: CTT
+      B2: GCT
+      spacer: A
+    - B1: CTT
+      B2: GCT
+      spacer: C
+    - B1: CTT
+      B2: GCT
+      spacer: G
+    - B1: CTT
+      B2: GCT
+      spacer: T
+    - B1: CTT
+      B2: GCT
+      spacer: AC
+    - B1: CTT
+      B2: GCT
+      spacer: CC
+    - B1: CTT
+      B2: GCT
+      spacer: GC
+    - B1: CTT
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  Reln:
+    variants:
+    - B1: ATG
+      B2: CGG
+      spacer: A
+    - B1: ATG
+      B2: CGG
+      spacer: C
+    - B1: ATG
+      B2: CGG
+      spacer: G
+    - B1: ATG
+      B2: CGG
+      spacer: T
+    - B1: ATG
+      B2: CGG
+      spacer: AC
+    - B1: ATG
+      B2: CGG
+      spacer: CC
+    - B1: ATG
+      B2: CGG
+      spacer: GC
+    - B1: ATG
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Gabrg2:
+    variants:
+    - B1: TTA
+      B2: GCC
+      spacer: A
+    - B1: TTA
+      B2: GCC
+      spacer: C
+    - B1: TTA
+      B2: GCC
+      spacer: G
+    - B1: TTA
+      B2: GCC
+      spacer: T
+    - B1: TTA
+      B2: GCC
+      spacer: AC
+    - B1: TTA
+      B2: GCC
+      spacer: CC
+    - B1: TTA
+      B2: GCC
+      spacer: GC
+    - B1: TTA
+      B2: GCC
+      spacer: TC
+    variant_count: 8
+  Ndrg4:
+    variants:
+    - B1: GAC
+      B2: GTC
+      spacer: A
+    - B1: GAC
+      B2: GTC
+      spacer: C
+    - B1: GAC
+      B2: GTC
+      spacer: G
+    - B1: GAC
+      B2: GTC
+      spacer: T
+    - B1: GAC
+      B2: GTC
+      spacer: AC
+    - B1: GAC
+      B2: GTC
+      spacer: CC
+    - B1: GAC
+      B2: GTC
+      spacer: GC
+    - B1: GAC
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Stmn2:
+    variants:
+    - B1: CGC
+      B2: CGG
+      spacer: A
+    - B1: CGC
+      B2: CGG
+      spacer: C
+    - B1: CGC
+      B2: CGG
+      spacer: G
+    - B1: CGC
+      B2: CGG
+      spacer: T
+    - B1: CGC
+      B2: CGG
+      spacer: AC
+    - B1: CGC
+      B2: CGG
+      spacer: CC
+    - B1: CGC
+      B2: CGG
+      spacer: GC
+    - B1: CGC
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Ntsr2:
+    variants:
+    - B1: TAC
+      B2: CTG
+      spacer: A
+    - B1: TAC
+      B2: CTG
+      spacer: C
+    - B1: TAC
+      B2: CTG
+      spacer: G
+    - B1: TAC
+      B2: CTG
+      spacer: T
+    - B1: TAC
+      B2: CTG
+      spacer: AC
+    - B1: TAC
+      B2: CTG
+      spacer: CC
+    - B1: TAC
+      B2: CTG
+      spacer: GC
+    - B1: TAC
+      B2: CTG
+      spacer: TC
+    variant_count: 8
+  Enkur:
+    variants:
+    - B1: GTG
+      B2: GGG
+      spacer: A
+    - B1: GTG
+      B2: GGG
+      spacer: C
+    - B1: GTG
+      B2: GGG
+      spacer: G
+    - B1: GTG
+      B2: GGG
+      spacer: T
+    - B1: GTG
+      B2: GGG
+      spacer: AC
+    - B1: GTG
+      B2: GGG
+      spacer: CC
+    - B1: GTG
+      B2: GGG
+      spacer: GC
+    - B1: GTG
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Foxj1:
+    variants:
+    - B1: ATT
+      B2: CTC
+      spacer: A
+    - B1: ATT
+      B2: CTC
+      spacer: C
+    - B1: ATT
+      B2: CTC
+      spacer: G
+    - B1: ATT
+      B2: CTC
+      spacer: T
+    - B1: ATT
+      B2: CTC
+      spacer: AC
+    - B1: ATT
+      B2: CTC
+      spacer: CC
+    - B1: ATT
+      B2: CTC
+      spacer: GC
+    - B1: ATT
+      B2: CTC
+      spacer: TC
+    variant_count: 8
+  Crhr1:
+    variants:
+    - B1: AAC
+      B2: GGG
+      spacer: A
+    - B1: AAC
+      B2: GGG
+      spacer: C
+    - B1: AAC
+      B2: GGG
+      spacer: G
+    - B1: AAC
+      B2: GGG
+      spacer: T
+    - B1: AAC
+      B2: GGG
+      spacer: AC
+    - B1: AAC
+      B2: GGG
+      spacer: CC
+    - B1: AAC
+      B2: GGG
+      spacer: GC
+    - B1: AAC
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Crhr2:
+    variants:
+    - B1: GTT
+      B2: GTC
+      spacer: A
+    - B1: GTT
+      B2: GTC
+      spacer: C
+    - B1: GTT
+      B2: GTC
+      spacer: G
+    - B1: GTT
+      B2: GTC
+      spacer: T
+    - B1: GTT
+      B2: GTC
+      spacer: AC
+    - B1: GTT
+      B2: GTC
+      spacer: CC
+    - B1: GTT
+      B2: GTC
+      spacer: GC
+    - B1: GTT
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Esr1:
+    variants:
+    - B1: ATA
+      B2: GTT
+      spacer: A
+    - B1: ATA
+      B2: GTT
+      spacer: C
+    - B1: ATA
+      B2: GTT
+      spacer: G
+    - B1: ATA
+      B2: GTT
+      spacer: T
+    - B1: ATA
+      B2: GTT
+      spacer: AC
+    - B1: ATA
+      B2: GTT
+      spacer: CC
+    - B1: ATA
+      B2: GTT
+      spacer: GC
+    - B1: ATA
+      B2: GTT
+      spacer: TC
+    variant_count: 8
+  Gabrg1:
+    variants:
+    - B1: AAT
+      B2: CAT
+      spacer: A
+    - B1: AAT
+      B2: CAT
+      spacer: C
+    - B1: AAT
+      B2: CAT
+      spacer: G
+    - B1: AAT
+      B2: CAT
+      spacer: T
+    - B1: AAT
+      B2: CAT
+      spacer: AC
+    - B1: AAT
+      B2: CAT
+      spacer: CC
+    - B1: AAT
+      B2: CAT
+      spacer: GC
+    - B1: AAT
+      B2: CAT
+      spacer: TC
+    variant_count: 8
+  Galr1:
+    variants:
+    - B1: ATG
+      B2: ATG
+      spacer: A
+    - B1: ATG
+      B2: ATG
+      spacer: C
+    - B1: ATG
+      B2: ATG
+      spacer: G
+    - B1: ATG
+      B2: ATG
+      spacer: T
+    - B1: ATG
+      B2: ATG
+      spacer: AC
+    - B1: ATG
+      B2: ATG
+      spacer: CC
+    - B1: ATG
+      B2: ATG
+      spacer: GC
+    - B1: ATG
+      B2: ATG
+      spacer: TC
+    variant_count: 8
+  Galr2:
+    variants:
+    - B1: GAT
+      B2: GTG
+      spacer: A
+    - B1: GAT
+      B2: GTG
+      spacer: C
+    - B1: GAT
+      B2: GTG
+      spacer: G
+    - B1: GAT
+      B2: GTG
+      spacer: T
+    - B1: GAT
+      B2: GTG
+      spacer: AC
+    - B1: GAT
+      B2: GTG
+      spacer: CC
+    - B1: GAT
+      B2: GTG
+      spacer: GC
+    - B1: GAT
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Glra3:
+    variants:
+    - B1: TAC
+      B2: CCG
+      spacer: A
+    - B1: TAC
+      B2: CCG
+      spacer: C
+    - B1: TAC
+      B2: CCG
+      spacer: G
+    - B1: TAC
+      B2: CCG
+      spacer: T
+    - B1: TAC
+      B2: CCG
+      spacer: AC
+    - B1: TAC
+      B2: CCG
+      spacer: CC
+    - B1: TAC
+      B2: CCG
+      spacer: GC
+    - B1: TAC
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Grpr:
+    variants:
+    - B1: TTC
+      B2: GTG
+      spacer: A
+    - B1: TTC
+      B2: GTG
+      spacer: C
+    - B1: TTC
+      B2: GTG
+      spacer: G
+    - B1: TTC
+      B2: GTG
+      spacer: T
+    - B1: TTC
+      B2: GTG
+      spacer: AC
+    - B1: TTC
+      B2: GTG
+      spacer: CC
+    - B1: TTC
+      B2: GTG
+      spacer: GC
+    - B1: TTC
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Igf1r:
+    variants:
+    - B1: AAA
+      B2: CCG
+      spacer: A
+    - B1: AAA
+      B2: CCG
+      spacer: C
+    - B1: AAA
+      B2: CCG
+      spacer: G
+    - B1: AAA
+      B2: CCG
+      spacer: T
+    - B1: AAA
+      B2: CCG
+      spacer: AC
+    - B1: AAA
+      B2: CCG
+      spacer: CC
+    - B1: AAA
+      B2: CCG
+      spacer: GC
+    - B1: AAA
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Igf2r:
+    variants:
+    - B1: TAT
+      B2: TTT
+      spacer: A
+    - B1: TAT
+      B2: TTT
+      spacer: C
+    - B1: TAT
+      B2: TTT
+      spacer: G
+    - B1: TAT
+      B2: TTT
+      spacer: T
+    - B1: TAT
+      B2: TTT
+      spacer: AC
+    - B1: TAT
+      B2: TTT
+      spacer: CC
+    - B1: TAT
+      B2: TTT
+      spacer: GC
+    - B1: TAT
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Lepr:
+    variants:
+    - B1: TCA
+      B2: CGT
+      spacer: A
+    - B1: TCA
+      B2: CGT
+      spacer: C
+    - B1: TCA
+      B2: CGT
+      spacer: G
+    - B1: TCA
+      B2: CGT
+      spacer: T
+    - B1: TCA
+      B2: CGT
+      spacer: AC
+    - B1: TCA
+      B2: CGT
+      spacer: CC
+    - B1: TCA
+      B2: CGT
+      spacer: GC
+    - B1: TCA
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Mc4r:
+    variants:
+    - B1: AGA
+      B2: TGC
+      spacer: A
+    - B1: AGA
+      B2: TGC
+      spacer: C
+    - B1: AGA
+      B2: TGC
+      spacer: G
+    - B1: AGA
+      B2: TGC
+      spacer: T
+    - B1: AGA
+      B2: TGC
+      spacer: AC
+    - B1: AGA
+      B2: TGC
+      spacer: CC
+    - B1: AGA
+      B2: TGC
+      spacer: GC
+    - B1: AGA
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Npy1r:
+    variants:
+    - B1: TCC
+      B2: CGC
+      spacer: A
+    - B1: TCC
+      B2: CGC
+      spacer: C
+    - B1: TCC
+      B2: CGC
+      spacer: G
+    - B1: TCC
+      B2: CGC
+      spacer: T
+    - B1: TCC
+      B2: CGC
+      spacer: AC
+    - B1: TCC
+      B2: CGC
+      spacer: CC
+    - B1: TCC
+      B2: CGC
+      spacer: GC
+    - B1: TCC
+      B2: CGC
+      spacer: TC
+    variant_count: 8
+  Ntsr1:
+    variants:
+    - B1: TTA
+      B2: GGC
+      spacer: A
+    - B1: TTA
+      B2: GGC
+      spacer: C
+    - B1: TTA
+      B2: GGC
+      spacer: G
+    - B1: TTA
+      B2: GGC
+      spacer: T
+    - B1: TTA
+      B2: GGC
+      spacer: AC
+    - B1: TTA
+      B2: GGC
+      spacer: CC
+    - B1: TTA
+      B2: GGC
+      spacer: GC
+    - B1: TTA
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Oprd1:
+    variants:
+    - B1: CGT
+      B2: GGC
+      spacer: A
+    - B1: CGT
+      B2: GGC
+      spacer: C
+    - B1: CGT
+      B2: GGC
+      spacer: G
+    - B1: CGT
+      B2: GGC
+      spacer: T
+    - B1: CGT
+      B2: GGC
+      spacer: AC
+    - B1: CGT
+      B2: GGC
+      spacer: CC
+    - B1: CGT
+      B2: GGC
+      spacer: GC
+    - B1: CGT
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Oxtr:
+    variants:
+    - B1: ACC
+      B2: CGG
+      spacer: A
+    - B1: ACC
+      B2: CGG
+      spacer: C
+    - B1: ACC
+      B2: CGG
+      spacer: G
+    - B1: ACC
+      B2: CGG
+      spacer: T
+    - B1: ACC
+      B2: CGG
+      spacer: AC
+    - B1: ACC
+      B2: CGG
+      spacer: CC
+    - B1: ACC
+      B2: CGG
+      spacer: GC
+    - B1: ACC
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Pgr:
+    variants:
+    - B1: AGC
+      B2: CGG
+      spacer: A
+    - B1: AGC
+      B2: CGG
+      spacer: C
+    - B1: AGC
+      B2: CGG
+      spacer: G
+    - B1: AGC
+      B2: CGG
+      spacer: T
+    - B1: AGC
+      B2: CGG
+      spacer: AC
+    - B1: AGC
+      B2: CGG
+      spacer: CC
+    - B1: AGC
+      B2: CGG
+      spacer: GC
+    - B1: AGC
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Sgk1:
+    variants:
+    - B1: ATA
+      B2: TTT
+      spacer: A
+    - B1: ATA
+      B2: TTT
+      spacer: C
+    - B1: ATA
+      B2: TTT
+      spacer: G
+    - B1: ATA
+      B2: TTT
+      spacer: T
+    - B1: ATA
+      B2: TTT
+      spacer: AC
+    - B1: ATA
+      B2: TTT
+      spacer: CC
+    - B1: ATA
+      B2: TTT
+      spacer: GC
+    - B1: ATA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Tacr1:
+    variants:
+    - B1: AAA
+      B2: GTC
+      spacer: A
+    - B1: AAA
+      B2: GTC
+      spacer: C
+    - B1: AAA
+      B2: GTC
+      spacer: G
+    - B1: AAA
+      B2: GTC
+      spacer: T
+    - B1: AAA
+      B2: GTC
+      spacer: AC
+    - B1: AAA
+      B2: GTC
+      spacer: CC
+    - B1: AAA
+      B2: GTC
+      spacer: GC
+    - B1: AAA
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Tacr3:
+    variants:
+    - B1: CCG
+      B2: GGG
+      spacer: A
+    - B1: CCG
+      B2: GGG
+      spacer: C
+    - B1: CCG
+      B2: GGG
+      spacer: G
+    - B1: CCG
+      B2: GGG
+      spacer: T
+    - B1: CCG
+      B2: GGG
+      spacer: AC
+    - B1: CCG
+      B2: GGG
+      spacer: CC
+    - B1: CCG
+      B2: GGG
+      spacer: GC
+    - B1: CCG
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Trhr:
+    variants:
+    - B1: TAA
+      B2: TAG
+      spacer: A
+    - B1: TAA
+      B2: TAG
+      spacer: C
+    - B1: TAA
+      B2: TAG
+      spacer: G
+    - B1: TAA
+      B2: TAG
+      spacer: T
+    - B1: TAA
+      B2: TAG
+      spacer: AC
+    - B1: TAA
+      B2: TAG
+      spacer: CC
+    - B1: TAA
+      B2: TAG
+      spacer: GC
+    - B1: TAA
+      B2: TAG
+      spacer: TC
+    variant_count: 8
+  Penk:
+    variants:
+    - B1: ACA
+      B2: GGG
+      spacer: A
+    - B1: ACA
+      B2: GGG
+      spacer: C
+    - B1: ACA
+      B2: GGG
+      spacer: G
+    - B1: ACA
+      B2: GGG
+      spacer: T
+    - B1: ACA
+      B2: GGG
+      spacer: AC
+    - B1: ACA
+      B2: GGG
+      spacer: CC
+    - B1: ACA
+      B2: GGG
+      spacer: GC
+    - B1: ACA
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Vgf:
+    variants:
+    - B1: ATG
+      B2: AGG
+      spacer: A
+    - B1: ATG
+      B2: AGG
+      spacer: C
+    - B1: ATG
+      B2: AGG
+      spacer: G
+    - B1: ATG
+      B2: AGG
+      spacer: T
+    - B1: ATG
+      B2: AGG
+      spacer: AC
+    - B1: ATG
+      B2: AGG
+      spacer: CC
+    - B1: ATG
+      B2: AGG
+      spacer: GC
+    - B1: ATG
+      B2: AGG
+      spacer: TC
+    variant_count: 8
+  Gnrh1:
+    variants:
+    - B1: CCA
+      B2: GGC
+      spacer: A
+    - B1: CCA
+      B2: GGC
+      spacer: C
+    - B1: CCA
+      B2: GGC
+      spacer: G
+    - B1: CCA
+      B2: GGC
+      spacer: T
+    - B1: CCA
+      B2: GGC
+      spacer: AC
+    - B1: CCA
+      B2: GGC
+      spacer: CC
+    - B1: CCA
+      B2: GGC
+      spacer: GC
+    - B1: CCA
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Tac2:
+    variants:
+    - B1: ACC
+      B2: AGG
+      spacer: A
+    - B1: ACC
+      B2: AGG
+      spacer: C
+    - B1: ACC
+      B2: AGG
+      spacer: G
+    - B1: ACC
+      B2: AGG
+      spacer: T
+    - B1: ACC
+      B2: AGG
+      spacer: AC
+    - B1: ACC
+      B2: AGG
+      spacer: CC
+    - B1: ACC
+      B2: AGG
+      spacer: GC
+    - B1: ACC
+      B2: AGG
+      spacer: TC
+    variant_count: 8
+  Cck:
+    variants:
+    - B1: TCT
+      B2: GGG
+      spacer: A
+    - B1: TCT
+      B2: GGG
+      spacer: C
+    - B1: TCT
+      B2: GGG
+      spacer: G
+    - B1: TCT
+      B2: GGG
+      spacer: T
+    - B1: TCT
+      B2: GGG
+      spacer: AC
+    - B1: TCT
+      B2: GGG
+      spacer: CC
+    - B1: TCT
+      B2: GGG
+      spacer: GC
+    - B1: TCT
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Ucn3:
+    variants:
+    - B1: TTT
+      B2: TTG
+      spacer: A
+    - B1: TTT
+      B2: TTG
+      spacer: C
+    - B1: TTT
+      B2: TTG
+      spacer: G
+    - B1: TTT
+      B2: TTG
+      spacer: T
+    - B1: TTT
+      B2: TTG
+      spacer: AC
+    - B1: TTT
+      B2: TTG
+      spacer: CC
+    - B1: TTT
+      B2: TTG
+      spacer: GC
+    - B1: TTT
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Pnoc:
+    variants:
+    - B1: ACA
+      B2: ACG
+      spacer: A
+    - B1: ACA
+      B2: ACG
+      spacer: C
+    - B1: ACA
+      B2: ACG
+      spacer: G
+    - B1: ACA
+      B2: ACG
+      spacer: T
+    - B1: ACA
+      B2: ACG
+      spacer: AC
+    - B1: ACA
+      B2: ACG
+      spacer: CC
+    - B1: ACA
+      B2: ACG
+      spacer: GC
+    - B1: ACA
+      B2: ACG
+      spacer: TC
+    variant_count: 8
+  Lhx8:
+    variants:
+    - B1: TCA
+      B2: GCG
+      spacer: A
+    - B1: TCA
+      B2: GCG
+      spacer: C
+    - B1: TCA
+      B2: GCG
+      spacer: G
+    - B1: TCA
+      B2: GCG
+      spacer: T
+    - B1: TCA
+      B2: GCG
+      spacer: AC
+    - B1: TCA
+      B2: GCG
+      spacer: CC
+    - B1: TCA
+      B2: GCG
+      spacer: GC
+    - B1: TCA
+      B2: GCG
+      spacer: TC
+    variant_count: 8
+  Ptgs1:
+    variants:
+    - B1: AAT
+      B2: TTT
+      spacer: A
+    - B1: AAT
+      B2: TTT
+      spacer: C
+    - B1: AAT
+      B2: TTT
+      spacer: G
+    - B1: AAT
+      B2: TTT
+      spacer: T
+    - B1: AAT
+      B2: TTT
+      spacer: AC
+    - B1: AAT
+      B2: TTT
+      spacer: CC
+    - B1: AAT
+      B2: TTT
+      spacer: GC
+    - B1: AAT
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Ptges:
+    variants:
+    - B1: ATC
+      B2: TCG
+      spacer: A
+    - B1: ATC
+      B2: TCG
+      spacer: C
+    - B1: ATC
+      B2: TCG
+      spacer: G
+    - B1: ATC
+      B2: TCG
+      spacer: T
+    - B1: ATC
+      B2: TCG
+      spacer: AC
+    - B1: ATC
+      B2: TCG
+      spacer: CC
+    - B1: ATC
+      B2: TCG
+      spacer: GC
+    - B1: ATC
+      B2: TCG
+      spacer: TC
+    variant_count: 8
+  Ptgs2:
+    variants:
+    - B1: CTT
+      B2: CCC
+      spacer: A
+    - B1: CTT
+      B2: CCC
+      spacer: C
+    - B1: CTT
+      B2: CCC
+      spacer: G
+    - B1: CTT
+      B2: CCC
+      spacer: T
+    - B1: CTT
+      B2: CCC
+      spacer: AC
+    - B1: CTT
+      B2: CCC
+      spacer: CC
+    - B1: CTT
+      B2: CCC
+      spacer: GC
+    - B1: CTT
+      B2: CCC
+      spacer: TC
+    variant_count: 8
+  Pdyn:
+    variants:
+    - B1: AGC
+      B2: CGC
+      spacer: A
+    - B1: AGC
+      B2: CGC
+      spacer: C
+    - B1: AGC
+      B2: CGC
+      spacer: G
+    - B1: AGC
+      B2: CGC
+      spacer: T
+    - B1: AGC
+      B2: CGC
+      spacer: AC
+    - B1: AGC
+      B2: CGC
+      spacer: CC
+    - B1: AGC
+      B2: CGC
+      spacer: GC
+    - B1: AGC
+      B2: CGC
+      spacer: TC
+    variant_count: 8
+  Esrrg:
+    variants:
+    - B1: CTC
+      B2: CCC
+      spacer: A
+    - B1: CTC
+      B2: CCC
+      spacer: C
+    - B1: CTC
+      B2: CCC
+      spacer: G
+    - B1: CTC
+      B2: CCC
+      spacer: T
+    - B1: CTC
+      B2: CCC
+      spacer: AC
+    - B1: CTC
+      B2: CCC
+      spacer: CC
+    - B1: CTC
+      B2: CCC
+      spacer: GC
+    - B1: CTC
+      B2: CCC
+      spacer: TC
+    variant_count: 8
+  Thrb:
+    variants:
+    - B1: CGT
+      B2: CGG
+      spacer: A
+    - B1: CGT
+      B2: CGG
+      spacer: C
+    - B1: CGT
+      B2: CGG
+      spacer: G
+    - B1: CGT
+      B2: CGG
+      spacer: T
+    - B1: CGT
+      B2: CGG
+      spacer: AC
+    - B1: CGT
+      B2: CGG
+      spacer: CC
+    - B1: CGT
+      B2: CGG
+      spacer: GC
+    - B1: CGT
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Chrm3:
+    variants:
+    - B1: ACA
+      B2: AGG
+      spacer: A
+    - B1: ACA
+      B2: AGG
+      spacer: C
+    - B1: ACA
+      B2: AGG
+      spacer: G
+    - B1: ACA
+      B2: AGG
+      spacer: T
+    - B1: ACA
+      B2: AGG
+      spacer: AC
+    - B1: ACA
+      B2: AGG
+      spacer: CC
+    - B1: ACA
+      B2: AGG
+      spacer: GC
+    - B1: ACA
+      B2: AGG
+      spacer: TC
+    variant_count: 8
+  Sstr4:
+    variants:
+    - B1: TTT
+      B2: GGG
+      spacer: A
+    - B1: TTT
+      B2: GGG
+      spacer: C
+    - B1: TTT
+      B2: GGG
+      spacer: G
+    - B1: TTT
+      B2: GGG
+      spacer: T
+    - B1: TTT
+      B2: GGG
+      spacer: AC
+    - B1: TTT
+      B2: GGG
+      spacer: CC
+    - B1: TTT
+      B2: GGG
+      spacer: GC
+    - B1: TTT
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Gpr165:
+    variants:
+    - B1: TTC
+      B2: TTC
+      spacer: A
+    - B1: TTC
+      B2: TTC
+      spacer: C
+    - B1: TTC
+      B2: TTC
+      spacer: G
+    - B1: TTC
+      B2: TTC
+      spacer: T
+    - B1: TTC
+      B2: TTC
+      spacer: AC
+    - B1: TTC
+      B2: TTC
+      spacer: CC
+    - B1: TTC
+      B2: TTC
+      spacer: GC
+    - B1: TTC
+      B2: TTC
+      spacer: TC
+    variant_count: 8
+  Lhx6:
+    variants:
+    - B1: TTC
+      B2: TGG
+      spacer: A
+    - B1: TTC
+      B2: TGG
+      spacer: C
+    - B1: TTC
+      B2: TGG
+      spacer: G
+    - B1: TTC
+      B2: TGG
+      spacer: T
+    - B1: TTC
+      B2: TGG
+      spacer: AC
+    - B1: TTC
+      B2: TGG
+      spacer: CC
+    - B1: TTC
+      B2: TGG
+      spacer: GC
+    - B1: TTC
+      B2: TGG
+      spacer: TC
+    variant_count: 8
+  Slc6a2:
+    variants:
+    - B1: AAC
+      B2: TCG
+      spacer: A
+    - B1: AAC
+      B2: TCG
+      spacer: C
+    - B1: AAC
+      B2: TCG
+      spacer: G
+    - B1: AAC
+      B2: TCG
+      spacer: T
+    - B1: AAC
+      B2: TCG
+      spacer: AC
+    - B1: AAC
+      B2: TCG
+      spacer: CC
+    - B1: AAC
+      B2: TCG
+      spacer: GC
+    - B1: AAC
+      B2: TCG
+      spacer: TC
+    variant_count: 8
+  Slc17a7:
+    variants:
+    - B1: CAG
+      B2: CCG
+      spacer: A
+    - B1: CAG
+      B2: CCG
+      spacer: C
+    - B1: CAG
+      B2: CCG
+      spacer: G
+    - B1: CAG
+      B2: CCG
+      spacer: T
+    - B1: CAG
+      B2: CCG
+      spacer: AC
+    - B1: CAG
+      B2: CCG
+      spacer: CC
+    - B1: CAG
+      B2: CCG
+      spacer: GC
+    - B1: CAG
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Slc32a1:
+    variants:
+    - B1: AAT
+      B2: CCC
+      spacer: A
+    - B1: AAT
+      B2: CCC
+      spacer: C
+    - B1: AAT
+      B2: CCC
+      spacer: G
+    - B1: AAT
+      B2: CCC
+      spacer: T
+    - B1: AAT
+      B2: CCC
+      spacer: AC
+    - B1: AAT
+      B2: CCC
+      spacer: CC
+    - B1: AAT
+      B2: CCC
+      spacer: GC
+    - B1: AAT
+      B2: CCC
+      spacer: TC
+    variant_count: 8
+  Slc17a6:
+    variants:
+    - B1: ATT
+      B2: TCC
+      spacer: A
+    - B1: ATT
+      B2: TCC
+      spacer: C
+    - B1: ATT
+      B2: TCC
+      spacer: G
+    - B1: ATT
+      B2: TCC
+      spacer: T
+    - B1: ATT
+      B2: TCC
+      spacer: AC
+    - B1: ATT
+      B2: TCC
+      spacer: CC
+    - B1: ATT
+      B2: TCC
+      spacer: GC
+    - B1: ATT
+      B2: TCC
+      spacer: TC
+    variant_count: 8
+  Slc18a2:
+    variants:
+    - B1: GAA
+      B2: GGG
+      spacer: A
+    - B1: GAA
+      B2: GGG
+      spacer: C
+    - B1: GAA
+      B2: GGG
+      spacer: G
+    - B1: GAA
+      B2: GGG
+      spacer: T
+    - B1: GAA
+      B2: GGG
+      spacer: AC
+    - B1: GAA
+      B2: GGG
+      spacer: CC
+    - B1: GAA
+      B2: GGG
+      spacer: GC
+    - B1: GAA
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Slco1a4:
+    variants:
+    - B1: TTT
+      B2: CGC
+      spacer: A
+    - B1: TTT
+      B2: CGC
+      spacer: C
+    - B1: TTT
+      B2: CGC
+      spacer: G
+    - B1: TTT
+      B2: CGC
+      spacer: T
+    - B1: TTT
+      B2: CGC
+      spacer: AC
+    - B1: TTT
+      B2: CGC
+      spacer: CC
+    - B1: TTT
+      B2: CGC
+      spacer: GC
+    - B1: TTT
+      B2: CGC
+      spacer: TC
+    variant_count: 8
+  Tlr2:
+    variants:
+    - B1: ATT
+      B2: GTT
+      spacer: A
+    - B1: ATT
+      B2: GTT
+      spacer: C
+    - B1: ATT
+      B2: GTT
+      spacer: G
+    - B1: ATT
+      B2: GTT
+      spacer: T
+    - B1: ATT
+      B2: GTT
+      spacer: AC
+    - B1: ATT
+      B2: GTT
+      spacer: CC
+    - B1: ATT
+      B2: GTT
+      spacer: GC
+    - B1: ATT
+      B2: GTT
+      spacer: TC
+    variant_count: 8
+  Ebf1:
+    variants:
+    - B1: GAG
+      B2: GCG
+      spacer: A
+    - B1: GAG
+      B2: GCG
+      spacer: C
+    - B1: GAG
+      B2: GCG
+      spacer: G
+    - B1: GAG
+      B2: GCG
+      spacer: T
+    - B1: GAG
+      B2: GCG
+      spacer: AC
+    - B1: GAG
+      B2: GCG
+      spacer: CC
+    - B1: GAG
+      B2: GCG
+      spacer: GC
+    - B1: GAG
+      B2: GCG
+      spacer: TC
+    variant_count: 8
+  Aif1:
+    variants:
+    - B1: TAA
+      B2: CTA
+      spacer: A
+    - B1: TAA
+      B2: CTA
+      spacer: C
+    - B1: TAA
+      B2: CTA
+      spacer: G
+    - B1: TAA
+      B2: CTA
+      spacer: T
+    - B1: TAA
+      B2: CTA
+      spacer: AC
+    - B1: TAA
+      B2: CTA
+      spacer: CC
+    - B1: TAA
+      B2: CTA
+      spacer: GC
+    - B1: TAA
+      B2: CTA
+      spacer: TC
+    variant_count: 8
+  Pdgfra:
+    variants:
+    - B1: TAA
+      B2: GGG
+      spacer: A
+    - B1: TAA
+      B2: GGG
+      spacer: C
+    - B1: TAA
+      B2: GGG
+      spacer: G
+    - B1: TAA
+      B2: GGG
+      spacer: T
+    - B1: TAA
+      B2: GGG
+      spacer: AC
+    - B1: TAA
+      B2: GGG
+      spacer: CC
+    - B1: TAA
+      B2: GGG
+      spacer: GC
+    - B1: TAA
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Ly6h:
+    variants:
+    - B1: GTC
+      B2: GTC
+      spacer: A
+    - B1: GTC
+      B2: GTC
+      spacer: C
+    - B1: GTC
+      B2: GTC
+      spacer: G
+    - B1: GTC
+      B2: GTC
+      spacer: T
+    - B1: GTC
+      B2: GTC
+      spacer: AC
+    - B1: GTC
+      B2: GTC
+      spacer: CC
+    - B1: GTC
+      B2: GTC
+      spacer: GC
+    - B1: GTC
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Cd24a:
+    variants:
+    - B1: TCA
+      B2: TCT
+      spacer: A
+    - B1: TCA
+      B2: TCT
+      spacer: C
+    - B1: TCA
+      B2: TCT
+      spacer: G
+    - B1: TCA
+      B2: TCT
+      spacer: T
+    - B1: TCA
+      B2: TCT
+      spacer: AC
+    - B1: TCA
+      B2: TCT
+      spacer: CC
+    - B1: TCA
+      B2: TCT
+      spacer: GC
+    - B1: TCA
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Fcer1g:
+    variants:
+    - B1: CAC
+      B2: CGC
+      spacer: A
+    - B1: CAC
+      B2: CGC
+      spacer: C
+    - B1: CAC
+      B2: CGC
+      spacer: G
+    - B1: CAC
+      B2: CGC
+      spacer: T
+    - B1: CAC
+      B2: CGC
+      spacer: AC
+    - B1: CAC
+      B2: CGC
+      spacer: CC
+    - B1: CAC
+      B2: CGC
+      spacer: GC
+    - B1: CAC
+      B2: CGC
+      spacer: TC
+    variant_count: 8
+  Angpt1:
+    variants:
+    - B1: TTA
+      B2: TCC
+      spacer: A
+    - B1: TTA
+      B2: TCC
+      spacer: C
+    - B1: TTA
+      B2: TCC
+      spacer: G
+    - B1: TTA
+      B2: TCC
+      spacer: T
+    - B1: TTA
+      B2: TCC
+      spacer: AC
+    - B1: TTA
+      B2: TCC
+      spacer: CC
+    - B1: TTA
+      B2: TCC
+      spacer: GC
+    - B1: TTA
+      B2: TCC
+      spacer: TC
+    variant_count: 8
+  Fabp7:
+    variants:
+    - B1: ACC
+      B2: AGC
+      spacer: A
+    - B1: ACC
+      B2: AGC
+      spacer: C
+    - B1: ACC
+      B2: AGC
+      spacer: G
+    - B1: ACC
+      B2: AGC
+      spacer: T
+    - B1: ACC
+      B2: AGC
+      spacer: AC
+    - B1: ACC
+      B2: AGC
+      spacer: CC
+    - B1: ACC
+      B2: AGC
+      spacer: GC
+    - B1: ACC
+      B2: AGC
+      spacer: TC
+    variant_count: 8
+  Selplg:
+    variants:
+    - B1: AAC
+      B2: GGC
+      spacer: A
+    - B1: AAC
+      B2: GGC
+      spacer: C
+    - B1: AAC
+      B2: GGC
+      spacer: G
+    - B1: AAC
+      B2: GGC
+      spacer: T
+    - B1: AAC
+      B2: GGC
+      spacer: AC
+    - B1: AAC
+      B2: GGC
+      spacer: CC
+    - B1: AAC
+      B2: GGC
+      spacer: GC
+    - B1: AAC
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Myh11:
+    variants:
+    - B1: AAC
+      B2: ATC
+      spacer: A
+    - B1: AAC
+      B2: ATC
+      spacer: C
+    - B1: AAC
+      B2: ATC
+      spacer: G
+    - B1: AAC
+      B2: ATC
+      spacer: T
+    - B1: AAC
+      B2: ATC
+      spacer: AC
+    - B1: AAC
+      B2: ATC
+      spacer: CC
+    - B1: AAC
+      B2: ATC
+      spacer: GC
+    - B1: AAC
+      B2: ATC
+      spacer: TC
+    variant_count: 8
+  Ugt8a:
+    variants:
+    - B1: ATA
+      B2: CCG
+      spacer: A
+    - B1: ATA
+      B2: CCG
+      spacer: C
+    - B1: ATA
+      B2: CCG
+      spacer: G
+    - B1: ATA
+      B2: CCG
+      spacer: T
+    - B1: ATA
+      B2: CCG
+      spacer: AC
+    - B1: ATA
+      B2: CCG
+      spacer: CC
+    - B1: ATA
+      B2: CCG
+      spacer: GC
+    - B1: ATA
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Aqp4:
+    variants:
+    - B1: AAC
+      B2: CTG
+      spacer: A
+    - B1: AAC
+      B2: CTG
+      spacer: C
+    - B1: AAC
+      B2: CTG
+      spacer: G
+    - B1: AAC
+      B2: CTG
+      spacer: T
+    - B1: AAC
+      B2: CTG
+      spacer: AC
+    - B1: AAC
+      B2: CTG
+      spacer: CC
+    - B1: AAC
+      B2: CTG
+      spacer: GC
+    - B1: AAC
+      B2: CTG
+      spacer: TC
+    variant_count: 8
+  Mbp:
+    variants:
+    - B1: TAC
+      B2: GCG
+      spacer: A
+    - B1: TAC
+      B2: GCG
+      spacer: C
+    - B1: TAC
+      B2: GCG
+      spacer: G
+    - B1: TAC
+      B2: GCG
+      spacer: T
+    - B1: TAC
+      B2: GCG
+      spacer: AC
+    - B1: TAC
+      B2: GCG
+      spacer: CC
+    - B1: TAC
+      B2: GCG
+      spacer: GC
+    - B1: TAC
+      B2: GCG
+      spacer: TC
+    variant_count: 8
+  Otp:
+    variants:
+    - B1: TGG
+      B2: CGG
+      spacer: A
+    - B1: TGG
+      B2: CGG
+      spacer: C
+    - B1: TGG
+      B2: CGG
+      spacer: G
+    - B1: TGG
+      B2: CGG
+      spacer: T
+    - B1: TGG
+      B2: CGG
+      spacer: AC
+    - B1: TGG
+      B2: CGG
+      spacer: CC
+    - B1: TGG
+      B2: CGG
+      spacer: GC
+    - B1: TGG
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Abcc9:
+    variants:
+    - B1: ATG
+      B2: TTG
+      spacer: A
+    - B1: ATG
+      B2: TTG
+      spacer: C
+    - B1: ATG
+      B2: TTG
+      spacer: G
+    - B1: ATG
+      B2: TTG
+      spacer: T
+    - B1: ATG
+      B2: TTG
+      spacer: AC
+    - B1: ATG
+      B2: TTG
+      spacer: CC
+    - B1: ATG
+      B2: TTG
+      spacer: GC
+    - B1: ATG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Adamtsl3:
+    variants:
+    - B1: ACT
+      B2: AGT
+      spacer: A
+    - B1: ACT
+      B2: AGT
+      spacer: C
+    - B1: ACT
+      B2: AGT
+      spacer: G
+    - B1: ACT
+      B2: AGT
+      spacer: T
+    - B1: ACT
+      B2: AGT
+      spacer: AC
+    - B1: ACT
+      B2: AGT
+      spacer: CC
+    - B1: ACT
+      B2: AGT
+      spacer: GC
+    - B1: ACT
+      B2: AGT
+      spacer: TC
+    variant_count: 8
+  Adarb2:
+    variants:
+    - B1: GGC
+      B2: TGT
+      spacer: A
+    - B1: GGC
+      B2: TGT
+      spacer: C
+    - B1: GGC
+      B2: TGT
+      spacer: G
+    - B1: GGC
+      B2: TGT
+      spacer: T
+    - B1: GGC
+      B2: TGT
+      spacer: AC
+    - B1: GGC
+      B2: TGT
+      spacer: CC
+    - B1: GGC
+      B2: TGT
+      spacer: GC
+    - B1: GGC
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Adgrl4:
+    variants:
+    - B1: CCC
+      B2: TGG
+      spacer: A
+    - B1: CCC
+      B2: TGG
+      spacer: C
+    - B1: CCC
+      B2: TGG
+      spacer: G
+    - B1: CCC
+      B2: TGG
+      spacer: T
+    - B1: CCC
+      B2: TGG
+      spacer: AC
+    - B1: CCC
+      B2: TGG
+      spacer: CC
+    - B1: CCC
+      B2: TGG
+      spacer: GC
+    - B1: CCC
+      B2: TGG
+      spacer: TC
+    variant_count: 8
+  Adgrv1:
+    variants:
+    - B1: CAG
+      B2: CGT
+      spacer: A
+    - B1: CAG
+      B2: CGT
+      spacer: C
+    - B1: CAG
+      B2: CGT
+      spacer: G
+    - B1: CAG
+      B2: CGT
+      spacer: T
+    - B1: CAG
+      B2: CGT
+      spacer: AC
+    - B1: CAG
+      B2: CGT
+      spacer: CC
+    - B1: CAG
+      B2: CGT
+      spacer: GC
+    - B1: CAG
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Airn:
+    variants:
+    - B1: CCA
+      B2: CGA
+      spacer: A
+    - B1: CCA
+      B2: CGA
+      spacer: C
+    - B1: CCA
+      B2: CGA
+      spacer: G
+    - B1: CCA
+      B2: CGA
+      spacer: T
+    - B1: CCA
+      B2: CGA
+      spacer: AC
+    - B1: CCA
+      B2: CGA
+      spacer: CC
+    - B1: CCA
+      B2: CGA
+      spacer: GC
+    - B1: CCA
+      B2: CGA
+      spacer: TC
+    variant_count: 8
+  Apold1:
+    variants:
+    - B1: ACA
+      B2: AGA
+      spacer: A
+    - B1: ACA
+      B2: AGA
+      spacer: C
+    - B1: ACA
+      B2: AGA
+      spacer: G
+    - B1: ACA
+      B2: AGA
+      spacer: T
+    - B1: ACA
+      B2: AGA
+      spacer: AC
+    - B1: ACA
+      B2: AGA
+      spacer: CC
+    - B1: ACA
+      B2: AGA
+      spacer: GC
+    - B1: ACA
+      B2: AGA
+      spacer: TC
+    variant_count: 8
+  Arhgap42:
+    variants:
+    - B1: TGA
+      B2: TGT
+      spacer: A
+    - B1: TGA
+      B2: TGT
+      spacer: C
+    - B1: TGA
+      B2: TGT
+      spacer: G
+    - B1: TGA
+      B2: TGT
+      spacer: T
+    - B1: TGA
+      B2: TGT
+      spacer: AC
+    - B1: TGA
+      B2: TGT
+      spacer: CC
+    - B1: TGA
+      B2: TGT
+      spacer: GC
+    - B1: TGA
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Arhgef3:
+    variants:
+    - B1: AAC
+      B2: GCC
+      spacer: A
+    - B1: AAC
+      B2: GCC
+      spacer: C
+    - B1: AAC
+      B2: GCC
+      spacer: G
+    - B1: AAC
+      B2: GCC
+      spacer: T
+    - B1: AAC
+      B2: GCC
+      spacer: AC
+    - B1: AAC
+      B2: GCC
+      spacer: CC
+    - B1: AAC
+      B2: GCC
+      spacer: GC
+    - B1: AAC
+      B2: GCC
+      spacer: TC
+    variant_count: 8
+  Atp13a5:
+    variants:
+    - B1: CAG
+      B2: CGG
+      spacer: A
+    - B1: CAG
+      B2: CGG
+      spacer: C
+    - B1: CAG
+      B2: CGG
+      spacer: G
+    - B1: CAG
+      B2: CGG
+      spacer: T
+    - B1: CAG
+      B2: CGG
+      spacer: AC
+    - B1: CAG
+      B2: CGG
+      spacer: CC
+    - B1: CAG
+      B2: CGG
+      spacer: GC
+    - B1: CAG
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Bcl6b:
+    variants:
+    - B1: AAT
+      B2: CTT
+      spacer: A
+    - B1: AAT
+      B2: CTT
+      spacer: C
+    - B1: AAT
+      B2: CTT
+      spacer: G
+    - B1: AAT
+      B2: CTT
+      spacer: T
+    - B1: AAT
+      B2: CTT
+      spacer: AC
+    - B1: AAT
+      B2: CTT
+      spacer: CC
+    - B1: AAT
+      B2: CTT
+      spacer: GC
+    - B1: AAT
+      B2: CTT
+      spacer: TC
+    variant_count: 8
+  Bicc1:
+    variants:
+    - B1: GAC
+      B2: GAT
+      spacer: A
+    - B1: GAC
+      B2: GAT
+      spacer: C
+    - B1: GAC
+      B2: GAT
+      spacer: G
+    - B1: GAC
+      B2: GAT
+      spacer: T
+    - B1: GAC
+      B2: GAT
+      spacer: AC
+    - B1: GAC
+      B2: GAT
+      spacer: CC
+    - B1: GAC
+      B2: GAT
+      spacer: GC
+    - B1: GAC
+      B2: GAT
+      spacer: TC
+    variant_count: 8
+  Bmp6:
+    variants:
+    - B1: ACT
+      B2: GCT
+      spacer: A
+    - B1: ACT
+      B2: GCT
+      spacer: C
+    - B1: ACT
+      B2: GCT
+      spacer: G
+    - B1: ACT
+      B2: GCT
+      spacer: T
+    - B1: ACT
+      B2: GCT
+      spacer: AC
+    - B1: ACT
+      B2: GCT
+      spacer: CC
+    - B1: ACT
+      B2: GCT
+      spacer: GC
+    - B1: ACT
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  Bnc2:
+    variants:
+    - B1: CCC
+      B2: GCC
+      spacer: A
+    - B1: CCC
+      B2: GCC
+      spacer: C
+    - B1: CCC
+      B2: GCC
+      spacer: G
+    - B1: CCC
+      B2: GCC
+      spacer: T
+    - B1: CCC
+      B2: GCC
+      spacer: AC
+    - B1: CCC
+      B2: GCC
+      spacer: CC
+    - B1: CCC
+      B2: GCC
+      spacer: GC
+    - B1: CCC
+      B2: GCC
+      spacer: TC
+    variant_count: 8
+  C1qa:
+    variants:
+    - B1: TGG
+      B2: TGT
+      spacer: A
+    - B1: TGG
+      B2: TGT
+      spacer: C
+    - B1: TGG
+      B2: TGT
+      spacer: G
+    - B1: TGG
+      B2: TGT
+      spacer: T
+    - B1: TGG
+      B2: TGT
+      spacer: AC
+    - B1: TGG
+      B2: TGT
+      spacer: CC
+    - B1: TGG
+      B2: TGT
+      spacer: GC
+    - B1: TGG
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  C1qb:
+    variants:
+    - B1: AGA
+      B2: TTT
+      spacer: A
+    - B1: AGA
+      B2: TTT
+      spacer: C
+    - B1: AGA
+      B2: TTT
+      spacer: G
+    - B1: AGA
+      B2: TTT
+      spacer: T
+    - B1: AGA
+      B2: TTT
+      spacer: AC
+    - B1: AGA
+      B2: TTT
+      spacer: CC
+    - B1: AGA
+      B2: TTT
+      spacer: GC
+    - B1: AGA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Car10:
+    variants:
+    - B1: AGT
+      B2: TGT
+      spacer: A
+    - B1: AGT
+      B2: TGT
+      spacer: C
+    - B1: AGT
+      B2: TGT
+      spacer: G
+    - B1: AGT
+      B2: TGT
+      spacer: T
+    - B1: AGT
+      B2: TGT
+      spacer: AC
+    - B1: AGT
+      B2: TGT
+      spacer: CC
+    - B1: AGT
+      B2: TGT
+      spacer: GC
+    - B1: AGT
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Ccdc141:
+    variants:
+    - B1: CCC
+      B2: GCT
+      spacer: A
+    - B1: CCC
+      B2: GCT
+      spacer: C
+    - B1: CCC
+      B2: GCT
+      spacer: G
+    - B1: CCC
+      B2: GCT
+      spacer: T
+    - B1: CCC
+      B2: GCT
+      spacer: AC
+    - B1: CCC
+      B2: GCT
+      spacer: CC
+    - B1: CCC
+      B2: GCT
+      spacer: GC
+    - B1: CCC
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  Ccl3:
+    variants:
+    - B1: CCC
+      B2: CCT
+      spacer: A
+    - B1: CCC
+      B2: CCT
+      spacer: C
+    - B1: CCC
+      B2: CCT
+      spacer: G
+    - B1: CCC
+      B2: CCT
+      spacer: T
+    - B1: CCC
+      B2: CCT
+      spacer: AC
+    - B1: CCC
+      B2: CCT
+      spacer: CC
+    - B1: CCC
+      B2: CCT
+      spacer: GC
+    - B1: CCC
+      B2: CCT
+      spacer: TC
+    variant_count: 8
+  Cdh20:
+    variants:
+    - B1: CAA
+      B2: GCG
+      spacer: A
+    - B1: CAA
+      B2: GCG
+      spacer: C
+    - B1: CAA
+      B2: GCG
+      spacer: G
+    - B1: CAA
+      B2: GCG
+      spacer: T
+    - B1: CAA
+      B2: GCG
+      spacer: AC
+    - B1: CAA
+      B2: GCG
+      spacer: CC
+    - B1: CAA
+      B2: GCG
+      spacer: GC
+    - B1: CAA
+      B2: GCG
+      spacer: TC
+    variant_count: 8
+  Celf3:
+    variants:
+    - B1: CCG
+      B2: TGT
+      spacer: A
+    - B1: CCG
+      B2: TGT
+      spacer: C
+    - B1: CCG
+      B2: TGT
+      spacer: G
+    - B1: CCG
+      B2: TGT
+      spacer: T
+    - B1: CCG
+      B2: TGT
+      spacer: AC
+    - B1: CCG
+      B2: TGT
+      spacer: CC
+    - B1: CCG
+      B2: TGT
+      spacer: GC
+    - B1: CCG
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Col1a1:
+    variants:
+    - B1: CAC
+      B2: TCT
+      spacer: A
+    - B1: CAC
+      B2: TCT
+      spacer: C
+    - B1: CAC
+      B2: TCT
+      spacer: G
+    - B1: CAC
+      B2: TCT
+      spacer: T
+    - B1: CAC
+      B2: TCT
+      spacer: AC
+    - B1: CAC
+      B2: TCT
+      spacer: CC
+    - B1: CAC
+      B2: TCT
+      spacer: GC
+    - B1: CAC
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Col3a1:
+    variants:
+    - B1: CCA
+      B2: CTA
+      spacer: A
+    - B1: CCA
+      B2: CTA
+      spacer: C
+    - B1: CCA
+      B2: CTA
+      spacer: G
+    - B1: CCA
+      B2: CTA
+      spacer: T
+    - B1: CCA
+      B2: CTA
+      spacer: AC
+    - B1: CCA
+      B2: CTA
+      spacer: CC
+    - B1: CCA
+      B2: CTA
+      spacer: GC
+    - B1: CCA
+      B2: CTA
+      spacer: TC
+    variant_count: 8
+  Col12a1:
+    variants:
+    - B1: TTC
+      B2: TTG
+      spacer: A
+    - B1: TTC
+      B2: TTG
+      spacer: C
+    - B1: TTC
+      B2: TTG
+      spacer: G
+    - B1: TTC
+      B2: TTG
+      spacer: T
+    - B1: TTC
+      B2: TTG
+      spacer: AC
+    - B1: TTC
+      B2: TTG
+      spacer: CC
+    - B1: TTC
+      B2: TTG
+      spacer: GC
+    - B1: TTC
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Col23a1:
+    variants:
+    - B1: AAT
+      B2: TAT
+      spacer: A
+    - B1: AAT
+      B2: TAT
+      spacer: C
+    - B1: AAT
+      B2: TAT
+      spacer: G
+    - B1: AAT
+      B2: TAT
+      spacer: T
+    - B1: AAT
+      B2: TAT
+      spacer: AC
+    - B1: AAT
+      B2: TAT
+      spacer: CC
+    - B1: AAT
+      B2: TAT
+      spacer: GC
+    - B1: AAT
+      B2: TAT
+      spacer: TC
+    variant_count: 8
+  Csf1:
+    variants:
+    - B1: AAG
+      B2: TGT
+      spacer: A
+    - B1: AAG
+      B2: TGT
+      spacer: C
+    - B1: AAG
+      B2: TGT
+      spacer: G
+    - B1: AAG
+      B2: TGT
+      spacer: T
+    - B1: AAG
+      B2: TGT
+      spacer: AC
+    - B1: AAG
+      B2: TGT
+      spacer: CC
+    - B1: AAG
+      B2: TGT
+      spacer: GC
+    - B1: AAG
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Csf1r:
+    variants:
+    - B1: GCA
+      B2: GCC
+      spacer: A
+    - B1: GCA
+      B2: GCC
+      spacer: C
+    - B1: GCA
+      B2: GCC
+      spacer: G
+    - B1: GCA
+      B2: GCC
+      spacer: T
+    - B1: GCA
+      B2: GCC
+      spacer: AC
+    - B1: GCA
+      B2: GCC
+      spacer: CC
+    - B1: GCA
+      B2: GCC
+      spacer: GC
+    - B1: GCA
+      B2: GCC
+      spacer: TC
+    variant_count: 8
+  Cxcl1:
+    variants:
+    - B1: TCG
+      B2: TTG
+      spacer: A
+    - B1: TCG
+      B2: TTG
+      spacer: C
+    - B1: TCG
+      B2: TTG
+      spacer: G
+    - B1: TCG
+      B2: TTG
+      spacer: T
+    - B1: TCG
+      B2: TTG
+      spacer: AC
+    - B1: TCG
+      B2: TTG
+      spacer: CC
+    - B1: TCG
+      B2: TTG
+      spacer: GC
+    - B1: TCG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Cxcl2:
+    variants:
+    - B1: ACG
+      B2: CCT
+      spacer: A
+    - B1: ACG
+      B2: CCT
+      spacer: C
+    - B1: ACG
+      B2: CCT
+      spacer: G
+    - B1: ACG
+      B2: CCT
+      spacer: T
+    - B1: ACG
+      B2: CCT
+      spacer: AC
+    - B1: ACG
+      B2: CCT
+      spacer: CC
+    - B1: ACG
+      B2: CCT
+      spacer: GC
+    - B1: ACG
+      B2: CCT
+      spacer: TC
+    variant_count: 8
+  Cxcl10:
+    variants:
+    - B1: AGC
+      B2: AGC
+      spacer: A
+    - B1: AGC
+      B2: AGC
+      spacer: C
+    - B1: AGC
+      B2: AGC
+      spacer: G
+    - B1: AGC
+      B2: AGC
+      spacer: T
+    - B1: AGC
+      B2: AGC
+      spacer: AC
+    - B1: AGC
+      B2: AGC
+      spacer: CC
+    - B1: AGC
+      B2: AGC
+      spacer: GC
+    - B1: AGC
+      B2: AGC
+      spacer: TC
+    variant_count: 8
+  Diaph3:
+    variants:
+    - B1: GAG
+      B2: TTG
+      spacer: A
+    - B1: GAG
+      B2: TTG
+      spacer: C
+    - B1: GAG
+      B2: TTG
+      spacer: G
+    - B1: GAG
+      B2: TTG
+      spacer: T
+    - B1: GAG
+      B2: TTG
+      spacer: AC
+    - B1: GAG
+      B2: TTG
+      spacer: CC
+    - B1: GAG
+      B2: TTG
+      spacer: GC
+    - B1: GAG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Egfl7:
+    variants:
+    - B1: AAT
+      B2: TGT
+      spacer: A
+    - B1: AAT
+      B2: TGT
+      spacer: C
+    - B1: AAT
+      B2: TGT
+      spacer: G
+    - B1: AAT
+      B2: TGT
+      spacer: T
+    - B1: AAT
+      B2: TGT
+      spacer: AC
+    - B1: AAT
+      B2: TGT
+      spacer: CC
+    - B1: AAT
+      B2: TGT
+      spacer: GC
+    - B1: AAT
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Ephb1:
+    variants:
+    - B1: GGT
+      B2: TTT
+      spacer: A
+    - B1: GGT
+      B2: TTT
+      spacer: C
+    - B1: GGT
+      B2: TTT
+      spacer: G
+    - B1: GGT
+      B2: TTT
+      spacer: T
+    - B1: GGT
+      B2: TTT
+      spacer: AC
+    - B1: GGT
+      B2: TTT
+      spacer: CC
+    - B1: GGT
+      B2: TTT
+      spacer: GC
+    - B1: GGT
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Epn2:
+    variants:
+    - B1: TAG
+      B2: TCT
+      spacer: A
+    - B1: TAG
+      B2: TCT
+      spacer: C
+    - B1: TAG
+      B2: TCT
+      spacer: G
+    - B1: TAG
+      B2: TCT
+      spacer: T
+    - B1: TAG
+      B2: TCT
+      spacer: AC
+    - B1: TAG
+      B2: TCT
+      spacer: CC
+    - B1: TAG
+      B2: TCT
+      spacer: GC
+    - B1: TAG
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Fxyd5:
+    variants:
+    - B1: TTG
+      B2: TTG
+      spacer: A
+    - B1: TTG
+      B2: TTG
+      spacer: C
+    - B1: TTG
+      B2: TTG
+      spacer: G
+    - B1: TTG
+      B2: TTG
+      spacer: T
+    - B1: TTG
+      B2: TTG
+      spacer: AC
+    - B1: TTG
+      B2: TTG
+      spacer: CC
+    - B1: TTG
+      B2: TTG
+      spacer: GC
+    - B1: TTG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Gabrb3:
+    variants:
+    - B1: CAA
+      B2: CCG
+      spacer: A
+    - B1: CAA
+      B2: CCG
+      spacer: C
+    - B1: CAA
+      B2: CCG
+      spacer: G
+    - B1: CAA
+      B2: CCG
+      spacer: T
+    - B1: CAA
+      B2: CCG
+      spacer: AC
+    - B1: CAA
+      B2: CCG
+      spacer: CC
+    - B1: CAA
+      B2: CCG
+      spacer: GC
+    - B1: CAA
+      B2: CCG
+      spacer: TC
+    variant_count: 8
+  Glis3:
+    variants:
+    - B1: CGC
+      B2: TTC
+      spacer: A
+    - B1: CGC
+      B2: TTC
+      spacer: C
+    - B1: CGC
+      B2: TTC
+      spacer: G
+    - B1: CGC
+      B2: TTC
+      spacer: T
+    - B1: CGC
+      B2: TTC
+      spacer: AC
+    - B1: CGC
+      B2: TTC
+      spacer: CC
+    - B1: CGC
+      B2: TTC
+      spacer: GC
+    - B1: CGC
+      B2: TTC
+      spacer: TC
+    variant_count: 8
+  Glra2:
+    variants:
+    - B1: CCA
+      B2: CTG
+      spacer: A
+    - B1: CCA
+      B2: CTG
+      spacer: C
+    - B1: CCA
+      B2: CTG
+      spacer: G
+    - B1: CCA
+      B2: CTG
+      spacer: T
+    - B1: CCA
+      B2: CTG
+      spacer: AC
+    - B1: CCA
+      B2: CTG
+      spacer: CC
+    - B1: CCA
+      B2: CTG
+      spacer: GC
+    - B1: CCA
+      B2: CTG
+      spacer: TC
+    variant_count: 8
+  Gm3764:
+    variants:
+    - B1: AGA
+      B2: TTA
+      spacer: A
+    - B1: AGA
+      B2: TTA
+      spacer: C
+    - B1: AGA
+      B2: TTA
+      spacer: G
+    - B1: AGA
+      B2: TTA
+      spacer: T
+    - B1: AGA
+      B2: TTA
+      spacer: AC
+    - B1: AGA
+      B2: TTA
+      spacer: CC
+    - B1: AGA
+      B2: TTA
+      spacer: GC
+    - B1: AGA
+      B2: TTA
+      spacer: TC
+    variant_count: 8
+  Gria1:
+    variants:
+    - B1: GGC
+      B2: TGG
+      spacer: A
+    - B1: GGC
+      B2: TGG
+      spacer: C
+    - B1: GGC
+      B2: TGG
+      spacer: G
+    - B1: GGC
+      B2: TGG
+      spacer: T
+    - B1: GGC
+      B2: TGG
+      spacer: AC
+    - B1: GGC
+      B2: TGG
+      spacer: CC
+    - B1: GGC
+      B2: TGG
+      spacer: GC
+    - B1: GGC
+      B2: TGG
+      spacer: TC
+    variant_count: 8
+  Grm3:
+    variants:
+    - B1: AAA
+      B2: AGT
+      spacer: A
+    - B1: AAA
+      B2: AGT
+      spacer: C
+    - B1: AAA
+      B2: AGT
+      spacer: G
+    - B1: AAA
+      B2: AGT
+      spacer: T
+    - B1: AAA
+      B2: AGT
+      spacer: AC
+    - B1: AAA
+      B2: AGT
+      spacer: CC
+    - B1: AAA
+      B2: AGT
+      spacer: GC
+    - B1: AAA
+      B2: AGT
+      spacer: TC
+    variant_count: 8
+  Hmgb2:
+    variants:
+    - B1: CTT
+      B2: GTT
+      spacer: A
+    - B1: CTT
+      B2: GTT
+      spacer: C
+    - B1: CTT
+      B2: GTT
+      spacer: G
+    - B1: CTT
+      B2: GTT
+      spacer: T
+    - B1: CTT
+      B2: GTT
+      spacer: AC
+    - B1: CTT
+      B2: GTT
+      spacer: CC
+    - B1: CTT
+      B2: GTT
+      spacer: GC
+    - B1: CTT
+      B2: GTT
+      spacer: TC
+    variant_count: 8
+  Icam1:
+    variants:
+    - B1: CGA
+      B2: CGG
+      spacer: A
+    - B1: CGA
+      B2: CGG
+      spacer: C
+    - B1: CGA
+      B2: CGG
+      spacer: G
+    - B1: CGA
+      B2: CGG
+      spacer: T
+    - B1: CGA
+      B2: CGG
+      spacer: AC
+    - B1: CGA
+      B2: CGG
+      spacer: CC
+    - B1: CGA
+      B2: CGG
+      spacer: GC
+    - B1: CGA
+      B2: CGG
+      spacer: TC
+    variant_count: 8
+  Ifit1:
+    variants:
+    - B1: AAT
+      B2: GGT
+      spacer: A
+    - B1: AAT
+      B2: GGT
+      spacer: C
+    - B1: AAT
+      B2: GGT
+      spacer: G
+    - B1: AAT
+      B2: GGT
+      spacer: T
+    - B1: AAT
+      B2: GGT
+      spacer: AC
+    - B1: AAT
+      B2: GGT
+      spacer: CC
+    - B1: AAT
+      B2: GGT
+      spacer: GC
+    - B1: AAT
+      B2: GGT
+      spacer: TC
+    variant_count: 8
+  Igf2:
+    variants:
+    - B1: CTC
+      B2: TTT
+      spacer: A
+    - B1: CTC
+      B2: TTT
+      spacer: C
+    - B1: CTC
+      B2: TTT
+      spacer: G
+    - B1: CTC
+      B2: TTT
+      spacer: T
+    - B1: CTC
+      B2: TTT
+      spacer: AC
+    - B1: CTC
+      B2: TTT
+      spacer: CC
+    - B1: CTC
+      B2: TTT
+      spacer: GC
+    - B1: CTC
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Igfbp2:
+    variants:
+    - B1: ACA
+      B2: GCA
+      spacer: A
+    - B1: ACA
+      B2: GCA
+      spacer: C
+    - B1: ACA
+      B2: GCA
+      spacer: G
+    - B1: ACA
+      B2: GCA
+      spacer: T
+    - B1: ACA
+      B2: GCA
+      spacer: AC
+    - B1: ACA
+      B2: GCA
+      spacer: CC
+    - B1: ACA
+      B2: GCA
+      spacer: GC
+    - B1: ACA
+      B2: GCA
+      spacer: TC
+    variant_count: 8
+  Inpp5d:
+    variants:
+    - B1: AAG
+      B2: CGT
+      spacer: A
+    - B1: AAG
+      B2: CGT
+      spacer: C
+    - B1: AAG
+      B2: CGT
+      spacer: G
+    - B1: AAG
+      B2: CGT
+      spacer: T
+    - B1: AAG
+      B2: CGT
+      spacer: AC
+    - B1: AAG
+      B2: CGT
+      spacer: CC
+    - B1: AAG
+      B2: CGT
+      spacer: GC
+    - B1: AAG
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Irf1:
+    variants:
+    - B1: GAA
+      B2: TGC
+      spacer: A
+    - B1: GAA
+      B2: TGC
+      spacer: C
+    - B1: GAA
+      B2: TGC
+      spacer: G
+    - B1: GAA
+      B2: TGC
+      spacer: T
+    - B1: GAA
+      B2: TGC
+      spacer: AC
+    - B1: GAA
+      B2: TGC
+      spacer: CC
+    - B1: GAA
+      B2: TGC
+      spacer: GC
+    - B1: GAA
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Junb:
+    variants:
+    - B1: AGC
+      B2: GTG
+      spacer: A
+    - B1: AGC
+      B2: GTG
+      spacer: C
+    - B1: AGC
+      B2: GTG
+      spacer: G
+    - B1: AGC
+      B2: GTG
+      spacer: T
+    - B1: AGC
+      B2: GTG
+      spacer: AC
+    - B1: AGC
+      B2: GTG
+      spacer: CC
+    - B1: AGC
+      B2: GTG
+      spacer: GC
+    - B1: AGC
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Kctd16:
+    variants:
+    - B1: GGA
+      B2: TTT
+      spacer: A
+    - B1: GGA
+      B2: TTT
+      spacer: C
+    - B1: GGA
+      B2: TTT
+      spacer: G
+    - B1: GGA
+      B2: TTT
+      spacer: T
+    - B1: GGA
+      B2: TTT
+      spacer: AC
+    - B1: GGA
+      B2: TTT
+      spacer: CC
+    - B1: GGA
+      B2: TTT
+      spacer: GC
+    - B1: GGA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Kdm6b:
+    variants:
+    - B1: CAA
+      B2: GAA
+      spacer: A
+    - B1: CAA
+      B2: GAA
+      spacer: C
+    - B1: CAA
+      B2: GAA
+      spacer: G
+    - B1: CAA
+      B2: GAA
+      spacer: T
+    - B1: CAA
+      B2: GAA
+      spacer: AC
+    - B1: CAA
+      B2: GAA
+      spacer: CC
+    - B1: CAA
+      B2: GAA
+      spacer: GC
+    - B1: CAA
+      B2: GAA
+      spacer: TC
+    variant_count: 8
+  Kif11:
+    variants:
+    - B1: CAA
+      B2: TCG
+      spacer: A
+    - B1: CAA
+      B2: TCG
+      spacer: C
+    - B1: CAA
+      B2: TCG
+      spacer: G
+    - B1: CAA
+      B2: TCG
+      spacer: T
+    - B1: CAA
+      B2: TCG
+      spacer: AC
+    - B1: CAA
+      B2: TCG
+      spacer: CC
+    - B1: CAA
+      B2: TCG
+      spacer: GC
+    - B1: CAA
+      B2: TCG
+      spacer: TC
+    variant_count: 8
+  Kifc1:
+    variants:
+    - B1: TAG
+      B2: TAT
+      spacer: A
+    - B1: TAG
+      B2: TAT
+      spacer: C
+    - B1: TAG
+      B2: TAT
+      spacer: G
+    - B1: TAG
+      B2: TAT
+      spacer: T
+    - B1: TAG
+      B2: TAT
+      spacer: AC
+    - B1: TAG
+      B2: TAT
+      spacer: CC
+    - B1: TAG
+      B2: TAT
+      spacer: GC
+    - B1: TAG
+      B2: TAT
+      spacer: TC
+    variant_count: 8
+  Laptm5:
+    variants:
+    - B1: AAC
+      B2: TTG
+      spacer: A
+    - B1: AAC
+      B2: TTG
+      spacer: C
+    - B1: AAC
+      B2: TTG
+      spacer: G
+    - B1: AAC
+      B2: TTG
+      spacer: T
+    - B1: AAC
+      B2: TTG
+      spacer: AC
+    - B1: AAC
+      B2: TTG
+      spacer: CC
+    - B1: AAC
+      B2: TTG
+      spacer: GC
+    - B1: AAC
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Lgmn:
+    variants:
+    - B1: CGG
+      B2: GTG
+      spacer: A
+    - B1: CGG
+      B2: GTG
+      spacer: C
+    - B1: CGG
+      B2: GTG
+      spacer: G
+    - B1: CGG
+      B2: GTG
+      spacer: T
+    - B1: CGG
+      B2: GTG
+      spacer: AC
+    - B1: CGG
+      B2: GTG
+      spacer: CC
+    - B1: CGG
+      B2: GTG
+      spacer: GC
+    - B1: CGG
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Lhx9:
+    variants:
+    - B1: ACA
+      B2: TTT
+      spacer: A
+    - B1: ACA
+      B2: TTT
+      spacer: C
+    - B1: ACA
+      B2: TTT
+      spacer: G
+    - B1: ACA
+      B2: TTT
+      spacer: T
+    - B1: ACA
+      B2: TTT
+      spacer: AC
+    - B1: ACA
+      B2: TTT
+      spacer: CC
+    - B1: ACA
+      B2: TTT
+      spacer: GC
+    - B1: ACA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Lrfn5:
+    variants:
+    - B1: GCA
+      B2: TGT
+      spacer: A
+    - B1: GCA
+      B2: TGT
+      spacer: C
+    - B1: GCA
+      B2: TGT
+      spacer: G
+    - B1: GCA
+      B2: TGT
+      spacer: T
+    - B1: GCA
+      B2: TGT
+      spacer: AC
+    - B1: GCA
+      B2: TGT
+      spacer: CC
+    - B1: GCA
+      B2: TGT
+      spacer: GC
+    - B1: GCA
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Mctp1:
+    variants:
+    - B1: AGC
+      B2: CTG
+      spacer: A
+    - B1: AGC
+      B2: CTG
+      spacer: C
+    - B1: AGC
+      B2: CTG
+      spacer: G
+    - B1: AGC
+      B2: CTG
+      spacer: T
+    - B1: AGC
+      B2: CTG
+      spacer: AC
+    - B1: AGC
+      B2: CTG
+      spacer: CC
+    - B1: AGC
+      B2: CTG
+      spacer: GC
+    - B1: AGC
+      B2: CTG
+      spacer: TC
+    variant_count: 8
+  Mecom:
+    variants:
+    - B1: GAA
+      B2: GTT
+      spacer: A
+    - B1: GAA
+      B2: GTT
+      spacer: C
+    - B1: GAA
+      B2: GTT
+      spacer: G
+    - B1: GAA
+      B2: GTT
+      spacer: T
+    - B1: GAA
+      B2: GTT
+      spacer: AC
+    - B1: GAA
+      B2: GTT
+      spacer: CC
+    - B1: GAA
+      B2: GTT
+      spacer: GC
+    - B1: GAA
+      B2: GTT
+      spacer: TC
+    variant_count: 8
+  Mef2c:
+    variants:
+    - B1: CAG
+      B2: TTG
+      spacer: A
+    - B1: CAG
+      B2: TTG
+      spacer: C
+    - B1: CAG
+      B2: TTG
+      spacer: G
+    - B1: CAG
+      B2: TTG
+      spacer: T
+    - B1: CAG
+      B2: TTG
+      spacer: AC
+    - B1: CAG
+      B2: TTG
+      spacer: CC
+    - B1: CAG
+      B2: TTG
+      spacer: GC
+    - B1: CAG
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Megf11:
+    variants:
+    - B1: ACG
+      B2: TCT
+      spacer: A
+    - B1: ACG
+      B2: TCT
+      spacer: C
+    - B1: ACG
+      B2: TCT
+      spacer: G
+    - B1: ACG
+      B2: TCT
+      spacer: T
+    - B1: ACG
+      B2: TCT
+      spacer: AC
+    - B1: ACG
+      B2: TCT
+      spacer: CC
+    - B1: ACG
+      B2: TCT
+      spacer: GC
+    - B1: ACG
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Mgp:
+    variants:
+    - B1: ACC
+      B2: ACC
+      spacer: A
+    - B1: ACC
+      B2: ACC
+      spacer: C
+    - B1: ACC
+      B2: ACC
+      spacer: G
+    - B1: ACC
+      B2: ACC
+      spacer: T
+    - B1: ACC
+      B2: ACC
+      spacer: AC
+    - B1: ACC
+      B2: ACC
+      spacer: CC
+    - B1: ACC
+      B2: ACC
+      spacer: GC
+    - B1: ACC
+      B2: ACC
+      spacer: TC
+    variant_count: 8
+  Mki67:
+    variants:
+    - B1: GCA
+      B2: TGC
+      spacer: A
+    - B1: GCA
+      B2: TGC
+      spacer: C
+    - B1: GCA
+      B2: TGC
+      spacer: G
+    - B1: GCA
+      B2: TGC
+      spacer: T
+    - B1: GCA
+      B2: TGC
+      spacer: AC
+    - B1: GCA
+      B2: TGC
+      spacer: CC
+    - B1: GCA
+      B2: TGC
+      spacer: GC
+    - B1: GCA
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Mpped1:
+    variants:
+    - B1: CGA
+      B2: TTA
+      spacer: A
+    - B1: CGA
+      B2: TTA
+      spacer: C
+    - B1: CGA
+      B2: TTA
+      spacer: G
+    - B1: CGA
+      B2: TTA
+      spacer: T
+    - B1: CGA
+      B2: TTA
+      spacer: AC
+    - B1: CGA
+      B2: TTA
+      spacer: CC
+    - B1: CGA
+      B2: TTA
+      spacer: GC
+    - B1: CGA
+      B2: TTA
+      spacer: TC
+    variant_count: 8
+  Msra:
+    variants:
+    - B1: AAA
+      B2: GAT
+      spacer: A
+    - B1: AAA
+      B2: GAT
+      spacer: C
+    - B1: AAA
+      B2: GAT
+      spacer: G
+    - B1: AAA
+      B2: GAT
+      spacer: T
+    - B1: AAA
+      B2: GAT
+      spacer: AC
+    - B1: AAA
+      B2: GAT
+      spacer: CC
+    - B1: AAA
+      B2: GAT
+      spacer: GC
+    - B1: AAA
+      B2: GAT
+      spacer: TC
+    variant_count: 8
+  Nap1l5:
+    variants:
+    - B1: CAA
+      B2: TTT
+      spacer: A
+    - B1: CAA
+      B2: TTT
+      spacer: C
+    - B1: CAA
+      B2: TTT
+      spacer: G
+    - B1: CAA
+      B2: TTT
+      spacer: T
+    - B1: CAA
+      B2: TTT
+      spacer: AC
+    - B1: CAA
+      B2: TTT
+      spacer: CC
+    - B1: CAA
+      B2: TTT
+      spacer: GC
+    - B1: CAA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Neto1:
+    variants:
+    - B1: GCA
+      B2: GGC
+      spacer: A
+    - B1: GCA
+      B2: GGC
+      spacer: C
+    - B1: GCA
+      B2: GGC
+      spacer: G
+    - B1: GCA
+      B2: GGC
+      spacer: T
+    - B1: GCA
+      B2: GGC
+      spacer: AC
+    - B1: GCA
+      B2: GGC
+      spacer: CC
+    - B1: GCA
+      B2: GGC
+      spacer: GC
+    - B1: GCA
+      B2: GGC
+      spacer: TC
+    variant_count: 8
+  Nfkbia:
+    variants:
+    - B1: GTA
+      B2: TTT
+      spacer: A
+    - B1: GTA
+      B2: TTT
+      spacer: C
+    - B1: GTA
+      B2: TTT
+      spacer: G
+    - B1: GTA
+      B2: TTT
+      spacer: T
+    - B1: GTA
+      B2: TTT
+      spacer: AC
+    - B1: GTA
+      B2: TTT
+      spacer: CC
+    - B1: GTA
+      B2: TTT
+      spacer: GC
+    - B1: GTA
+      B2: TTT
+      spacer: TC
+    variant_count: 8
+  Nfkbiz:
+    variants:
+    - B1: AAG
+      B2: AAT
+      spacer: A
+    - B1: AAG
+      B2: AAT
+      spacer: C
+    - B1: AAG
+      B2: AAT
+      spacer: G
+    - B1: AAG
+      B2: AAT
+      spacer: T
+    - B1: AAG
+      B2: AAT
+      spacer: AC
+    - B1: AAG
+      B2: AAT
+      spacer: CC
+    - B1: AAG
+      B2: AAT
+      spacer: GC
+    - B1: AAG
+      B2: AAT
+      spacer: TC
+    variant_count: 8
+  Nhsl1:
+    variants:
+    - B1: CAA
+      B2: GGG
+      spacer: A
+    - B1: CAA
+      B2: GGG
+      spacer: C
+    - B1: CAA
+      B2: GGG
+      spacer: G
+    - B1: CAA
+      B2: GGG
+      spacer: T
+    - B1: CAA
+      B2: GGG
+      spacer: AC
+    - B1: CAA
+      B2: GGG
+      spacer: CC
+    - B1: CAA
+      B2: GGG
+      spacer: GC
+    - B1: CAA
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Nkx2-1:
+    variants:
+    - B1: CGA
+      B2: CTA
+      spacer: A
+    - B1: CGA
+      B2: CTA
+      spacer: C
+    - B1: CGA
+      B2: CTA
+      spacer: G
+    - B1: CGA
+      B2: CTA
+      spacer: T
+    - B1: CGA
+      B2: CTA
+      spacer: AC
+    - B1: CGA
+      B2: CTA
+      spacer: CC
+    - B1: CGA
+      B2: CTA
+      spacer: GC
+    - B1: CGA
+      B2: CTA
+      spacer: TC
+    variant_count: 8
+  Nr4a1:
+    variants:
+    - B1: AGG
+      B2: ATT
+      spacer: A
+    - B1: AGG
+      B2: ATT
+      spacer: C
+    - B1: AGG
+      B2: ATT
+      spacer: G
+    - B1: AGG
+      B2: ATT
+      spacer: T
+    - B1: AGG
+      B2: ATT
+      spacer: AC
+    - B1: AGG
+      B2: ATT
+      spacer: CC
+    - B1: AGG
+      B2: ATT
+      spacer: GC
+    - B1: AGG
+      B2: ATT
+      spacer: TC
+    variant_count: 8
+  Nrg1:
+    variants:
+    - B1: CCA
+      B2: CTC
+      spacer: A
+    - B1: CCA
+      B2: CTC
+      spacer: C
+    - B1: CCA
+      B2: CTC
+      spacer: G
+    - B1: CCA
+      B2: CTC
+      spacer: T
+    - B1: CCA
+      B2: CTC
+      spacer: AC
+    - B1: CCA
+      B2: CTC
+      spacer: CC
+    - B1: CCA
+      B2: CTC
+      spacer: GC
+    - B1: CCA
+      B2: CTC
+      spacer: TC
+    variant_count: 8
+  Nwd2:
+    variants:
+    - B1: ATA
+      B2: TTG
+      spacer: A
+    - B1: ATA
+      B2: TTG
+      spacer: C
+    - B1: ATA
+      B2: TTG
+      spacer: G
+    - B1: ATA
+      B2: TTG
+      spacer: T
+    - B1: ATA
+      B2: TTG
+      spacer: AC
+    - B1: ATA
+      B2: TTG
+      spacer: CC
+    - B1: ATA
+      B2: TTG
+      spacer: GC
+    - B1: ATA
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Osmr:
+    variants:
+    - B1: ACA
+      B2: GTA
+      spacer: A
+    - B1: ACA
+      B2: GTA
+      spacer: C
+    - B1: ACA
+      B2: GTA
+      spacer: G
+    - B1: ACA
+      B2: GTA
+      spacer: T
+    - B1: ACA
+      B2: GTA
+      spacer: AC
+    - B1: ACA
+      B2: GTA
+      spacer: CC
+    - B1: ACA
+      B2: GTA
+      spacer: GC
+    - B1: ACA
+      B2: GTA
+      spacer: TC
+    variant_count: 8
+  Oxr1:
+    variants:
+    - B1: ATA
+      B2: TTA
+      spacer: A
+    - B1: ATA
+      B2: TTA
+      spacer: C
+    - B1: ATA
+      B2: TTA
+      spacer: G
+    - B1: ATA
+      B2: TTA
+      spacer: T
+    - B1: ATA
+      B2: TTA
+      spacer: AC
+    - B1: ATA
+      B2: TTA
+      spacer: CC
+    - B1: ATA
+      B2: TTA
+      spacer: GC
+    - B1: ATA
+      B2: TTA
+      spacer: TC
+    variant_count: 8
+  Pcdh11x:
+    variants:
+    - B1: AGA
+      B2: CTA
+      spacer: A
+    - B1: AGA
+      B2: CTA
+      spacer: C
+    - B1: AGA
+      B2: CTA
+      spacer: G
+    - B1: AGA
+      B2: CTA
+      spacer: T
+    - B1: AGA
+      B2: CTA
+      spacer: AC
+    - B1: AGA
+      B2: CTA
+      spacer: CC
+    - B1: AGA
+      B2: CTA
+      spacer: GC
+    - B1: AGA
+      B2: CTA
+      spacer: TC
+    variant_count: 8
+  Pde1c:
+    variants:
+    - B1: TCA
+      B2: TTA
+      spacer: A
+    - B1: TCA
+      B2: TTA
+      spacer: C
+    - B1: TCA
+      B2: TTA
+      spacer: G
+    - B1: TCA
+      B2: TTA
+      spacer: T
+    - B1: TCA
+      B2: TTA
+      spacer: AC
+    - B1: TCA
+      B2: TTA
+      spacer: CC
+    - B1: TCA
+      B2: TTA
+      spacer: GC
+    - B1: TCA
+      B2: TTA
+      spacer: TC
+    variant_count: 8
+  Pde5a:
+    variants:
+    - B1: AAG
+      B2: AGG
+      spacer: A
+    - B1: AAG
+      B2: AGG
+      spacer: C
+    - B1: AAG
+      B2: AGG
+      spacer: G
+    - B1: AAG
+      B2: AGG
+      spacer: T
+    - B1: AAG
+      B2: AGG
+      spacer: AC
+    - B1: AAG
+      B2: AGG
+      spacer: CC
+    - B1: AAG
+      B2: AGG
+      spacer: GC
+    - B1: AAG
+      B2: AGG
+      spacer: TC
+    variant_count: 8
+  Pde8b:
+    variants:
+    - B1: CGA
+      B2: TGC
+      spacer: A
+    - B1: CGA
+      B2: TGC
+      spacer: C
+    - B1: CGA
+      B2: TGC
+      spacer: G
+    - B1: CGA
+      B2: TGC
+      spacer: T
+    - B1: CGA
+      B2: TGC
+      spacer: AC
+    - B1: CGA
+      B2: TGC
+      spacer: CC
+    - B1: CGA
+      B2: TGC
+      spacer: GC
+    - B1: CGA
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Pdgfrb:
+    variants:
+    - B1: AAG
+      B2: TCT
+      spacer: A
+    - B1: AAG
+      B2: TCT
+      spacer: C
+    - B1: AAG
+      B2: TCT
+      spacer: G
+    - B1: AAG
+      B2: TCT
+      spacer: T
+    - B1: AAG
+      B2: TCT
+      spacer: AC
+    - B1: AAG
+      B2: TCT
+      spacer: CC
+    - B1: AAG
+      B2: TCT
+      spacer: GC
+    - B1: AAG
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Pgm2l1:
+    variants:
+    - B1: CGC
+      B2: TTG
+      spacer: A
+    - B1: CGC
+      B2: TTG
+      spacer: C
+    - B1: CGC
+      B2: TTG
+      spacer: G
+    - B1: CGC
+      B2: TTG
+      spacer: T
+    - B1: CGC
+      B2: TTG
+      spacer: AC
+    - B1: CGC
+      B2: TTG
+      spacer: CC
+    - B1: CGC
+      B2: TTG
+      spacer: GC
+    - B1: CGC
+      B2: TTG
+      spacer: TC
+    variant_count: 8
+  Plpp3:
+    variants:
+    - B1: AAC
+      B2: TCC
+      spacer: A
+    - B1: AAC
+      B2: TCC
+      spacer: C
+    - B1: AAC
+      B2: TCC
+      spacer: G
+    - B1: AAC
+      B2: TCC
+      spacer: T
+    - B1: AAC
+      B2: TCC
+      spacer: AC
+    - B1: AAC
+      B2: TCC
+      spacer: CC
+    - B1: AAC
+      B2: TCC
+      spacer: GC
+    - B1: AAC
+      B2: TCC
+      spacer: TC
+    variant_count: 8
+  Pou2f2:
+    variants:
+    - B1: CTC
+      B2: GTC
+      spacer: A
+    - B1: CTC
+      B2: GTC
+      spacer: C
+    - B1: CTC
+      B2: GTC
+      spacer: G
+    - B1: CTC
+      B2: GTC
+      spacer: T
+    - B1: CTC
+      B2: GTC
+      spacer: AC
+    - B1: CTC
+      B2: GTC
+      spacer: CC
+    - B1: CTC
+      B2: GTC
+      spacer: GC
+    - B1: CTC
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Ptch1:
+    variants:
+    - B1: CTG
+      B2: GTG
+      spacer: A
+    - B1: CTG
+      B2: GTG
+      spacer: C
+    - B1: CTG
+      B2: GTG
+      spacer: G
+    - B1: CTG
+      B2: GTG
+      spacer: T
+    - B1: CTG
+      B2: GTG
+      spacer: AC
+    - B1: CTG
+      B2: GTG
+      spacer: CC
+    - B1: CTG
+      B2: GTG
+      spacer: GC
+    - B1: CTG
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Ptprb:
+    variants:
+    - B1: CGA
+      B2: CGC
+      spacer: A
+    - B1: CGA
+      B2: CGC
+      spacer: C
+    - B1: CGA
+      B2: CGC
+      spacer: G
+    - B1: CGA
+      B2: CGC
+      spacer: T
+    - B1: CGA
+      B2: CGC
+      spacer: AC
+    - B1: CGA
+      B2: CGC
+      spacer: CC
+    - B1: CGA
+      B2: CGC
+      spacer: GC
+    - B1: CGA
+      B2: CGC
+      spacer: TC
+    variant_count: 8
+  Rfx4:
+    variants:
+    - B1: GCA
+      B2: TCT
+      spacer: A
+    - B1: GCA
+      B2: TCT
+      spacer: C
+    - B1: GCA
+      B2: TCT
+      spacer: G
+    - B1: GCA
+      B2: TCT
+      spacer: T
+    - B1: GCA
+      B2: TCT
+      spacer: AC
+    - B1: GCA
+      B2: TCT
+      spacer: CC
+    - B1: GCA
+      B2: TCT
+      spacer: GC
+    - B1: GCA
+      B2: TCT
+      spacer: TC
+    variant_count: 8
+  Rgs6:
+    variants:
+    - B1: GAA
+      B2: TCA
+      spacer: A
+    - B1: GAA
+      B2: TCA
+      spacer: C
+    - B1: GAA
+      B2: TCA
+      spacer: G
+    - B1: GAA
+      B2: TCA
+      spacer: T
+    - B1: GAA
+      B2: TCA
+      spacer: AC
+    - B1: GAA
+      B2: TCA
+      spacer: CC
+    - B1: GAA
+      B2: TCA
+      spacer: GC
+    - B1: GAA
+      B2: TCA
+      spacer: TC
+    variant_count: 8
+  Rnf220:
+    variants:
+    - B1: GAG
+      B2: GAT
+      spacer: A
+    - B1: GAG
+      B2: GAT
+      spacer: C
+    - B1: GAG
+      B2: GAT
+      spacer: G
+    - B1: GAG
+      B2: GAT
+      spacer: T
+    - B1: GAG
+      B2: GAT
+      spacer: AC
+    - B1: GAG
+      B2: GAT
+      spacer: CC
+    - B1: GAG
+      B2: GAT
+      spacer: GC
+    - B1: GAG
+      B2: GAT
+      spacer: TC
+    variant_count: 8
+  Rprm:
+    variants:
+    - B1: ACC
+      B2: AGT
+      spacer: A
+    - B1: ACC
+      B2: AGT
+      spacer: C
+    - B1: ACC
+      B2: AGT
+      spacer: G
+    - B1: ACC
+      B2: AGT
+      spacer: T
+    - B1: ACC
+      B2: AGT
+      spacer: AC
+    - B1: ACC
+      B2: AGT
+      spacer: CC
+    - B1: ACC
+      B2: AGT
+      spacer: GC
+    - B1: ACC
+      B2: AGT
+      spacer: TC
+    variant_count: 8
+  Satb2:
+    variants:
+    - B1: AAA
+      B2: TCA
+      spacer: A
+    - B1: AAA
+      B2: TCA
+      spacer: C
+    - B1: AAA
+      B2: TCA
+      spacer: G
+    - B1: AAA
+      B2: TCA
+      spacer: T
+    - B1: AAA
+      B2: TCA
+      spacer: AC
+    - B1: AAA
+      B2: TCA
+      spacer: CC
+    - B1: AAA
+      B2: TCA
+      spacer: GC
+    - B1: AAA
+      B2: TCA
+      spacer: TC
+    variant_count: 8
+  Sele:
+    variants:
+    - B1: ATG
+      B2: GTG
+      spacer: A
+    - B1: ATG
+      B2: GTG
+      spacer: C
+    - B1: ATG
+      B2: GTG
+      spacer: G
+    - B1: ATG
+      B2: GTG
+      spacer: T
+    - B1: ATG
+      B2: GTG
+      spacer: AC
+    - B1: ATG
+      B2: GTG
+      spacer: CC
+    - B1: ATG
+      B2: GTG
+      spacer: GC
+    - B1: ATG
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Sfxn5:
+    variants:
+    - B1: GGG
+      B2: GGG
+      spacer: A
+    - B1: GGG
+      B2: GGG
+      spacer: C
+    - B1: GGG
+      B2: GGG
+      spacer: G
+    - B1: GGG
+      B2: GGG
+      spacer: T
+    - B1: GGG
+      B2: GGG
+      spacer: AC
+    - B1: GGG
+      B2: GGG
+      spacer: CC
+    - B1: GGG
+      B2: GGG
+      spacer: GC
+    - B1: GGG
+      B2: GGG
+      spacer: TC
+    variant_count: 8
+  Sh3d19:
+    variants:
+    - B1: GAA
+      B2: TGT
+      spacer: A
+    - B1: GAA
+      B2: TGT
+      spacer: C
+    - B1: GAA
+      B2: TGT
+      spacer: G
+    - B1: GAA
+      B2: TGT
+      spacer: T
+    - B1: GAA
+      B2: TGT
+      spacer: AC
+    - B1: GAA
+      B2: TGT
+      spacer: CC
+    - B1: GAA
+      B2: TGT
+      spacer: GC
+    - B1: GAA
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Sidt1:
+    variants:
+    - B1: CGG
+      B2: CTT
+      spacer: A
+    - B1: CGG
+      B2: CTT
+      spacer: C
+    - B1: CGG
+      B2: CTT
+      spacer: G
+    - B1: CGG
+      B2: CTT
+      spacer: T
+    - B1: CGG
+      B2: CTT
+      spacer: AC
+    - B1: CGG
+      B2: CTT
+      spacer: CC
+    - B1: CGG
+      B2: CTT
+      spacer: GC
+    - B1: CGG
+      B2: CTT
+      spacer: TC
+    variant_count: 8
+  Slc4a4:
+    variants:
+    - B1: GCC
+      B2: GTG
+      spacer: A
+    - B1: GCC
+      B2: GTG
+      spacer: C
+    - B1: GCC
+      B2: GTG
+      spacer: G
+    - B1: GCC
+      B2: GTG
+      spacer: T
+    - B1: GCC
+      B2: GTG
+      spacer: AC
+    - B1: GCC
+      B2: GTG
+      spacer: CC
+    - B1: GCC
+      B2: GTG
+      spacer: GC
+    - B1: GCC
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Slc6a11:
+    variants:
+    - B1: ACC
+      B2: TGC
+      spacer: A
+    - B1: ACC
+      B2: TGC
+      spacer: C
+    - B1: ACC
+      B2: TGC
+      spacer: G
+    - B1: ACC
+      B2: TGC
+      spacer: T
+    - B1: ACC
+      B2: TGC
+      spacer: AC
+    - B1: ACC
+      B2: TGC
+      spacer: CC
+    - B1: ACC
+      B2: TGC
+      spacer: GC
+    - B1: ACC
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Slc6a13:
+    variants:
+    - B1: TGC
+      B2: TGC
+      spacer: A
+    - B1: TGC
+      B2: TGC
+      spacer: C
+    - B1: TGC
+      B2: TGC
+      spacer: G
+    - B1: TGC
+      B2: TGC
+      spacer: T
+    - B1: TGC
+      B2: TGC
+      spacer: AC
+    - B1: TGC
+      B2: TGC
+      spacer: CC
+    - B1: TGC
+      B2: TGC
+      spacer: GC
+    - B1: TGC
+      B2: TGC
+      spacer: TC
+    variant_count: 8
+  Slc7a1:
+    variants:
+    - B1: TCG
+      B2: TGG
+      spacer: A
+    - B1: TCG
+      B2: TGG
+      spacer: C
+    - B1: TCG
+      B2: TGG
+      spacer: G
+    - B1: TCG
+      B2: TGG
+      spacer: T
+    - B1: TCG
+      B2: TGG
+      spacer: AC
+    - B1: TCG
+      B2: TGG
+      spacer: CC
+    - B1: TCG
+      B2: TGG
+      spacer: GC
+    - B1: TCG
+      B2: TGG
+      spacer: TC
+    variant_count: 8
+  Slc7a5:
+    variants:
+    - B1: CAG
+      B2: GCT
+      spacer: A
+    - B1: CAG
+      B2: GCT
+      spacer: C
+    - B1: CAG
+      B2: GCT
+      spacer: G
+    - B1: CAG
+      B2: GCT
+      spacer: T
+    - B1: CAG
+      B2: GCT
+      spacer: AC
+    - B1: CAG
+      B2: GCT
+      spacer: CC
+    - B1: CAG
+      B2: GCT
+      spacer: GC
+    - B1: CAG
+      B2: GCT
+      spacer: TC
+    variant_count: 8
+  Slco1c1:
+    variants:
+    - B1: GAC
+      B2: GAG
+      spacer: A
+    - B1: GAC
+      B2: GAG
+      spacer: C
+    - B1: GAC
+      B2: GAG
+      spacer: G
+    - B1: GAC
+      B2: GAG
+      spacer: T
+    - B1: GAC
+      B2: GAG
+      spacer: AC
+    - B1: GAC
+      B2: GAG
+      spacer: CC
+    - B1: GAC
+      B2: GAG
+      spacer: GC
+    - B1: GAC
+      B2: GAG
+      spacer: TC
+    variant_count: 8
+  Smc2:
+    variants:
+    - B1: ACA
+      B2: CCT
+      spacer: A
+    - B1: ACA
+      B2: CCT
+      spacer: C
+    - B1: ACA
+      B2: CCT
+      spacer: G
+    - B1: ACA
+      B2: CCT
+      spacer: T
+    - B1: ACA
+      B2: CCT
+      spacer: AC
+    - B1: ACA
+      B2: CCT
+      spacer: CC
+    - B1: ACA
+      B2: CCT
+      spacer: GC
+    - B1: ACA
+      B2: CCT
+      spacer: TC
+    variant_count: 8
+  Smc4:
+    variants:
+    - B1: CCC
+      B2: TGT
+      spacer: A
+    - B1: CCC
+      B2: TGT
+      spacer: C
+    - B1: CCC
+      B2: TGT
+      spacer: G
+    - B1: CCC
+      B2: TGT
+      spacer: T
+    - B1: CCC
+      B2: TGT
+      spacer: AC
+    - B1: CCC
+      B2: TGT
+      spacer: CC
+    - B1: CCC
+      B2: TGT
+      spacer: GC
+    - B1: CCC
+      B2: TGT
+      spacer: TC
+    variant_count: 8
+  Thbd:
+    variants:
+    - B1: GTA
+      B2: TTA
+      spacer: A
+    - B1: GTA
+      B2: TTA
+      spacer: C
+    - B1: GTA
+      B2: TTA
+      spacer: G
+    - B1: GTA
+      B2: TTA
+      spacer: T
+    - B1: GTA
+      B2: TTA
+      spacer: AC
+    - B1: GTA
+      B2: TTA
+      spacer: CC
+    - B1: GTA
+      B2: TTA
+      spacer: GC
+    - B1: GTA
+      B2: TTA
+      spacer: TC
+    variant_count: 8
+  Tmem132d:
+    variants:
+    - B1: AGA
+      B2: GTC
+      spacer: A
+    - B1: AGA
+      B2: GTC
+      spacer: C
+    - B1: AGA
+      B2: GTC
+      spacer: G
+    - B1: AGA
+      B2: GTC
+      spacer: T
+    - B1: AGA
+      B2: GTC
+      spacer: AC
+    - B1: AGA
+      B2: GTC
+      spacer: CC
+    - B1: AGA
+      B2: GTC
+      spacer: GC
+    - B1: AGA
+      B2: GTC
+      spacer: TC
+    variant_count: 8
+  Tnc:
+    variants:
+    - B1: ACA
+      B2: CCC
+      spacer: A
+    - B1: ACA
+      B2: CCC
+      spacer: C
+    - B1: ACA
+      B2: CCC
+      spacer: G
+    - B1: ACA
+      B2: CCC
+      spacer: T
+    - B1: ACA
+      B2: CCC
+      spacer: AC
+    - B1: ACA
+      B2: CCC
+      spacer: CC
+    - B1: ACA
+      B2: CCC
+      spacer: GC
+    - B1: ACA
+      B2: CCC
+      spacer: TC
+    variant_count: 8
+  Tnr:
+    variants:
+    - B1: CAA
+      B2: TAC
+      spacer: A
+    - B1: CAA
+      B2: TAC
+      spacer: C
+    - B1: CAA
+      B2: TAC
+      spacer: G
+    - B1: CAA
+      B2: TAC
+      spacer: T
+    - B1: CAA
+      B2: TAC
+      spacer: AC
+    - B1: CAA
+      B2: TAC
+      spacer: CC
+    - B1: CAA
+      B2: TAC
+      spacer: GC
+    - B1: CAA
+      B2: TAC
+      spacer: TC
+    variant_count: 8
+  Top2a:
+    variants:
+    - B1: AAA
+      B2: CGT
+      spacer: A
+    - B1: AAA
+      B2: CGT
+      spacer: C
+    - B1: AAA
+      B2: CGT
+      spacer: G
+    - B1: AAA
+      B2: CGT
+      spacer: T
+    - B1: AAA
+      B2: CGT
+      spacer: AC
+    - B1: AAA
+      B2: CGT
+      spacer: CC
+    - B1: AAA
+      B2: CGT
+      spacer: GC
+    - B1: AAA
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+  Trabd2b:
+    variants:
+    - B1: ACG
+      B2: AGT
+      spacer: A
+    - B1: ACG
+      B2: AGT
+      spacer: C
+    - B1: ACG
+      B2: AGT
+      spacer: G
+    - B1: ACG
+      B2: AGT
+      spacer: T
+    - B1: ACG
+      B2: AGT
+      spacer: AC
+    - B1: ACG
+      B2: AGT
+      spacer: CC
+    - B1: ACG
+      B2: AGT
+      spacer: GC
+    - B1: ACG
+      B2: AGT
+      spacer: TC
+    variant_count: 8
+  Trpc3:
+    variants:
+    - B1: ACC
+      B2: CCC
+      spacer: A
+    - B1: ACC
+      B2: CCC
+      spacer: C
+    - B1: ACC
+      B2: CCC
+      spacer: G
+    - B1: ACC
+      B2: CCC
+      spacer: T
+    - B1: ACC
+      B2: CCC
+      spacer: AC
+    - B1: ACC
+      B2: CCC
+      spacer: CC
+    - B1: ACC
+      B2: CCC
+      spacer: GC
+    - B1: ACC
+      B2: CCC
+      spacer: TC
+    variant_count: 8
+  Unc13c:
+    variants:
+    - B1: AAC
+      B2: GAT
+      spacer: A
+    - B1: AAC
+      B2: GAT
+      spacer: C
+    - B1: AAC
+      B2: GAT
+      spacer: G
+    - B1: AAC
+      B2: GAT
+      spacer: T
+    - B1: AAC
+      B2: GAT
+      spacer: AC
+    - B1: AAC
+      B2: GAT
+      spacer: CC
+    - B1: AAC
+      B2: GAT
+      spacer: GC
+    - B1: AAC
+      B2: GAT
+      spacer: TC
+    variant_count: 8
+  Zbtb18:
+    variants:
+    - B1: AAT
+      B2: AAT
+      spacer: A
+    - B1: AAT
+      B2: AAT
+      spacer: C
+    - B1: AAT
+      B2: AAT
+      spacer: G
+    - B1: AAT
+      B2: AAT
+      spacer: T
+    - B1: AAT
+      B2: AAT
+      spacer: AC
+    - B1: AAT
+      B2: AAT
+      spacer: CC
+    - B1: AAT
+      B2: AAT
+      spacer: GC
+    - B1: AAT
+      B2: AAT
+      spacer: TC
+    variant_count: 8
+  Ccn3:
+    variants:
+    - B1: ACA
+      B2: TTC
+      spacer: A
+    - B1: ACA
+      B2: TTC
+      spacer: C
+    - B1: ACA
+      B2: TTC
+      spacer: G
+    - B1: ACA
+      B2: TTC
+      spacer: T
+    - B1: ACA
+      B2: TTC
+      spacer: AC
+    - B1: ACA
+      B2: TTC
+      spacer: CC
+    - B1: ACA
+      B2: TTC
+      spacer: GC
+    - B1: ACA
+      B2: TTC
+      spacer: TC
+    variant_count: 8
+  Cfap299:
+    variants:
+    - B1: AAG
+      B2: GTG
+      spacer: A
+    - B1: AAG
+      B2: GTG
+      spacer: C
+    - B1: AAG
+      B2: GTG
+      spacer: G
+    - B1: AAG
+      B2: GTG
+      spacer: T
+    - B1: AAG
+      B2: GTG
+      spacer: AC
+    - B1: AAG
+      B2: GTG
+      spacer: CC
+    - B1: AAG
+      B2: GTG
+      spacer: GC
+    - B1: AAG
+      B2: GTG
+      spacer: TC
+    variant_count: 8
+  Dpp10:
+    variants:
+    - B1: ACA
+      B2: ACA
+      spacer: A
+    - B1: ACA
+      B2: ACA
+      spacer: C
+    - B1: ACA
+      B2: ACA
+      spacer: G
+    - B1: ACA
+      B2: ACA
+      spacer: T
+    - B1: ACA
+      B2: ACA
+      spacer: AC
+    - B1: ACA
+      B2: ACA
+      spacer: CC
+    - B1: ACA
+      B2: ACA
+      spacer: GC
+    - B1: ACA
+      B2: ACA
+      spacer: TC
+    variant_count: 8
+  Rasgef1b:
+    variants:
+    - B1: ACA
+      B2: ATG
+      spacer: A
+    - B1: ACA
+      B2: ATG
+      spacer: C
+    - B1: ACA
+      B2: ATG
+      spacer: G
+    - B1: ACA
+      B2: ATG
+      spacer: T
+    - B1: ACA
+      B2: ATG
+      spacer: AC
+    - B1: ACA
+      B2: ATG
+      spacer: CC
+    - B1: ACA
+      B2: ATG
+      spacer: GC
+    - B1: ACA
+      B2: ATG
+      spacer: TC
+    variant_count: 8
+  Sirpa:
+    variants:
+    - B1: ACC
+      B2: CGT
+      spacer: A
+    - B1: ACC
+      B2: CGT
+      spacer: C
+    - B1: ACC
+      B2: CGT
+      spacer: G
+    - B1: ACC
+      B2: CGT
+      spacer: T
+    - B1: ACC
+      B2: CGT
+      spacer: AC
+    - B1: ACC
+      B2: CGT
+      spacer: CC
+    - B1: ACC
+      B2: CGT
+      spacer: GC
+    - B1: ACC
+      B2: CGT
+      spacer: TC
+    variant_count: 8
+meta:
+  recovery_execution:
+    encoding_variants: cartesian
+    spacer_policy: All A/C/G/T and AC/CC/GC/TC spacer variants applied to every site
+      and code; no binding sequences or site coordinates.
+    candidate_scope: All annotated transcripts, full mRNA, step 1; no selection or
+      physicochemical filters.
+extracts:
+  target_region:
+    source: mRNA
+    transcripts: all
+    length: 40
+    step: 1
+    layout:
+      template: '{arm5_site}{arm3_site}{gap}{primer_site}'
+      parts:
+        arm5_site:
+          length: 13
+        arm3_site:
+          length: 13
+        gap:
+          length: 1
+        primer_site:
+          length: 13
+probes:
+  padlock:
+    template: '{arm_5}CC{b1}TGCGTCTATTTGT{b2}TAGTGGAGCCT{arm_3}'
+    parts:
+      arm_5:
+        expr: rc(target_parts['arm5_site'])
+      b1:
+        expr: encoding[target]['variants'][probe_index % encoding[target]['variant_count']]['B1']
+      b2:
+        expr: encoding[target]['variants'][probe_index % encoding[target]['variant_count']]['B2']
+      arm_3:
+        expr: rc(target_parts['arm3_site'])
+  rca_primer:
+    template: '{binding}{spacer}AGGCTCCACTA'
+    parts:
+      binding:
+        expr: rc(target_parts['primer_site'])
+      spacer:
+        expr: encoding[target]['variants'][probe_index % encoding[target]['variant_count']]['spacer']

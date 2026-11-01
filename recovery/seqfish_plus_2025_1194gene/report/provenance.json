@@ -1,0 +1,15 @@
+{
+  "reference_assembly": "mm10",
+  "annotation": "GENCODE M19 / Ensembl 94",
+  "candidate_records": 28851260,
+  "sha256": {
+    "design.yaml": "819a7d978e0184a967d722478ac15fabc3530e9aef8c1365593ed31a42a9eba8",
+    "targets.csv": "5885e8f3d3c6bbfa9c699d8bc64e3815451d3658a42736a7766a220b959ed4cb",
+    "codebook.csv": "01ccbb7adc6844db2ff1976d01e540ad179336b03d3387c7c45daf1baf8007a9",
+    "readouts.csv": "ec0cd687f85c3d7731c210cc8fcc6717d3f45208319ff6a0eada685013ae9bd4",
+    "reference_oligos.csv": "b6ffae90bafb32a3c22ecb995241d53168174539129b3374d087d975e8b730cc",
+    "run_recovery.py": "ef1412780ad08b3b1a894fd2f933f528d5e8a927bc3ee10e38611fd662e5e67f",
+    "mm10.fa": "c7fe528da3fd081382ad65c1b1af3ea9c0b6251bc24f392b7b3ef4967eeed91c",
+    "mm10.gtf": "7ab6746c0417216e6fe299f91df8624e818ce419ae8f7d0f6118744e8cb36e6d"
+  }
+}

@@ -1,0 +1,32 @@
+# Targeted ExSeq V04. BC1/BC2 must be matched SOLiD/Illumina codebook sequences.
+# Arbitrary or independently generated barcodes are not scientifically valid.
+barcodes:
+  count: 2
+  barcodes:
+    BC1: {length: 7, description: "Matched SOLiD barcode from ExSeq codebook"}
+    BC2: {length: 7, description: "Matched Illumina barcode from ExSeq codebook"}
+extracts:
+  target_region:
+    source: mRNA
+    length: 32
+    step: 1
+probes:
+  pad_probe:
+    template: "{arm5}AAA{solid}TCTCGGGAACGCTGAAGACGGC{illumina}AAA{arm3}"
+    modifications: {5prime: phosphate, 3prime: hydroxyl}
+    parts:
+      arm5: {expr: "rc(target_region[0:16])"}
+      solid: {expr: "encoding[target]['BC1']"}
+      illumina: {expr: "encoding[target]['BC2']"}
+      arm3: {expr: "rc(target_region[16:32])"}
+attributes:
+  arm5_gc: {target: pad_probe.arm5, type: gc_content}
+  arm3_gc: {target: pad_probe.arm3, type: gc_content}
+post_process:
+  filters:
+    arm5_gc: {condition: "arm5_gc >= 0.4 & arm5_gc <= 0.65"}
+    arm3_gc: {condition: "arm3_gc >= 0.4 & arm3_gc <= 0.65"}
+    target_complexity:
+      type: sequence_pattern
+      target: target_region
+      exclude_patterns: ['AAAAA', 'CCCCC', 'GGGGG', 'TTTTT', '^[^A]*$', '^[^C]*$', '^[^G]*$', '^[^T]*$']

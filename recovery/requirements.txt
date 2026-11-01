@@ -1,0 +1,6 @@
+# Versions recorded for the completed run; install the U-Probe repository first.
+# Additional U-Probe dependency versions were not recorded exhaustively.
+numpy==1.26.0
+pandas==2.1.1
+PyYAML==6.0.1
+biopython==1.83

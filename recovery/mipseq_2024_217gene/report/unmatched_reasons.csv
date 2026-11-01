@@ -1,0 +1,7 @@
+gene,oligo_type,reference_oligo_id,reference_pair_id,reason,evidence
+Adgrl4,padlock,Fig3_row_417,Adgrl4-2,target_site_difference,Published binding region absent from legal same-gene generated windows
+Adgrl4,rca,Fig3_row_418,Adgrl4-2,target_site_difference,Published binding region absent from legal same-gene generated windows
+Kif11,padlock,Fig3_row_609,Kif11-2,target_site_difference,Published binding region absent from legal same-gene generated windows
+Kif11,rca,Fig3_row_610,Kif11-2,target_site_difference,Published binding region absent from legal same-gene generated windows
+Pde1c,padlock,Fig3_row_713,Pde1c-2,target_site_difference,Published binding region absent from legal same-gene generated windows
+Pde1c,rca,Fig3_row_714,Pde1c-2,target_site_difference,Published binding region absent from legal same-gene generated windows

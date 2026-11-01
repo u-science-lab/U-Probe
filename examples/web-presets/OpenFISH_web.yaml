@@ -1,0 +1,44 @@
+# OpenFISH V01 code snapshot. The bridge and RO sequences must be supplied
+# from a validated panel; connector TA is one tested option, not a universal choice.
+barcodes:
+  count: 3
+  barcodes:
+    BC1: {length: 30, description: "Validated OpenFISH bridge"}
+    BC2: {length: 20, description: "Panel readout RO1"}
+    BC3: {length: 20, description: "Panel readout RO2"}
+extracts:
+  target_region: {source: mRNA, length: 62, step: 1}
+probes:
+  probe_a:
+    template: "{bridge}TA{binding}"
+    parts:
+      bridge: {expr: "encoding[target]['BC1'][0:14]"}
+      binding: {expr: "rc(target_region[0:30])"}
+  probe_b:
+    template: "{binding}TA{bridge}"
+    parts:
+      binding: {expr: "rc(target_region[32:62])"}
+      bridge: {expr: "encoding[target]['BC1'][-14:]"}
+  pad_probe:
+    template: "{end5}{ro1}TA{ro2}{end3}"
+    parts:
+      end5: {expr: "rc(encoding[target]['BC1'])[-7:]"}
+      ro1: {expr: "encoding[target]['BC2']"}
+      ro2: {expr: "encoding[target]['BC3']"}
+      end3: {expr: "rc(encoding[target]['BC1'])[0:23]"}
+# GC range from notebook 05, not the Para constructor default.
+attributes:
+  binding_a_gc: {target: probe_a.binding, type: gc_content}
+  binding_b_gc: {target: probe_b.binding, type: gc_content}
+post_process:
+  filters:
+    binding_a_gc: {condition: "binding_a_gc >= 0.2 & binding_a_gc <= 0.8"}
+    binding_b_gc: {condition: "binding_b_gc >= 0.2 & binding_b_gc <= 0.8"}
+    binding_a_complexity:
+      type: sequence_pattern
+      target: probe_a.binding
+      exclude_patterns: ['N', 'GGGGG', 'CCCCC']
+    binding_b_complexity:
+      type: sequence_pattern
+      target: probe_b.binding
+      exclude_patterns: ['N', 'GGGGG', 'CCCCC']

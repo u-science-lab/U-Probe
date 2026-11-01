@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+'''Native YAML candidate construction; never reads reference oligos or binding arms.'''
+import argparse
+import copy
+import csv
+import gzip
+import hashlib
+import json
+import multiprocessing as mp
+import re
+import shutil
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+import pandas as pd
+import yaml
+from uprobe.core.api import UProbeAPI
+from uprobe.core.gen.fun import read_gtf, GTF_RUN_FIELDS
+
+CONFIG = GTF = GENOMES = OUTPUT = None
+FIELDS = ['stage', 'gene', 'probe_id', 'probe_set_id', 'oligo_type', 'full_sequence', 'modification_5p']
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for block in iter(lambda: f.read(4*1024*1024), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def run_gene(gene):
+    started = time.time()
+    cfg = copy.deepcopy(CONFIG)
+    cfg['targets'] = [gene]
+    api = UProbeAPI(cfg, GENOMES, OUTPUT/'engine', require_genome=True)
+    api._gtf = GTF[GTF.gene_name.str.upper().eq(gene.upper())]
+    ids = sorted(api._gtf.loc[api._gtf.type.eq('exon'), 'transcript_id'].dropna().unique())
+    if not ids:
+        ids = []
+    n = cfg['encoding'][gene]['variant_count']
+    if n != len(cfg['encoding'][gene]['variants']) or n < 1:
+        raise ValueError('Invalid encoding variant count')
+    seen = set()
+    sites = rejected = count = 0
+    windows = gzip.open(OUTPUT/'candidates_by_gene'/(gene+'.windows.txt.gz'), 'wt')
+    with gzip.open(OUTPUT/'candidates_by_gene'/(gene+'.csv.gz'), 'wt', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        writer.writeheader()
+        for tx in ids:
+            api.protocol['extracts']['target_region']['transcripts'] = [tx]
+            df = api.generate_target_seqs()
+            if df.empty:
+                exons = api._gtf[api._gtf.type.eq('exon') & api._gtf.transcript_id.eq(tx)]
+                if int((exons.end-exons.start+1).sum()) < 40:
+                    continue
+                raise RuntimeError('No windows generated for '+tx)
+            for offset in range(0, len(df), 300):
+                rows = []
+                for row in df.iloc[offset:offset+300].to_dict('records'):
+                    seq = row['target_region'].upper()
+                    if seq in seen:
+                        continue
+                    seen.add(seq)
+                    if set(seq)-set('ACGT'):
+                        rejected += 1
+                        continue
+                    windows.write(seq+'\n')
+                    row['target_region'] = seq
+                    # Repeat each site for every YAML encoding variant, with no site/codebook association.
+                    rows.extend([row]*n)
+                    sites += 1
+                if not rows:
+                    continue
+                built = api.construct_probes(pd.DataFrame(rows))
+                if len(built) != len(rows):
+                    raise RuntimeError('Native construction row mismatch')
+                for item in built.to_dict('records'):
+                    pair = gene+'_'+str(count//2+1)
+                    for typ in cfg['probes']:
+                        seq = item[typ]
+                        if not seq or set(seq)-set('ACGT'):
+                            raise RuntimeError('Invalid native probe DNA')
+                        if len(seq) not in ([58] if typ == 'padlock' else [25,26]):
+                            raise RuntimeError('Invalid native probe length')
+                        count += 1
+                        writer.writerow(dict(stage='candidate', gene=gene, probe_id=pair+'_'+typ,
+                            probe_set_id=pair, oligo_type='rca' if typ == 'rca_primer' else typ, full_sequence=seq, modification_5p='none'))
+    windows.close()
+    detail = dict(gene=gene, transcripts=len(ids), unique_sites=sites, encoding_variants=n,
+                  candidate_records=count, non_acgt_windows=rejected, seconds=round(time.time()-started, 3))
+    print(json.dumps(detail), flush=True)
+    return detail
+
+
+def main():
+    global CONFIG, GTF, GENOMES, OUTPUT
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--config', type=Path, required=True)
+    p.add_argument('--fasta', type=Path, required=True)
+    p.add_argument('--gtf', type=Path, required=True)
+    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--resume-log', type=Path, help='Reuse only completed per-gene shards recorded by this runner')
+    p.add_argument('--workers', type=int, default=8)
+    p.add_argument('--genes', nargs='+', help='Optional YAML target subset for one small end-to-end test')
+    p.add_argument('--target-alias', action='append', default=[], metavar='TARGET=GTF_NAME',
+                   help='Explicit annotation gene-name alias; preserves the panel target in output')
+    args = p.parse_args()
+    CONFIG = yaml.safe_load(args.config.read_text())
+    if args.workers < 1:
+        p.error('--workers must be positive')
+    if CONFIG['meta']['recovery_execution']['encoding_variants'] != 'cartesian':
+        p.error('This runner supports the declared Cartesian encoding policy only')
+    if args.genes:
+        if not set(args.genes) <= set(CONFIG['targets']):
+            p.error('--genes must be YAML targets')
+        CONFIG['targets'] = args.genes
+    if any(not re.fullmatch(r'[A-Za-z0-9_.-]+', g) for g in CONFIG['targets']):
+        p.error('Targets must be gene names, never target sequences')
+    aliases = {}
+    for value in args.target_alias:
+        target, separator, annotation = value.partition('=')
+        if not separator or target not in CONFIG['targets'] or not re.fullmatch(r'[A-Za-z0-9_.-]+', annotation):
+            p.error('Alias must be TARGET=GTF_NAME for a selected YAML target')
+        aliases[target] = annotation
+    OUTPUT = args.output.resolve()
+    if OUTPUT.exists() and any(OUTPUT.iterdir()) and not args.resume_log:
+        p.error('Output must be empty')
+    (OUTPUT/'candidates_by_gene').mkdir(parents=True, exist_ok=True)
+    GENOMES = {CONFIG['genome']: dict(fasta=str(args.fasta.resolve()), gtf=str(args.gtf.resolve()))}
+    subset = OUTPUT/'target_annotation.gtf'
+    annotation_targets = {aliases.get(g, g).upper(): g for g in CONFIG['targets']}
+    if len(annotation_targets) != len(CONFIG['targets']):
+        p.error('Annotation aliases must be one-to-one')
+    genes = {g.upper() for g in CONFIG['targets']}
+    with args.gtf.open() as src, subset.open('w') as dst:
+        for line in src:
+            if line.startswith('#'):
+                continue
+            match = re.search(r'(?:^|;)\s*gene_name\s+\x22([^\x22]+)\x22', line.split('\t')[-1])
+            if match and match.group(1).upper() in annotation_targets:
+                target = annotation_targets[match.group(1).upper()]
+                if target in aliases:
+                    line = re.sub(r'(gene_name\s+\x22)[^\x22]+(\x22)',
+                                  lambda m: m.group(1)+target+m.group(2), line)
+                dst.write(line)
+    GTF = read_gtf(str(subset), extract_fields=GTF_RUN_FIELDS)
+    GTF['gene_name'] = GTF.gene_name
+    missing = sorted(genes-set(GTF.gene_name.str.upper()))
+    (OUTPUT/'missing_targets.json').write_text(json.dumps(missing))
+    coverage = []
+    for gene in CONFIG['targets']:
+        exons = GTF[GTF.gene_name.str.upper().eq(gene.upper()) & GTF.type.eq('exon')]
+        coverage.append(dict(gene=gene, transcripts=int(exons.transcript_id.nunique()), exon_records=len(exons)))
+    (OUTPUT/'coverage.json').write_text(json.dumps(coverage, indent=2))
+    started = time.time()
+    completed = {}
+    if args.resume_log:
+        for line in args.resume_log.read_text().splitlines():
+            if line.startswith('{'):
+                d = json.loads(line)
+                if 'gene' in d:
+                    completed[d['gene']] = d
+        for gene in completed:
+            if not (OUTPUT/'candidates_by_gene'/(gene+'.csv.gz')).exists():
+                raise RuntimeError('Missing completed shard: '+gene)
+    pending = [g for g in CONFIG['targets'] if g not in completed]
+    with ProcessPoolExecutor(max_workers=args.workers, mp_context=mp.get_context('fork')) as pool:
+        fresh = list(pool.map(run_gene, pending, chunksize=1))
+    completed.update({d['gene']: d for d in fresh})
+    details = [completed[g] for g in CONFIG['targets']]
+    with gzip.open(OUTPUT/'candidates.csv.gz', 'wb', compresslevel=1) as out:
+        header = None
+        for gene in CONFIG['targets']:
+            with gzip.open(OUTPUT/'candidates_by_gene'/(gene+'.csv.gz'), 'rb') as src:
+                current = src.readline()
+                if header is None:
+                    header = current
+                    out.write(header)
+                elif current != header:
+                    raise RuntimeError('Candidate headers differ')
+                shutil.copyfileobj(src, out, 4*1024*1024)
+    provenance = dict(config_sha256=sha256(args.config), fasta_sha256=sha256(args.fasta),
+                      gtf_sha256=sha256(args.gtf), runner_sha256=sha256(__file__))
+    result = dict(target_aliases=aliases, candidate_records=sum(d['candidate_records'] for d in details),
+                  genes=details, final_stage='not_executed', seconds=round(time.time()-started, 3), **provenance)
+    (OUTPUT/'run_details.json').write_text(json.dumps(result, indent=2))
+    print(json.dumps(result), flush=True)
+
+
+if __name__ == '__main__':
+    main()
