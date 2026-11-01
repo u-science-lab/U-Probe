@@ -8,7 +8,7 @@ The eight additional configurations are scoped research templates, not complete 
 | --- | --- |
 | `ExSeq_web.yaml` | `4e0326c2ffdabb31fa22fbc5ebbdc589eb712a627f4260ea5484790c37cd8378` |
 | `MERFISH_web.yaml` | `8b2d1697bf63b50c55f346c4be9755639d378f8a3b780be8c6fcff11b409febf` |
-| `MiP-seq_web.yaml` | `3a954b2f6ba810a913042ea90dcaf10516bde59bc3f4f87607ad975a00041daa` |
+| `MiP-seq_web.yaml` | `401370d938db5d715f95e8c94a48e8ec09cb3d1a624e72eb86b3fb5d8eec1f5d` |
 | `Oligo-LiveFISH_web.yaml` | `7d370bd9e5803e57d74810c467c0e60aedc2b139186d277ba499cf9ef0b96a0d` |
 | `OpenFISH_web.yaml` | `cf3ae978c06d9b61b7fa9494731c1fce9083a27a6804d7a82b3269032c0c7e6d` |
 | `PRISM_web.yaml` | `86b11af1c39ed95b206b313d13d9031b6fc5785d883f1f668fb90918f95ef72d` |
@@ -26,7 +26,7 @@ As described in issue #5 and checked against the files.
 | | Web preset | Library template |
 | --- | --- | --- |
 | **MiP-seq** target | 40-nt exon windows | mRNA, `transcripts: mane`, explicit 13 + 13 + 1 + 13 nt layout |
-| MiP-seq construction | `BC1 + A + BC2` between the padlock arms; primer tail `rc(BC2)[:-2]` | B1/B2 barcodes in a fixed backbone; fixed RCA-primer tail `AGGCTCCACTA` |
+| MiP-seq construction | Published 217-gene-panel backbone and fixed RCA-primer tail; B1/B2 require a matched codebook | Same published backbone and primer tail |
 | MiP-seq specificity | Bowtie2 on the whole 40-nt window, `target_mapped_genes <= 4` | Bowtie 1, each oligo's site searched on its own, up to 2 substitutions, `target_mapped_genes <= 1` |
 | MiP-seq filters | Tm 36-44 C for all three target segments, fold-score and terminal-GC filters | Tm >= 28 C per binding segment, target start within the first 1,000 nt, two sites per gene |
 | **STARmap** barcodes | four fields `BC1`-`BC4`, backbone supplied through `encoding` | one `code` field in fixed padlock and primer backbones |

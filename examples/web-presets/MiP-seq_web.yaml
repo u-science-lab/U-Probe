@@ -1,3 +1,12 @@
+# Published 217-gene panel backbone, Wu et al. 2024 Supplementary Data 1 Fig 3.
+# BC1/BC2 must come from a validated matched codebook; random 3-mers are not validated.
+# Padlocks require 5-prime phosphorylation (order or T4 PNK); U-Probe does not add it.
+# Existing target-selection and filtering rules remain approximations, not paper rules.
+barcodes:
+  count: 2
+  barcodes:
+    BC1: {length: 3, description: "MiP-seq panel barcode B1; use matched codebook"}
+    BC2: {length: 3, description: "MiP-seq panel barcode B2; use matched codebook"}
 extracts:
   target_region:
     source: exon
@@ -20,7 +29,7 @@ probes:
         length: 13
         expr: rc(target_region[0:13])
       part2:
-        template: '{barcode1}A{barcode2}'
+        template: 'CC{barcode1}TGCGTCTATTTGT{barcode2}TAGTGGAGCCT'
         parts:
           barcode1:
             expr: encoding[target]['BC1']
@@ -37,7 +46,7 @@ probes:
       part2:
         expr: target_region[26]
       part3:
-        expr: rc(pad_probe.part2.barcode2)[:-2]
+        expr: "'AGGCTCCACTA'"
 attributes:
   target_fold_score:
     target: target_region
