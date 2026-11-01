@@ -1,0 +1,2 @@
+# Preserve archived CSV bytes and allow their existing CRLF record terminators.
+*.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

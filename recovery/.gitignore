@@ -1,0 +1,17 @@
+# Generated candidates, databases and temporary files stay outside version control.
+**/__pycache__/
+**/*.py[cod]
+**/generated/
+**/candidates_by_gene/
+**/candidate_sites/
+**/gene_run_details/
+**/target_annotation.gtf
+**/candidates*.csv*
+**/*.fa
+**/*.fasta
+**/*.fna
+**/*.gtf
+**/*.bt2*
+**/*.ebwt*
+**/*.nsq
+**/*.gz

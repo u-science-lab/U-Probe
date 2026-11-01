@@ -1,0 +1,199 @@
+project: Probe Sequence Recovery
+case: STARmap PLUS 2023 64-gene
+measured_run_date: '2026-10-31'
+curation_date: '2026-11-01'
+publication:
+  doi: 10.1038/s41593-022-01251-x
+  url: https://www.nature.com/articles/s41593-022-01251-x
+  panel: 64-gene validation panel
+scope: Independent genome/GTF-derived exhaustive candidate recovery under a fixed
+  architecture; permissive candidate-coverage upper bound, not original ranking or
+  final probe selection reproduction.
+environment:
+  git_commit: a76baff9fa79c6ef45308b55877aa507e9c62a27
+  python: 3.10.14 | packaged by conda-forge | (main, Mar 20 2024, 12:45:18) [GCC 12.3.0]
+  platform: Linux-5.15.0-157-generic-x86_64-with-glibc2.35
+  packages:
+    pandas: 2.1.1
+    numpy: 1.26.0
+    PyYAML: 6.0.1
+    biopython: '1.83'
+    uprobe: 0.2.0
+  historical_repository: /home/qzhang/uprobe_all/env_20260401/U-Probe
+  preexisting_modified_paths:
+  - examples/web-presets/MiP-seq_web.yaml
+  - examples/web-presets/README.md
+  source_core_modified_by_this_run: false
+  portable_runner_full_rerun: not_performed_during_curation
+reference_database:
+  build: GRCm39
+  accession: GCF_000001635.27
+  annotation: NCBI RefSeq RS_2024_02
+  files:
+  - name: GRCm39.fa
+    historical_path: GRCm39.fa
+    bytes: 2762330512
+    sha256: b1d94d96ef9ba5ec6ad957b7233a8ed18541d7da1a575f84cf97e31a9407e0dd
+    role: design input
+  - name: GRCm39.gtf
+    historical_path: GRCm39.gtf
+    bytes: 1115389575
+    sha256: a8183d575ccf62c08534a3df1e62339238c31f585dc8b62a839ef287703ab3ad
+    role: design input
+  - name: transcript.fa
+    historical_path: transcript.fa
+    bytes: 526795579
+    sha256: 53179dc06b2728968d3de428710bae453f5e26b7810e2676e9a4ac993c0f8c2f
+    role: independent validation only
+  acquisition_command: not_recorded
+  preprocessing_command: not_recorded
+  public_matching_artifact_url: not_recorded
+design:
+  current_config: ../config/design.yaml
+  current_runner: ../scripts/run_recovery.py
+  historical_frozen_artifacts:
+  - historical_path: STARmap_PLUS_2023_64gene_final.yaml
+    sha256: 4bff8b65d58e2feb5d218f064b7279ea14d568f13c483b962cf4d72a64bcd608
+    bytes: 3280
+  - historical_path: genomes.yaml
+    sha256: cf76dcffcdba4e87f3cd651e7521962e2e387d60b9b5710195a5f26fae509fe8
+    bytes: 137
+  - historical_path: make_config.py
+    sha256: f9f1660e6793e3a20c35215e54b966e39e774ef2d32321637d85128aa1d72792
+    bytes: 1622
+  frozen_at_utc: '2026-10-31T03:28:07+00:00'
+  transcript_policy: All 308 annotated isoforms, each independently spliced; all NM,
+    XM, NR and XR records retained
+  transcript_accession_prefix_counts:
+    NM: 157
+    NR: 4
+    XM: 140
+    XR: 7
+  padlock_site_length_nt:
+  - 19
+  - 25
+  primer_site_length_nt:
+  - 19
+  - 25
+  rna_site_order:
+  - padlock_site
+  - gap
+  - primer_site
+  gap_length_nt:
+  - 1
+  - 2
+  total_window_length_nt:
+  - 39
+  - 52
+  step_nt: 1
+  layout_count: 98
+  alphabet: Uppercase ACGT only
+  deduplication: Within each gene, identical uppercase raw target window plus layout
+    retained once across isoforms and positions
+  filters:
+    gc: not_applied
+    tm: not_applied
+    off_target: not_applied
+  ranking: not_applied
+  final_selection: not_applied
+  reference_binding_sequences_read_by_design: false
+  fixed_functional_sequences: Published gene-specific 3-nt codebook and fixed padlock/primer
+    backbone only
+  gap_basis: One-time panel-wide reference geometry audit before the full recovery
+    run; no per-probe coordinates or binding sequence seeded into design
+  original_transcript_selection: not_recorded
+  original_design_thresholds: not_recorded
+  parameter_changes_after_freeze: false
+  current_config_sha256: db3d3555784580ac79d71d3082774ba492b926a28526e41b26d554f479aa7b81
+  curation_metadata_only_changes:
+  - Protocol display name changed to STARmap_PLUS_2023_64gene_unfiltered_candidate_recovery
+  - Execution annotation key renamed to recovery_execution; all generation parameters,
+    genes, codebook and grammar unchanged
+measured_results:
+  stage: candidate
+  candidate_pairs: 44271276
+  generated_oligo_records: 88542552
+  reference_oligos: 512
+  matched_oligos: 512
+  reference_genes: 64
+  recovered_genes: 64
+  reference_pairs: 256
+  matched_pairs: 256
+  SRR_pct: 100.0
+  TRR_pct: 100.0
+  MTR_pct: 100.0
+  CPSR_pct: 100.0
+  unrecovered_reference_oligos: 0
+  unrecovered_reference_pairs: 0
+  excluded_reference_records: 0
+  duplicate_reference_records: 0
+  final_stage:
+    status: not_applied
+    SRR_pct: null
+    TRR_pct: null
+    MTR_pct: null
+    CPSR_pct: null
+matching: Full 5-to-3 DNA exact sequence, same gene and role; modifications separate;
+  no automatic reverse complement. Complete pairs require both matching members in
+  one generated pair. Unpublished candidates are not false positives.
+execution_history:
+  first_launch: '2026-10-31T11:21:53+08:00'
+  design_completed: '2026-10-31T12:17:49.251809+08:00'
+  design_wall_seconds_including_resource_restarts: 3356.251808643341
+  evaluation_workers: 16
+  evaluation_wall_seconds: 450.3818364031613
+  events:
+  - Initial eight-worker run; resumed with sixteen workers. The effective user cgroup
+    limit was 64 GiB and fifteen workers were OOM-killed; 49 complete gene outputs
+    were retained.
+  - Execution v2 used bounded 250-window native layout batches and ProcessPoolExecutor,
+    retaining unchanged design parameters; resumed with eight workers.
+  - The last gene, Pcdh9, retained all isoforms including the 148183-nt XR_003950833.2
+    transcript. It was recomputed using sixteen ordered construction-batch workers
+    after retaining 63 complete genes. Truncated diagnostic snapshots were not evaluated.
+  - Npy emitted CSV records were byte-identical after decompression across execution
+    v1, v2 and v3.
+  - Closed per-gene outputs were merged without changing CSV body bytes using pigz
+    with sixteen threads; all gzip streams passed EOF/CRC checks.
+  - All 88542552 records were evaluated; an independent complete rescan reproduced
+    every sequence/pair match and all metrics.
+  execution_script_sha256:
+    v1: d1f19e95756755c4c3cdb304e6852b7c243b5a95638cfda7b3f7a2998b11b272
+    v2: 1289d14ba289cb6ed79a50049ae015f4093c72d3e00fd852ce59096fe5cc5bff
+    v3_parallel_batches: 723ef269c404033cd701abc2b29a2be5566ac63610457b8103d8f61401022dc0
+    merge: 698ef4217641969f712c54b3ea5a2fba774c01b03613b61be14713311a3c39aa
+  merged_uncompressed_csv_sha256: cb9804f01ce7f981c0daa01ad823936d6e2afb7096d1a68663713056a2146258
+  resources:
+    effective_cgroup_memory_limit_bytes: 68719476736
+    parallel_evaluation_max_rss_kib: 30760
+    independent_verification_max_rss_kib: 14520
+    parallel_evaluation_elapsed_seconds_from_time_log: 450.43
+    independent_verification_elapsed_seconds_including_wait: 977.87
+reference_inputs:
+- name: starmap_raw.xlsx
+  historical_path: starmap_raw.xlsx
+  sha256: 6388e90d4ab9e68b8ee72045310c7c69691ed3bef6f2c13dd121aa2813043b42
+  bytes: 1119357
+  role: reference evaluation only; never a target-binding design input
+- name: STARmap_PLUS_2023_64gene_reference_oligos.csv
+  historical_path: STARmap_PLUS_2023_64gene_reference_oligos.csv
+  sha256: 61da326e837e6107db14c7bc3a5c3140240fadcaab9b3d194467ca1d866b7ca0
+  bytes: 95561
+  role: reference evaluation only; never a target-binding design input
+- name: STARmap_PLUS_2023_64gene_reference_pairs.csv
+  historical_path: STARmap_PLUS_2023_64gene_reference_pairs.csv
+  sha256: 0ca5588358067fc89196d29d2f76e692bd047e85a32c8ae3127dad6a29157eeb
+  bytes: 76140
+  role: reference evaluation only; never a target-binding design input
+verification_evidence: verification_evidence.json
+historical_source_results: 'External archived run; compact report files and checksums
+  are included here. Large-artifact public URL: not_recorded.'
+historical_paths_note: Historical artifact basenames and checksums identify the completed
+  run. Current portable case paths are under recovery/starmap_plus_2023_64gene. Large
+  generated and database files are excluded from Git.
+limitations:
+- No thermal, GC or off-target quality filtering was applied.
+- No final ranked four-pair-per-gene set was recovered or evaluated.
+- Exact candidate recovery does not establish experimental performance of new designs.
+- The original publication transcript database and selection rules remain not_recorded.
+portable_runner_validation: portable_runner_validation.json

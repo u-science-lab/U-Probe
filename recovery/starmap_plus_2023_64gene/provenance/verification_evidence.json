@@ -1,0 +1,464 @@
+{
+  "independent_full_output_rescan": {
+    "status": "passed",
+    "checked_generated_records": 88542552,
+    "checked_generated_pairs": 44271276,
+    "recomputed_metrics": {
+      "all": {
+        "reference_sequences": 512,
+        "matched_sequences": 512,
+        "SRR_pct": 100.0,
+        "reference_targets": 64,
+        "recovered_targets": 64,
+        "TRR_pct": 100.0,
+        "MTR_pct": 100.0,
+        "reference_pairs": 256,
+        "matched_pairs": 256,
+        "CPSR_pct": 100.0
+      },
+      "padlock": {
+        "reference_sequences": 256,
+        "matched_sequences": 256,
+        "SRR_pct": 100.0,
+        "reference_targets": 64,
+        "recovered_targets": 64,
+        "TRR_pct": 100.0,
+        "MTR_pct": 100.0
+      },
+      "primer": {
+        "reference_sequences": 256,
+        "matched_sequences": 256,
+        "SRR_pct": 100.0,
+        "reference_targets": 64,
+        "recovered_targets": 64,
+        "TRR_pct": 100.0,
+        "MTR_pct": 100.0
+      }
+    }
+  },
+  "independent_candidate_count_oracle": {
+    "status": "passed",
+    "expected_total_pairs": 44271276,
+    "completed_genes": 64,
+    "all_genes": 64,
+    "mismatches": [],
+    "pending_markers": [],
+    "geometry_multiplicity_by_length": {
+      "39": 1,
+      "40": 3,
+      "41": 5,
+      "42": 7,
+      "43": 9,
+      "44": 11,
+      "45": 13,
+      "46": 13,
+      "47": 11,
+      "48": 9,
+      "49": 7,
+      "50": 5,
+      "51": 3,
+      "52": 1
+    }
+  },
+  "full_transcript_splice_verification": {
+    "status": "passed",
+    "genes": 64,
+    "transcripts": 308,
+    "minus_strand_transcripts": 113,
+    "mismatches": [],
+    "method": "Parse raw GTF exon intervals independently; concatenate ascending genomic segments then reverse complement entire negative-strand transcript; compare full length to prebuilt transcript.fa and native extract_spliced for every selected transcript. No reference oligo CSV opened."
+  },
+  "candidate_counts_by_gene": [
+    {
+      "gene": "Slc17a7",
+      "expected_pairs": 283759,
+      "observed_pairs": 283759,
+      "agrees": true
+    },
+    {
+      "gene": "Cux2",
+      "expected_pairs": 928648,
+      "observed_pairs": 928648,
+      "agrees": true
+    },
+    {
+      "gene": "Tshz2",
+      "expected_pairs": 956087,
+      "observed_pairs": 956087,
+      "agrees": true
+    },
+    {
+      "gene": "Cplx1",
+      "expected_pairs": 210455,
+      "observed_pairs": 210455,
+      "agrees": true
+    },
+    {
+      "gene": "Pcp4",
+      "expected_pairs": 58457,
+      "observed_pairs": 58457,
+      "agrees": true
+    },
+    {
+      "gene": "Pcdh9",
+      "expected_pairs": 15211911,
+      "observed_pairs": 15211911,
+      "agrees": true
+    },
+    {
+      "gene": "Gad1",
+      "expected_pairs": 565068,
+      "observed_pairs": 565068,
+      "agrees": true
+    },
+    {
+      "gene": "Cnr1",
+      "expected_pairs": 1046052,
+      "observed_pairs": 1046052,
+      "agrees": true
+    },
+    {
+      "gene": "Lamp5",
+      "expected_pairs": 293314,
+      "observed_pairs": 293314,
+      "agrees": true
+    },
+    {
+      "gene": "Pvalb",
+      "expected_pairs": 97657,
+      "observed_pairs": 97657,
+      "agrees": true
+    },
+    {
+      "gene": "Sst",
+      "expected_pairs": 85113,
+      "observed_pairs": 85113,
+      "agrees": true
+    },
+    {
+      "gene": "Vip",
+      "expected_pairs": 166012,
+      "observed_pairs": 166012,
+      "agrees": true
+    },
+    {
+      "gene": "Npy",
+      "expected_pairs": 51107,
+      "observed_pairs": 51107,
+      "agrees": true
+    },
+    {
+      "gene": "Grin2b",
+      "expected_pairs": 2467870,
+      "observed_pairs": 2467870,
+      "agrees": true
+    },
+    {
+      "gene": "Camk4",
+      "expected_pairs": 1280272,
+      "observed_pairs": 1280272,
+      "agrees": true
+    },
+    {
+      "gene": "Rph3a",
+      "expected_pairs": 550858,
+      "observed_pairs": 550858,
+      "agrees": true
+    },
+    {
+      "gene": "Brinp1",
+      "expected_pairs": 324331,
+      "observed_pairs": 324331,
+      "agrees": true
+    },
+    {
+      "gene": "C1ql3",
+      "expected_pairs": 396067,
+      "observed_pairs": 396067,
+      "agrees": true
+    },
+    {
+      "gene": "Aldoc",
+      "expected_pairs": 276899,
+      "observed_pairs": 276899,
+      "agrees": true
+    },
+    {
+      "gene": "Cst3",
+      "expected_pairs": 73647,
+      "observed_pairs": 73647,
+      "agrees": true
+    },
+    {
+      "gene": "Gfap",
+      "expected_pairs": 710126,
+      "observed_pairs": 710126,
+      "agrees": true
+    },
+    {
+      "gene": "Vim",
+      "expected_pairs": 175371,
+      "observed_pairs": 175371,
+      "agrees": true
+    },
+    {
+      "gene": "Aqp4",
+      "expected_pairs": 605346,
+      "observed_pairs": 605346,
+      "agrees": true
+    },
+    {
+      "gene": "Cd63",
+      "expected_pairs": 135828,
+      "observed_pairs": 135828,
+      "agrees": true
+    },
+    {
+      "gene": "Bsg",
+      "expected_pairs": 171598,
+      "observed_pairs": 171598,
+      "agrees": true
+    },
+    {
+      "gene": "Flt1",
+      "expected_pairs": 1363901,
+      "observed_pairs": 1363901,
+      "agrees": true
+    },
+    {
+      "gene": "Ctss",
+      "expected_pairs": 141708,
+      "observed_pairs": 141708,
+      "agrees": true
+    },
+    {
+      "gene": "P2ry12",
+      "expected_pairs": 274939,
+      "observed_pairs": 274939,
+      "agrees": true
+    },
+    {
+      "gene": "Gpr34",
+      "expected_pairs": 691586,
+      "observed_pairs": 691586,
+      "agrees": true
+    },
+    {
+      "gene": "Tgfbr1",
+      "expected_pairs": 639744,
+      "observed_pairs": 639744,
+      "agrees": true
+    },
+    {
+      "gene": "Cst7",
+      "expected_pairs": 92267,
+      "observed_pairs": 92267,
+      "agrees": true
+    },
+    {
+      "gene": "Ctsb",
+      "expected_pairs": 464618,
+      "observed_pairs": 464618,
+      "agrees": true
+    },
+    {
+      "gene": "Apoe",
+      "expected_pairs": 238826,
+      "observed_pairs": 238826,
+      "agrees": true
+    },
+    {
+      "gene": "Cd9",
+      "expected_pairs": 112945,
+      "observed_pairs": 112945,
+      "agrees": true
+    },
+    {
+      "gene": "Trem2",
+      "expected_pairs": 112014,
+      "observed_pairs": 112014,
+      "agrees": true
+    },
+    {
+      "gene": "Plp1",
+      "expected_pairs": 392147,
+      "observed_pairs": 392147,
+      "agrees": true
+    },
+    {
+      "gene": "Mbp",
+      "expected_pairs": 850640,
+      "observed_pairs": 850640,
+      "agrees": true
+    },
+    {
+      "gene": "Cldn11",
+      "expected_pairs": 179095,
+      "observed_pairs": 179095,
+      "agrees": true
+    },
+    {
+      "gene": "Klk6",
+      "expected_pairs": 126518,
+      "observed_pairs": 126518,
+      "agrees": true
+    },
+    {
+      "gene": "Serpina3n",
+      "expected_pairs": 199969,
+      "observed_pairs": 199969,
+      "agrees": true
+    },
+    {
+      "gene": "C4b",
+      "expected_pairs": 536550,
+      "observed_pairs": 536550,
+      "agrees": true
+    },
+    {
+      "gene": "Cdkn1a",
+      "expected_pairs": 195069,
+      "observed_pairs": 195069,
+      "agrees": true
+    },
+    {
+      "gene": "Pdgfra",
+      "expected_pairs": 904197,
+      "observed_pairs": 904197,
+      "agrees": true
+    },
+    {
+      "gene": "Cacng4",
+      "expected_pairs": 350938,
+      "observed_pairs": 350938,
+      "agrees": true
+    },
+    {
+      "gene": "Gpr17",
+      "expected_pairs": 532042,
+      "observed_pairs": 532042,
+      "agrees": true
+    },
+    {
+      "gene": "Myh11",
+      "expected_pairs": 657825,
+      "observed_pairs": 657825,
+      "agrees": true
+    },
+    {
+      "gene": "Vtn",
+      "expected_pairs": 166649,
+      "observed_pairs": 166649,
+      "agrees": true
+    },
+    {
+      "gene": "C1qa",
+      "expected_pairs": 101675,
+      "observed_pairs": 101675,
+      "agrees": true
+    },
+    {
+      "gene": "Clec7a",
+      "expected_pairs": 223734,
+      "observed_pairs": 223734,
+      "agrees": true
+    },
+    {
+      "gene": "Ctsl",
+      "expected_pairs": 346087,
+      "observed_pairs": 346087,
+      "agrees": true
+    },
+    {
+      "gene": "Cd83",
+      "expected_pairs": 202272,
+      "observed_pairs": 202272,
+      "agrees": true
+    },
+    {
+      "gene": "Calm1",
+      "expected_pairs": 415765,
+      "observed_pairs": 415765,
+      "agrees": true
+    },
+    {
+      "gene": "Myo5a",
+      "expected_pairs": 1504221,
+      "observed_pairs": 1504221,
+      "agrees": true
+    },
+    {
+      "gene": "Htra1",
+      "expected_pairs": 195461,
+      "observed_pairs": 195461,
+      "agrees": true
+    },
+    {
+      "gene": "Gpm6a",
+      "expected_pairs": 348096,
+      "observed_pairs": 348096,
+      "agrees": true
+    },
+    {
+      "gene": "Ddit3",
+      "expected_pairs": 257334,
+      "observed_pairs": 257334,
+      "agrees": true
+    },
+    {
+      "gene": "Ccnb2",
+      "expected_pairs": 146657,
+      "observed_pairs": 146657,
+      "agrees": true
+    },
+    {
+      "gene": "Tmsb4x",
+      "expected_pairs": 88445,
+      "observed_pairs": 88445,
+      "agrees": true
+    },
+    {
+      "gene": "Tspan7",
+      "expected_pairs": 579621,
+      "observed_pairs": 579621,
+      "agrees": true
+    },
+    {
+      "gene": "Srrm2",
+      "expected_pairs": 1207556,
+      "observed_pairs": 1207556,
+      "agrees": true
+    },
+    {
+      "gene": "Rhoc",
+      "expected_pairs": 105153,
+      "observed_pairs": 105153,
+      "agrees": true
+    },
+    {
+      "gene": "Prkce",
+      "expected_pairs": 880649,
+      "observed_pairs": 880649,
+      "agrees": true
+    },
+    {
+      "gene": "Ap2b1",
+      "expected_pairs": 842310,
+      "observed_pairs": 842310,
+      "agrees": true
+    },
+    {
+      "gene": "Gabra1",
+      "expected_pairs": 480200,
+      "observed_pairs": 480200,
+      "agrees": true
+    }
+  ],
+  "transcript_accession_prefix_counts": {
+    "NM": 157,
+    "NR": 4,
+    "XM": 140,
+    "XR": 7
+  },
+  "checks_exclude_published_oligo_design_input": true
+}

@@ -1,0 +1,27 @@
+{
+  "publication": "Zeng et al., Nature Neuroscience (2023)",
+  "doi": "10.1038/s41593-022-01251-x",
+  "article": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11332722/",
+  "dataset": "STARmap PLUS 64 genes",
+  "source_workbook_sha256": "6388e90d4ab9e68b8ee72045310c7c69691ed3bef6f2c13dd121aa2813043b42",
+  "source_sheet": "Supplementary Table 1 ",
+  "source_cells": {
+    "gene_list": "P4:P67",
+    "padlock_names": "Q5:Q260",
+    "padlock_sequences": "R5:R260",
+    "primer_names": "Y5:Y260",
+    "primer_sequences": "Z5:Z260"
+  },
+  "reference_files": {
+    "reference_oligos.csv": {
+      "sha256": "61da326e837e6107db14c7bc3a5c3140240fadcaab9b3d194467ca1d866b7ca0",
+      "records": 512
+    },
+    "reference_pairs.csv": {
+      "sha256": "0ca5588358067fc89196d29d2f76e692bd047e85a32c8ae3127dad6a29157eeb",
+      "records": 256
+    }
+  },
+  "design_input_separation": "Reference binding sequences and full oligos are evaluation inputs only. Candidate generation uses genes, codebook, architecture, genomic FASTA and GTF.",
+  "reference_source_sheet_label": "Supplementary Table 1"
+}

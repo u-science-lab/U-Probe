@@ -1,0 +1,53 @@
+{
+  "validation_directory": "/home/qzhang/uprobe_all/recovery_validation/portable-starmap-20261101-j5vh9rg1",
+  "engine_api_path": "/home/qzhang/uprobe_all/recovery_worktrees/starmap-plus-2023-64gene/uprobe/core/api.py",
+  "fresh_command": [
+    "/home/qzhang/.conda/envs/blast/bin/python",
+    "/home/qzhang/uprobe_all/recovery_worktrees/starmap-plus-2023-64gene/recovery/starmap_plus_2023_64gene/scripts/run_recovery.py",
+    "--config",
+    "/home/qzhang/uprobe_all/recovery_validation/portable-starmap-20261101-j5vh9rg1/npy.yaml",
+    "--fasta",
+    "/home/qzhang/uprobe_all/genomes/public/GRCm39/GRCm39.fa",
+    "--gtf",
+    "/home/qzhang/uprobe_all/genomes/public/GRCm39/GRCm39.gtf",
+    "--output",
+    "/home/qzhang/uprobe_all/recovery_validation/portable-starmap-20261101-j5vh9rg1/output",
+    "--workers",
+    "1"
+  ],
+  "working_directory": "/home/qzhang/uprobe_all/recovery_worktrees/starmap-plus-2023-64gene",
+  "environment": {
+    "PYTHONPATH": "/home/qzhang/uprobe_all/recovery_worktrees/starmap-plus-2023-64gene"
+  },
+  "fresh_returncode": 0,
+  "resume_returncode": 0,
+  "mismatched_config_resume_returncode": 2,
+  "candidate_pairs": 51107,
+  "candidate_records": {
+    "sha256": "9669fbeb4e217ad9c296597426d5ca930c85520ea69bc8c348d425b2516f3483",
+    "records": 102214
+  },
+  "archived_candidate_records": {
+    "sha256": "9669fbeb4e217ad9c296597426d5ca930c85520ea69bc8c348d425b2516f3483",
+    "records": 102214
+  },
+  "combined_records": {
+    "sha256": "9669fbeb4e217ad9c296597426d5ca930c85520ea69bc8c348d425b2516f3483",
+    "records": 102214
+  },
+  "candidate_sites": {
+    "sha256": "fe24441a126a43110e633c81be40c2d243ad64c10a38db48acf63e5e0ec72d16",
+    "records": 51107
+  },
+  "archived_candidate_sites": {
+    "sha256": "fe24441a126a43110e633c81be40c2d243ad64c10a38db48acf63e5e0ec72d16",
+    "records": 51107
+  },
+  "all_checks_passed": true,
+  "runner_sha256": "8326c6c8c3c2d71ff88d1fc1c8494ad7acb3ab94b45611818b74bcfd11766b11",
+  "validation_after_eof_normalization": true,
+  "format_only_change": "Trim trailing whitespace and end with exactly one LF; no design parameter or core change.",
+  "validation_elapsed_seconds_approximately": 43.555702686309814,
+  "elapsed_time_basis": "Validation report modification time minus validation directory birth timestamp (birth timestamp has seconds resolution).",
+  "validated_at": "2026-11-01T10:41:57.555703+08:00"
+}

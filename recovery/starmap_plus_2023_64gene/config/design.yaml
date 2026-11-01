@@ -1,0 +1,244 @@
+name: STARmap_PLUS_2023_64gene_unfiltered_candidate_recovery
+genome: GRCm39
+targets:
+- Slc17a7
+- Cux2
+- Tshz2
+- Cplx1
+- Pcp4
+- Pcdh9
+- Gad1
+- Cnr1
+- Lamp5
+- Pvalb
+- Sst
+- Vip
+- Npy
+- Grin2b
+- Camk4
+- Rph3a
+- Brinp1
+- C1ql3
+- Aldoc
+- Cst3
+- Gfap
+- Vim
+- Aqp4
+- Cd63
+- Bsg
+- Flt1
+- Ctss
+- P2ry12
+- Gpr34
+- Tgfbr1
+- Cst7
+- Ctsb
+- Apoe
+- Cd9
+- Trem2
+- Plp1
+- Mbp
+- Cldn11
+- Klk6
+- Serpina3n
+- C4b
+- Cdkn1a
+- Pdgfra
+- Cacng4
+- Gpr17
+- Myh11
+- Vtn
+- C1qa
+- Clec7a
+- Ctsl
+- Cd83
+- Calm1
+- Myo5a
+- Htra1
+- Gpm6a
+- Ddit3
+- Ccnb2
+- Tmsb4x
+- Tspan7
+- Srrm2
+- Rhoc
+- Prkce
+- Ap2b1
+- Gabra1
+encoding:
+  Slc17a7:
+    code: CCT
+  Cux2:
+    code: GGC
+  Tshz2:
+    code: TGT
+  Cplx1:
+    code: ACC
+  Pcp4:
+    code: CTG
+  Pcdh9:
+    code: ATG
+  Gad1:
+    code: GTC
+  Cnr1:
+    code: TAC
+  Lamp5:
+    code: GCG
+  Pvalb:
+    code: CAT
+  Sst:
+    code: TCT
+  Vip:
+    code: GTT
+  Npy:
+    code: GGG
+  Grin2b:
+    code: TAG
+  Camk4:
+    code: TGA
+  Rph3a:
+    code: TAT
+  Brinp1:
+    code: ACA
+  C1ql3:
+    code: TCA
+  Aldoc:
+    code: AAA
+  Cst3:
+    code: CCC
+  Gfap:
+    code: TTC
+  Vim:
+    code: CTT
+  Aqp4:
+    code: TAA
+  Cd63:
+    code: CTA
+  Bsg:
+    code: CCA
+  Flt1:
+    code: ATC
+  Ctss:
+    code: CGC
+  P2ry12:
+    code: TGG
+  Gpr34:
+    code: GAG
+  Tgfbr1:
+    code: AGT
+  Cst7:
+    code: GCC
+  Ctsb:
+    code: TCC
+  Apoe:
+    code: GAA
+  Cd9:
+    code: TTA
+  Trem2:
+    code: GGT
+  Plp1:
+    code: TTG
+  Mbp:
+    code: TCG
+  Cldn11:
+    code: CAC
+  Klk6:
+    code: CCG
+  Serpina3n:
+    code: ACT
+  C4b:
+    code: AGA
+  Cdkn1a:
+    code: AAC
+  Pdgfra:
+    code: GTG
+  Cacng4:
+    code: CGA
+  Gpr17:
+    code: CAG
+  Myh11:
+    code: AGG
+  Vtn:
+    code: TTT
+  C1qa:
+    code: GCA
+  Clec7a:
+    code: GAC
+  Ctsl:
+    code: AGC
+  Cd83:
+    code: GTA
+  Calm1:
+    code: GGA
+  Myo5a:
+    code: CGG
+  Htra1:
+    code: ACG
+  Gpm6a:
+    code: AAG
+  Ddit3:
+    code: TGC
+  Ccnb2:
+    code: ATA
+  Tmsb4x:
+    code: CGT
+  Tspan7:
+    code: ATT
+  Srrm2:
+    code: GCT
+  Rhoc:
+    code: GAT
+  Prkce:
+    code: AAT
+  Ap2b1:
+    code: CAA
+  Gabra1:
+    code: CTC
+extracts:
+  target_region:
+    source: mRNA
+    length:
+    - 39
+    - 52
+    step: 1
+    transcripts: all
+    layout:
+      template: '{padlock_site}{gap}{primer_site}'
+      parts:
+        padlock_site:
+          length:
+          - 19
+          - 25
+        gap:
+          length:
+          - 1
+          - 2
+        primer_site:
+          length:
+          - 19
+          - 25
+probes:
+  padlock:
+    template: '{sequence}'
+    modifications:
+      5prime: phosphate
+    parts:
+      sequence:
+        expr: '''A'' + encoding[target][''code''] + ''TA'' + rc(target_parts[''padlock_site''])
+          + ''AATTATTAC'' + encoding[target][''code''] + ''CATACACTAAAGATA'''
+  primer:
+    template: '{sequence}'
+    parts:
+      sequence:
+        expr: rc(target_parts['primer_site']) + 'TA' + rc(encoding[target]['code'])
+          + 'TTATCTT'
+attributes: {}
+post_process: {}
+recovery_execution:
+  transcript_policy: each annotated isoform separately through UProbeAPI, not merged
+    exon model
+  alphabet: ACGT only; upper-case before construction
+  filters: no GC/Tm/off-target thresholds; published thresholds unavailable
+  final_selection: not applied
+  candidate_deduplication: gene + uppercase target window + layout
+  no_reference_binding_input: true

@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "scope": "compact_report_consistency",
+  "full_generated_scan_performed": false,
+  "limitation": "Reported hit IDs are evidence, not proof of the contents of an unprovided generated file.",
+  "reference_sequences": 512,
+  "reference_pairs": 256,
+  "checked_sequence_rows": 512,
+  "checked_pair_rows": 256,
+  "generated_records": null,
+  "unverified_fields": [
+    "generated_records"
+  ],
+  "recomputed_metrics": [
+    {
+      "stage": "candidate",
+      "oligo_type": "all",
+      "reference_sequences": 512,
+      "matched_sequences": 512,
+      "SRR_pct": 100.0,
+      "reference_targets": 64,
+      "recovered_targets": 64,
+      "TRR_pct": 100.0,
+      "MTR_pct": 100.0,
+      "reference_pairs": 256,
+      "matched_pairs": 256,
+      "CPSR_pct": 100.0
+    },
+    {
+      "stage": "candidate",
+      "oligo_type": "padlock",
+      "reference_sequences": 256,
+      "matched_sequences": 256,
+      "SRR_pct": 100.0,
+      "reference_targets": 64,
+      "recovered_targets": 64,
+      "TRR_pct": 100.0,
+      "MTR_pct": 100.0
+    },
+    {
+      "stage": "candidate",
+      "oligo_type": "primer",
+      "reference_sequences": 256,
+      "matched_sequences": 256,
+      "SRR_pct": 100.0,
+      "reference_targets": 64,
+      "recovered_targets": 64,
+      "TRR_pct": 100.0,
+      "MTR_pct": 100.0
+    }
+  ]
+}
