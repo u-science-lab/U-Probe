@@ -11,12 +11,12 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 
 | Method | Dataset | Candidate SRR | CPSR | Final Recovery |
 |---|---|---|---|---|
-| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | TODO |
-| ExSeq | 2021 / 42 genes | - | - | N/A |
-| MERFISH | TBD | - | - | TODO |
-| seqFISH+ | TBD | - | - | TODO |
-| MiP-seq | TBD | - | - | TODO |
-| PRISM | TBD | - | - | TODO |
+| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | N/A |
+| ExSeq | 2021 / 42 genes | - | - | - |
+| MERFISH | TBD | - | - | - |
+| seqFISH+ | TBD | - | - | - |
+| MiP-seq | TBD | - | - | - |
+| PRISM | TBD | - | - | - |
 
 STARmap is **Unfiltered Candidate Recovery**, not final probe selection.
 Dashes indicate no verified full-dataset result. ExSeq has external prepared
