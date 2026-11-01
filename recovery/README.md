@@ -11,33 +11,17 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 
 | Method | Dataset | Candidate SRR | CPSR | Final Recovery |
 |---|---|---|---|---|
-| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | TODO |
+| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | N/A |
 | [ExSeq](exseq_2021_42gene/) | 2021 / 42 genes | 99.7006% | N/A | Not evaluated |
-| MERFISH | TBD | - | - | TODO |
-| seqFISH+ | TBD | - | - | TODO |
-| MiP-seq | TBD | - | - | TODO |
-| PRISM | TBD | - | - | TODO |
+| MERFISH | TBD | - | - | - |
+| seqFISH+ | TBD | - | - | - |
+| MiP-seq | TBD | - | - | - |
+| PRISM | TBD | - | - | - |
 
 STARmap and ExSeq report **unfiltered candidate recovery**, not final probe
 selection. ExSeq recovers 333/334 padlocks and 42/42 targets using mm10;
-TRR is 100% and MTR is 99.7024%. Dashes indicate no verified full-dataset result.
-
-## TODO
-
-**STARmap PLUS**
-- [ ] Evaluate predefined filtering and final four-pair selection.
-
-**ExSeq**
-- [x] Import S9-S10 references and execute declarative YAML.
-- [x] Evaluate and document full-panel candidate recovery.
-- [ ] Evaluate final selection against the historical design procedure.
-
-**Other Methods**
-- [ ] Prepare reference sets, configurations and recovery records.
-
-**General**
-- [ ] Publish matching reference-data acquisition artifacts.
-- [ ] Verify fresh-machine reproduction and extend cross-method summaries.
+TRR is 100% and MTR is 99.7024%. ExSeq final selection has not been evaluated.
+Dashes indicate no verified full-dataset result.
 
 ## Usage
 
