@@ -423,8 +423,8 @@ candidate,mipseq_2024_217gene,Unc13c,Unc13c-1,padlock;rca,True,"{""padlock"": tr
 candidate,mipseq_2024_217gene,Unc13c,Unc13c-2,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Unc13c_59532
 candidate,mipseq_2024_217gene,Zbtb18,Zbtb18-1,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Zbtb18_21601
 candidate,mipseq_2024_217gene,Zbtb18,Zbtb18-2,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Zbtb18_15803
-candidate,mipseq_2024_217gene,Ccn3,Ccn3-1,padlock;rca,True,"{""padlock"": false, ""rca"": false}",False,False,
-candidate,mipseq_2024_217gene,Ccn3,Ccn3-2,padlock;rca,True,"{""padlock"": false, ""rca"": false}",False,False,
+candidate,mipseq_2024_217gene,Ccn3,Ccn3-1,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Ccn3_5978
+candidate,mipseq_2024_217gene,Ccn3,Ccn3-2,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Ccn3_10034
 candidate,mipseq_2024_217gene,Cfap299,Cfap299-1,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Cfap299_10339
 candidate,mipseq_2024_217gene,Cfap299,Cfap299-2,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Cfap299_5362
 candidate,mipseq_2024_217gene,Dpp10,Dpp10-1,padlock;rca,True,"{""padlock"": true, ""rca"": true}",True,True,Dpp10_7659

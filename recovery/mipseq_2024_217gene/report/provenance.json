@@ -1,14 +1,14 @@
 {
   "reference_assembly": "mm10 / GRCm38",
   "annotation": "GENCODE M19 / Ensembl 94",
-  "candidate_records": 20696144,
-  "unique_target_windows": 1293509,
+  "candidate_records": 20741376,
+  "unique_target_windows": 1296336,
   "target_window_length": 40,
-  "covered_targets": 216,
-  "total_transcript_ids": 1210,
+  "covered_targets": 217,
+  "total_transcript_ids": 1211,
   "sha256": {
     "design.yaml": "2d8a9a0512d79c7c3c572158570bb85c29c4d0404d3998896b6b9b569238dea8",
-    "run_recovery.py": "d7a52deda5de033ef3951a391f3daf4a7af3674aacb2fa51cf31eb46c6056ea3",
+    "run_recovery.py": "74bc0876d7158bfccdf5d2f440e845e623f97b0b7a50c7d1676de5345ca6c48e",
     "extract_reference.py": "a4261ce0a9d40c675f27cf7b3b70b5ba35a775fbd2a95adab2f350089d643ca0",
     "classify_unrecovered.py": "c5fa1b011356a0c12e5a7019ee04293d0faf60819a2ba8e616c98f38c49e4545",
     "targets.csv": "b3d5d71e87f07d224c047eb2cd6ee0542176aa950e92c52bb273ac2531249f85",
@@ -18,5 +18,20 @@
     "mm10.fa": "c7fe528da3fd081382ad65c1b1af3ea9c0b6251bc24f392b7b3ef4967eeed91c",
     "mm10.gtf": "7ab6746c0417216e6fe299f91df8624e818ce419ae8f7d0f6118744e8cb36e6d",
     "common/sequence_recovery.py": "979e1c45df686bff4ccf416a73e0cfbf90449f4df951ca85579dbca5e44b35af"
-  }
+  },
+  "target_aliases": {
+    "Ccn3": "Nov"
+  },
+  "generation_batches": [
+    {
+      "scope": "216 same-name targets; Ccn3 empty",
+      "candidate_records": 20696144,
+      "runner_sha256": "d7a52deda5de033ef3951a391f3daf4a7af3674aacb2fa51cf31eb46c6056ea3"
+    },
+    {
+      "scope": "Ccn3 via annotation symbol Nov only",
+      "candidate_records": 45232,
+      "runner_sha256": "74bc0876d7158bfccdf5d2f440e845e623f97b0b7a50c7d1676de5345ca6c48e"
+    }
+  ]
 }

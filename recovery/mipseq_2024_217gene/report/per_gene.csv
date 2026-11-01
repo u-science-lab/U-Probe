@@ -26,7 +26,7 @@ candidate,all,Cartpt,4,4,100.0,2,2,100.0
 candidate,all,Ccdc141,4,4,100.0,2,2,100.0
 candidate,all,Cck,4,4,100.0,2,2,100.0
 candidate,all,Ccl3,4,4,100.0,2,2,100.0
-candidate,all,Ccn3,4,0,0.0,2,0,0.0
+candidate,all,Ccn3,4,4,100.0,2,2,100.0
 candidate,all,Cd24a,4,4,100.0,2,2,100.0
 candidate,all,Cdh20,4,4,100.0,2,2,100.0
 candidate,all,Celf3,4,4,100.0,2,2,100.0
@@ -243,7 +243,7 @@ candidate,padlock,Cartpt,2,2,100.0,,,
 candidate,padlock,Ccdc141,2,2,100.0,,,
 candidate,padlock,Cck,2,2,100.0,,,
 candidate,padlock,Ccl3,2,2,100.0,,,
-candidate,padlock,Ccn3,2,0,0.0,,,
+candidate,padlock,Ccn3,2,2,100.0,,,
 candidate,padlock,Cd24a,2,2,100.0,,,
 candidate,padlock,Cdh20,2,2,100.0,,,
 candidate,padlock,Celf3,2,2,100.0,,,
@@ -460,7 +460,7 @@ candidate,rca,Cartpt,2,2,100.0,,,
 candidate,rca,Ccdc141,2,2,100.0,,,
 candidate,rca,Cck,2,2,100.0,,,
 candidate,rca,Ccl3,2,2,100.0,,,
-candidate,rca,Ccn3,2,0,0.0,,,
+candidate,rca,Ccn3,2,2,100.0,,,
 candidate,rca,Cd24a,2,2,100.0,,,
 candidate,rca,Cdh20,2,2,100.0,,,
 candidate,rca,Celf3,2,2,100.0,,,

@@ -8,13 +8,13 @@ is used. [Reference audit](reference_audit.json) records its SHA256 and source r
 
 | Metric | Unfiltered candidates |
 |---|---|
-| Generated oligos | 20,696,144 |
-| Padlock SRR | 98.847926% (429/434) |
-| RCA initiator SRR | 98.847926% (429/434) |
-| Overall SRR | 98.847926% (858/868) |
-| TRR | 99.539171% (216/217 genes) |
-| MTR | 98.847926% |
-| CPSR | 98.617512% (428/434 reference pairs) |
+| Generated oligos | 20,741,376 |
+| Padlock SRR | 99.308756% (431/434) |
+| RCA initiator SRR | 99.308756% (431/434) |
+| Overall SRR | 99.308756% (862/868) |
+| TRR | 100% (217/217 genes) |
+| MTR | 99.308756% |
+| CPSR | 99.078341% (430/434 reference pairs) |
 | Final selection | Not evaluated |
 
 [Shared evaluator reports](report/) retain full-sequence and same-generated-group
@@ -32,21 +32,20 @@ gene's published B1/B2 combination. Internal short motifs are not treated as
 unique gene identifiers.
 
 Native U-Probe target extraction and assembly enumerate 40-nt windows at step 1
-across all same-name annotated transcripts in mm10/GRCm38 with GENCODE M19
+across all target-matched annotated transcripts in mm10/GRCm38 with GENCODE M19
 (Ensembl 94). A window contains two adjacent 13-nt padlock sites, a 1-nt gap,
 and a 13-nt initiator site. Valid windows are deduplicated within each gene;
-1,293,509 windows from 1,210 transcript IDs cover 216 targets. No final-count,
+1,296,336 windows from 1,211 transcript IDs cover all 217 targets.
+The explicit annotation alias Ccn3=Nov resolves the older mm10 gene symbol. No final-count,
 1,000-nt position, GC/Tm, specificity or ranking filter limits recovery.
 Generation reads the YAML target list, fixed backbone and codebook; published
 binding arms, full oligos and inferred coordinates are evaluation-only inputs.
 Both output oligos retain their actual shared native assembly group ID.
 [Provenance](report/provenance.json) records input and implementation hashes.
-
-Four missing oligos belong to Ccn3, annotated as its former symbol Nov
-(ENSMUSG00000037362.8) in the input mm10 GTF. The run matched gene names
-without alias mapping, so these oligos were not generated; the gene is present
-in mm10. GRCm39 annotates it as Ccn3 and lists Nov as a synonym. This
-post-run naming clarification does not change the measured recovery results.
+The measured candidate set reuses the original 216-target generation and adds
+a Nov-only native generation reported as Ccn3; no binding sequences or inferred
+sites guide this supplemental run. Ccn3 recovers all four oligos and both
+reference pairs.
 
 Six missing oligos from Adgrl4-2, Kif11-2 and Pde1c-2 have binding
 regions absent from legal same-gene generated windows; see
@@ -74,7 +73,7 @@ Set `OUTPUT_DIR` to an empty directory outside the checkout.
 R=recovery/mipseq_2024_217gene
 PYTHONPATH=. python "$R/run_recovery.py" --config "$R/design.yaml" \
   --fasta "$REFERENCE_DIR/mm10.fa" --gtf "$REFERENCE_DIR/mm10.gtf" \
-  --output "$OUTPUT_DIR" --workers 8
+  --output "$OUTPUT_DIR" --workers 8 --target-alias Ccn3=Nov
 python recovery/common/sequence_recovery.py \
   --reference-oligos "$R/reference_oligos.csv" \
   --reference-pairs "$R/reference_pairs.csv" \

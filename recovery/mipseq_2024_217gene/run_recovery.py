@@ -103,6 +103,8 @@ def main():
     p.add_argument('--resume-log', type=Path, help='Reuse only completed per-gene shards recorded by this runner')
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--genes', nargs='+', help='Optional YAML target subset for one small end-to-end test')
+    p.add_argument('--target-alias', action='append', default=[], metavar='TARGET=GTF_NAME',
+                   help='Explicit annotation gene-name alias; preserves the panel target in output')
     args = p.parse_args()
     CONFIG = yaml.safe_load(args.config.read_text())
     if args.workers < 1:
@@ -115,19 +117,32 @@ def main():
         CONFIG['targets'] = args.genes
     if any(not re.fullmatch(r'[A-Za-z0-9_.-]+', g) for g in CONFIG['targets']):
         p.error('Targets must be gene names, never target sequences')
+    aliases = {}
+    for value in args.target_alias:
+        target, separator, annotation = value.partition('=')
+        if not separator or target not in CONFIG['targets'] or not re.fullmatch(r'[A-Za-z0-9_.-]+', annotation):
+            p.error('Alias must be TARGET=GTF_NAME for a selected YAML target')
+        aliases[target] = annotation
     OUTPUT = args.output.resolve()
     if OUTPUT.exists() and any(OUTPUT.iterdir()) and not args.resume_log:
         p.error('Output must be empty')
     (OUTPUT/'candidates_by_gene').mkdir(parents=True, exist_ok=True)
     GENOMES = {CONFIG['genome']: dict(fasta=str(args.fasta.resolve()), gtf=str(args.gtf.resolve()))}
     subset = OUTPUT/'target_annotation.gtf'
+    annotation_targets = {aliases.get(g, g).upper(): g for g in CONFIG['targets']}
+    if len(annotation_targets) != len(CONFIG['targets']):
+        p.error('Annotation aliases must be one-to-one')
     genes = {g.upper() for g in CONFIG['targets']}
     with args.gtf.open() as src, subset.open('w') as dst:
         for line in src:
             if line.startswith('#'):
                 continue
             match = re.search(r'(?:^|;)\s*gene_name\s+\x22([^\x22]+)\x22', line.split('\t')[-1])
-            if match and match.group(1).upper() in genes:
+            if match and match.group(1).upper() in annotation_targets:
+                target = annotation_targets[match.group(1).upper()]
+                if target in aliases:
+                    line = re.sub(r'(gene_name\s+\x22)[^\x22]+(\x22)',
+                                  lambda m: m.group(1)+target+m.group(2), line)
                 dst.write(line)
     GTF = read_gtf(str(subset), extract_fields=GTF_RUN_FIELDS)
     GTF['gene_name'] = GTF.gene_name
@@ -167,7 +182,7 @@ def main():
                 shutil.copyfileobj(src, out, 4*1024*1024)
     provenance = dict(config_sha256=sha256(args.config), fasta_sha256=sha256(args.fasta),
                       gtf_sha256=sha256(args.gtf), runner_sha256=sha256(__file__))
-    result = dict(candidate_records=sum(d['candidate_records'] for d in details),
+    result = dict(target_aliases=aliases, candidate_records=sum(d['candidate_records'] for d in details),
                   genes=details, final_stage='not_executed', seconds=round(time.time()-started, 3), **provenance)
     (OUTPUT/'run_details.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result), flush=True)
