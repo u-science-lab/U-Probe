@@ -44,14 +44,6 @@ pair-level matching evidence. Metric definitions are provided in the
   both corresponding oligos in the same generated pair. GC/Tm, specificity,
   ranking and final-count filters are not applied.
 
-SHA-256 checksums identify the external input artifacts:
-
-| Input | SHA-256 |
-|---|---|
-| Supplementary workbook | `6388e90d4ab9e68b8ee72045310c7c69691ed3bef6f2c13dd121aa2813043b42` |
-| Genome FASTA | `b1d94d96ef9ba5ec6ad957b7233a8ed18541d7da1a575f84cf97e31a9407e0dd` |
-| Annotation GTF | `a8183d575ccf62c08534a3df1e62339238c31f585dc8b62a839ef287703ab3ad` |
-
 ## Reproduction
 
 From the repository root, install U-Probe and the recorded dependencies
@@ -77,11 +69,3 @@ python recovery/common/sequence_recovery.py \
   --generated "<OUTPUT_DIR>/candidates.csv.gz" \
   --output "<OUTPUT_DIR>/report"
 ```
-
-## Limitations
-
-The exact FASTA/GTF acquisition and preprocessing procedure was not recorded;
-external hash-matched files are required to reproduce the reported candidate
-count. The full candidate dataset is not included. The 2024 annotation is not
-claimed to be the original publication's reference. Recovery does not establish
-specificity, experimental performance or successful final probe selection.
