@@ -69,6 +69,7 @@ python recovery/common/sequence_recovery.py \
   --generated "<OUTPUT_DIR>/candidates.csv.gz" \
   --output "<OUTPUT_DIR>/report"
 ```
-Reproducibility Notes
+
+## Reproducibility Notes
 
 Results were generated using GRCm39 with NCBI RefSeq RS_2024_02 annotation. Exact reproduction requires matching reference FASTA/GTF files and a compatible U-Probe version. Reference data acquisition instructions are not yet provided. The reported recovery rates reflect unfiltered candidate-space coverage, not final probe selection.
