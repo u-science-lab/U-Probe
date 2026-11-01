@@ -54,14 +54,8 @@ use native U-Probe extraction, layout and assembly, iterating isoforms separatel
 All isoforms include the 148,183-nt Pcdh9 XR_003950833.2 transcript. RNA geometry
 is `padlock_site -> gap -> primer_site`, inferred once from the reference panel,
 without supplying reference sites to generation. Gene-specific 3-nt codes and
-fixed scaffold remain published values. Oligos are written 5'-to-3':
-
-```text
-padlock = A + code + TA + rc(padlock_site) + AATTATTAC + code + CATACACTAAAGATA
-primer  = rc(primer_site) + TA + rc(code) + TTATCTT
-```
-
-Phosphorylation is separate metadata. The initial specification was translated
+fixed scaffold remain published values; [design.yaml](design.yaml) is the
+assembly specification. Phosphorylation is separate metadata. The initial specification was translated
 to executable fields and all-isoform extraction; the full arm-length Cartesian
 product replaced its observed combined-length range. Curation changed only the
 protocol name and execution-annotation key, hence the two YAML hashes below.
@@ -82,33 +76,53 @@ protocol name and execution-annotation key, hence the two YAML hashes below.
 Use Linux, Python 3.10, the U-Probe API at the recorded execution base, and
 matching FASTA/GTF files. The recorded environment used Python 3.10.14 and
 U-Probe 0.2.0; additional pinned versions are in [requirements](../requirements.txt).
-Run from the repository root:
+Install U-Probe and the recorded dependencies from the repository root:
 
 ```bash
 python -m pip install -e .
 python -m pip install -r recovery/requirements.txt
+```
+
+Then use two commands, with no published binding sequence supplied to generation:
+
+```bash
 python recovery/starmap_plus_2023_64gene/run_recovery.py \
   --config recovery/starmap_plus_2023_64gene/design.yaml \
   --fasta /absolute/path/GRCm39.fa --gtf /absolute/path/GRCm39.gtf \
   --output /absolute/path/generated/starmap_plus_2023_64gene --workers 8
-python recovery/starmap_plus_2023_64gene/evaluate_recovery.py \
+python recovery/common/sequence_recovery.py \
+  --reference-oligos recovery/starmap_plus_2023_64gene/reference_oligos.csv \
+  --reference-pairs recovery/starmap_plus_2023_64gene/reference_pairs.csv \
+  --method-version STARmap_PLUS_2023_64gene \
   --generated /absolute/path/generated/starmap_plus_2023_64gene/candidates.csv.gz \
   --output /absolute/path/generated/starmap_plus_2023_64gene/report
-python recovery/starmap_plus_2023_64gene/verify_results.py
 ```
 
-Generation writes combined and per-gene candidate CSV gzip files plus source
-coordinates and run details. Coordinates are mature-transcript, 1-based inclusive;
-deduplicated windows retain their first generating isoform. The compact verifier
-checks committed report consistency; optional `--generated PATH` independently
-scans a complete generated file. Unit-test commands are in the [root README](../README.md).
+Generation writes complete candidate pairs, source coordinates and run details.
+Coordinates are mature-transcript, 1-based inclusive; window deduplication keeps
+the first generating isoform. Evaluation streams all records and reports SRR,
+TRR, MTR and CPSR. New generic pair reports use JSON `member_matches`; archived
+pair reports retain the original `padlock_matched` and `primer_matched` columns.
+The matching rule is identical; the archived results are not regenerated.
+
+To audit a published pair, compare both full DNA/gene/role records with
+`sequence_matches.csv`, then require a shared generated pair ID also listed in
+`pair_matches.csv`. The committed evidence preserves all linked IDs. It records
+the historical full scan; checking these small tables does not constitute a new
+scan of the uncommitted candidates.
+
+**External inputs:** published probe references are included, with supplementary
+table locations and checksums above. Matching genomic FASTA/GTF must be supplied
+from the original data archive. Their exact acquisition/preprocessing commands
+and a public version-matched download URL are `not_recorded`. Consequently a
+fresh-machine end-to-end reproduction cannot be claimed from public repository
+files alone; supplying the exact hash-matched database artifacts is still required.
+Do not silently substitute a newer annotation and expect identical candidate counts.
 
 ## Limitations
 
 Original transcript accessions, GC/Tm and specificity thresholds, and ranking
 rules were not reconstructed. The 2024 annotation is compatible with published
-sites but is not claimed to be the original 2023 database. Exact historical
-database acquisition/preprocessing commands and a public full-candidate download
-are `not_recorded`; matching external database artifacts are needed for exact
-candidate-count reproduction. New probes have not been experimentally validated.
+sites but is not claimed to be the original 2023 database. A public full-candidate download is also `not_recorded`.
+New probes have not been experimentally validated.
 Predefine filtering and final-selection rules before evaluating those stages.

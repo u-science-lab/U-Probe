@@ -40,23 +40,14 @@ references and small-subset pilots; these do not establish 42-gene recovery.
 
 ## Usage
 
-Follow each method README for candidate generation. The shared standard-library
-evaluator supports plain CSV and gzip, arbitrary oligo roles, separate candidate
-and final stages, and an optional wide pair table:
+Each method README provides two commands: generate candidates with the native
+U-Probe API, then evaluate them with [common/sequence_recovery.py](common/sequence_recovery.py).
+No method-specific evaluation wrapper is needed. Inputs use `gene`/`target_id`,
+`oligo_type`, `full_sequence`, and `pair_id`/`probe_set_id` for functional groups.
+Full DNA, target, role and same-generated-pair membership determine recovery;
+chemical modifications are separate. Novel sequences are not false positives.
 
-```bash
-python recovery/common/sequence_recovery.py \
-  --reference-oligos path/reference_oligos.csv --generated path/generated.csv.gz \
-  --method-version example_v1 --output path/report
-python -m unittest discover -s recovery/common -p 'test_*.py'
-python -m unittest discover -s recovery/starmap_plus_2023_64gene -p test_evaluation.py
-```
-
-Required fields are `gene` (or `target_id`), `oligo_type`, and `full_sequence`.
-Use `pair_id`/`probe_set_id` for functional groups and `probe_id`/`oligo_id` for
-generated oligos. `stage` defaults to `candidate`; modifications are separate.
-Pass `--reference-pairs` to cross-check reference groups. Outputs are the four
-recovery CSV reports plus exclusion reasons. Generic pair reports use JSON
-`member_matches`; method adapters may retain named role columns. New unpublished
-oligos are not false positives. Generated data and reference databases are not
-committed.
+Keep the published references and all four compact report tables for auditing,
+including full matched sequences and generated pair IDs. Do not commit large
+generated candidates or reference databases. The small metric regression tests
+are optional: `python -m unittest discover -s recovery/common`.
