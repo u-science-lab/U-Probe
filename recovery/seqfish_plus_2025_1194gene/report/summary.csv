@@ -1,0 +1,3 @@
+stage,oligo_type,reference_sequences,matched_sequences,SRR_pct,reference_targets,recovered_targets,TRR_pct,MTR_pct,reference_pairs,matched_pairs,CPSR_pct,generated_records,generated_unique_reference_hits,excluded_reference_records,duplicate_reference_records
+candidate,all,37893,37548,99.08954160399018,1194,1192,99.83249581239531,99.05014886819572,,,,28851260,37548,0,0
+candidate,primary_probe_body,37893,37548,99.08954160399018,1194,1192,99.83249581239531,99.05014886819572,,,,28851260,37548,0,0
