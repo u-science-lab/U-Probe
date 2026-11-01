@@ -11,7 +11,7 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 
 | Method | Dataset | Candidate SRR | CPSR | Final Recovery |
 |---|---|---|---|---|
-| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | N/A |
+| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | Not evaluated |
 | [ExSeq](exseq_2021_42gene/) | 2021 / 42 genes | 99.7006% | N/A | Not evaluated |
 | MERFISH | TBD | - | - | - |
 | seqFISH+ | TBD | - | - | - |
