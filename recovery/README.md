@@ -22,22 +22,6 @@ STARmap is **Unfiltered Candidate Recovery**, not final probe selection.
 Dashes indicate no verified full-dataset result. ExSeq has external prepared
 references and small-subset pilots; these do not establish 42-gene recovery.
 
-## TODO
-
-**STARmap PLUS**
-- [ ] Evaluate predefined filtering and final four-pair selection.
-
-**ExSeq**
-- [ ] Import prepared references and finalize executable YAML.
-- [ ] Evaluate and document full-panel recovery.
-
-**Other Methods**
-- [ ] Prepare reference sets, configurations and recovery records.
-
-**General**
-- [ ] Publish matching reference-data acquisition artifacts.
-- [ ] Verify fresh-machine reproduction and extend cross-method summaries.
-
 ## Usage
 
 Each method README provides two commands: generate candidates with the native
