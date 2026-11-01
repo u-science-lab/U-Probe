@@ -47,7 +47,7 @@ pair-level matching evidence. Metric definitions are provided in the
 ## Reproduction
 
 From the repository root, install U-Probe and the recorded dependencies
-(Python 3.10.14; U-Probe 0.2.0):
+(Python 3.10.14; U-Probe 0.6.2):
 
 ```bash
 python -m pip install -e .
