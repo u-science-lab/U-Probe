@@ -15,15 +15,17 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 | [ExSeq](exseq_2021_42gene/) | 2021 / 42 genes | 99.7006% | N/A | Not evaluated |
 | [MERFISH](merfish_2021_242gene/) | 2021 / 242 genes | 99.995456% | N/A | Not evaluated |
 | [seqFISH+](seqfish_plus_2025_1194gene/) | 2025 / 1,194 genes | 99.089542% | N/A | Not evaluated |
-| MiP-seq | TBD | - | - | - |
+| [MiP-seq](mipseq_2024_217gene/) | 2024 / 217 genes | 98.847926% | 98.617512% | Not evaluated |
 | PRISM | TBD | - | - | - |
 
-STARmap, ExSeq, MERFISH and seqFISH+ report **unfiltered candidate recovery**, not final probe
+STARmap, ExSeq, MERFISH, seqFISH+ and MiP-seq report **unfiltered candidate recovery**, not final probe
 selection. ExSeq recovers 333/334 padlocks and 42/42 targets using mm10;
 TRR is 100% and MTR is 99.7024%. ExSeq final selection has not been evaluated.
 MERFISH recovers 22,004/22,005 encoding templates and 242/242 targets; MTR is 99.995508%.
 seqFISH+ recovers 37,548/37,893 110-nt probe bodies and 1,192/1,194 targets;
 MTR is 99.050149%. Complete synthesis oligos are not evaluated.
+MiP-seq recovers 858/868 full oligos and 216/217 targets; MTR is 98.847926%.
+Same-generated-group recovery covers 428/434 padlock-RCA pairs.
 Dashes indicate no verified full-dataset result.
 
 ## Usage
