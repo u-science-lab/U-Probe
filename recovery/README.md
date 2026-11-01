@@ -61,7 +61,7 @@ or modified by the STARmap PLUS addition.
 ### General
 
 - [x] Standardize common recovery evaluation code.
-- [x] Establish compact results and provenance formats for the first method.
+- [x] Record compact results and non-sensitive reproduction settings in method READMEs.
 - [x] Verify compact evidence, metric consistency and small-run equivalence.
 - [ ] Generate a numerical cross-method recovery summary.
 - [ ] Publish matching external reference-data acquisition artifacts.

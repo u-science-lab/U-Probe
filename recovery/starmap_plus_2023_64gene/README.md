@@ -69,9 +69,21 @@ padlock = A + code + TA + rc(padlock_site) + AATTATTAC + code + CATACACTAAAGATA
 primer  = rc(primer_site) + TA + rc(code) + TTATCTT
 ```
 
-Padlock 5'-phosphate is exported separately. Main YAML changes and source versus
-published configuration hashes are in
-[provenance/yaml_changes.md](provenance/yaml_changes.md).
+Padlock 5'-phosphate is exported separately. The initial architecture
+specification was converted to native extraction/layout/probe fields. Reference
+selection was resolved to all annotated GRCm39 isoforms, the complete 19-25 nt
+arm Cartesian product replaced the initially observed total-length range, and
+the gap was fixed to 1-2 nt following the panel-wide geometry audit. No recovery-
+guided parameter retuning was performed. During repository curation, only the
+protocol display name and unused execution-annotation key were renamed.
+
+| Configuration artifact | SHA-256 |
+|---|---|
+| Historical executed YAML | `4bff8b65d58e2feb5d218f064b7279ea14d568f13c483b962cf4d72a64bcd608` |
+| Current `config/design.yaml` | `db3d3555784580ac79d71d3082774ba492b926a28526e41b26d554f479aa7b81` |
+
+The two YAML versions have identical genes, codebook, architecture and
+generation parameters; their byte hashes differ because of the metadata renames.
 
 ## 5. Candidate generation
 
@@ -86,8 +98,9 @@ construction. Execution-only changes addressed a 64-GiB cgroup limit and
 parallelized the long final gene, without changing design parameters. Small
 complete Npy outputs were byte-identical after decompression across execution
 versions. Design/export/merge took 3,356.25 seconds including recovery from
-failed workers and execution optimization. Full execution provenance is in
-[provenance/run_metadata.yaml](provenance/run_metadata.yaml).
+failed workers and execution optimization. The run used Python 3.10.14,
+U-Probe 0.2.0, pandas 2.1.1, NumPy 1.26.0, PyYAML 6.0.1 and Biopython 1.83.
+Additional dependency versions were not recorded exhaustively.
 
 Large generated files, genome FASTA, annotation, indexes and caches are not
 committed. The full candidate gzip has SHA-256
@@ -124,8 +137,14 @@ python -m pip install -e .
 python -m pip install -r recovery/requirements.txt
 ```
 
-Supply genomic FASTA and GTF matching the recorded versions and SHA-256 values
-in provenance. The exact historical database acquisition/preprocessing commands
+Supply genomic FASTA and GTF matching the versions above and these checksums:
+
+| File | Bytes | SHA-256 |
+|---|---:|---|
+| `GRCm39.fa` | 2762330512 | `b1d94d96ef9ba5ec6ad957b7233a8ed18541d7da1a575f84cf97e31a9407e0dd` |
+| `GRCm39.gtf` | 1115389575 | `a8183d575ccf62c08534a3df1e62339238c31f585dc8b62a839ef287703ab3ad` |
+
+The exact historical database acquisition/preprocessing commands
 were not recorded; a matching external reference artifact is required for an
 exact candidate-count reproduction. Do not substitute a newer annotation and
 assume its candidate count will be identical.
@@ -164,10 +183,14 @@ python -m unittest discover -s recovery/common -p 'test_*.py'
 
 The compact verifier establishes report consistency, not a new full candidate
 scan. Its optional `--generated` mode enables an independent full scan when the
-large output is available. Historical all-candidate scan evidence is retained
-in provenance. Small-run candidate equivalence and resume checks are recorded in
-[provenance/portable_runner_validation.json](provenance/portable_runner_validation.json); the
-directory migration does not rerun the complete 64-gene calculation.
+large output is available. The historical full scan covered all 88,542,552
+oligo rows and 44,271,276 pair records; repository curation did not repeat that
+large calculation. The portable runner was separately validated on Npy:
+51,107 pairs and 102,214 oligo rows, byte-identical after decompression to the
+historical run. Its candidate CSV SHA-256 after decompression is
+`9669fbeb4e217ad9c296597426d5ca930c85520ea69bc8c348d425b2516f3483`.
+Source-site records were also identical; unchanged-input resume succeeded,
+while modified-input resume was rejected.
 The portable bounded-batch runner may take longer than the historical run,
 which additionally parallelized the largest gene and compressed its merge.
 
