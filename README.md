@@ -105,7 +105,7 @@ uprobe run -p protocol.yaml -g genomes.yaml -o ./results --json
 The recommended way to use U-Probe with an AI agent such as Claude Code or Codex is the Agent Skill under [`uprobe/skills/u-probe/`](uprobe/skills/u-probe/); install it with `uprobe skill install` (see [Use U-Probe with an AI agent](#use-u-probe-with-an-ai-agent)). U-Probe no longer ships a terminal agent of its own: the `uprobe agent` command has been removed. The web server keeps its chat agent as an optional extra (see below).
 
 #### 🌐 Start Web Server 
-Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. First check `config.ini`: use local Linux paths under `[Paths]` and `frontend_url = http://localhost:5173` under `[Server]`.
+Run the FastAPI backend in WSL/Linux and the separate React frontend in Windows. Copy `config.example.ini` to the Git-ignored `config.ini` for optional local overrides. Leave `[Paths]` commented to use portable defaults, or set your own paths locally. Never commit credentials or machine-specific settings. When upgrading from a version that tracked `config.ini`, back up your local file before pulling and restore it afterward as an untracked file; keep existing custom settings instead of replacing them with the example.
 
 ```bash
 cd /path/to/U-Probe
