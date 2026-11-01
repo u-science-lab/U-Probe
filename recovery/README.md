@@ -41,3 +41,22 @@ Keep the published references and all four compact report tables for auditing,
 including full matched sequences and generated pair IDs. Do not commit large
 generated candidates or reference databases. The small metric regression tests
 are optional: `python -m unittest discover -s recovery/common`.
+
+## Planned Recoveries
+
+| Priority | Method | Validation focus | Status |
+|---|---|---|---|
+| P1 | osmFISH | Linear RNA-FISH probes | Planned — reference audit required |
+| P1 | split-FISH | Paired probes and bridge/readout assembly | Planned — reference audit required |
+| P1 | DNA Oligopaint | Genomic-region probe pools | Planned — reference audit required |
+| P1 | HCR v3.0 | Split-initiator probe pairs | Planned — reference audit required |
+| P2 | SABER-FISH | Modular signal amplification | Planned — reference audit required |
+| P2 | clampFISH 2.0 | Multi-component amplification probes | Planned — reference audit required |
+| P2 | HT-smFISH | High-throughput probe libraries | Planned — reference audit required |
+| P2 | FISHnCHIPs | Multiplexed RNA probe pools | Planned — reference audit required |
+| P2 | π-FISH rainbow | Multi-level probe assembly | Planned — reference audit required |
+| P2 | RAEFISH | Reverse padlock and priming probes | Planned — reference audit required |
+| P2 | Oligo-LiveFISH | CRISPR-based live-cell DNA imaging | Planned — reference audit required |
+
+Before execution, confirm complete original probe sequences, target mapping,
+fixed functional segments, probe grouping and reference genome version.
