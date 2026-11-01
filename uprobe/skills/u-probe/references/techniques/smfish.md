@@ -17,7 +17,7 @@ protocols disagree, and the `smfish_stellaris` template.
 ## 2. Probe architecture (5' -> 3')
 
 ```
-5'-[ rc(RNA), 20 nt (17-22) ]-3'-amine -> NHS-ester dye (TMR, Alexa 594, Cy5, Quasar, CAL Fluor)
+5'-[ rc(RNA), 20 nt (18-22) ]-3'-amine -> NHS-ester dye (TMR, Alexa 594, Cy5, Quasar, CAL Fluor)
 RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48) -5'
 ```
 
@@ -28,8 +28,8 @@ RNA 3'-.......[ site 1 ]--2-3 nt--[ site 2 ]--2-3 nt--[ site 3 ]....... (x 25-48
 
 | Parameter | Value | Conditions / note | Source |
 | --- | --- | --- | --- |
-| Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48; Suppl. Fig. 4 labels these "20 bp") | | Raj 2008 Suppl. Methods and probe list, doi:10.1038/nmeth.1253 |
-| Length (Stellaris) | 18-22 nt, typically 20; 18-19 nt in GC-rich regions, 21-22 nt in AT-rich regions | | Biosearch designer FAQ / blog |
+| Length | 17-22 nt ("roughly 17-22 bases"); sets used 20 nt (Actb, 48) and 17 nt (d2EGFP, 48; Suppl. Fig. 4 labels these "20 bp") | 17 nt lies outside the Stellaris range: use it only when the user asks for Raj's own set | Raj 2008 Suppl. Methods and probe list, doi:10.1038/nmeth.1253 |
+| Length (Stellaris) | 18-22 nt, typically 20; 18-19 nt in GC-rich regions, 21-22 nt in AT-rich regions | use **20 nt, 18-22 nt where 20 fails**: inside both ranges | Biosearch designer FAQ / blog |
 | GC | "as close to 45 % as possible" (dynamic programming); no window. The spread of one published set (Actb: 35-80 %, mean 56 %) is not a filter window | a target, no hard window | Raj 2008 |
 | GC (Stellaris) | **40-60 %** ("the limits of the design tool"); skewed-GC stretches are skipped | filter it: a position-based tiling never centres GC | Xiao 2023 RNA 29:1274, Methods "Oligo design and purchase", doi:10.1261/rna.079591.123 |
 | Tm | no value: "similar melting temperatures" (Stellaris designer); none in Raj | | Xiao 2023 |
@@ -103,7 +103,8 @@ configuration with `exempt_copies`, SKILL.md rule 6); `location_interval: 2` onl
 designer's spacing; `source: CDS` for a CDS-only set. Keep `length: 20`. A range such as
 `length: [18, 22]` makes windows of every length and `remove_overlap` keeps the shortest passing
 window at each start, so most of the set drops to 18-19 nt, not just the GC-skewed sites. If 20-nt
-sites fall short, report the shortfall first; then take another length only where 20 fails
+sites fall short, report the shortfall first; then take another length only where 20 fails, from
+18-22 nt (inside both Raj's and Stellaris' range; 17 nt only for a Raj set the user asks for)
 (`references/uprobe/troubleshooting.md`, "Too few probes").
 
 Template departures:
