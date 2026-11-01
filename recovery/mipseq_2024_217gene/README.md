@@ -42,8 +42,13 @@ binding arms, full oligos and inferred coordinates are evaluation-only inputs.
 Both output oligos retain their actual shared native assembly group ID.
 [Provenance](report/provenance.json) records input and implementation hashes.
 
-Four missing oligos belong to Ccn3, which has no same-name annotated transcript
-in this GTF. Six missing oligos from Adgrl4-2, Kif11-2 and Pde1c-2 have binding
+Four missing oligos belong to Ccn3, annotated as its former symbol Nov
+(ENSMUSG00000037362.8) in the input mm10 GTF. The run matched gene names
+without alias mapping, so these oligos were not generated; the gene is present
+in mm10. GRCm39 annotates it as Ccn3 and lists Nov as a synonym. This
+post-run naming clarification does not change the measured recovery results.
+
+Six missing oligos from Adgrl4-2, Kif11-2 and Pde1c-2 have binding
 regions absent from legal same-gene generated windows; see
 [unmatched reasons](report/unmatched_reasons.csv). Grpr-2's two oligos are
 individually recovered at different windows but never in one generated group,

@@ -1,10 +1,10 @@
 gene,oligo_type,reference_oligo_id,reference_pair_id,reason,evidence
 Adgrl4,padlock,Fig3_row_417,Adgrl4-2,target_site_difference,Published binding region absent from legal same-gene generated windows
 Adgrl4,rca,Fig3_row_418,Adgrl4-2,target_site_difference,Published binding region absent from legal same-gene generated windows
-Ccn3,padlock,Fig3_row_851,Ccn3-1,transcript_not_covered,No same-name annotated transcript in the input GTF
-Ccn3,rca,Fig3_row_852,Ccn3-1,transcript_not_covered,No same-name annotated transcript in the input GTF
-Ccn3,padlock,Fig3_row_853,Ccn3-2,transcript_not_covered,No same-name annotated transcript in the input GTF
-Ccn3,rca,Fig3_row_854,Ccn3-2,transcript_not_covered,No same-name annotated transcript in the input GTF
+Ccn3,padlock,Fig3_row_851,Ccn3-1,transcript_not_covered,"Input mm10 GTF annotates Ccn3 as Nov (ENSMUSG00000037362.8); gene-name alias mapping was not applied, so no Ccn3 transcript was extracted"
+Ccn3,rca,Fig3_row_852,Ccn3-1,transcript_not_covered,"Input mm10 GTF annotates Ccn3 as Nov (ENSMUSG00000037362.8); gene-name alias mapping was not applied, so no Ccn3 transcript was extracted"
+Ccn3,padlock,Fig3_row_853,Ccn3-2,transcript_not_covered,"Input mm10 GTF annotates Ccn3 as Nov (ENSMUSG00000037362.8); gene-name alias mapping was not applied, so no Ccn3 transcript was extracted"
+Ccn3,rca,Fig3_row_854,Ccn3-2,transcript_not_covered,"Input mm10 GTF annotates Ccn3 as Nov (ENSMUSG00000037362.8); gene-name alias mapping was not applied, so no Ccn3 transcript was extracted"
 Kif11,padlock,Fig3_row_609,Kif11-2,target_site_difference,Published binding region absent from legal same-gene generated windows
 Kif11,rca,Fig3_row_610,Kif11-2,target_site_difference,Published binding region absent from legal same-gene generated windows
 Pde1c,padlock,Fig3_row_713,Pde1c-2,target_site_difference,Published binding region absent from legal same-gene generated windows

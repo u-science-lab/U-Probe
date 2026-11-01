@@ -42,7 +42,10 @@ def main():
             key = r['reference_oligo_id']
             if not coverage.get(gene, {}).get('transcripts', 0):
                 reason = 'transcript_not_covered'
-                evidence = 'No same-name annotated transcript in the input GTF'
+                # Post-run annotation evidence; no alias substitution during generation.
+                evidence = ('Input mm10 GTF annotates Ccn3 as Nov (ENSMUSG00000037362.8); '
+                            'gene-name alias mapping was not applied, so no Ccn3 transcript was extracted'
+                            if gene == 'Ccn3' else 'No same-name annotated transcript in the input GTF')
             elif key not in present:
                 reason = 'target_site_difference'
                 evidence = 'Published binding region absent from legal same-gene generated windows'
