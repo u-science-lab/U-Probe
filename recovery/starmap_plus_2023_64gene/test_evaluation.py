@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
-sys.path.insert(0, str(HERE.parents[1]/'scripts'))
-sys.path.insert(0, str(HERE.parents[2]/'common'))
+sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(HERE.parent.parent/'common'))
 from evaluate_recovery import evaluate_files
 from verify_results import verify
 

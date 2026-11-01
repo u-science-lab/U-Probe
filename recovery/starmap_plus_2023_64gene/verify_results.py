@@ -9,7 +9,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-METHOD_ROOT = Path(__file__).resolve().parents[1]
+METHOD_ROOT = Path(__file__).resolve().parent
 VERSION = 'STARmap_PLUS_2023_64gene'
 
 
@@ -211,8 +211,8 @@ def verify(reference_oligos, reference_pairs, report, generated=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--reference-oligos', type=Path, default=METHOD_ROOT/'reference/reference_oligos.csv')
-    parser.add_argument('--reference-pairs', type=Path, default=METHOD_ROOT/'reference/reference_pairs.csv')
+    parser.add_argument('--reference-oligos', type=Path, default=METHOD_ROOT/'reference_oligos.csv')
+    parser.add_argument('--reference-pairs', type=Path, default=METHOD_ROOT/'reference_pairs.csv')
     parser.add_argument('--report', type=Path, default=METHOD_ROOT/'report')
     parser.add_argument('--generated', type=Path, help='Optional complete long CSV/.csv.gz; expensive for the archived run')
     parser.add_argument('--output', type=Path, help='Optional verification JSON output')

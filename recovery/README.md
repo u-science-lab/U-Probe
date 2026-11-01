@@ -4,65 +4,59 @@
 
 Evaluate whether U-Probe can independently regenerate experimentally published
 probe sequences from reference target sequences under method-specific probe
-architectures. This project records recovery of published molecules, not a
-comparison of design tools. Methods share SRR, TRR and MTR, plus CPSR when a
-functional unit contains multiple oligos.
+architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
+[metric definitions](sequence_recovery_metrics.md) specify matching and counting.
 
-[Metric definitions](sequence_recovery_metrics.md) and
-[shared evaluation code](common/) apply across methods. Detailed configurations,
-results and limitations belong in the method directories.
+## Recovery Results & Progress
 
-## Progress
+| Method | Dataset | Candidate SRR | CPSR | Final Recovery |
+|---|---|---|---|---|
+| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | TODO |
+| ExSeq | 2021 / 42 genes | - | - | TODO |
+| MERFISH | TBD | - | - | TODO |
+| seqFISH+ | TBD | - | - | TODO |
+| MiP-seq | TBD | - | - | TODO |
+| PRISM | TBD | - | - | TODO |
 
-| Method | Dataset | Reference | YAML | Candidate Recovery | Final Recovery |
-|---|---|---|---|---|---|
-| [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | Done | Done | Done: unfiltered | TODO |
-| ExSeq | 2021 / 42 genes | Prepared externally | Initial specification | Partial external pilots; full panel TODO | TODO |
-| MERFISH | TBD | TODO | TODO | TODO | TODO |
-| seqFISH+ | TBD | Source collected | Engineering preset only | Published-sequence recovery not verified | TODO |
-| MiP-seq | TBD | Source collected | Existing preset; recovery not audited | Not verified | TODO |
-| PRISM | TBD | Source collected | TODO | Not verified | TODO |
-
-The ExSeq reference archive includes the 42-gene design specification, targets,
-oligos and barcode assignments. Separate external pilots cover different small
-gene subsets; they do not establish complete 42-gene recovery. The seqFISH+
-engineering pilot used synthetic readout placeholders, so it is not evidence of
-published full-sequence recovery. Source-collected entries have no verified
-recovery result in this record. Other methods' existing files are not migrated
-or modified by the STARmap PLUS addition.
+STARmap is **Unfiltered Candidate Recovery**, not final probe selection.
+Dashes indicate no verified full-dataset result. ExSeq has external prepared
+references and small-subset pilots; these do not establish 42-gene recovery.
 
 ## TODO
 
-### STARmap PLUS
+**STARmap PLUS**
+- [ ] Evaluate predefined filtering and final four-pair selection.
 
-- [x] Extract published probe sequences.
-- [x] Prepare executable design YAML and portable candidate runner.
-- [x] Generate unfiltered candidate probes.
-- [x] Evaluate candidate sequence recovery and independently verify results.
-- [ ] Evaluate recovery after predefined filtering.
-- [ ] Evaluate recovery after final probe selection.
+**ExSeq**
+- [ ] Import prepared references and finalize executable YAML.
+- [ ] Evaluate and document full-panel recovery.
 
-### ExSeq
+**Other Methods**
+- [ ] Prepare reference sets, configurations and recovery records.
 
-- [x] Prepare published reference sequences in the external archive.
-- [x] Prepare an initial probe architecture specification.
-- [ ] Import and audit the intended 42-gene recovery package.
-- [ ] Validate and finalize executable YAML.
-- [ ] Run full-panel candidate sequence recovery.
-- [ ] Validate and document full-panel recovery results.
+**General**
+- [ ] Publish matching reference-data acquisition artifacts.
+- [ ] Verify fresh-machine reproduction and extend cross-method summaries.
 
-### Other methods
+## Usage
 
-- [ ] Prepare and normalize published reference probe sets.
-- [ ] Implement method-specific YAML configurations.
-- [ ] Run candidate sequence recovery.
-- [ ] Document results and limitations.
+Follow each method README for candidate generation. The shared standard-library
+evaluator supports plain CSV and gzip, arbitrary oligo roles, separate candidate
+and final stages, and an optional wide pair table:
 
-### General
+```bash
+python recovery/common/sequence_recovery.py \
+  --reference-oligos path/reference_oligos.csv --generated path/generated.csv.gz \
+  --method-version example_v1 --output path/report
+python -m unittest discover -s recovery/common -p 'test_*.py'
+python -m unittest discover -s recovery/starmap_plus_2023_64gene -p test_evaluation.py
+```
 
-- [x] Standardize common recovery evaluation code.
-- [x] Record compact results and non-sensitive reproduction settings in method READMEs.
-- [x] Verify compact evidence, metric consistency and small-run equivalence.
-- [ ] Generate a numerical cross-method recovery summary.
-- [ ] Publish matching external reference-data acquisition artifacts.
-- [ ] Verify complete fresh-machine reproduction with those public artifacts.
+Required fields are `gene` (or `target_id`), `oligo_type`, and `full_sequence`.
+Use `pair_id`/`probe_set_id` for functional groups and `probe_id`/`oligo_id` for
+generated oligos. `stage` defaults to `candidate`; modifications are separate.
+Pass `--reference-pairs` to cross-check reference groups. Outputs are the four
+recovery CSV reports plus exclusion reasons. Generic pair reports use JSON
+`member_matches`; method adapters may retain named role columns. New unpublished
+oligos are not false positives. Generated data and reference databases are not
+committed.

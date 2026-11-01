@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-METHOD_ROOT = Path(__file__).resolve().parents[1]
+METHOD_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(METHOD_ROOT.parent / 'common'))
 from sequence_recovery import evaluate, iter_csv, read_csv, write_csv
 
@@ -41,8 +41,8 @@ def evaluate_files(reference_oligos, reference_pairs, generated, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--reference-oligos', type=Path, default=METHOD_ROOT/'reference/reference_oligos.csv')
-    parser.add_argument('--reference-pairs', type=Path, default=METHOD_ROOT/'reference/reference_pairs.csv')
+    parser.add_argument('--reference-oligos', type=Path, default=METHOD_ROOT/'reference_oligos.csv')
+    parser.add_argument('--reference-pairs', type=Path, default=METHOD_ROOT/'reference_pairs.csv')
     parser.add_argument('--generated', type=Path, required=True, help='Generated long CSV or .csv.gz')
     parser.add_argument('--output', type=Path, default=METHOD_ROOT/'report')
     args = parser.parse_args()
