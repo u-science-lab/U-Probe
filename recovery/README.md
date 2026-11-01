@@ -13,14 +13,15 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 |---|---|---|---|---|
 | [STARmap PLUS](starmap_plus_2023_64gene/) | 2023 / 64 genes | 100% | 100% | N/A |
 | [ExSeq](exseq_2021_42gene/) | 2021 / 42 genes | 99.7006% | N/A | Not evaluated |
-| MERFISH | TBD | - | - | - |
+| [MERFISH](merfish_2021_242gene/) | 2021 / 242 genes | 99.995456% | N/A | Not evaluated |
 | seqFISH+ | TBD | - | - | - |
 | MiP-seq | TBD | - | - | - |
 | PRISM | TBD | - | - | - |
 
-STARmap and ExSeq report **unfiltered candidate recovery**, not final probe
+STARmap, ExSeq and MERFISH report **unfiltered candidate recovery**, not final probe
 selection. ExSeq recovers 333/334 padlocks and 42/42 targets using mm10;
 TRR is 100% and MTR is 99.7024%. ExSeq final selection has not been evaluated.
+MERFISH recovers 22,004/22,005 encoding templates and 242/242 targets; MTR is 99.995508%.
 Dashes indicate no verified full-dataset result.
 
 ## Usage

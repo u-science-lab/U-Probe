@@ -1,0 +1,3 @@
+stage,oligo_type,reference_sequences,matched_sequences,SRR_pct,reference_targets,recovered_targets,TRR_pct,MTR_pct,reference_pairs,matched_pairs,CPSR_pct,generated_records,generated_unique_reference_hits,excluded_reference_records,duplicate_reference_records
+candidate,all,22005,22004,99.99545557827767,242,242,100.0,99.99550844412504,,,,17702580,22004,0,0
+candidate,encoding_probe,22005,22004,99.99545557827767,242,242,100.0,99.99550844412504,,,,17702580,22004,0,0
