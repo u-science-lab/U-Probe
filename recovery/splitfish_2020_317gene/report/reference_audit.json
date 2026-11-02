@@ -1,0 +1,25 @@
+{
+  "genes": 317,
+  "oligos": 45648,
+  "proposed_pairs": 22824,
+  "confirmed_pairs": 22824,
+  "uncertain_pairs": [],
+  "codebook_blank_controls": [
+    "Blank1",
+    "Blank2",
+    "Blank3",
+    "Blank4",
+    "Blank5",
+    "Blank6",
+    "Blank7",
+    "Blank8"
+  ],
+  "bridge_core_matches_author": true,
+  "input_sha256": {
+    "templates": "722f224ceb0f07709cf3c250d403bc26f0849a641fdc2babaeb22ee0e45d4f60",
+    "codebook": "81c51c3dfa79f76fdb34fb11ee2c60272a93d4227c7f540ae528d02c778959e3",
+    "bridges": "846501cd74ef0c0d54c9f380c3728698138245049b98e3fa7dd3134a40cde6d3",
+    "author_bridges": "66ad671950c47eb47a85277db331e934cc4fc1d6cd883366dc6ce3b3dc8a0b27"
+  },
+  "pairing_rule": "Per gene and ascending on-bit: 36 P1 followed by 36 P2; same ordinal, verified 25+2+25 on published transcript. Unverified pairs omitted from CPSR only."
+}

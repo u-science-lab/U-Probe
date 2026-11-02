@@ -18,6 +18,7 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 | [MiP-seq](mipseq_2024_217gene/) | 2024 / 217 genes | 99.308756% | 99.078341% | Not evaluated |
 | [PRISM](prism_2025_64gene/) | 2025 / 64 genes | 100% | N/A | Not evaluated |
 | [RAEFISH](raefish_2025_64gene/) | 2025 / 64 Human genes | 100% | 100% | Not evaluated |
+| [split-FISH](splitfish_2020_317gene/) | 2020 / 317 genes | 100% | 100% | Not evaluated |
 | [TDDN-FISH](tddnfish_2025/) | 2025 / 9 HeLa genes | 100% | N/A | Not evaluated |
 
 STARmap, ExSeq, MERFISH, seqFISH+ and MiP-seq report **unfiltered candidate recovery**, not final probe
@@ -54,7 +55,6 @@ are optional: `python -m unittest discover -s recovery/common`.
 | Priority | Method | Validation focus | Status |
 |---|---|---|---|
 | P1 | osmFISH | Linear RNA-FISH probes | Planned — reference audit required |
-| P1 | split-FISH | Paired probes and bridge/readout assembly | Planned — reference audit required |
 | P1 | DNA Oligopaint | Genomic-region probe pools | Planned — reference audit required |
 | P1 | HCR v3.0 | Split-initiator probe pairs | Planned — reference audit required |
 | P2 | SABER-FISH | Modular signal amplification | Planned — reference audit required |

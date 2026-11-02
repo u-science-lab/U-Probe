@@ -1,0 +1,2570 @@
+name: splitfish_2020_317gene_candidates
+genome: reference
+targets:
+- Ccdc177
+- RP23-383N15.1
+- RP24-338G10.1
+- Myh11
+- Xirp1
+- Col6a5
+- Abca9
+- Pkdrej
+- Col6a6
+- Igsf10
+- Tmc3
+- Wdfy4
+- Scn10a
+- Fat4
+- Hmcn2
+- Zfp831
+- Map3k9
+- Scn7a
+- Nat8l
+- Sdk1
+- Dnah8
+- Dnah11
+- Pappa
+- Spag17
+- Trabd2b
+- Prtg
+- Grik3
+- Gpr179
+- Edaradd
+- Akap6
+- Adamts17
+- Map1a
+- Bend4
+- Reps2
+- Armcx4
+- Plcb2
+- Adam19
+- Galnt15
+- Pygo1
+- Tnxb
+- Stab2
+- Ptprz1
+- Kif5a
+- Dnah1
+- Chst2
+- Cacna1c
+- Col4a4
+- Scn4a
+- Sdk2
+- Pcdhb19
+- Myom2
+- Fgd5
+- Kif1a
+- Caskin1
+- Csmd1
+- Acacb
+- Ksr2
+- Mgam
+- Plxnc1
+- Pcdhb22
+- Impg2
+- Sptbn2
+- Rnf150
+- Myh7b
+- Adamts2
+- Ppfia2
+- Camk4
+- Rims3
+- Fign
+- Gpr116
+- Prune2
+- Erc2
+- Abca1
+- Notch3
+- Dock10
+- Ntrk2
+- Synm
+- Pkd1l3
+- Mrc2
+- Foxo1
+- Il17rd
+- Myom3
+- Rassf4
+- Ddr2
+- Trpm6
+- Spon1
+- Celsr1
+- Aldh1l2
+- Parp14
+- Daam2
+- Ago4
+- Ctif
+- Setd1b
+- Pla2r1
+- Gpr161
+- Dock6
+- Gm20342
+- Trpm2
+- Lgr6
+- Fry
+- Flrt2
+- Ptprm
+- Srgap3
+- Dock8
+- Shroom3
+- Sned1
+- Gm29666
+- Nhsl2
+- Arhgap31
+- Zfp334
+- Cdyl2
+- Veph1
+- Slc38a1
+- Hspg2
+- Itga4
+- Amer1
+- Dzank1
+- F8
+- Nid1
+- Atp1a2
+- Kcnq1ot1
+- Notch4
+- Myh10
+- Col4a6
+- Fbxo32
+- Hivep2
+- Plxna3
+- Cacna1e
+- Phlpp2
+- Nup210l
+- Helz2
+- Mlxip
+- Mkl2
+- Prkaa2
+- Nhsl1
+- Sox6
+- Szt2
+- Nfia
+- Qser1
+- Elmsan1
+- Abca4
+- Dennd4a
+- Nr6a1
+- Crocc
+- Dennd3
+- Tmed8
+- Dock5
+- Irs1
+- Kdm7a
+- Nav2
+- Ppm1l
+- Baz2a
+- Itpr2
+- Arid1a
+- Mylk
+- Jrk
+- Crebbp
+- Dab2ip
+- Aim1
+- Lrrk2
+- Zfp516
+- Thsd7a
+- Plxnd1
+- Crb2
+- Dock4
+- Tbc1d32
+- Onecut2
+- Polr2a
+- Zfyve26
+- Irgq
+- Cacna1a
+- Alms1
+- Arhgef10
+- Zbtb1
+- Dip2c
+- Rttn
+- Prdm15
+- Kmt2c
+- Lsm11
+- Kif13a
+- Usp36
+- Rnf213
+- Spg11
+- Dcaf5
+- Cmah
+- Trim56
+- Thada
+- Col7a1
+- Fancm
+- Rprd2
+- Rnf217
+- Med12
+- Sestd1
+- Flnc
+- Itpr1
+- AU022252
+- Sh3pxd2b
+- Rfx7
+- Wdr7
+- Brca2
+- Wdr81
+- Tnrc18
+- Ep300
+- Piezo1
+- Atxn1l
+- Plcxd2
+- Atg2b
+- Nf1
+- Wdr90
+- Rnf169
+- Myo9a
+- Ly75
+- Sox11
+- Kif21a
+- Btrc
+- Dock9
+- Ubn1
+- Pask
+- Svil
+- Rapgef1
+- Nedd4l
+- Gas2l3
+- 2410089E03Rik
+- Sec16a
+- Dpy19l4
+- Ep400
+- Nin
+- Nipbl
+- Utp14b
+- Slc12a7
+- Akap11
+- Smg7
+- Brip1
+- Ythdc2
+- Rc3h1
+- Utrn
+- Rsf1
+- Zfyve16
+- 4932438A13Rik
+- Cdc42bpb
+- Trove2
+- Abcc2
+- Gtf3c4
+- 1700020I14Rik
+- Luzp1
+- Abca3
+- Dicer1
+- Larp1
+- Map4
+- Ehbp1l1
+- Uhrf1bp1l
+- Aspm
+- Osbpl8
+- Dsp
+- Mysm1
+- Arhgap35
+- Plxna1
+- Ppl
+- Eif5b
+- Atr
+- Psd3
+- Tmem2
+- Cenpe
+- Als2cl
+- Kntc1
+- Zfp26
+- Tspan7
+- Nvl
+- Cacna2d1
+- Arhgef12
+- Slc4a7
+- Sart1
+- Brwd1
+- Trim33
+- Letm1
+- Arfgef1
+- Nbeal2
+- Golga4
+- Zbtb41
+- Cgnl1
+- Sbf1
+- Prrc2c
+- Myo6
+- Spag9
+- Edem1
+- Heatr1
+- Arhgef5
+- Dync1h1
+- Ogt
+- Macf1
+- Utp20
+- Smchd1
+- Pdzd8
+- Polr1a
+- Arhgef28
+- Mki67
+- Myo5c
+- Tjp1
+- Son
+- Cnot1
+- Mlec
+- Mllt4
+- Prpf8
+- Abhd2
+- Myo18a
+- Sptlc2
+- Ppp2ca
+- Aars
+- Pten
+- Pik3c2a
+- Slk
+- Cand1
+- Tnpo1
+- Myof
+- Flna
+- Kpnb1
+- Ahnak
+encoding:
+  Ccdc177:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGTAAGTGCGGTTAAAT
+    bits:
+    - 2
+    - 5
+  RP23-383N15.1:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 20
+    - 22
+  RP24-338G10.1:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 8
+    - 21
+  Myh11:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 9
+    - 14
+  Xirp1:
+    bridges:
+    - GGTTGGAAGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 25
+    - 26
+  Col6a5:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 16
+    - 24
+  Abca9:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 7
+    - 19
+  Pkdrej:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 5
+    - 16
+  Col6a6:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 7
+    - 11
+  Igsf10:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGTGTGGGCGGTTAAAT
+    bits:
+    - 2
+    - 4
+  Tmc3:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 11
+    - 14
+  Wdfy4:
+    bridges:
+    - GGTTGTTGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 21
+    - 24
+  Scn10a:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 6
+    - 9
+  Fat4:
+    bridges:
+    - GGAGTGTAGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 22
+    - 26
+  Hmcn2:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 10
+    - 15
+  Zfp831:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 3
+    - 16
+  Map3k9:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 5
+    - 22
+  Scn7a:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 11
+    - 17
+  Nat8l:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTTTGGTGCGGTTAAAT
+    bits:
+    - 4
+    - 6
+  Sdk1:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 4
+    - 25
+  Dnah8:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 13
+    - 15
+  Dnah11:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 3
+    - 12
+  Pappa:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 3
+    - 14
+  Spag17:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 9
+    - 19
+  Trabd2b:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 15
+    - 20
+  Prtg:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 4
+    - 11
+  Grik3:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 11
+    - 13
+  Gpr179:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 10
+    - 14
+  Edaradd:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 11
+    - 23
+  Akap6:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 12
+    - 24
+  Adamts17:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 13
+    - 14
+  Map1a:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 7
+    - 9
+  Bend4:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGGTAAGTGCGGTTAAAT
+    bits:
+    - 4
+    - 5
+  Reps2:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 15
+    - 22
+  Armcx4:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 3
+    - 13
+  Plcb2:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 11
+    - 12
+  Adam19:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 7
+    - 16
+  Galnt15:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGTAAGTGCGGTTAAAT
+    bits:
+    - 3
+    - 5
+  Pygo1:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 20
+    - 25
+  Tnxb:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGTGTGGGCGGTTAAAT
+    bits:
+    - 1
+    - 4
+  Stab2:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 1
+    - 14
+  Ptprz1:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 3
+    - 24
+  Kif5a:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 14
+    - 21
+  Dnah1:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTTTGGTGCGGTTAAAT
+    bits:
+    - 5
+    - 6
+  Chst2:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 7
+    - 13
+  Cacna1c:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 3
+    - 25
+  Col4a4:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 10
+    - 25
+  Scn4a:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 17
+    - 23
+  Sdk2:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 14
+    - 15
+  Pcdhb19:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 19
+    - 20
+  Myom2:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 2
+    - 10
+  Fgd5:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 11
+    - 22
+  Kif1a:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTTTGGTGCGGTTAAAT
+    bits:
+    - 2
+    - 6
+  Caskin1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 6
+    - 16
+  Csmd1:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 16
+    - 20
+  Acacb:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 2
+    - 16
+  Ksr2:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 5
+    - 13
+  Mgam:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 18
+    - 19
+  Plxnc1:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 1
+    - 15
+  Pcdhb22:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 13
+    - 20
+  Impg2:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 14
+    - 26
+  Sptbn2:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 2
+    - 22
+  Rnf150:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 8
+    - 13
+  Myh7b:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 4
+    - 16
+  Adamts2:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 1
+    - 24
+  Ppfia2:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 6
+    - 20
+  Camk4:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTTTGGTGCGGTTAAAT
+    bits:
+    - 1
+    - 6
+  Rims3:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 14
+    - 25
+  Fign:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 2
+    - 11
+  Gpr116:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGTAAGTGCGGTTAAAT
+    bits:
+    - 1
+    - 5
+  Prune2:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 1
+    - 25
+  Erc2:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 8
+    - 23
+  Abca1:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 13
+    - 17
+  Notch3:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 18
+    - 22
+  Dock10:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 12
+    - 26
+  Ntrk2:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 1
+    - 10
+  Synm:
+    bridges:
+    - GGTTGTTGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 21
+    - 26
+  Pkd1l3:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 7
+    - 22
+  Mrc2:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 17
+    - 19
+  Foxo1:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 5
+    - 20
+  Il17rd:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 1
+    - 22
+  Myom3:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 8
+    - 12
+  Rassf4:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 8
+    - 16
+  Ddr2:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 2
+    - 18
+  Trpm6:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 8
+    - 25
+  Spon1:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 7
+    - 24
+  Celsr1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 6
+    - 8
+  Aldh1l2:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 13
+    - 21
+  Parp14:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 4
+    - 19
+  Daam2:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 17
+    - 24
+  Ago4:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 9
+    - 20
+  Ctif:
+    bridges:
+    - GGAGTGTAGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 22
+    - 24
+  Setd1b:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 7
+    - 14
+  Pla2r1:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 11
+    - 26
+  Gpr161:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 6
+    - 24
+  Dock6:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTTTGGTGCGGTTAAAT
+    bits:
+    - 3
+    - 6
+  Gm20342:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 18
+    - 23
+  Trpm2:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 18
+    - 21
+  Lgr6:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 11
+    - 25
+  Fry:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 10
+    - 13
+  Flrt2:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 15
+    - 26
+  Ptprm:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 2
+    - 25
+  Srgap3:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 4
+    - 22
+  Dock8:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 12
+    - 16
+  Shroom3:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 4
+    - 12
+  Sned1:
+    bridges:
+    - GGTAGGTAGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 23
+    - 24
+  Gm29666:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 12
+    - 22
+  Nhsl2:
+    bridges:
+    - GGTAGGTAGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 23
+    - 25
+  Arhgap31:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 8
+    - 18
+  Zfp334:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 4
+    - 20
+  Cdyl2:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 12
+    - 18
+  Veph1:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 1
+    - 16
+  Slc38a1:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 17
+    - 21
+  Hspg2:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 9
+    - 21
+  Itga4:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 1
+    - 20
+  Amer1:
+    bridges:
+    - GGTTGTTGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 21
+    - 25
+  Dzank1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 6
+    - 21
+  F8:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 13
+    - 18
+  Nid1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 6
+    - 17
+  Atp1a2:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 16
+    - 26
+  Kcnq1ot1:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 2
+    - 19
+  Notch4:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 5
+    - 24
+  Myh10:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAAGGTTGCGGTTAAAT
+    bits:
+    - 2
+    - 7
+  Col4a6:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 4
+    - 15
+  Fbxo32:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 8
+    - 19
+  Hivep2:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 3
+    - 11
+  Plxna3:
+    bridges:
+    - GGTAGGTAGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 23
+    - 26
+  Cacna1e:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 20
+    - 21
+  Phlpp2:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 5
+    - 9
+  Nup210l:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 10
+    - 12
+  Helz2:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 11
+    - 18
+  Mlxip:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 5
+    - 10
+  Mkl2:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 12
+    - 19
+  Prkaa2:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 3
+    - 23
+  Nhsl1:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 15
+    - 16
+  Sox6:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 16
+    - 18
+  Szt2:
+    bridges:
+    - GGAGTGTAGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 22
+    - 25
+  Nfia:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 8
+    - 9
+  Qser1:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 16
+    - 17
+  Elmsan1:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 14
+    - 17
+  Abca4:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 3
+    - 18
+  Dennd4a:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 9
+    - 25
+  Nr6a1:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 15
+    - 21
+  Crocc:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 3
+    - 9
+  Dennd3:
+    bridges:
+    - GGTTGTGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 24
+    - 26
+  Tmed8:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 17
+    - 22
+  Dock5:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 9
+    - 22
+  Irs1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAAGGTTGCGGTTAAAT
+    bits:
+    - 6
+    - 7
+  Kdm7a:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 15
+    - 19
+  Nav2:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 10
+    - 21
+  Ppm1l:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 1
+    - 11
+  Baz2a:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 6
+    - 13
+  Itpr2:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 15
+    - 18
+  Arid1a:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 4
+    - 10
+  Mylk:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 10
+    - 24
+  Jrk:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 5
+    - 12
+  Crebbp:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 5
+    - 18
+  Dab2ip:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 18
+    - 25
+  Aim1:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 8
+    - 14
+  Lrrk2:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 14
+    - 19
+  Zfp516:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 17
+    - 18
+  Thsd7a:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 7
+    - 12
+  Plxnd1:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 13
+    - 24
+  Crb2:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 5
+    - 15
+  Dock4:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 1
+    - 8
+  Tbc1d32:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 2
+    - 17
+  Onecut2:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 19
+    - 21
+  Polr2a:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGTGTGGGCGGTTAAAT
+    bits:
+    - 3
+    - 4
+  Zfyve26:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 4
+    - 14
+  Irgq:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 2
+    - 24
+  Cacna1a:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 2
+    - 12
+  Alms1:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 2
+    - 14
+  Arhgef10:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 2
+    - 15
+  Zbtb1:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 10
+    - 22
+  Dip2c:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 7
+    - 18
+  Rttn:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 7
+    - 20
+  Prdm15:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 13
+    - 23
+  Kmt2c:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 11
+    - 15
+  Lsm11:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 15
+    - 24
+  Kif13a:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 9
+    - 15
+  Usp36:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 8
+    - 20
+  Rnf213:
+    bridges:
+    - GGTTGTGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 24
+    - 25
+  Spg11:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 13
+    - 19
+  Dcaf5:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTAGAGTGCGGTTAAAT
+    bits:
+    - 1
+    - 2
+  Cmah:
+    bridges:
+    - GGAGTGTAGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 22
+    - 23
+  Trim56:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 5
+    - 19
+  Thada:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 12
+    - 14
+  Col7a1:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 11
+    - 16
+  Fancm:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 3
+    - 20
+  Rprd2:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 5
+    - 14
+  Rnf217:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 9
+    - 10
+  Med12:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 12
+    - 21
+  Sestd1:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 13
+    - 26
+  Flnc:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 5
+    - 21
+  Itpr1:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 5
+    - 25
+  AU022252:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 6
+    - 11
+  Sh3pxd2b:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 4
+    - 13
+  Rfx7:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 14
+    - 16
+  Wdr7:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 6
+    - 23
+  Brca2:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 2
+    - 21
+  Wdr81:
+    bridges:
+    - GGTTGTTGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 21
+    - 23
+  Tnrc18:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 16
+    - 19
+  Ep300:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 1
+    - 23
+  Piezo1:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 13
+    - 16
+  Atxn1l:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 3
+    - 22
+  Plcxd2:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 9
+    - 12
+  Atg2b:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 10
+    - 19
+  Nf1:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 17
+    - 20
+  Wdr90:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 7
+    - 15
+  Rnf169:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 1
+    - 13
+  Myo9a:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 5
+    - 26
+  Ly75:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 6
+    - 12
+  Sox11:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 3
+    - 8
+  Kif21a:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 15
+    - 25
+  Btrc:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 1
+    - 9
+  Dock9:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 1
+    - 17
+  Ubn1:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 16
+    - 22
+  Pask:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 10
+    - 18
+  Svil:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 9
+    - 11
+  Rapgef1:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 19
+    - 25
+  Nedd4l:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 17
+    - 26
+  Gas2l3:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 19
+    - 22
+  2410089E03Rik:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 7
+    - 21
+  Sec16a:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 4
+    - 23
+  Dpy19l4:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 10
+    - 20
+  Ep400:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 8
+    - 10
+  Nin:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 18
+    - 24
+  Nipbl:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 16
+    - 23
+  Utp14b:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 14
+    - 18
+  Slc12a7:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 15
+    - 23
+  Akap11:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 16
+    - 25
+  Smg7:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 4
+    - 9
+  Brip1:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 12
+    - 13
+  Ythdc2:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 19
+    - 26
+  Rc3h1:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 4
+    - 18
+  Utrn:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 11
+    - 20
+  Rsf1:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 20
+    - 23
+  Zfyve16:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 4
+    - 24
+  4932438A13Rik:
+    bridges:
+    - GGAGGAAAGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 17
+    - 25
+  Cdc42bpb:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 11
+    - 19
+  Trove2:
+    bridges:
+    - GGGAAGTTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 15
+    - 17
+  Abcc2:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 7
+    - 17
+  Gtf3c4:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 1
+    - 26
+  1700020I14Rik:
+    bridges:
+    - GGTAAGGTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 19
+    - 24
+  Luzp1:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGAGATTGCGGTTAAAT
+    bits:
+    - 1
+    - 12
+  Abca3:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGAAGGTTGCGGTTAAAT
+    bits:
+    - 1
+    - 7
+  Dicer1:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAAGGTTGCGGTTAAAT
+    bits:
+    - 3
+    - 7
+  Larp1:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 9
+    - 13
+  Map4:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 7
+    - 10
+  Ehbp1l1:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 18
+    - 20
+  Uhrf1bp1l:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 12
+    - 23
+  Aspm:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 10
+    - 11
+  Osbpl8:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 12
+    - 20
+  Dsp:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 2
+    - 8
+  Mysm1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 6
+    - 10
+  Arhgap35:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 9
+    - 23
+  Plxna1:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 9
+    - 24
+  Ppl:
+    bridges:
+    - GGAGATGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 16
+    - 21
+  Eif5b:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 8
+    - 17
+  Atr:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAGAGTTGCGGTTAAAT
+    bits:
+    - 3
+    - 10
+  Psd3:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 5
+    - 11
+  Tmem2:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 9
+    - 18
+  Cenpe:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 7
+    - 26
+  Als2cl:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 6
+    - 18
+  Kntc1:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 11
+    - 21
+  Zfp26:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 10
+    - 23
+  Tspan7:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGATTGAGGCGGTTAAAT
+    bits:
+    - 1
+    - 3
+  Nvl:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 4
+    - 21
+  Cacna2d1:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 8
+    - 24
+  Arhgef12:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 20
+    - 24
+  Slc4a7:
+    bridges:
+    - GGGAGAGGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 18
+    - 26
+  Sart1:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 7
+    - 8
+  Brwd1:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 9
+    - 26
+  Trim33:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 3
+    - 21
+  Letm1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 6
+    - 19
+  Arfgef1:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTTGTTGGCGGTTAAAT
+    bits:
+    - 1
+    - 21
+  Nbeal2:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAAGGTTGCGGTTAAAT
+    bits:
+    - 5
+    - 7
+  Golga4:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 1
+    - 19
+  Zbtb41:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 4
+    - 8
+  Cgnl1:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 5
+    - 17
+  Sbf1:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 10
+    - 16
+  Prrc2c:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 3
+    - 15
+  Myo6:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 5
+    - 23
+  Spag9:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 2
+    - 23
+  Edem1:
+    bridges:
+    - GGTTGTTGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 21
+    - 22
+  Heatr1:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGAGATGTGCGGTTAAAT
+    bits:
+    - 9
+    - 16
+  Arhgef5:
+    bridges:
+    - GGAGAGTTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 10
+    - 17
+  Dync1h1:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGTGTTTGGCGGTTAAAT
+    bits:
+    - 2
+    - 20
+  Ogt:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 13
+    - 25
+  Macf1:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTGGTTTGCGGTTAAAT
+    bits:
+    - 8
+    - 11
+  Utp20:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 14
+    - 23
+  Smchd1:
+    bridges:
+    - GGTGGTTTGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 11
+    - 24
+  Pdzd8:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 8
+    - 15
+  Polr1a:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 6
+    - 25
+  Arhgef28:
+    bridges:
+    - GGAAGAAGGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 9
+    - 17
+  Mki67:
+    bridges:
+    - GGTGTTTGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 20
+    - 26
+  Myo5c:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTAAGGTGCGGTTAAAT
+    bits:
+    - 3
+    - 19
+  Tjp1:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 3
+    - 26
+  Son:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 4
+    - 26
+  Cnot1:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGATTAGGGCGGTTAAAT
+    bits:
+    - 2
+    - 13
+  Mlec:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGGTATGAGCGGTTAAAT
+    bits:
+    - 6
+    - 14
+  Mllt4:
+    bridges:
+    - GGAAGGTTGCGGTTAAAT
+    - GGTAGGTAGCGGTTAAAT
+    bits:
+    - 7
+    - 23
+  Prpf8:
+    bridges:
+    - GGTAATGGGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 8
+    - 26
+  Abhd2:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGTTGGAAGCGGTTAAAT
+    bits:
+    - 12
+    - 25
+  Myo18a:
+    bridges:
+    - GGATTAGGGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 13
+    - 22
+  Sptlc2:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 12
+    - 15
+  Ppp2ca:
+    bridges:
+    - GGGAGATTGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 12
+    - 17
+  Aars:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGAAGAAGGCGGTTAAAT
+    bits:
+    - 2
+    - 9
+  Pten:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGAGTGTAGCGGTTAAAT
+    bits:
+    - 6
+    - 22
+  Pik3c2a:
+    bridges:
+    - GGGTGTGGGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 4
+    - 17
+  Slk:
+    bridges:
+    - GGTAGAGTGCGGTTAAAT
+    - GGATTGAGGCGGTTAAAT
+    bits:
+    - 2
+    - 3
+  Cand1:
+    bridges:
+    - GGATTGAGGCGGTTAAAT
+    - GGAGGAAAGCGGTTAAAT
+    bits:
+    - 3
+    - 17
+  Tnpo1:
+    bridges:
+    - GGGATAGTGCGGTTAAAT
+    - GGGAGAGGGCGGTTAAAT
+    bits:
+    - 1
+    - 18
+  Myof:
+    bridges:
+    - GGGTAAGTGCGGTTAAAT
+    - GGTAATGGGCGGTTAAAT
+    bits:
+    - 5
+    - 8
+  Flna:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGTTGAGAGCGGTTAAAT
+    bits:
+    - 6
+    - 26
+  Kpnb1:
+    bridges:
+    - GGTTTGGTGCGGTTAAAT
+    - GGGAAGTTGCGGTTAAAT
+    bits:
+    - 6
+    - 15
+  Ahnak:
+    bridges:
+    - GGGTATGAGCGGTTAAAT
+    - GGTTGTGTGCGGTTAAAT
+    bits:
+    - 14
+    - 24
+extracts:
+  target_region:
+    source: mRNA
+    transcripts: all
+    length: 52
+    step: 1
+    layout:
+      template: '{right_site}{gap}{left_site}'
+      parts:
+        right_site:
+          length: 25
+        gap:
+          length: 2
+        left_site:
+          length: 25
+probes:
+  p1:
+    template: AACGAACGGAGGGTCATTGGGGTAC{bridge_half}TAT{binding}GAATTCCCCTAATGCGAGTAGAGCCT
+    parts:
+      bridge_half:
+        expr: rc(encoding[target]['bridges'][probe_index % 2][:9])
+      binding:
+        expr: rc(target_parts['left_site'])
+  p2:
+    template: AACGAACGGAGGGTCATTGGGGTACC{binding}TAT{bridge_half}AATTCCCCTAATGCGAGTAGAGCCT
+    parts:
+      bridge_half:
+        expr: rc(encoding[target]['bridges'][probe_index % 2][9:])
+      binding:
+        expr: rc(target_parts['right_site'])
