@@ -18,6 +18,7 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 | [MiP-seq](mipseq_2024_217gene/) | 2024 / 217 genes | 99.308756% | 99.078341% | Not evaluated |
 | [PRISM](prism_2025_64gene/) | 2025 / 64 genes | 100% | N/A | Not evaluated |
 | [RAEFISH](raefish_2025_64gene/) | 2025 / 64 Human genes | 100% | 100% | Not evaluated |
+| [TDDN-FISH](tddnfish_2025/) | 2025 / 9 HeLa genes | 100% | N/A | Not evaluated |
 
 STARmap, ExSeq, MERFISH, seqFISH+ and MiP-seq report **unfiltered candidate recovery**, not final probe
 selection. ExSeq recovers 333/334 padlocks and 42/42 targets using mm10;
@@ -30,6 +31,9 @@ Same-generated-group recovery covers 430/434 padlock-RCA pairs.
 PRISM recovers 64/64 complete 120-nt padlocks and 64/64 targets using mm10; MTR is 100%.
 RAEFISH recovers 192/192 complete synthesis templates, 64/64 targets and 64/64
 same-generated-set padlock/priming/encoding triplets using GRCh38/GENCODE v46; MTR is 100%.
+TDDN-FISH recovers 54/54 complete 65-nt primary oligos and 9/9 targets using
+GRCh38/GENCODE v47; TRR and MTR are 100%. Fixed tetrahedral components and
+chemical modifications are checked separately; physical assembly is not evaluated.
 
 ## Usage
 

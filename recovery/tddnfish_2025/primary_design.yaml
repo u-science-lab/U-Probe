@@ -1,0 +1,18 @@
+name: TDDN_FISH_primary_candidates
+genome: reference
+targets: []
+encoding: {}
+extracts:
+  target_region:
+    source: mRNA
+    length: 35
+    step: 1
+probes:
+  primary:
+    template: '{readout}{binding}'
+    parts:
+      readout:
+        template: GATCCGATTGGAACCGTCCCAAGCGTTGCG
+        parts: {}
+      binding:
+        expr: rc(target_region)
