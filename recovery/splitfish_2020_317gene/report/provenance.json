@@ -1,0 +1,2266 @@
+{
+  "uprobe_base_commit": "4c8aa1bd263f933090b7c45e7382cd72679b2d22",
+  "python": "3.10.14",
+  "packages": {
+    "pandas": "2.1.1",
+    "PyYAML": "6.0.1",
+    "pyfaidx": "0.5.9.5",
+    "openpyxl": "3.1.5"
+  },
+  "files_sha256": {
+    "recovery/splitfish_2020_317gene/generate.py": "03992dbeeed0339dd3ade6321a31eeacd321a749e0631cac7e5e139bc2538abd",
+    "recovery/splitfish_2020_317gene/prepare_inputs.py": "7e9cbc8b7459ebab940fd3916bb50526268cef180e137890ebbf2b9f07f49fba",
+    "recovery/splitfish_2020_317gene/design.yaml": "35c6a0bdaf887cddd2376e8c9f5e726dbf58ec5b809e2ba7a494bc6db6591004",
+    "recovery/common/sequence_recovery.py": "979e1c45df686bff4ccf416a73e0cfbf90449f4df951ca85579dbca5e44b35af"
+  },
+  "sources": {
+    "paper": "https://doi.org/10.1038/s41592-020-0858-0",
+    "bridge_correction": "https://doi.org/10.1038/s41592-020-01019-w",
+    "supplementary_tables": {
+      "MOESM3": "https://static-content.springer-cdn.com/esm/art%3A10.1038%2Fs41592-020-0858-0/MediaObjects/41592_2020_858_MOESM3_ESM.xlsx",
+      "MOESM4": "https://static-content.springer-cdn.com/esm/art%3A10.1038%2Fs41592-020-0858-0/MediaObjects/41592_2020_858_MOESM4_ESM.xlsx",
+      "MOESM5": "https://static-content.springer-cdn.com/esm/art%3A10.1038%2Fs41592-020-0858-0/MediaObjects/41592_2020_858_MOESM5_ESM.xlsx"
+    },
+    "author_design": "https://github.com/KHChenLab/split-fish/blob/master/probedesign/SplitFISH_ProbeDesignExampleScript.m",
+    "author_design_git_blob": "4006ad75219939fe336d46063c874e8e23a68f08",
+    "author_design_sha256": "439efd1221b8b2cd1db9cf56d5480aca2c8f7a0d94a57644719273f9e79f127b",
+    "author_bridges": "https://github.com/KHChenLab/split-fish/blob/master/probedesign/BridgeSequences.xlsx",
+    "author_bridges_git_blob": "653ee2ad9bb140b7b28b92be7e6c0b9c337e0f10",
+    "gtf": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M4/gencode.vM4.annotation.gtf.gz",
+    "fasta": "Pre-existing UCSC-named mm10/GRCm38 genomic FASTA, 66 contigs; original download URL unrecorded.",
+    "fasta_reproduction": "https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/chromFa.tar.gz"
+  },
+  "bridge_policy": "Corrected 18-nt cores agree with author BridgeSequences.xlsx and every published P1/P2. Historical extra G is not used.",
+  "candidate_generation": {
+    "genes": [
+      {
+        "gene": "Ccdc177",
+        "transcripts": 1,
+        "unique_windows": 5575,
+        "non_acgt_windows": 0,
+        "candidate_records": 22300
+      },
+      {
+        "gene": "RP23-383N15.1",
+        "transcripts": 1,
+        "unique_windows": 6831,
+        "non_acgt_windows": 0,
+        "candidate_records": 27324
+      },
+      {
+        "gene": "RP24-338G10.1",
+        "transcripts": 1,
+        "unique_windows": 5732,
+        "non_acgt_windows": 0,
+        "candidate_records": 22928
+      },
+      {
+        "gene": "Myh11",
+        "transcripts": 1,
+        "unique_windows": 6581,
+        "non_acgt_windows": 0,
+        "candidate_records": 26324
+      },
+      {
+        "gene": "Xirp1",
+        "transcripts": 1,
+        "unique_windows": 5788,
+        "non_acgt_windows": 0,
+        "candidate_records": 23152
+      },
+      {
+        "gene": "Col6a5",
+        "transcripts": 3,
+        "unique_windows": 9405,
+        "non_acgt_windows": 0,
+        "candidate_records": 37620
+      },
+      {
+        "gene": "Abca9",
+        "transcripts": 2,
+        "unique_windows": 8045,
+        "non_acgt_windows": 0,
+        "candidate_records": 32180
+      },
+      {
+        "gene": "Pkdrej",
+        "transcripts": 1,
+        "unique_windows": 7007,
+        "non_acgt_windows": 0,
+        "candidate_records": 28028
+      },
+      {
+        "gene": "Col6a6",
+        "transcripts": 3,
+        "unique_windows": 9161,
+        "non_acgt_windows": 0,
+        "candidate_records": 36644
+      },
+      {
+        "gene": "Igsf10",
+        "transcripts": 3,
+        "unique_windows": 10145,
+        "non_acgt_windows": 0,
+        "candidate_records": 40580
+      },
+      {
+        "gene": "Tmc3",
+        "transcripts": 5,
+        "unique_windows": 9072,
+        "non_acgt_windows": 0,
+        "candidate_records": 36288
+      },
+      {
+        "gene": "Wdfy4",
+        "transcripts": 4,
+        "unique_windows": 10601,
+        "non_acgt_windows": 0,
+        "candidate_records": 42404
+      },
+      {
+        "gene": "Scn10a",
+        "transcripts": 1,
+        "unique_windows": 6365,
+        "non_acgt_windows": 0,
+        "candidate_records": 25460
+      },
+      {
+        "gene": "Fat4",
+        "transcripts": 2,
+        "unique_windows": 17112,
+        "non_acgt_windows": 0,
+        "candidate_records": 68448
+      },
+      {
+        "gene": "Hmcn2",
+        "transcripts": 5,
+        "unique_windows": 16103,
+        "non_acgt_windows": 0,
+        "candidate_records": 64412
+      },
+      {
+        "gene": "Zfp831",
+        "transcripts": 1,
+        "unique_windows": 9756,
+        "non_acgt_windows": 0,
+        "candidate_records": 39024
+      },
+      {
+        "gene": "Map3k9",
+        "transcripts": 1,
+        "unique_windows": 10568,
+        "non_acgt_windows": 0,
+        "candidate_records": 42272
+      },
+      {
+        "gene": "Scn7a",
+        "transcripts": 1,
+        "unique_windows": 7287,
+        "non_acgt_windows": 0,
+        "candidate_records": 29148
+      },
+      {
+        "gene": "Nat8l",
+        "transcripts": 1,
+        "unique_windows": 6478,
+        "non_acgt_windows": 0,
+        "candidate_records": 25912
+      },
+      {
+        "gene": "Sdk1",
+        "transcripts": 4,
+        "unique_windows": 11030,
+        "non_acgt_windows": 0,
+        "candidate_records": 44120
+      },
+      {
+        "gene": "Dnah8",
+        "transcripts": 1,
+        "unique_windows": 14532,
+        "non_acgt_windows": 0,
+        "candidate_records": 58128
+      },
+      {
+        "gene": "Dnah11",
+        "transcripts": 4,
+        "unique_windows": 14470,
+        "non_acgt_windows": 0,
+        "candidate_records": 57880
+      },
+      {
+        "gene": "Pappa",
+        "transcripts": 1,
+        "unique_windows": 10961,
+        "non_acgt_windows": 0,
+        "candidate_records": 43844
+      },
+      {
+        "gene": "Spag17",
+        "transcripts": 4,
+        "unique_windows": 8482,
+        "non_acgt_windows": 0,
+        "candidate_records": 33928
+      },
+      {
+        "gene": "Trabd2b",
+        "transcripts": 1,
+        "unique_windows": 6552,
+        "non_acgt_windows": 0,
+        "candidate_records": 26208
+      },
+      {
+        "gene": "Prtg",
+        "transcripts": 2,
+        "unique_windows": 9105,
+        "non_acgt_windows": 0,
+        "candidate_records": 36420
+      },
+      {
+        "gene": "Grik3",
+        "transcripts": 1,
+        "unique_windows": 8922,
+        "non_acgt_windows": 0,
+        "candidate_records": 35688
+      },
+      {
+        "gene": "Gpr179",
+        "transcripts": 2,
+        "unique_windows": 9491,
+        "non_acgt_windows": 0,
+        "candidate_records": 37964
+      },
+      {
+        "gene": "Edaradd",
+        "transcripts": 1,
+        "unique_windows": 8052,
+        "non_acgt_windows": 0,
+        "candidate_records": 32208
+      },
+      {
+        "gene": "Akap6",
+        "transcripts": 1,
+        "unique_windows": 10212,
+        "non_acgt_windows": 0,
+        "candidate_records": 40848
+      },
+      {
+        "gene": "Adamts17",
+        "transcripts": 8,
+        "unique_windows": 7317,
+        "non_acgt_windows": 0,
+        "candidate_records": 29268
+      },
+      {
+        "gene": "Map1a",
+        "transcripts": 4,
+        "unique_windows": 12164,
+        "non_acgt_windows": 0,
+        "candidate_records": 48656
+      },
+      {
+        "gene": "Bend4",
+        "transcripts": 1,
+        "unique_windows": 7884,
+        "non_acgt_windows": 0,
+        "candidate_records": 31536
+      },
+      {
+        "gene": "Reps2",
+        "transcripts": 5,
+        "unique_windows": 8385,
+        "non_acgt_windows": 0,
+        "candidate_records": 33540
+      },
+      {
+        "gene": "Armcx4",
+        "transcripts": 1,
+        "unique_windows": 7945,
+        "non_acgt_windows": 0,
+        "candidate_records": 31780
+      },
+      {
+        "gene": "Plcb2",
+        "transcripts": 6,
+        "unique_windows": 6772,
+        "non_acgt_windows": 0,
+        "candidate_records": 27088
+      },
+      {
+        "gene": "Adam19",
+        "transcripts": 4,
+        "unique_windows": 7113,
+        "non_acgt_windows": 0,
+        "candidate_records": 28452
+      },
+      {
+        "gene": "Galnt15",
+        "transcripts": 2,
+        "unique_windows": 6325,
+        "non_acgt_windows": 0,
+        "candidate_records": 25300
+      },
+      {
+        "gene": "Pygo1",
+        "transcripts": 1,
+        "unique_windows": 7845,
+        "non_acgt_windows": 0,
+        "candidate_records": 31380
+      },
+      {
+        "gene": "Tnxb",
+        "transcripts": 2,
+        "unique_windows": 11851,
+        "non_acgt_windows": 0,
+        "candidate_records": 47404
+      },
+      {
+        "gene": "Stab2",
+        "transcripts": 7,
+        "unique_windows": 8803,
+        "non_acgt_windows": 0,
+        "candidate_records": 35212
+      },
+      {
+        "gene": "Ptprz1",
+        "transcripts": 1,
+        "unique_windows": 8017,
+        "non_acgt_windows": 0,
+        "candidate_records": 32068
+      },
+      {
+        "gene": "Kif5a",
+        "transcripts": 1,
+        "unique_windows": 6259,
+        "non_acgt_windows": 0,
+        "candidate_records": 25036
+      },
+      {
+        "gene": "Dnah1",
+        "transcripts": 1,
+        "unique_windows": 12821,
+        "non_acgt_windows": 0,
+        "candidate_records": 51284
+      },
+      {
+        "gene": "Chst2",
+        "transcripts": 1,
+        "unique_windows": 7248,
+        "non_acgt_windows": 0,
+        "candidate_records": 28992
+      },
+      {
+        "gene": "Cacna1c",
+        "transcripts": 23,
+        "unique_windows": 21606,
+        "non_acgt_windows": 0,
+        "candidate_records": 86424
+      },
+      {
+        "gene": "Col4a4",
+        "transcripts": 2,
+        "unique_windows": 10554,
+        "non_acgt_windows": 0,
+        "candidate_records": 42216
+      },
+      {
+        "gene": "Scn4a",
+        "transcripts": 2,
+        "unique_windows": 6939,
+        "non_acgt_windows": 0,
+        "candidate_records": 27756
+      },
+      {
+        "gene": "Sdk2",
+        "transcripts": 6,
+        "unique_windows": 15485,
+        "non_acgt_windows": 0,
+        "candidate_records": 61940
+      },
+      {
+        "gene": "Pcdhb19",
+        "transcripts": 1,
+        "unique_windows": 7087,
+        "non_acgt_windows": 0,
+        "candidate_records": 28348
+      },
+      {
+        "gene": "Myom2",
+        "transcripts": 5,
+        "unique_windows": 8790,
+        "non_acgt_windows": 0,
+        "candidate_records": 35160
+      },
+      {
+        "gene": "Fgd5",
+        "transcripts": 4,
+        "unique_windows": 6237,
+        "non_acgt_windows": 0,
+        "candidate_records": 24948
+      },
+      {
+        "gene": "Kif1a",
+        "transcripts": 11,
+        "unique_windows": 9662,
+        "non_acgt_windows": 0,
+        "candidate_records": 38648
+      },
+      {
+        "gene": "Caskin1",
+        "transcripts": 1,
+        "unique_windows": 6121,
+        "non_acgt_windows": 0,
+        "candidate_records": 24484
+      },
+      {
+        "gene": "Csmd1",
+        "transcripts": 7,
+        "unique_windows": 19130,
+        "non_acgt_windows": 0,
+        "candidate_records": 76520
+      },
+      {
+        "gene": "Acacb",
+        "transcripts": 5,
+        "unique_windows": 9581,
+        "non_acgt_windows": 0,
+        "candidate_records": 38324
+      },
+      {
+        "gene": "Ksr2",
+        "transcripts": 2,
+        "unique_windows": 13539,
+        "non_acgt_windows": 0,
+        "candidate_records": 54156
+      },
+      {
+        "gene": "Mgam",
+        "transcripts": 1,
+        "unique_windows": 6437,
+        "non_acgt_windows": 0,
+        "candidate_records": 25748
+      },
+      {
+        "gene": "Plxnc1",
+        "transcripts": 4,
+        "unique_windows": 7833,
+        "non_acgt_windows": 0,
+        "candidate_records": 31332
+      },
+      {
+        "gene": "Pcdhb22",
+        "transcripts": 2,
+        "unique_windows": 6606,
+        "non_acgt_windows": 0,
+        "candidate_records": 26424
+      },
+      {
+        "gene": "Impg2",
+        "transcripts": 4,
+        "unique_windows": 9274,
+        "non_acgt_windows": 0,
+        "candidate_records": 37096
+      },
+      {
+        "gene": "Sptbn2",
+        "transcripts": 1,
+        "unique_windows": 8200,
+        "non_acgt_windows": 0,
+        "candidate_records": 32800
+      },
+      {
+        "gene": "Rnf150",
+        "transcripts": 1,
+        "unique_windows": 9634,
+        "non_acgt_windows": 0,
+        "candidate_records": 38536
+      },
+      {
+        "gene": "Myh7b",
+        "transcripts": 3,
+        "unique_windows": 6582,
+        "non_acgt_windows": 0,
+        "candidate_records": 26328
+      },
+      {
+        "gene": "Adamts2",
+        "transcripts": 4,
+        "unique_windows": 9285,
+        "non_acgt_windows": 0,
+        "candidate_records": 37140
+      },
+      {
+        "gene": "Ppfia2",
+        "transcripts": 2,
+        "unique_windows": 7970,
+        "non_acgt_windows": 0,
+        "candidate_records": 31880
+      },
+      {
+        "gene": "Camk4",
+        "transcripts": 1,
+        "unique_windows": 12280,
+        "non_acgt_windows": 0,
+        "candidate_records": 49120
+      },
+      {
+        "gene": "Rims3",
+        "transcripts": 4,
+        "unique_windows": 7918,
+        "non_acgt_windows": 0,
+        "candidate_records": 31672
+      },
+      {
+        "gene": "Fign",
+        "transcripts": 4,
+        "unique_windows": 10056,
+        "non_acgt_windows": 0,
+        "candidate_records": 40224
+      },
+      {
+        "gene": "Gpr116",
+        "transcripts": 1,
+        "unique_windows": 8484,
+        "non_acgt_windows": 0,
+        "candidate_records": 33936
+      },
+      {
+        "gene": "Prune2",
+        "transcripts": 1,
+        "unique_windows": 12461,
+        "non_acgt_windows": 0,
+        "candidate_records": 49844
+      },
+      {
+        "gene": "Erc2",
+        "transcripts": 1,
+        "unique_windows": 6032,
+        "non_acgt_windows": 0,
+        "candidate_records": 24128
+      },
+      {
+        "gene": "Abca1",
+        "transcripts": 2,
+        "unique_windows": 10310,
+        "non_acgt_windows": 0,
+        "candidate_records": 41240
+      },
+      {
+        "gene": "Notch3",
+        "transcripts": 1,
+        "unique_windows": 7993,
+        "non_acgt_windows": 0,
+        "candidate_records": 31972
+      },
+      {
+        "gene": "Dock10",
+        "transcripts": 11,
+        "unique_windows": 18707,
+        "non_acgt_windows": 0,
+        "candidate_records": 74828
+      },
+      {
+        "gene": "Ntrk2",
+        "transcripts": 2,
+        "unique_windows": 13752,
+        "non_acgt_windows": 0,
+        "candidate_records": 55008
+      },
+      {
+        "gene": "Synm",
+        "transcripts": 2,
+        "unique_windows": 7864,
+        "non_acgt_windows": 0,
+        "candidate_records": 31456
+      },
+      {
+        "gene": "Pkd1l3",
+        "transcripts": 2,
+        "unique_windows": 6371,
+        "non_acgt_windows": 0,
+        "candidate_records": 25484
+      },
+      {
+        "gene": "Mrc2",
+        "transcripts": 5,
+        "unique_windows": 6622,
+        "non_acgt_windows": 0,
+        "candidate_records": 26488
+      },
+      {
+        "gene": "Foxo1",
+        "transcripts": 1,
+        "unique_windows": 8614,
+        "non_acgt_windows": 0,
+        "candidate_records": 34456
+      },
+      {
+        "gene": "Il17rd",
+        "transcripts": 1,
+        "unique_windows": 8169,
+        "non_acgt_windows": 0,
+        "candidate_records": 32676
+      },
+      {
+        "gene": "Myom3",
+        "transcripts": 3,
+        "unique_windows": 5983,
+        "non_acgt_windows": 0,
+        "candidate_records": 23932
+      },
+      {
+        "gene": "Rassf4",
+        "transcripts": 1,
+        "unique_windows": 6293,
+        "non_acgt_windows": 0,
+        "candidate_records": 25172
+      },
+      {
+        "gene": "Ddr2",
+        "transcripts": 6,
+        "unique_windows": 9294,
+        "non_acgt_windows": 0,
+        "candidate_records": 37176
+      },
+      {
+        "gene": "Trpm6",
+        "transcripts": 1,
+        "unique_windows": 6457,
+        "non_acgt_windows": 0,
+        "candidate_records": 25828
+      },
+      {
+        "gene": "Spon1",
+        "transcripts": 2,
+        "unique_windows": 8126,
+        "non_acgt_windows": 0,
+        "candidate_records": 32504
+      },
+      {
+        "gene": "Celsr1",
+        "transcripts": 1,
+        "unique_windows": 10999,
+        "non_acgt_windows": 0,
+        "candidate_records": 43996
+      },
+      {
+        "gene": "Aldh1l2",
+        "transcripts": 7,
+        "unique_windows": 7623,
+        "non_acgt_windows": 0,
+        "candidate_records": 30492
+      },
+      {
+        "gene": "Parp14",
+        "transcripts": 3,
+        "unique_windows": 9302,
+        "non_acgt_windows": 0,
+        "candidate_records": 37208
+      },
+      {
+        "gene": "Daam2",
+        "transcripts": 1,
+        "unique_windows": 5994,
+        "non_acgt_windows": 0,
+        "candidate_records": 23976
+      },
+      {
+        "gene": "Ago4",
+        "transcripts": 2,
+        "unique_windows": 6896,
+        "non_acgt_windows": 0,
+        "candidate_records": 27584
+      },
+      {
+        "gene": "Ctif",
+        "transcripts": 1,
+        "unique_windows": 6122,
+        "non_acgt_windows": 0,
+        "candidate_records": 24488
+      },
+      {
+        "gene": "Setd1b",
+        "transcripts": 6,
+        "unique_windows": 10914,
+        "non_acgt_windows": 0,
+        "candidate_records": 43656
+      },
+      {
+        "gene": "Pla2r1",
+        "transcripts": 7,
+        "unique_windows": 9660,
+        "non_acgt_windows": 0,
+        "candidate_records": 38640
+      },
+      {
+        "gene": "Gpr161",
+        "transcripts": 2,
+        "unique_windows": 6911,
+        "non_acgt_windows": 0,
+        "candidate_records": 27644
+      },
+      {
+        "gene": "Dock6",
+        "transcripts": 1,
+        "unique_windows": 6505,
+        "non_acgt_windows": 0,
+        "candidate_records": 26020
+      },
+      {
+        "gene": "Gm20342",
+        "transcripts": 1,
+        "unique_windows": 9669,
+        "non_acgt_windows": 0,
+        "candidate_records": 38676
+      },
+      {
+        "gene": "Trpm2",
+        "transcripts": 8,
+        "unique_windows": 12341,
+        "non_acgt_windows": 0,
+        "candidate_records": 49364
+      },
+      {
+        "gene": "Lgr6",
+        "transcripts": 3,
+        "unique_windows": 6800,
+        "non_acgt_windows": 0,
+        "candidate_records": 27200
+      },
+      {
+        "gene": "Fry",
+        "transcripts": 1,
+        "unique_windows": 10678,
+        "non_acgt_windows": 0,
+        "candidate_records": 42712
+      },
+      {
+        "gene": "Flrt2",
+        "transcripts": 2,
+        "unique_windows": 7667,
+        "non_acgt_windows": 0,
+        "candidate_records": 30668
+      },
+      {
+        "gene": "Ptprm",
+        "transcripts": 1,
+        "unique_windows": 5518,
+        "non_acgt_windows": 0,
+        "candidate_records": 22072
+      },
+      {
+        "gene": "Srgap3",
+        "transcripts": 5,
+        "unique_windows": 9897,
+        "non_acgt_windows": 0,
+        "candidate_records": 39588
+      },
+      {
+        "gene": "Dock8",
+        "transcripts": 1,
+        "unique_windows": 7759,
+        "non_acgt_windows": 0,
+        "candidate_records": 31036
+      },
+      {
+        "gene": "Shroom3",
+        "transcripts": 7,
+        "unique_windows": 7792,
+        "non_acgt_windows": 0,
+        "candidate_records": 31168
+      },
+      {
+        "gene": "Sned1",
+        "transcripts": 6,
+        "unique_windows": 9586,
+        "non_acgt_windows": 0,
+        "candidate_records": 38344
+      },
+      {
+        "gene": "Gm29666",
+        "transcripts": 1,
+        "unique_windows": 7987,
+        "non_acgt_windows": 0,
+        "candidate_records": 31948
+      },
+      {
+        "gene": "Nhsl2",
+        "transcripts": 9,
+        "unique_windows": 17031,
+        "non_acgt_windows": 0,
+        "candidate_records": 68124
+      },
+      {
+        "gene": "Arhgap31",
+        "transcripts": 3,
+        "unique_windows": 11089,
+        "non_acgt_windows": 0,
+        "candidate_records": 44356
+      },
+      {
+        "gene": "Zfp334",
+        "transcripts": 1,
+        "unique_windows": 8138,
+        "non_acgt_windows": 0,
+        "candidate_records": 32552
+      },
+      {
+        "gene": "Cdyl2",
+        "transcripts": 1,
+        "unique_windows": 8036,
+        "non_acgt_windows": 0,
+        "candidate_records": 32144
+      },
+      {
+        "gene": "Veph1",
+        "transcripts": 3,
+        "unique_windows": 7033,
+        "non_acgt_windows": 0,
+        "candidate_records": 28132
+      },
+      {
+        "gene": "Slc38a1",
+        "transcripts": 3,
+        "unique_windows": 8339,
+        "non_acgt_windows": 0,
+        "candidate_records": 33356
+      },
+      {
+        "gene": "Hspg2",
+        "transcripts": 3,
+        "unique_windows": 14349,
+        "non_acgt_windows": 0,
+        "candidate_records": 57396
+      },
+      {
+        "gene": "Itga4",
+        "transcripts": 5,
+        "unique_windows": 14069,
+        "non_acgt_windows": 0,
+        "candidate_records": 56276
+      },
+      {
+        "gene": "Amer1",
+        "transcripts": 1,
+        "unique_windows": 8415,
+        "non_acgt_windows": 0,
+        "candidate_records": 33660
+      },
+      {
+        "gene": "Dzank1",
+        "transcripts": 4,
+        "unique_windows": 8258,
+        "non_acgt_windows": 0,
+        "candidate_records": 33032
+      },
+      {
+        "gene": "F8",
+        "transcripts": 4,
+        "unique_windows": 9952,
+        "non_acgt_windows": 0,
+        "candidate_records": 39808
+      },
+      {
+        "gene": "Nid1",
+        "transcripts": 1,
+        "unique_windows": 5995,
+        "non_acgt_windows": 0,
+        "candidate_records": 23980
+      },
+      {
+        "gene": "Atp1a2",
+        "transcripts": 5,
+        "unique_windows": 7001,
+        "non_acgt_windows": 0,
+        "candidate_records": 28004
+      },
+      {
+        "gene": "Kcnq1ot1",
+        "transcripts": 1,
+        "unique_windows": 84343,
+        "non_acgt_windows": 0,
+        "candidate_records": 337372
+      },
+      {
+        "gene": "Notch4",
+        "transcripts": 12,
+        "unique_windows": 8370,
+        "non_acgt_windows": 0,
+        "candidate_records": 33480
+      },
+      {
+        "gene": "Myh10",
+        "transcripts": 10,
+        "unique_windows": 10601,
+        "non_acgt_windows": 0,
+        "candidate_records": 42404
+      },
+      {
+        "gene": "Col4a6",
+        "transcripts": 3,
+        "unique_windows": 7919,
+        "non_acgt_windows": 0,
+        "candidate_records": 31676
+      },
+      {
+        "gene": "Fbxo32",
+        "transcripts": 1,
+        "unique_windows": 6885,
+        "non_acgt_windows": 0,
+        "candidate_records": 27540
+      },
+      {
+        "gene": "Hivep2",
+        "transcripts": 6,
+        "unique_windows": 13910,
+        "non_acgt_windows": 0,
+        "candidate_records": 55640
+      },
+      {
+        "gene": "Plxna3",
+        "transcripts": 9,
+        "unique_windows": 8211,
+        "non_acgt_windows": 0,
+        "candidate_records": 32844
+      },
+      {
+        "gene": "Cacna1e",
+        "transcripts": 6,
+        "unique_windows": 24994,
+        "non_acgt_windows": 0,
+        "candidate_records": 99976
+      },
+      {
+        "gene": "Phlpp2",
+        "transcripts": 3,
+        "unique_windows": 8398,
+        "non_acgt_windows": 0,
+        "candidate_records": 33592
+      },
+      {
+        "gene": "Nup210l",
+        "transcripts": 1,
+        "unique_windows": 5630,
+        "non_acgt_windows": 0,
+        "candidate_records": 22520
+      },
+      {
+        "gene": "Helz2",
+        "transcripts": 5,
+        "unique_windows": 11912,
+        "non_acgt_windows": 0,
+        "candidate_records": 47648
+      },
+      {
+        "gene": "Mlxip",
+        "transcripts": 3,
+        "unique_windows": 8206,
+        "non_acgt_windows": 0,
+        "candidate_records": 32824
+      },
+      {
+        "gene": "Mkl2",
+        "transcripts": 4,
+        "unique_windows": 8936,
+        "non_acgt_windows": 0,
+        "candidate_records": 35744
+      },
+      {
+        "gene": "Prkaa2",
+        "transcripts": 1,
+        "unique_windows": 7918,
+        "non_acgt_windows": 0,
+        "candidate_records": 31672
+      },
+      {
+        "gene": "Nhsl1",
+        "transcripts": 8,
+        "unique_windows": 11153,
+        "non_acgt_windows": 0,
+        "candidate_records": 44612
+      },
+      {
+        "gene": "Sox6",
+        "transcripts": 5,
+        "unique_windows": 8942,
+        "non_acgt_windows": 0,
+        "candidate_records": 35768
+      },
+      {
+        "gene": "Szt2",
+        "transcripts": 6,
+        "unique_windows": 12040,
+        "non_acgt_windows": 0,
+        "candidate_records": 48160
+      },
+      {
+        "gene": "Nfia",
+        "transcripts": 8,
+        "unique_windows": 11032,
+        "non_acgt_windows": 0,
+        "candidate_records": 44128
+      },
+      {
+        "gene": "Qser1",
+        "transcripts": 1,
+        "unique_windows": 8922,
+        "non_acgt_windows": 0,
+        "candidate_records": 35688
+      },
+      {
+        "gene": "Elmsan1",
+        "transcripts": 4,
+        "unique_windows": 7557,
+        "non_acgt_windows": 0,
+        "candidate_records": 30228
+      },
+      {
+        "gene": "Abca4",
+        "transcripts": 11,
+        "unique_windows": 11862,
+        "non_acgt_windows": 0,
+        "candidate_records": 47448
+      },
+      {
+        "gene": "Dennd4a",
+        "transcripts": 1,
+        "unique_windows": 8594,
+        "non_acgt_windows": 0,
+        "candidate_records": 34376
+      },
+      {
+        "gene": "Nr6a1",
+        "transcripts": 10,
+        "unique_windows": 7482,
+        "non_acgt_windows": 0,
+        "candidate_records": 29928
+      },
+      {
+        "gene": "Crocc",
+        "transcripts": 11,
+        "unique_windows": 8443,
+        "non_acgt_windows": 0,
+        "candidate_records": 33772
+      },
+      {
+        "gene": "Dennd3",
+        "transcripts": 7,
+        "unique_windows": 5848,
+        "non_acgt_windows": 0,
+        "candidate_records": 23392
+      },
+      {
+        "gene": "Tmed8",
+        "transcripts": 1,
+        "unique_windows": 7128,
+        "non_acgt_windows": 0,
+        "candidate_records": 28512
+      },
+      {
+        "gene": "Dock5",
+        "transcripts": 1,
+        "unique_windows": 10162,
+        "non_acgt_windows": 0,
+        "candidate_records": 40648
+      },
+      {
+        "gene": "Irs1",
+        "transcripts": 1,
+        "unique_windows": 9093,
+        "non_acgt_windows": 0,
+        "candidate_records": 36372
+      },
+      {
+        "gene": "Kdm7a",
+        "transcripts": 2,
+        "unique_windows": 10006,
+        "non_acgt_windows": 0,
+        "candidate_records": 40024
+      },
+      {
+        "gene": "Nav2",
+        "transcripts": 17,
+        "unique_windows": 32176,
+        "non_acgt_windows": 0,
+        "candidate_records": 128704
+      },
+      {
+        "gene": "Ppm1l",
+        "transcripts": 4,
+        "unique_windows": 10437,
+        "non_acgt_windows": 0,
+        "candidate_records": 41748
+      },
+      {
+        "gene": "Baz2a",
+        "transcripts": 2,
+        "unique_windows": 8365,
+        "non_acgt_windows": 0,
+        "candidate_records": 33460
+      },
+      {
+        "gene": "Itpr2",
+        "transcripts": 9,
+        "unique_windows": 13526,
+        "non_acgt_windows": 0,
+        "candidate_records": 54104
+      },
+      {
+        "gene": "Arid1a",
+        "transcripts": 6,
+        "unique_windows": 11559,
+        "non_acgt_windows": 0,
+        "candidate_records": 46236
+      },
+      {
+        "gene": "Mylk",
+        "transcripts": 2,
+        "unique_windows": 10105,
+        "non_acgt_windows": 0,
+        "candidate_records": 40420
+      },
+      {
+        "gene": "Jrk",
+        "transcripts": 1,
+        "unique_windows": 5802,
+        "non_acgt_windows": 0,
+        "candidate_records": 23208
+      },
+      {
+        "gene": "Crebbp",
+        "transcripts": 2,
+        "unique_windows": 12912,
+        "non_acgt_windows": 0,
+        "candidate_records": 51648
+      },
+      {
+        "gene": "Dab2ip",
+        "transcripts": 13,
+        "unique_windows": 8643,
+        "non_acgt_windows": 0,
+        "candidate_records": 34572
+      },
+      {
+        "gene": "Aim1",
+        "transcripts": 1,
+        "unique_windows": 7365,
+        "non_acgt_windows": 0,
+        "candidate_records": 29460
+      },
+      {
+        "gene": "Lrrk2",
+        "transcripts": 6,
+        "unique_windows": 11778,
+        "non_acgt_windows": 0,
+        "candidate_records": 47112
+      },
+      {
+        "gene": "Zfp516",
+        "transcripts": 2,
+        "unique_windows": 7765,
+        "non_acgt_windows": 0,
+        "candidate_records": 31060
+      },
+      {
+        "gene": "Thsd7a",
+        "transcripts": 7,
+        "unique_windows": 13780,
+        "non_acgt_windows": 0,
+        "candidate_records": 55120
+      },
+      {
+        "gene": "Plxnd1",
+        "transcripts": 3,
+        "unique_windows": 7190,
+        "non_acgt_windows": 0,
+        "candidate_records": 28760
+      },
+      {
+        "gene": "Crb2",
+        "transcripts": 3,
+        "unique_windows": 6695,
+        "non_acgt_windows": 0,
+        "candidate_records": 26780
+      },
+      {
+        "gene": "Dock4",
+        "transcripts": 1,
+        "unique_windows": 8012,
+        "non_acgt_windows": 0,
+        "candidate_records": 32048
+      },
+      {
+        "gene": "Tbc1d32",
+        "transcripts": 1,
+        "unique_windows": 7184,
+        "non_acgt_windows": 0,
+        "candidate_records": 28736
+      },
+      {
+        "gene": "Onecut2",
+        "transcripts": 2,
+        "unique_windows": 13340,
+        "non_acgt_windows": 0,
+        "candidate_records": 53360
+      },
+      {
+        "gene": "Polr2a",
+        "transcripts": 4,
+        "unique_windows": 7159,
+        "non_acgt_windows": 0,
+        "candidate_records": 28636
+      },
+      {
+        "gene": "Zfyve26",
+        "transcripts": 1,
+        "unique_windows": 9317,
+        "non_acgt_windows": 0,
+        "candidate_records": 37268
+      },
+      {
+        "gene": "Irgq",
+        "transcripts": 1,
+        "unique_windows": 6059,
+        "non_acgt_windows": 0,
+        "candidate_records": 24236
+      },
+      {
+        "gene": "Cacna1a",
+        "transcripts": 10,
+        "unique_windows": 11542,
+        "non_acgt_windows": 0,
+        "candidate_records": 46168
+      },
+      {
+        "gene": "Alms1",
+        "transcripts": 1,
+        "unique_windows": 9935,
+        "non_acgt_windows": 0,
+        "candidate_records": 39740
+      },
+      {
+        "gene": "Arhgef10",
+        "transcripts": 7,
+        "unique_windows": 9300,
+        "non_acgt_windows": 0,
+        "candidate_records": 37200
+      },
+      {
+        "gene": "Zbtb1",
+        "transcripts": 1,
+        "unique_windows": 12124,
+        "non_acgt_windows": 0,
+        "candidate_records": 48496
+      },
+      {
+        "gene": "Dip2c",
+        "transcripts": 3,
+        "unique_windows": 8319,
+        "non_acgt_windows": 0,
+        "candidate_records": 33276
+      },
+      {
+        "gene": "Rttn",
+        "transcripts": 1,
+        "unique_windows": 7217,
+        "non_acgt_windows": 0,
+        "candidate_records": 28868
+      },
+      {
+        "gene": "Prdm15",
+        "transcripts": 10,
+        "unique_windows": 10633,
+        "non_acgt_windows": 0,
+        "candidate_records": 42532
+      },
+      {
+        "gene": "Kmt2c",
+        "transcripts": 8,
+        "unique_windows": 20576,
+        "non_acgt_windows": 0,
+        "candidate_records": 82304
+      },
+      {
+        "gene": "Lsm11",
+        "transcripts": 2,
+        "unique_windows": 6453,
+        "non_acgt_windows": 0,
+        "candidate_records": 25812
+      },
+      {
+        "gene": "Kif13a",
+        "transcripts": 1,
+        "unique_windows": 6815,
+        "non_acgt_windows": 0,
+        "candidate_records": 27260
+      },
+      {
+        "gene": "Usp36",
+        "transcripts": 6,
+        "unique_windows": 7727,
+        "non_acgt_windows": 0,
+        "candidate_records": 30908
+      },
+      {
+        "gene": "Rnf213",
+        "transcripts": 3,
+        "unique_windows": 16962,
+        "non_acgt_windows": 0,
+        "candidate_records": 67848
+      },
+      {
+        "gene": "Spg11",
+        "transcripts": 3,
+        "unique_windows": 8041,
+        "non_acgt_windows": 0,
+        "candidate_records": 32164
+      },
+      {
+        "gene": "Dcaf5",
+        "transcripts": 1,
+        "unique_windows": 5656,
+        "non_acgt_windows": 0,
+        "candidate_records": 22624
+      },
+      {
+        "gene": "Cmah",
+        "transcripts": 6,
+        "unique_windows": 10161,
+        "non_acgt_windows": 0,
+        "candidate_records": 40644
+      },
+      {
+        "gene": "Trim56",
+        "transcripts": 2,
+        "unique_windows": 9232,
+        "non_acgt_windows": 0,
+        "candidate_records": 36928
+      },
+      {
+        "gene": "Thada",
+        "transcripts": 1,
+        "unique_windows": 7833,
+        "non_acgt_windows": 0,
+        "candidate_records": 31332
+      },
+      {
+        "gene": "Col7a1",
+        "transcripts": 7,
+        "unique_windows": 10352,
+        "non_acgt_windows": 0,
+        "candidate_records": 41408
+      },
+      {
+        "gene": "Fancm",
+        "transcripts": 1,
+        "unique_windows": 7724,
+        "non_acgt_windows": 0,
+        "candidate_records": 30896
+      },
+      {
+        "gene": "Rprd2",
+        "transcripts": 1,
+        "unique_windows": 8368,
+        "non_acgt_windows": 0,
+        "candidate_records": 33472
+      },
+      {
+        "gene": "Rnf217",
+        "transcripts": 1,
+        "unique_windows": 10962,
+        "non_acgt_windows": 0,
+        "candidate_records": 43848
+      },
+      {
+        "gene": "Med12",
+        "transcripts": 9,
+        "unique_windows": 7947,
+        "non_acgt_windows": 0,
+        "candidate_records": 31788
+      },
+      {
+        "gene": "Sestd1",
+        "transcripts": 4,
+        "unique_windows": 9856,
+        "non_acgt_windows": 0,
+        "candidate_records": 39424
+      },
+      {
+        "gene": "Flnc",
+        "transcripts": 4,
+        "unique_windows": 9583,
+        "non_acgt_windows": 0,
+        "candidate_records": 38332
+      },
+      {
+        "gene": "Itpr1",
+        "transcripts": 1,
+        "unique_windows": 9797,
+        "non_acgt_windows": 0,
+        "candidate_records": 39188
+      },
+      {
+        "gene": "AU022252",
+        "transcripts": 4,
+        "unique_windows": 9561,
+        "non_acgt_windows": 0,
+        "candidate_records": 38244
+      },
+      {
+        "gene": "Sh3pxd2b",
+        "transcripts": 2,
+        "unique_windows": 9657,
+        "non_acgt_windows": 0,
+        "candidate_records": 38628
+      },
+      {
+        "gene": "Rfx7",
+        "transcripts": 7,
+        "unique_windows": 15297,
+        "non_acgt_windows": 0,
+        "candidate_records": 61188
+      },
+      {
+        "gene": "Wdr7",
+        "transcripts": 1,
+        "unique_windows": 7058,
+        "non_acgt_windows": 0,
+        "candidate_records": 28232
+      },
+      {
+        "gene": "Brca2",
+        "transcripts": 1,
+        "unique_windows": 10673,
+        "non_acgt_windows": 0,
+        "candidate_records": 42692
+      },
+      {
+        "gene": "Wdr81",
+        "transcripts": 4,
+        "unique_windows": 7035,
+        "non_acgt_windows": 0,
+        "candidate_records": 28140
+      },
+      {
+        "gene": "Tnrc18",
+        "transcripts": 4,
+        "unique_windows": 6878,
+        "non_acgt_windows": 0,
+        "candidate_records": 27512
+      },
+      {
+        "gene": "Ep300",
+        "transcripts": 6,
+        "unique_windows": 13927,
+        "non_acgt_windows": 0,
+        "candidate_records": 55708
+      },
+      {
+        "gene": "Piezo1",
+        "transcripts": 9,
+        "unique_windows": 10346,
+        "non_acgt_windows": 0,
+        "candidate_records": 41384
+      },
+      {
+        "gene": "Atxn1l",
+        "transcripts": 1,
+        "unique_windows": 7475,
+        "non_acgt_windows": 0,
+        "candidate_records": 29900
+      },
+      {
+        "gene": "Plcxd2",
+        "transcripts": 1,
+        "unique_windows": 7089,
+        "non_acgt_windows": 0,
+        "candidate_records": 28356
+      },
+      {
+        "gene": "Atg2b",
+        "transcripts": 1,
+        "unique_windows": 10122,
+        "non_acgt_windows": 0,
+        "candidate_records": 40488
+      },
+      {
+        "gene": "Nf1",
+        "transcripts": 8,
+        "unique_windows": 16009,
+        "non_acgt_windows": 0,
+        "candidate_records": 64036
+      },
+      {
+        "gene": "Wdr90",
+        "transcripts": 11,
+        "unique_windows": 9047,
+        "non_acgt_windows": 0,
+        "candidate_records": 36188
+      },
+      {
+        "gene": "Rnf169",
+        "transcripts": 2,
+        "unique_windows": 7594,
+        "non_acgt_windows": 0,
+        "candidate_records": 30376
+      },
+      {
+        "gene": "Myo9a",
+        "transcripts": 8,
+        "unique_windows": 13077,
+        "non_acgt_windows": 0,
+        "candidate_records": 52308
+      },
+      {
+        "gene": "Ly75",
+        "transcripts": 2,
+        "unique_windows": 6904,
+        "non_acgt_windows": 0,
+        "candidate_records": 27616
+      },
+      {
+        "gene": "Sox11",
+        "transcripts": 1,
+        "unique_windows": 8260,
+        "non_acgt_windows": 0,
+        "candidate_records": 33040
+      },
+      {
+        "gene": "Kif21a",
+        "transcripts": 5,
+        "unique_windows": 6773,
+        "non_acgt_windows": 0,
+        "candidate_records": 27092
+      },
+      {
+        "gene": "Btrc",
+        "transcripts": 2,
+        "unique_windows": 6281,
+        "non_acgt_windows": 0,
+        "candidate_records": 25124
+      },
+      {
+        "gene": "Dock9",
+        "transcripts": 2,
+        "unique_windows": 8238,
+        "non_acgt_windows": 0,
+        "candidate_records": 32952
+      },
+      {
+        "gene": "Ubn1",
+        "transcripts": 1,
+        "unique_windows": 6404,
+        "non_acgt_windows": 0,
+        "candidate_records": 25616
+      },
+      {
+        "gene": "Pask",
+        "transcripts": 6,
+        "unique_windows": 9045,
+        "non_acgt_windows": 0,
+        "candidate_records": 36180
+      },
+      {
+        "gene": "Svil",
+        "transcripts": 14,
+        "unique_windows": 11024,
+        "non_acgt_windows": 0,
+        "candidate_records": 44096
+      },
+      {
+        "gene": "Rapgef1",
+        "transcripts": 7,
+        "unique_windows": 7632,
+        "non_acgt_windows": 0,
+        "candidate_records": 30528
+      },
+      {
+        "gene": "Nedd4l",
+        "transcripts": 2,
+        "unique_windows": 8574,
+        "non_acgt_windows": 0,
+        "candidate_records": 34296
+      },
+      {
+        "gene": "Gas2l3",
+        "transcripts": 2,
+        "unique_windows": 6748,
+        "non_acgt_windows": 0,
+        "candidate_records": 26992
+      },
+      {
+        "gene": "2410089E03Rik",
+        "transcripts": 5,
+        "unique_windows": 13058,
+        "non_acgt_windows": 0,
+        "candidate_records": 52232
+      },
+      {
+        "gene": "Sec16a",
+        "transcripts": 8,
+        "unique_windows": 9375,
+        "non_acgt_windows": 0,
+        "candidate_records": 37500
+      },
+      {
+        "gene": "Dpy19l4",
+        "transcripts": 6,
+        "unique_windows": 8337,
+        "non_acgt_windows": 0,
+        "candidate_records": 33348
+      },
+      {
+        "gene": "Ep400",
+        "transcripts": 11,
+        "unique_windows": 14258,
+        "non_acgt_windows": 0,
+        "candidate_records": 57032
+      },
+      {
+        "gene": "Nin",
+        "transcripts": 4,
+        "unique_windows": 10392,
+        "non_acgt_windows": 0,
+        "candidate_records": 41568
+      },
+      {
+        "gene": "Nipbl",
+        "transcripts": 1,
+        "unique_windows": 8764,
+        "non_acgt_windows": 0,
+        "candidate_records": 35056
+      },
+      {
+        "gene": "Utp14b",
+        "transcripts": 2,
+        "unique_windows": 7616,
+        "non_acgt_windows": 0,
+        "candidate_records": 30464
+      },
+      {
+        "gene": "Slc12a7",
+        "transcripts": 1,
+        "unique_windows": 5080,
+        "non_acgt_windows": 0,
+        "candidate_records": 20320
+      },
+      {
+        "gene": "Akap11",
+        "transcripts": 2,
+        "unique_windows": 9417,
+        "non_acgt_windows": 0,
+        "candidate_records": 37668
+      },
+      {
+        "gene": "Smg7",
+        "transcripts": 6,
+        "unique_windows": 6459,
+        "non_acgt_windows": 0,
+        "candidate_records": 25836
+      },
+      {
+        "gene": "Brip1",
+        "transcripts": 3,
+        "unique_windows": 7453,
+        "non_acgt_windows": 0,
+        "candidate_records": 29812
+      },
+      {
+        "gene": "Ythdc2",
+        "transcripts": 1,
+        "unique_windows": 6248,
+        "non_acgt_windows": 0,
+        "candidate_records": 24992
+      },
+      {
+        "gene": "Rc3h1",
+        "transcripts": 3,
+        "unique_windows": 11303,
+        "non_acgt_windows": 0,
+        "candidate_records": 45212
+      },
+      {
+        "gene": "Utrn",
+        "transcripts": 1,
+        "unique_windows": 12331,
+        "non_acgt_windows": 0,
+        "candidate_records": 49324
+      },
+      {
+        "gene": "Rsf1",
+        "transcripts": 7,
+        "unique_windows": 12759,
+        "non_acgt_windows": 0,
+        "candidate_records": 51036
+      },
+      {
+        "gene": "Zfyve16",
+        "transcripts": 4,
+        "unique_windows": 7126,
+        "non_acgt_windows": 0,
+        "candidate_records": 28504
+      },
+      {
+        "gene": "4932438A13Rik",
+        "transcripts": 18,
+        "unique_windows": 27489,
+        "non_acgt_windows": 0,
+        "candidate_records": 109956
+      },
+      {
+        "gene": "Cdc42bpb",
+        "transcripts": 1,
+        "unique_windows": 6667,
+        "non_acgt_windows": 0,
+        "candidate_records": 26668
+      },
+      {
+        "gene": "Trove2",
+        "transcripts": 2,
+        "unique_windows": 9537,
+        "non_acgt_windows": 0,
+        "candidate_records": 38148
+      },
+      {
+        "gene": "Abcc2",
+        "transcripts": 5,
+        "unique_windows": 8467,
+        "non_acgt_windows": 0,
+        "candidate_records": 33868
+      },
+      {
+        "gene": "Gtf3c4",
+        "transcripts": 4,
+        "unique_windows": 7276,
+        "non_acgt_windows": 0,
+        "candidate_records": 29104
+      },
+      {
+        "gene": "1700020I14Rik",
+        "transcripts": 2,
+        "unique_windows": 8301,
+        "non_acgt_windows": 0,
+        "candidate_records": 33204
+      },
+      {
+        "gene": "Luzp1",
+        "transcripts": 7,
+        "unique_windows": 8158,
+        "non_acgt_windows": 0,
+        "candidate_records": 32632
+      },
+      {
+        "gene": "Abca3",
+        "transcripts": 8,
+        "unique_windows": 8939,
+        "non_acgt_windows": 0,
+        "candidate_records": 35756
+      },
+      {
+        "gene": "Dicer1",
+        "transcripts": 1,
+        "unique_windows": 9800,
+        "non_acgt_windows": 0,
+        "candidate_records": 39200
+      },
+      {
+        "gene": "Larp1",
+        "transcripts": 3,
+        "unique_windows": 6879,
+        "non_acgt_windows": 0,
+        "candidate_records": 27516
+      },
+      {
+        "gene": "Map4",
+        "transcripts": 5,
+        "unique_windows": 10623,
+        "non_acgt_windows": 0,
+        "candidate_records": 42492
+      },
+      {
+        "gene": "Ehbp1l1",
+        "transcripts": 2,
+        "unique_windows": 6487,
+        "non_acgt_windows": 0,
+        "candidate_records": 25948
+      },
+      {
+        "gene": "Uhrf1bp1l",
+        "transcripts": 1,
+        "unique_windows": 6395,
+        "non_acgt_windows": 0,
+        "candidate_records": 25580
+      },
+      {
+        "gene": "Aspm",
+        "transcripts": 1,
+        "unique_windows": 9815,
+        "non_acgt_windows": 0,
+        "candidate_records": 39260
+      },
+      {
+        "gene": "Osbpl8",
+        "transcripts": 2,
+        "unique_windows": 7150,
+        "non_acgt_windows": 0,
+        "candidate_records": 28600
+      },
+      {
+        "gene": "Dsp",
+        "transcripts": 3,
+        "unique_windows": 9619,
+        "non_acgt_windows": 0,
+        "candidate_records": 38476
+      },
+      {
+        "gene": "Mysm1",
+        "transcripts": 9,
+        "unique_windows": 9069,
+        "non_acgt_windows": 0,
+        "candidate_records": 36276
+      },
+      {
+        "gene": "Arhgap35",
+        "transcripts": 3,
+        "unique_windows": 9175,
+        "non_acgt_windows": 0,
+        "candidate_records": 36700
+      },
+      {
+        "gene": "Plxna1",
+        "transcripts": 2,
+        "unique_windows": 8980,
+        "non_acgt_windows": 0,
+        "candidate_records": 35920
+      },
+      {
+        "gene": "Ppl",
+        "transcripts": 1,
+        "unique_windows": 6226,
+        "non_acgt_windows": 0,
+        "candidate_records": 24904
+      },
+      {
+        "gene": "Eif5b",
+        "transcripts": 5,
+        "unique_windows": 9846,
+        "non_acgt_windows": 0,
+        "candidate_records": 39384
+      },
+      {
+        "gene": "Atr",
+        "transcripts": 12,
+        "unique_windows": 23625,
+        "non_acgt_windows": 0,
+        "candidate_records": 94500
+      },
+      {
+        "gene": "Psd3",
+        "transcripts": 9,
+        "unique_windows": 15396,
+        "non_acgt_windows": 0,
+        "candidate_records": 61584
+      },
+      {
+        "gene": "Tmem2",
+        "transcripts": 2,
+        "unique_windows": 6666,
+        "non_acgt_windows": 0,
+        "candidate_records": 26664
+      },
+      {
+        "gene": "Cenpe",
+        "transcripts": 1,
+        "unique_windows": 7762,
+        "non_acgt_windows": 0,
+        "candidate_records": 31048
+      },
+      {
+        "gene": "Als2cl",
+        "transcripts": 7,
+        "unique_windows": 5935,
+        "non_acgt_windows": 0,
+        "candidate_records": 23740
+      },
+      {
+        "gene": "Kntc1",
+        "transcripts": 1,
+        "unique_windows": 6910,
+        "non_acgt_windows": 0,
+        "candidate_records": 27640
+      },
+      {
+        "gene": "Zfp26",
+        "transcripts": 6,
+        "unique_windows": 9833,
+        "non_acgt_windows": 0,
+        "candidate_records": 39332
+      },
+      {
+        "gene": "Tspan7",
+        "transcripts": 3,
+        "unique_windows": 7113,
+        "non_acgt_windows": 0,
+        "candidate_records": 28452
+      },
+      {
+        "gene": "Nvl",
+        "transcripts": 5,
+        "unique_windows": 13471,
+        "non_acgt_windows": 0,
+        "candidate_records": 53884
+      },
+      {
+        "gene": "Cacna2d1",
+        "transcripts": 6,
+        "unique_windows": 7686,
+        "non_acgt_windows": 0,
+        "candidate_records": 30744
+      },
+      {
+        "gene": "Arhgef12",
+        "transcripts": 2,
+        "unique_windows": 10533,
+        "non_acgt_windows": 0,
+        "candidate_records": 42132
+      },
+      {
+        "gene": "Slc4a7",
+        "transcripts": 1,
+        "unique_windows": 7338,
+        "non_acgt_windows": 0,
+        "candidate_records": 29352
+      },
+      {
+        "gene": "Sart1",
+        "transcripts": 1,
+        "unique_windows": 5040,
+        "non_acgt_windows": 0,
+        "candidate_records": 20160
+      },
+      {
+        "gene": "Brwd1",
+        "transcripts": 16,
+        "unique_windows": 19324,
+        "non_acgt_windows": 0,
+        "candidate_records": 77296
+      },
+      {
+        "gene": "Trim33",
+        "transcripts": 2,
+        "unique_windows": 8868,
+        "non_acgt_windows": 0,
+        "candidate_records": 35472
+      },
+      {
+        "gene": "Letm1",
+        "transcripts": 4,
+        "unique_windows": 9644,
+        "non_acgt_windows": 0,
+        "candidate_records": 38576
+      },
+      {
+        "gene": "Arfgef1",
+        "transcripts": 8,
+        "unique_windows": 11355,
+        "non_acgt_windows": 0,
+        "candidate_records": 45420
+      },
+      {
+        "gene": "Nbeal2",
+        "transcripts": 10,
+        "unique_windows": 9898,
+        "non_acgt_windows": 0,
+        "candidate_records": 39592
+      },
+      {
+        "gene": "Golga4",
+        "transcripts": 1,
+        "unique_windows": 7484,
+        "non_acgt_windows": 0,
+        "candidate_records": 29936
+      },
+      {
+        "gene": "Zbtb41",
+        "transcripts": 1,
+        "unique_windows": 8311,
+        "non_acgt_windows": 0,
+        "candidate_records": 33244
+      },
+      {
+        "gene": "Cgnl1",
+        "transcripts": 6,
+        "unique_windows": 7886,
+        "non_acgt_windows": 0,
+        "candidate_records": 31544
+      },
+      {
+        "gene": "Sbf1",
+        "transcripts": 13,
+        "unique_windows": 7211,
+        "non_acgt_windows": 0,
+        "candidate_records": 28844
+      },
+      {
+        "gene": "Prrc2c",
+        "transcripts": 14,
+        "unique_windows": 16452,
+        "non_acgt_windows": 0,
+        "candidate_records": 65808
+      },
+      {
+        "gene": "Myo6",
+        "transcripts": 12,
+        "unique_windows": 12271,
+        "non_acgt_windows": 0,
+        "candidate_records": 49084
+      },
+      {
+        "gene": "Spag9",
+        "transcripts": 12,
+        "unique_windows": 11591,
+        "non_acgt_windows": 0,
+        "candidate_records": 46364
+      },
+      {
+        "gene": "Edem1",
+        "transcripts": 1,
+        "unique_windows": 5807,
+        "non_acgt_windows": 0,
+        "candidate_records": 23228
+      },
+      {
+        "gene": "Heatr1",
+        "transcripts": 1,
+        "unique_windows": 6486,
+        "non_acgt_windows": 0,
+        "candidate_records": 25944
+      },
+      {
+        "gene": "Arhgef5",
+        "transcripts": 8,
+        "unique_windows": 10075,
+        "non_acgt_windows": 0,
+        "candidate_records": 40300
+      },
+      {
+        "gene": "Dync1h1",
+        "transcripts": 8,
+        "unique_windows": 15698,
+        "non_acgt_windows": 0,
+        "candidate_records": 62792
+      },
+      {
+        "gene": "Ogt",
+        "transcripts": 7,
+        "unique_windows": 8184,
+        "non_acgt_windows": 0,
+        "candidate_records": 32736
+      },
+      {
+        "gene": "Macf1",
+        "transcripts": 16,
+        "unique_windows": 27513,
+        "non_acgt_windows": 0,
+        "candidate_records": 110052
+      },
+      {
+        "gene": "Utp20",
+        "transcripts": 1,
+        "unique_windows": 8780,
+        "non_acgt_windows": 0,
+        "candidate_records": 35120
+      },
+      {
+        "gene": "Smchd1",
+        "transcripts": 9,
+        "unique_windows": 19303,
+        "non_acgt_windows": 0,
+        "candidate_records": 77212
+      },
+      {
+        "gene": "Pdzd8",
+        "transcripts": 1,
+        "unique_windows": 7025,
+        "non_acgt_windows": 0,
+        "candidate_records": 28100
+      },
+      {
+        "gene": "Polr1a",
+        "transcripts": 1,
+        "unique_windows": 6054,
+        "non_acgt_windows": 0,
+        "candidate_records": 24216
+      },
+      {
+        "gene": "Arhgef28",
+        "transcripts": 1,
+        "unique_windows": 6208,
+        "non_acgt_windows": 0,
+        "candidate_records": 24832
+      },
+      {
+        "gene": "Mki67",
+        "transcripts": 1,
+        "unique_windows": 9716,
+        "non_acgt_windows": 0,
+        "candidate_records": 38864
+      },
+      {
+        "gene": "Myo5c",
+        "transcripts": 1,
+        "unique_windows": 6680,
+        "non_acgt_windows": 0,
+        "candidate_records": 26720
+      },
+      {
+        "gene": "Tjp1",
+        "transcripts": 4,
+        "unique_windows": 7404,
+        "non_acgt_windows": 0,
+        "candidate_records": 29616
+      },
+      {
+        "gene": "Son",
+        "transcripts": 13,
+        "unique_windows": 14682,
+        "non_acgt_windows": 0,
+        "candidate_records": 58728
+      },
+      {
+        "gene": "Cnot1",
+        "transcripts": 2,
+        "unique_windows": 8440,
+        "non_acgt_windows": 0,
+        "candidate_records": 33760
+      },
+      {
+        "gene": "Mlec",
+        "transcripts": 3,
+        "unique_windows": 6007,
+        "non_acgt_windows": 0,
+        "candidate_records": 24028
+      },
+      {
+        "gene": "Mllt4",
+        "transcripts": 16,
+        "unique_windows": 10502,
+        "non_acgt_windows": 0,
+        "candidate_records": 42008
+      },
+      {
+        "gene": "Prpf8",
+        "transcripts": 4,
+        "unique_windows": 7504,
+        "non_acgt_windows": 0,
+        "candidate_records": 30016
+      },
+      {
+        "gene": "Abhd2",
+        "transcripts": 2,
+        "unique_windows": 10460,
+        "non_acgt_windows": 0,
+        "candidate_records": 41840
+      },
+      {
+        "gene": "Myo18a",
+        "transcripts": 25,
+        "unique_windows": 15355,
+        "non_acgt_windows": 0,
+        "candidate_records": 61420
+      },
+      {
+        "gene": "Sptlc2",
+        "transcripts": 5,
+        "unique_windows": 8028,
+        "non_acgt_windows": 0,
+        "candidate_records": 32112
+      },
+      {
+        "gene": "Ppp2ca",
+        "transcripts": 2,
+        "unique_windows": 7438,
+        "non_acgt_windows": 0,
+        "candidate_records": 29752
+      },
+      {
+        "gene": "Aars",
+        "transcripts": 7,
+        "unique_windows": 9456,
+        "non_acgt_windows": 0,
+        "candidate_records": 37824
+      },
+      {
+        "gene": "Pten",
+        "transcripts": 3,
+        "unique_windows": 11453,
+        "non_acgt_windows": 0,
+        "candidate_records": 45812
+      },
+      {
+        "gene": "Pik3c2a",
+        "transcripts": 1,
+        "unique_windows": 7991,
+        "non_acgt_windows": 0,
+        "candidate_records": 31964
+      },
+      {
+        "gene": "Slk",
+        "transcripts": 5,
+        "unique_windows": 8322,
+        "non_acgt_windows": 0,
+        "candidate_records": 33288
+      },
+      {
+        "gene": "Cand1",
+        "transcripts": 4,
+        "unique_windows": 8295,
+        "non_acgt_windows": 0,
+        "candidate_records": 33180
+      },
+      {
+        "gene": "Tnpo1",
+        "transcripts": 4,
+        "unique_windows": 8624,
+        "non_acgt_windows": 0,
+        "candidate_records": 34496
+      },
+      {
+        "gene": "Myof",
+        "transcripts": 2,
+        "unique_windows": 7108,
+        "non_acgt_windows": 0,
+        "candidate_records": 28432
+      },
+      {
+        "gene": "Flna",
+        "transcripts": 15,
+        "unique_windows": 9918,
+        "non_acgt_windows": 0,
+        "candidate_records": 39672
+      },
+      {
+        "gene": "Kpnb1",
+        "transcripts": 3,
+        "unique_windows": 6541,
+        "non_acgt_windows": 0,
+        "candidate_records": 26164
+      },
+      {
+        "gene": "Ahnak",
+        "transcripts": 2,
+        "unique_windows": 16041,
+        "non_acgt_windows": 0,
+        "candidate_records": 64164
+      }
+    ],
+    "candidate_records": 12367668,
+    "fasta_sha256": "c7fe528da3fd081382ad65c1b1af3ea9c0b6251bc24f392b7b3ef4967eeed91c",
+    "gtf_sha256": "f36f125ed3b5bffd67cd987f7d1596be1a90d7f9efafd75a9dfc69c08f1820c4",
+    "config_sha256": "35c6a0bdaf887cddd2376e8c9f5e726dbf58ec5b809e2ba7a494bc6db6591004",
+    "final_recovery": "Not evaluated",
+    "policy": "All M4 transcripts; step 1; unique 52-nt ACGT windows within gene; both on-bits per window. Pair IDs namespace unchanged native window IDs by transcript and bit."
+  },
+  "ground_truth": "317 genes; 45648 unique complete 88-nt oligos; 22824 independently confirmed 25+2+25 pairs; no exclusions.",
+  "pair_id_policy": "Namespace native extraction probe_id by transcript and on-bit; retain both roles of the same native construction row. No cross-row pairing.",
+  "final_recovery": "Not evaluated"
+}

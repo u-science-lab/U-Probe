@@ -1,0 +1,4 @@
+stage,oligo_type,reference_sequences,matched_sequences,SRR_pct,reference_targets,recovered_targets,TRR_pct,MTR_pct,reference_pairs,matched_pairs,CPSR_pct,generated_records,generated_unique_reference_hits,excluded_reference_records,duplicate_reference_records
+candidate,all,45648,45648,100.0,317,317,100.0,100.0,22824,22824,100.0,12367668,45648,0,0
+candidate,p1,22824,22824,100.0,317,317,100.0,100.0,,,,12367668,45648,0,0
+candidate,p2,22824,22824,100.0,317,317,100.0,100.0,,,,12367668,45648,0,0
