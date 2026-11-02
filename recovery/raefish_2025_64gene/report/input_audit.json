@@ -1,0 +1,47 @@
+{
+  "sources": {
+    "publication": "https://doi.org/10.1016/j.cell.2025.09.006",
+    "annotation": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/gencode.v46.annotation.gtf.gz",
+    "annotation_checksums": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/MD5SUMS",
+    "supplement": "https://ars.els-cdn.com/content/image/1-s2.0-S0092867425010372-mmc1.xlsx"
+  },
+  "workbook_sha256": "08abfeb988ff83688109e65ca0722b6727c298e90519ecd9f52e104360e0e029",
+  "human_raw_records": 23352,
+  "human_raw_unique_ids": 23352,
+  "human_excluded_records": 40,
+  "exclusion_rule": "gene_symbol ends with NegativeControl",
+  "human_effective_reference_records": 23312,
+  "human_effective_reference_oligos": 69936,
+  "human_annotation_missing_ids": [],
+  "human_effective_biotypes": {
+    "lncRNA": 6382,
+    "protein_coding": 16430,
+    "TEC": 429,
+    "IG_V_gene": 30,
+    "TR_V_gene": 30,
+    "TR_C_gene": 2,
+    "IG_C_gene": 9
+  },
+  "pilot_rule": "Sort Ensembl IDs independently within GENCODE v46 protein_coding and lncRNA; take first 32 per stratum; combine and sort. No sequence matching is used.",
+  "pilot_reference_oligos": 192,
+  "pilot_reference_probe_sets": 64,
+  "integrity_checks": "All Human rows have valid DNA, 80/107/150 lengths, 94-bit weight-4 codes, shared fixed regions, rc(padlock-binding) encoding middle, and adapter-prefix readouts in ascending bit order.",
+  "annotation": "GENCODE v46 / GRCh38",
+  "template_encoding_rule": "E5 + R1 + R2 + rc(padlock.RNA_binding) + R3 + R4 + E3; functional encoding is rc(template).",
+  "target_id_rule": "Numeric Table S1 Ensembl_GeneID padded to 11 digits after ENSG; annotation version suffix stripped.",
+  "gtf_official_md5": "68070e3c87f6a0e70af6e4ff4d55f61c",
+  "gtf_gzip_integrity": "PASS: complete gzip stream read and official MD5 match",
+  "biotype_caveat": "GENCODE v46 has 16430 protein_coding, 6382 lncRNA, 429 TEC, and 71 IG/TR genes in the effective table. Grouping IG/TR with coding genes and TEC with noncoding genes yields 16501/6811, exactly the paper counts; this reconciliation is an interpretation of the classification. The pilot uses only 32 protein_coding and 32 lncRNA gene_type records.",
+  "paper_broad_biotypes_compatible_reclassification": {
+    "coding_including_IG_TR": 16501,
+    "lncRNA_including_TEC": 6811
+  },
+  "gtf_uncompressed_sha256": "1b3f265e67e2fa6c5ca53df37da9285768511b80a0078d73c6a36287201af57d",
+  "output_sha256": {
+    "targets.csv": "19193670a121c147ae0af95923f7aafb5da76c18088e8753ee37414f0687755f",
+    "codebook.csv": "b7e52b4f657c08f52f1ae0e98bba47ba87c8081449b116112dd079238a3ed0f7",
+    "readouts.csv": "5e01fe1e0d3e4f99e7ed8a7dfb7a7f0efaa0a906f2eb782f166a5ebae98f4451",
+    "reference_oligos.csv": "70173a0a8c5cd39816b680f2477bb0749fbf6f49d5b432c9f1945e185e50dfe0"
+  },
+  "gtf_compressed_sha256": "82b0e52bc4956486528152e3850660b3c41767ab103d87949e41d38f92ef8b38"
+}

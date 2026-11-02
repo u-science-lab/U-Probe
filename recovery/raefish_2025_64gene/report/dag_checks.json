@@ -1,0 +1,10 @@
+{
+  "native_dag_dependency_checks": 4,
+  "passed": 4,
+  "checks": [
+    "padlock binding changes encoding",
+    "priming binding remains independently linked",
+    "gene readout changes encoding only",
+    "padlock RCA-compatible common changes priming"
+  ]
+}

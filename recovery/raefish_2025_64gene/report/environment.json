@@ -1,0 +1,12 @@
+{
+  "python": "3.10.12",
+  "packages": {
+    "numpy": "1.26.0",
+    "pandas": "2.1.1",
+    "PyYAML": "6.0.1",
+    "primer3-py": "2.4.0",
+    "pyfaidx": "0.5.9.5",
+    "pathos": "0.3.5",
+    "viennarna": "2.7.2"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "native_probe_sets_checked": 1596454,
+  "gap0_sets": 797880,
+  "gap1_sets": 798574,
+  "orientation_counts": {
+    "padlock_upstream": 798227,
+    "padlock_downstream": 798227
+  },
+  "native_group_id_rule": "target_id|transcript_id|start:end|orientation; checked against every origin",
+  "all_checks_passed": true,
+  "checks": [
+    "three roles from one native record",
+    "shared target/transcript/window origin",
+    "80/107/150-nt synthesis templates",
+    "adjacent nonoverlapping 30-nt RNA sites",
+    "RCA priming complement",
+    "encoding dependence on padlock binding",
+    "94-bit weight-4 readout assignment",
+    "synthesis-template orientation"
+  ],
+  "note": "Structural acceptance is separate from exact published-sequence recovery."
+}
