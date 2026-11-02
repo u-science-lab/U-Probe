@@ -1,0 +1,776 @@
+{
+  "unique_unrecovered": 96,
+  "reasons": {
+    "no_exact_chrII_binding_site": 96
+  },
+  "records": [
+    {
+      "reference_id": "A05F__commonRT__Read003__boundary_10k_003_chr2:11520003-11530003_p0022__A12R",
+      "bin": "bin003",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11520003,
+      "bin_end": 11530003,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read003__boundary_10k_003_chr2:11520003-11530003_p0079__A12R",
+      "bin": "bin003",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11520003,
+      "bin_end": 11530003,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read003__boundary_10k_003_chr2:11520003-11530003_p0081__A12R",
+      "bin": "bin003",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11520003,
+      "bin_end": 11530003,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read004__boundary_10k_004_chr2:11530004-11540004_p0027__A12R",
+      "bin": "bin004",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11530004,
+      "bin_end": 11540004,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read004__boundary_10k_004_chr2:11530004-11540004_p0039__A12R",
+      "bin": "bin004",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11530004,
+      "bin_end": 11540004,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read004__boundary_10k_004_chr2:11530004-11540004_p0083__A12R",
+      "bin": "bin004",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11530004,
+      "bin_end": 11540004,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read005__boundary_10k_005_chr2:11540005-11550005_p0007__A12R",
+      "bin": "bin005",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11540005,
+      "bin_end": 11550005,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read005__boundary_10k_005_chr2:11540005-11550005_p0021__A12R",
+      "bin": "bin005",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11540005,
+      "bin_end": 11550005,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read005__boundary_10k_005_chr2:11540005-11550005_p0051__A12R",
+      "bin": "bin005",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11540005,
+      "bin_end": 11550005,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read006__boundary_10k_006_chr2:11550006-11560006_p0081__A12R",
+      "bin": "bin006",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11550006,
+      "bin_end": 11560006,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read007__boundary_10k_007_chr2:11560007-11570007_p0088__A12R",
+      "bin": "bin007",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11560007,
+      "bin_end": 11570007,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read007__boundary_10k_007_chr2:11560007-11570007_p0093__A12R",
+      "bin": "bin007",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11560007,
+      "bin_end": 11570007,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read008__boundary_10k_008_chr2:11570008-11580008_p0054__A12R",
+      "bin": "bin008",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11570008,
+      "bin_end": 11580008,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read009__boundary_10k_009_chr2:11580009-11590009_p0078__A12R",
+      "bin": "bin009",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11580009,
+      "bin_end": 11590009,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read010__boundary_10k_010_chr2:11590010-11600010_p0019__A12R",
+      "bin": "bin010",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11590010,
+      "bin_end": 11600010,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read010__boundary_10k_010_chr2:11590010-11600010_p0022__A12R",
+      "bin": "bin010",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11590010,
+      "bin_end": 11600010,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read010__boundary_10k_010_chr2:11590010-11600010_p0070__A12R",
+      "bin": "bin010",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11590010,
+      "bin_end": 11600010,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read016__boundary_10k_016_chr2:11650016-11660016_p0013__A12R",
+      "bin": "bin016",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11650016,
+      "bin_end": 11660016,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read016__boundary_10k_016_chr2:11650016-11660016_p0035__A12R",
+      "bin": "bin016",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11650016,
+      "bin_end": 11660016,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read016__boundary_10k_016_chr2:11650016-11660016_p0045__A12R",
+      "bin": "bin016",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11650016,
+      "bin_end": 11660016,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read019__boundary_10k_019_chr2:11680019-11690019_p0011__A12R",
+      "bin": "bin019",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11680019,
+      "bin_end": 11690019,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read019__boundary_10k_019_chr2:11680019-11690019_p0037__A12R",
+      "bin": "bin019",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11680019,
+      "bin_end": 11690019,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read024__boundary_10k_024_chr2:11730024-11740024_p0015__A12R",
+      "bin": "bin024",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11730024,
+      "bin_end": 11740024,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read024__boundary_10k_024_chr2:11730024-11740024_p0029__A12R",
+      "bin": "bin024",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11730024,
+      "bin_end": 11740024,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read025__boundary_10k_025_chr2:11740025-11750025_p0030__A12R",
+      "bin": "bin025",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11740025,
+      "bin_end": 11750025,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read027__boundary_10k_027_chr2:11760027-11770027_p0045__A12R",
+      "bin": "bin027",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11760027,
+      "bin_end": 11770027,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read028__boundary_10k_028_chr2:11770028-11780028_p0041__A12R",
+      "bin": "bin028",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11770028,
+      "bin_end": 11780028,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read028__boundary_10k_028_chr2:11770028-11780028_p0046__A12R",
+      "bin": "bin028",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11770028,
+      "bin_end": 11780028,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read028__boundary_10k_028_chr2:11770028-11780028_p0080__A12R",
+      "bin": "bin028",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11770028,
+      "bin_end": 11780028,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read032__boundary_10k_032_chr2:11810032-11820032_p0025__A12R",
+      "bin": "bin032",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11810032,
+      "bin_end": 11820032,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read032__boundary_10k_032_chr2:11810032-11820032_p0048__A12R",
+      "bin": "bin032",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11810032,
+      "bin_end": 11820032,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read032__boundary_10k_032_chr2:11810032-11820032_p0055__A12R",
+      "bin": "bin032",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11810032,
+      "bin_end": 11820032,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read033__boundary_10k_033_chr2:11820033-11830033_p0069__A12R",
+      "bin": "bin033",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11820033,
+      "bin_end": 11830033,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read035__boundary_10k_035_chr2:11840035-11850035_p0064__A12R",
+      "bin": "bin035",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11840035,
+      "bin_end": 11850035,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read037__boundary_10k_037_chr2:11860037-11870037_p0032__A12R",
+      "bin": "bin037",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11860037,
+      "bin_end": 11870037,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read037__boundary_10k_037_chr2:11860037-11870037_p0052__A12R",
+      "bin": "bin037",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11860037,
+      "bin_end": 11870037,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read041__boundary_10k_041_chr2:11900041-11910041_p0084__A12R",
+      "bin": "bin041",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11900041,
+      "bin_end": 11910041,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read044__boundary_10k_044_chr2:11930044-11940044_p0057__A12R",
+      "bin": "bin044",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11930044,
+      "bin_end": 11940044,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read047__boundary_10k_047_chr2:11960047-11970047_p0012__A12R",
+      "bin": "bin047",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11960047,
+      "bin_end": 11970047,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read047__boundary_10k_047_chr2:11960047-11970047_p0031__A12R",
+      "bin": "bin047",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11960047,
+      "bin_end": 11970047,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read047__boundary_10k_047_chr2:11960047-11970047_p0055__A12R",
+      "bin": "bin047",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11960047,
+      "bin_end": 11970047,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read047__boundary_10k_047_chr2:11960047-11970047_p0070__A12R",
+      "bin": "bin047",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11960047,
+      "bin_end": 11970047,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read047__boundary_10k_047_chr2:11960047-11970047_p0076__A12R",
+      "bin": "bin047",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11960047,
+      "bin_end": 11970047,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read048__boundary_10k_048_chr2:11970048-11980048_p0057__A12R",
+      "bin": "bin048",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11970048,
+      "bin_end": 11980048,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read048__boundary_10k_048_chr2:11970048-11980048_p0073__A12R",
+      "bin": "bin048",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 11970048,
+      "bin_end": 11980048,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read053B188__boundary_10k_053_chr2:12020053-12030053_p0079__A12R",
+      "bin": "bin053",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12020053,
+      "bin_end": 12030053,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read054B189__boundary_10k_054_chr2:12030054-12040054_p0050__A12R",
+      "bin": "bin054",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12030054,
+      "bin_end": 12040054,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read054B189__boundary_10k_054_chr2:12030054-12040054_p0085__A12R",
+      "bin": "bin054",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12030054,
+      "bin_end": 12040054,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read057__boundary_10k_057_chr2:12060057-12070057_p0002__A12R",
+      "bin": "bin057",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12060057,
+      "bin_end": 12070057,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read057__boundary_10k_057_chr2:12060057-12070057_p0032__A12R",
+      "bin": "bin057",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12060057,
+      "bin_end": 12070057,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read058__boundary_10k_058_chr2:12070058-12080058_p0027__A12R",
+      "bin": "bin058",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12070058,
+      "bin_end": 12080058,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read059__boundary_10k_059_chr2:12080059-12090059_p0087__A12R",
+      "bin": "bin059",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12080059,
+      "bin_end": 12090059,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read060__boundary_10k_060_chr2:12090060-12100060_p0084__A12R",
+      "bin": "bin060",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12090060,
+      "bin_end": 12100060,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read061__boundary_10k_061_chr2:12100061-12110061_p0025__A12R",
+      "bin": "bin061",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12100061,
+      "bin_end": 12110061,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read061__boundary_10k_061_chr2:12100061-12110061_p0064__A12R",
+      "bin": "bin061",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12100061,
+      "bin_end": 12110061,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read061__boundary_10k_061_chr2:12100061-12110061_p0068__A12R",
+      "bin": "bin061",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12100061,
+      "bin_end": 12110061,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read062__boundary_10k_062_chr2:12110062-12120062_p0067__A12R",
+      "bin": "bin062",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12110062,
+      "bin_end": 12120062,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read064__boundary_10k_064_chr2:12130064-12140064_p0007__A12R",
+      "bin": "bin064",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12130064,
+      "bin_end": 12140064,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read071__boundary_10k_071_chr2:12200071-12210071_p0005__A12R",
+      "bin": "bin071",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12200071,
+      "bin_end": 12210071,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read071__boundary_10k_071_chr2:12200071-12210071_p0090__A12R",
+      "bin": "bin071",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12200071,
+      "bin_end": 12210071,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read073__boundary_10k_073_chr2:12220073-12230073_p0017__A12R",
+      "bin": "bin073",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12220073,
+      "bin_end": 12230073,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read076__boundary_10k_076_chr2:12250076-12260076_p0011__A12R",
+      "bin": "bin076",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12250076,
+      "bin_end": 12260076,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read076__boundary_10k_076_chr2:12250076-12260076_p0068__A12R",
+      "bin": "bin076",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12250076,
+      "bin_end": 12260076,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read077__boundary_10k_077_chr2:12260077-12270077_p0067__A12R",
+      "bin": "bin077",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12260077,
+      "bin_end": 12270077,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read077__boundary_10k_077_chr2:12260077-12270077_p0068__A12R",
+      "bin": "bin077",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12260077,
+      "bin_end": 12270077,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read078__boundary_10k_078_chr2:12270078-12280078_p0044__A12R",
+      "bin": "bin078",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12270078,
+      "bin_end": 12280078,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read081__boundary_10k_081_chr2:12300081-12310081_p0010__A12R",
+      "bin": "bin081",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12300081,
+      "bin_end": 12310081,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read085__boundary_10k_085_chr2:12340085-12350085_p0053__A12R",
+      "bin": "bin085",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12340085,
+      "bin_end": 12350085,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read087__boundary_10k_087_chr2:12360087-12370087_p0061__A12R",
+      "bin": "bin087",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12360087,
+      "bin_end": 12370087,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read088__boundary_10k_088_chr2:12370088-12380088_p0039__A12R",
+      "bin": "bin088",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12370088,
+      "bin_end": 12380088,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read088__boundary_10k_088_chr2:12370088-12380088_p0097__A12R",
+      "bin": "bin088",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12370088,
+      "bin_end": 12380088,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read089__boundary_10k_089_chr2:12380089-12390089_p0073__A12R",
+      "bin": "bin089",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12380089,
+      "bin_end": 12390089,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read090__boundary_10k_090_chr2:12390090-12400090_p0047__A12R",
+      "bin": "bin090",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12390090,
+      "bin_end": 12400090,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read090__boundary_10k_090_chr2:12390090-12400090_p0055__A12R",
+      "bin": "bin090",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12390090,
+      "bin_end": 12400090,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read090__boundary_10k_090_chr2:12390090-12400090_p0090__A12R",
+      "bin": "bin090",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12390090,
+      "bin_end": 12400090,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read091__boundary_10k_091_chr2:12400091-12410091_p0014__A12R",
+      "bin": "bin091",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12400091,
+      "bin_end": 12410091,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read091__boundary_10k_091_chr2:12400091-12410091_p0032__A12R",
+      "bin": "bin091",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12400091,
+      "bin_end": 12410091,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read091__boundary_10k_091_chr2:12400091-12410091_p0088__A12R",
+      "bin": "bin091",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12400091,
+      "bin_end": 12410091,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0002__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0033__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0047__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0063__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0069__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read092__boundary_10k_092_chr2:12410092-12420092_p0084__A12R",
+      "bin": "bin092",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12410092,
+      "bin_end": 12420092,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read093__boundary_10k_093_chr2:12420093-12430093_p0009__A12R",
+      "bin": "bin093",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12420093,
+      "bin_end": 12430093,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read093__boundary_10k_093_chr2:12420093-12430093_p0098__A12R",
+      "bin": "bin093",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12420093,
+      "bin_end": 12430093,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read094__boundary_10k_094_chr2:12430094-12440094_p0008__A12R",
+      "bin": "bin094",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12430094,
+      "bin_end": 12440094,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read094__boundary_10k_094_chr2:12430094-12440094_p0040__A12R",
+      "bin": "bin094",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12430094,
+      "bin_end": 12440094,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read094__boundary_10k_094_chr2:12430094-12440094_p0062__A12R",
+      "bin": "bin094",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12430094,
+      "bin_end": 12440094,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read095__boundary_10k_095_chr2:12440095-12450095_p0015__A12R",
+      "bin": "bin095",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12440095,
+      "bin_end": 12450095,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read096__boundary_10k_096_chr2:12450096-12460096_p0024__A12R",
+      "bin": "bin096",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12450096,
+      "bin_end": 12460096,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read096__boundary_10k_096_chr2:12450096-12460096_p0045__A12R",
+      "bin": "bin096",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12450096,
+      "bin_end": 12460096,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read096__boundary_10k_096_chr2:12450096-12460096_p0069__A12R",
+      "bin": "bin096",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12450096,
+      "bin_end": 12460096,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read099__boundary_10k_099_chr2:12480099-12490099_p0013__A12R",
+      "bin": "bin099",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12480099,
+      "bin_end": 12490099,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read100__boundary_10k_100_chr2:12490100-12500000_p0053__A12R",
+      "bin": "bin100",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12490100,
+      "bin_end": 12500000,
+      "exact_chrII_sites": []
+    },
+    {
+      "reference_id": "A05F__commonRT__Read100__boundary_10k_100_chr2:12490100-12500000_p0073__A12R",
+      "bin": "bin100",
+      "reason": "no_exact_chrII_binding_site",
+      "bin_start": 12490100,
+      "bin_end": 12500000,
+      "exact_chrII_sites": []
+    }
+  ]
+}

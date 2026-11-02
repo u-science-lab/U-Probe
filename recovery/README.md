@@ -19,6 +19,7 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 | [PRISM](prism_2025_64gene/) | 2025 / 64 genes | 100% | N/A | Not evaluated |
 | [RAEFISH](raefish_2025_64gene/) | 2025 / 64 Human genes | 100% | 100% | Not evaluated |
 | [split-FISH](splitfish_2020_317gene/) | 2020 / 317 genes | 100% | 100% | Not evaluated |
+| [DNA Oligopaint](oligopaint_2020_chrII_1mb/) | 2020 / 100 genomic bins | 99.037594% | N/A | Not evaluated |
 | [TDDN-FISH](tddnfish_2025/) | 2025 / 9 HeLa genes | 100% | N/A | Not evaluated |
 
 STARmap, ExSeq, MERFISH, seqFISH+ and MiP-seq report **unfiltered candidate recovery**, not final probe
@@ -36,11 +37,17 @@ TDDN-FISH recovers 54/54 complete 65-nt primary oligos and 9/9 targets using
 GRCh38/GENCODE v47; TRR and MTR are 100%. Fixed tetrahedral components and
 chemical modifications are checked separately; physical assembly is not evaluated.
 
+DNA Oligopaint recovers 9,879/9,975 unique full 120-nt oligos from 9,984 source
+records using ce11; TRR is 100% and MTR is 99.037893%. Quality-filtered SRR is
+97.002506%; deterministic non-overlap selection retains 135 published oligos
+(1.353383%) among 19,344 candidates. These stages are reported separately;
+final recovery is not evaluated.
+
 ## Usage
 
-Each method README provides two commands: generate candidates with the native
-U-Probe API, then evaluate them with [common/sequence_recovery.py](common/sequence_recovery.py).
-No method-specific evaluation wrapper is needed. Inputs use `gene`/`target_id`,
+Each method README provides commands to generate candidates with the native
+U-Probe API and evaluate them with [common/sequence_recovery.py](common/sequence_recovery.py).
+All stages use the shared matching definitions. Inputs use `gene`/`target_id`,
 `oligo_type`, `full_sequence`, and `pair_id`/`probe_set_id` for functional groups.
 Full DNA, target, role and same-generated-pair membership determine recovery;
 chemical modifications are separate. Novel sequences are not false positives.
@@ -55,7 +62,6 @@ are optional: `python -m unittest discover -s recovery/common`.
 | Priority | Method | Validation focus | Status |
 |---|---|---|---|
 | P1 | osmFISH | Linear RNA-FISH probes | Planned — reference audit required |
-| P1 | DNA Oligopaint | Genomic-region probe pools | Planned — reference audit required |
 | P1 | HCR v3.0 | Split-initiator probe pairs | Planned — reference audit required |
 | P2 | SABER-FISH | Modular signal amplification | Planned — reference audit required |
 | P2 | clampFISH 2.0 | Multi-component amplification probes | Planned — reference audit required |

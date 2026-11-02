@@ -1,0 +1,18 @@
+{
+  "base_code_commit": "0397a78c37cb5fdf8b551d148d33c84dc3b9bec1",
+  "fasta_sha256": "e0b3aa8f5443773e1af99d8e0227cb1f10289981480a90ba11bae4f696bb1c85",
+  "config_sha256": "75b5d23eb891185e54ab158daf48b31aa2ba60c82aaba816c0c84e90c1bbb31b",
+  "genome": "UCSC ce11 / WBcel235 (WS245)",
+  "genome_source": "https://hgdownload.soe.ucsc.edu/goldenPath/ce11/bigZips/ce11.fa.gz",
+  "package_versions": {
+    "numpy": "1.26.0",
+    "pandas": "2.1.1",
+    "PyYAML": "6.0.1",
+    "pyfaidx": "0.5.9.5",
+    "primer3-py": "2.0.3"
+  },
+  "generation_passes": 1,
+  "specificity_passes": 1,
+  "core_changes": false,
+  "metric_denominator": "Common evaluator deduplicates by method, target, role and full DNA; 9984 rows / 9975 unique target oligos"
+}
