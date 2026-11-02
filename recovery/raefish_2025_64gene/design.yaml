@@ -1,0 +1,577 @@
+name: RAEFISH_2025_64gene_unfiltered_candidates
+genome: reference
+targets:
+- ENSG00000000419
+- ENSG00000000457
+- ENSG00000000938
+- ENSG00000001036
+- ENSG00000001084
+- ENSG00000001167
+- ENSG00000001460
+- ENSG00000001461
+- ENSG00000001497
+- ENSG00000001561
+- ENSG00000001617
+- ENSG00000001626
+- ENSG00000001629
+- ENSG00000001630
+- ENSG00000001631
+- ENSG00000002016
+- ENSG00000002330
+- ENSG00000002549
+- ENSG00000002586
+- ENSG00000002587
+- ENSG00000002726
+- ENSG00000002745
+- ENSG00000002746
+- ENSG00000002822
+- ENSG00000002834
+- ENSG00000002919
+- ENSG00000002933
+- ENSG00000003137
+- ENSG00000003147
+- ENSG00000003249
+- ENSG00000003393
+- ENSG00000003400
+- ENSG00000099869
+- ENSG00000103472
+- ENSG00000115934
+- ENSG00000117242
+- ENSG00000122043
+- ENSG00000122548
+- ENSG00000124835
+- ENSG00000124915
+- ENSG00000125462
+- ENSG00000125514
+- ENSG00000125804
+- ENSG00000128254
+- ENSG00000130600
+- ENSG00000145063
+- ENSG00000146049
+- ENSG00000146521
+- ENSG00000146666
+- ENSG00000152931
+- ENSG00000153363
+- ENSG00000157306
+- ENSG00000162888
+- ENSG00000162913
+- ENSG00000163081
+- ENSG00000163364
+- ENSG00000163597
+- ENSG00000163915
+- ENSG00000164385
+- ENSG00000164621
+- ENSG00000165511
+- ENSG00000166917
+- ENSG00000167046
+- ENSG00000167459
+encoding:
+  ENSG00000000419:
+    R1: GACTTTGTGGGTACGTTGAT
+    R2: GACACGTCCCTCAATCGAAC
+    R3: TTGGACCGGCATGTCAAGAG
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000000457:
+    R1: TTCCGCGTCATGTACCGGTT
+    R2: CGGCCGGTTGGTCTACGGAT
+    R3: GTGTCCGCCAGTACCGTGAG
+    R4: GCGCGATTGACCGTCTCGTT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000000938:
+    R1: CGCGAGGAATTGGCGCATCG
+    R2: AAATCCCGGAAATAACGGCC
+    R3: CGCAAGATGGTGTACGTCCA
+    R4: GAGAAGCGCTCGGGTATGAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001036:
+    R1: GTTCACCGGAATACTTCTGA
+    R2: CGTGTACGGTCAAATACGAG
+    R3: GATGATCCGCTGAAGTCAAA
+    R4: GAGAAGCGCTCGGGTATGAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001084:
+    R1: GTCCGTAGGCAAAGGGTCCG
+    R2: GACAATGGTGCGAAAGACCC
+    R3: AAATCCCGGAAATAACGGCC
+    R4: CGCAAGATGGTGTACGTCCA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001167:
+    R1: GACGGCAAGAGAGCGTGCGT
+    R2: GGATTCCGTAGGCACGCCGA
+    R3: CGTCGTGGGACGTGGACCGT
+    R4: ACTCTATCGGCATGGAGGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001460:
+    R1: TTCCGCGTCATGTACCGGTT
+    R2: GCGCGATTGACCGTCTCGTT
+    R3: GCCACGGTCCCGTTGAACTT
+    R4: CGCGAGGAATTGGCGCATCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001461:
+    R1: GTGTCCGCCAGTACCGTGAG
+    R2: CCGTATCCCTGGCGCGGACT
+    R3: CTCGGAGCGTTACTGCGGGC
+    R4: CGTCGCGATACTGGTGTAAG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001497:
+    R1: CGGCCGGTTGGTCTACGGAT
+    R2: GTCTGGAACGACGGATTCAG
+    R3: CGGTGCGGTGGGATGGATAA
+    R4: AGTGCGCACGAGTTGAACTG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001561:
+    R1: TGTCGCTACCGGCTTTGCTA
+    R2: CCGGCGGCCTTTTCTCGGAC
+    R3: ACCGAGCAGGTTAGTTGACG
+    R4: ACGCTCGACAAGAACAGGAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001617:
+    R1: CCGCTTGCGAGTAGGGCAAT
+    R2: CGTGGATTAGGGCATCGACC
+    R3: ATTTGGGTCATTCCCACCGA
+    R4: CGCCGGATCTTTGAATCAAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001626:
+    R1: TGTTCGAATCCGCCTTCAAC
+    R2: ATCGACCCTTTATAGCGTGT
+    R3: GTCTGGAACGACGGATTCAG
+    R4: ACTCTATCGGCATGGAGGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001629:
+    R1: TGCAAGTCGGCATAACCATA
+    R2: TACTCCGCAGTCGGCACATA
+    R3: AACTTCTGCCACTACCGTTG
+    R4: TCGGCGATTGCGCAACCTCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001630:
+    R1: CGTCAGACCTATGTGCACCC
+    R2: ACGAACCGCGACTACGGGTG
+    R3: CGACGGATGTAATTCGGCCG
+    R4: TTGGCGCGGTTCCATACTCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000001631:
+    R1: GACTTTGTGGGTACGTTGAT
+    R2: CATATCGGTCGGCTAACACT
+    R3: GTCTGGAACGACGGATTCAG
+    R4: GACACGTCCCTCAATCGAAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002016:
+    R1: CCGGACGGATTACCCATGCG
+    R2: CTCACGCTGGAAGTGATACG
+    R3: ACTTACGCGTTACACGGACT
+    R4: ACCGAACCGACGTCGCAAAT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002330:
+    R1: ATATCGGCTTGTGCCAGCGT
+    R2: CTACCAAGTTACGAGGCATA
+    R3: GTGGGCTGCTGCGATTTCAC
+    R4: ACGTAAGGCAGCTTGCGTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002549:
+    R1: GTCGTCCGCAGTAATTTGTC
+    R2: GTGGTACCGTGGAACGCAAC
+    R3: AAATAGCGTGCTGCCTACCT
+    R4: CGGTCCACCGTTGCGCTTAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002586:
+    R1: GGTCACGTACGAGACATTGG
+    R2: ATTTGAACCAACCTAGCGAT
+    R3: GATCCCGGTCGGATATGTGA
+    R4: TCGTATCTGGCGACTACTAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002587:
+    R1: GAACTCGTTGACTAAGCATT
+    R2: GCGAAGGTTAGCCTCGAAGC
+    R3: ATATGTCGATGTCCTTAGAC
+    R4: CGTCTGGATCGTCTATCAAT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002726:
+    R1: GAACGGCCTCATAAATCGGT
+    R2: AATGATGCCTTGCGGTTCTT
+    R3: CGGTATGCTGCTTCGTGAAC
+    R4: CTTATCGCAAGGTGGCCTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002745:
+    R1: AATGATGCCTTGCGGTTCTT
+    R2: TAGAAATATCCGAGTGGCAT
+    R3: GGTGTCGGTTAAATATTCCT
+    R4: GGGCGTCTGTTACACGTTTG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002746:
+    R1: CATATCGGTCGGCTAACACT
+    R2: CGGCGAATTTGCTTTCGTTA
+    R3: AATGATGCCTTGCGGTTCTT
+    R4: TAGAAATATCCGAGTGGCAT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002822:
+    R1: TGACTGTCGTTGACTCTCGG
+    R2: GTTAGATGGCCGCTCGGGTT
+    R3: GGTGTCGGTTAAATATTCCT
+    R4: GGGCGTCTGTTACACGTTTG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002834:
+    R1: CTACCACGGCATCGATTTAG
+    R2: ATCAGGTTTACGCCCATGTC
+    R3: ATGCGAACCGTCTCAAAGCA
+    R4: TGCGACATGTTATGCTAGGC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002919:
+    R1: GAACGGCCTCATAAATCGGT
+    R2: ATCGACCCTTTATAGCGTGT
+    R3: GGTGGTTGTCACTTTCCGAA
+    R4: CGTATTGCAGGATCCTTATG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000002933:
+    R1: TCGTATTCGCCTTACTGTGT
+    R2: TAGGCGCTTTAGTAGGTACC
+    R3: CGGTATGCTGCTTCGTGAAC
+    R4: CTTATCGCAAGGTGGCCTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000003137:
+    R1: AGGCGATACATGAGAGGCGT
+    R2: CGAACGACCTGTTACCTTGC
+    R3: TAGGCGCTTTAGTAGGTACC
+    R4: AATTTCTCGCATGTCGTGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000003147:
+    R1: TTGGGAACGCCTTCATATCC
+    R2: ACCGGTTGTCTATATCGTCT
+    R3: CGGTATGCTGCTTCGTGAAC
+    R4: CTTATCGCAAGGTGGCCTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000003249:
+    R1: TGTTCGAATCCGCCTTCAAC
+    R2: AAATTCCGGAAGCTTGGGCA
+    R3: GTCGGCTGCGTACTGGTACA
+    R4: ATCAATCCTCGTTGGCGTTC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000003393:
+    R1: TCGTATTCGCCTTACTGTGT
+    R2: TAGCGCCTGAATTAGCTATA
+    R3: GAACTCGTTGACTAAGCATT
+    R4: GCGAAGGTTAGCCTCGAAGC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000003400:
+    R1: ATATGTCGATGTCCTTAGAC
+    R2: CGTCTGGATCGTCTATCAAT
+    R3: TGTCGCTACCGGCTTTGCTA
+    R4: CCGGCGGCCTTTTCTCGGAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000099869:
+    R1: AAATAGCGTGCTGCCTACCT
+    R2: CGGTCCACCGTTGCGCTTAC
+    R3: GCGCGATTGACCGTCTCGTT
+    R4: ACGTAAGGCAGCTTGCGTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000103472:
+    R1: CGTCTGGATCGTCTATCAAT
+    R2: CCGGACGGATTACCCATGCG
+    R3: ACCGAGCAGGTTAGTTGACG
+    R4: GGATTCCGTAGGCACGCCGA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000115934:
+    R1: GTTCACCGGAATACTTCTGA
+    R2: TAGGCGCTTTAGTAGGTACC
+    R3: GAACTCGTTGACTAAGCATT
+    R4: GATCCCGGTCGGATATGTGA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000117242:
+    R1: CTACCACGGCATCGATTTAG
+    R2: GGGCGTCTGTTACACGTTTG
+    R3: ACCGAGCAGGTTAGTTGACG
+    R4: CGTCGCGATACTGGTGTAAG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000122043:
+    R1: CGTGTACGGTCAAATACGAG
+    R2: AGGCGATACATGAGAGGCGT
+    R3: CGGTGCGGTGGGATGGATAA
+    R4: GCGCGATTGACCGTCTCGTT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000122548:
+    R1: GGTGGTTGTCACTTTCCGAA
+    R2: GATCCCGGTCGGATATGTGA
+    R3: AACTTCTGCCACTACCGTTG
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000124835:
+    R1: GAACGGCCTCATAAATCGGT
+    R2: ATATGTCGATGTCCTTAGAC
+    R3: CGTCAGACCTATGTGCACCC
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000124915:
+    R1: TCGGCGATTGCGCAACCTCG
+    R2: CGCCGGATCTTTGAATCAAC
+    R3: AGTGCGCACGAGTTGAACTG
+    R4: ACGTAAGGCAGCTTGCGTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000125462:
+    R1: CGTGTACGGTCAAATACGAG
+    R2: TGACTGTCGTTGACTCTCGG
+    R3: ATATGTCGATGTCCTTAGAC
+    R4: CGTCAGACCTATGTGCACCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000125514:
+    R1: GAACGGCCTCATAAATCGGT
+    R2: AGTGCGCACGAGTTGAACTG
+    R3: AAATCCCGGAAATAACGGCC
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000125804:
+    R1: CGGCGAATTTGCTTTCGTTA
+    R2: GAACTCGTTGACTAAGCATT
+    R3: TACTCCGCAGTCGGCACATA
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000128254:
+    R1: GGTGGTTGTCACTTTCCGAA
+    R2: TGCGACATGTTATGCTAGGC
+    R3: ACTCTATCGGCATGGAGGTA
+    R4: GACAATGGTGCGAAAGACCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000130600:
+    R1: CGTGTACGGTCAAATACGAG
+    R2: ACGCTCGACAAGAACAGGAC
+    R3: ACGTAAGGCAGCTTGCGTTA
+    R4: TGGACTTCCGGTCGATATCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000145063:
+    R1: CGAACGACCTGTTACCTTGC
+    R2: GAACGGCCTCATAAATCGGT
+    R3: CTCGGAGCGTTACTGCGGGC
+    R4: ACTCTATCGGCATGGAGGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000146049:
+    R1: GTTCACCGGAATACTTCTGA
+    R2: ATCGACCCTTTATAGCGTGT
+    R3: CGGCCGGTTGGTCTACGGAT
+    R4: ACTCTATCGGCATGGAGGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000146521:
+    R1: CGGTCCACCGTTGCGCTTAC
+    R2: AACTTCTGCCACTACCGTTG
+    R3: CGGCCGGTTGGTCTACGGAT
+    R4: ACTCTATCGGCATGGAGGTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000146666:
+    R1: TTCCGCGTCATGTACCGGTT
+    R2: CGGTGCGGTGGGATGGATAA
+    R3: ACTCTATCGGCATGGAGGTA
+    R4: GAGAAGCGCTCGGGTATGAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000152931:
+    R1: TGCGACATGTTATGCTAGGC
+    R2: CGGCGAATTTGCTTTCGTTA
+    R3: TTGGCGCGGTTCCATACTCG
+    R4: TCGGCGATTGCGCAACCTCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000153363:
+    R1: AGGCGATACATGAGAGGCGT
+    R2: GAACGGCCTCATAAATCGGT
+    R3: GTGGGCTGCTGCGATTTCAC
+    R4: TTGGACCGGCATGTCAAGAG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000157306:
+    R1: GAACTCGTTGACTAAGCATT
+    R2: CCGCTTGCGAGTAGGGCAAT
+    R3: CGGTGCGGTGGGATGGATAA
+    R4: GACAATGGTGCGAAAGACCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000162888:
+    R1: TGACTGTCGTTGACTCTCGG
+    R2: GTTAGATGGCCGCTCGGGTT
+    R3: AACTTCTGCCACTACCGTTG
+    R4: TCGGCGATTGCGCAACCTCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000162913:
+    R1: AAATAGCGTGCTGCCTACCT
+    R2: TCGGCGATTGCGCAACCTCG
+    R3: GCGCGATTGACCGTCTCGTT
+    R4: AAATCCCGGAAATAACGGCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000163081:
+    R1: CGTCTGGATCGTCTATCAAT
+    R2: CGGTCCACCGTTGCGCTTAC
+    R3: ACCGAGCAGGTTAGTTGACG
+    R4: CTCGGAGCGTTACTGCGGGC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000163364:
+    R1: CGGTCCACCGTTGCGCTTAC
+    R2: TTGGCGCGGTTCCATACTCG
+    R3: CTCGGAGCGTTACTGCGGGC
+    R4: GACAATGGTGCGAAAGACCC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000163597:
+    R1: AAATAGCGTGCTGCCTACCT
+    R2: AACTTCTGCCACTACCGTTG
+    R3: AGTGCGCACGAGTTGAACTG
+    R4: TTGGACCGGCATGTCAAGAG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000163915:
+    R1: AGGCGATACATGAGAGGCGT
+    R2: CGAACGACCTGTTACCTTGC
+    R3: ATATGTCGATGTCCTTAGAC
+    R4: CGTCTGGATCGTCTATCAAT
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000164385:
+    R1: AGGCGATACATGAGAGGCGT
+    R2: TGACTGTCGTTGACTCTCGG
+    R3: GTGGTACCGTGGAACGCAAC
+    R4: CGCCGGATCTTTGAATCAAC
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000164621:
+    R1: AAATAGCGTGCTGCCTACCT
+    R2: TTGGCGCGGTTCCATACTCG
+    R3: GTGGGCTGCTGCGATTTCAC
+    R4: CGCGAGGAATTGGCGCATCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000165511:
+    R1: AGGCGATACATGAGAGGCGT
+    R2: GAACGGCCTCATAAATCGGT
+    R3: CGTCTGGATCGTCTATCAAT
+    R4: TACTCCGCAGTCGGCACATA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000166917:
+    R1: ACCGGTTGTCTATATCGTCT
+    R2: GGTGGTTGTCACTTTCCGAA
+    R3: GAACTCGTTGACTAAGCATT
+    R4: TCGGCGATTGCGCAACCTCG
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000167046:
+    R1: TAGCGCCTGAATTAGCTATA
+    R2: AGGCGATACATGAGAGGCGT
+    R3: GAACTCGTTGACTAAGCATT
+    R4: CTTATCGCAAGGTGGCCTTA
+    padlock_part: upstream
+    priming_part: downstream
+  ENSG00000167459:
+    R1: ATATGTCGATGTCCTTAGAC
+    R2: CGTCTGGATCGTCTATCAAT
+    R3: TTCCGCGTCATGTACCGGTT
+    R4: GTGGGCTGCTGCGATTTCAC
+    padlock_part: upstream
+    priming_part: downstream
+extracts:
+  target_region:
+    source: mRNA
+    length:
+    - 60
+    - 61
+    step: 1
+    layout:
+      template: '{upstream}{gap}{downstream}'
+      parts:
+        upstream:
+          length: 30
+        gap:
+          length:
+          - 0
+          - 1
+        downstream:
+          length: 30
+probes:
+  padlock:
+    template: '{common5}{binding}{common3}'
+    parts:
+      common5:
+        expr: '''ACTCTCACTTGGGTTCCAAT'''
+      binding:
+        expr: rc(target_parts[encoding[target]['padlock_part']])
+      common3:
+        expr: '''TTCCTCTAACTCTCTAATCCACTAATACCC'''
+  priming:
+    template: '{common5}{binding}{rca_priming}{tail}'
+    parts:
+      common5:
+        expr: '''GTGGTAAAGCTCCGCGGCTT'''
+      binding:
+        expr: rc(target_parts[encoding[target]['priming_part']])
+      rca_priming:
+        expr: rc(padlock.common5[-10:])
+      tail:
+        expr: '''TATAGTGAGTCGTATTATCCGTACGGCGATTGGTCAATGCGGAACGA'''
+  encoding_probe:
+    template: '{synthesis}'
+    parts:
+      functional:
+        template: '{common5}{readout4}{readout3}{amplicon_binding}{readout2}{readout1}{common3}'
+        parts:
+          common5:
+            expr: rc('CGACACCGAACGTGCGACAA')
+          readout4:
+            expr: rc(encoding[target]['R4'])
+          readout3:
+            expr: rc(encoding[target]['R3'])
+          amplicon_binding:
+            expr: padlock.binding
+          readout2:
+            expr: rc(encoding[target]['R2'])
+          readout1:
+            expr: rc(encoding[target]['R1'])
+          common3:
+            expr: rc('GCGTCGTTATGGTGCAACGT')
+      synthesis:
+        expr: rc(encoding_probe.functional)

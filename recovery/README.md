@@ -17,6 +17,7 @@ architectures. Methods share SRR, TRR, MTR and, where applicable, CPSR;
 | [seqFISH+](seqfish_plus_2025_1194gene/) | 2025 / 1,194 genes | 99.089542% | N/A | Not evaluated |
 | [MiP-seq](mipseq_2024_217gene/) | 2024 / 217 genes | 99.308756% | 99.078341% | Not evaluated |
 | [PRISM](prism_2025_64gene/) | 2025 / 64 genes | 100% | N/A | Not evaluated |
+| [RAEFISH](raefish_2025_64gene/) | 2025 / 64 Human genes | 100% | 100% | Not evaluated |
 
 STARmap, ExSeq, MERFISH, seqFISH+ and MiP-seq report **unfiltered candidate recovery**, not final probe
 selection. ExSeq recovers 333/334 padlocks and 42/42 targets using mm10;
@@ -27,6 +28,8 @@ MTR is 99.050149%. Complete synthesis oligos are not evaluated.
 MiP-seq recovers 862/868 full oligos and 217/217 targets; MTR is 99.308756%.
 Same-generated-group recovery covers 430/434 padlock-RCA pairs.
 PRISM recovers 64/64 complete 120-nt padlocks and 64/64 targets using mm10; MTR is 100%.
+RAEFISH recovers 192/192 complete synthesis templates, 64/64 targets and 64/64
+same-generated-set padlock/priming/encoding triplets using GRCh38/GENCODE v46; MTR is 100%.
 
 ## Usage
 
@@ -55,7 +58,6 @@ are optional: `python -m unittest discover -s recovery/common`.
 | P2 | HT-smFISH | High-throughput probe libraries | Planned — reference audit required |
 | P2 | FISHnCHIPs | Multiplexed RNA probe pools | Planned — reference audit required |
 | P2 | π-FISH rainbow | Multi-level probe assembly | Planned — reference audit required |
-| P2 | RAEFISH | Reverse padlock and priming probes | Planned — reference audit required |
 | P2 | Oligo-LiveFISH | CRISPR-based live-cell DNA imaging | Planned — reference audit required |
 
 Before execution, confirm complete original probe sequences, target mapping,

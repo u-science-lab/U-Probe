@@ -1,0 +1,661 @@
+{
+  "method_version": "raefish_2025_64gene",
+  "native_api": [
+    "UProbeAPI.generate_target_seqs",
+    "UProbeAPI.construct_probes"
+  ],
+  "config_sha256": "fefb05b88eebf51700697bbc9477d19f2f05b47cd700f90a1d302234e9ed18af",
+  "targets_sha256": "19193670a121c147ae0af95923f7aafb5da76c18088e8753ee37414f0687755f",
+  "fasta_sha256": "e49b92b3e4f321bf254c042f25b726d9931c4d74c7523e8b6bb530e63b0cfd4b",
+  "gtf_sha256": "1b3f265e67e2fa6c5ca53df37da9285768511b80a0078d73c6a36287201af57d",
+  "runner_sha256": "cafd94c510d1c94ff4915e10f23d9ddcd96f71d7d456b0c2dc22440c9090cb9b",
+  "candidate_records": 4789362,
+  "native_probe_sets": 1596454,
+  "genes": [
+    {
+      "target_id": "ENSG00000000419",
+      "gene_symbol": "DPM1",
+      "transcripts": 16,
+      "native_probe_sets": 38884,
+      "candidate_records": 116652,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000000457",
+      "gene_symbol": "SCYL3",
+      "transcripts": 5,
+      "native_probe_sets": 27754,
+      "candidate_records": 83262,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000000938",
+      "gene_symbol": "FGR",
+      "transcripts": 7,
+      "native_probe_sets": 13262,
+      "candidate_records": 39786,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001036",
+      "gene_symbol": "FUCA2",
+      "transcripts": 3,
+      "native_probe_sets": 11260,
+      "candidate_records": 33780,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001084",
+      "gene_symbol": "GCLC",
+      "transcripts": 14,
+      "native_probe_sets": 35498,
+      "candidate_records": 106494,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001167",
+      "gene_symbol": "NFYA",
+      "transcripts": 2,
+      "native_probe_sets": 24836,
+      "candidate_records": 74508,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001460",
+      "gene_symbol": "STPG1",
+      "transcripts": 12,
+      "native_probe_sets": 35372,
+      "candidate_records": 106116,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001461",
+      "gene_symbol": "NIPAL3",
+      "transcripts": 7,
+      "native_probe_sets": 38020,
+      "candidate_records": 114060,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001497",
+      "gene_symbol": "LAS1L",
+      "transcripts": 25,
+      "native_probe_sets": 56608,
+      "candidate_records": 169824,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001561",
+      "gene_symbol": "ENPP4",
+      "transcripts": 1,
+      "native_probe_sets": 18338,
+      "candidate_records": 55014,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001617",
+      "gene_symbol": "SEMA3F",
+      "transcripts": 9,
+      "native_probe_sets": 20194,
+      "candidate_records": 60582,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001626",
+      "gene_symbol": "CFTR",
+      "transcripts": 38,
+      "native_probe_sets": 72466,
+      "candidate_records": 217398,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001629",
+      "gene_symbol": "ANKIB1",
+      "transcripts": 7,
+      "native_probe_sets": 29992,
+      "candidate_records": 89976,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001630",
+      "gene_symbol": "CYP51A1",
+      "transcripts": 5,
+      "native_probe_sets": 16656,
+      "candidate_records": 49968,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000001631",
+      "gene_symbol": "KRIT1",
+      "transcripts": 70,
+      "native_probe_sets": 95796,
+      "candidate_records": 287388,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002016",
+      "gene_symbol": "RAD52",
+      "transcripts": 19,
+      "native_probe_sets": 21024,
+      "candidate_records": 63072,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002330",
+      "gene_symbol": "BAD",
+      "transcripts": 7,
+      "native_probe_sets": 7062,
+      "candidate_records": 21186,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002549",
+      "gene_symbol": "LAP3",
+      "transcripts": 11,
+      "native_probe_sets": 15742,
+      "candidate_records": 47226,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002586",
+      "gene_symbol": "CD99",
+      "transcripts": 15,
+      "native_probe_sets": 20222,
+      "candidate_records": 60666,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002587",
+      "gene_symbol": "HS3ST1",
+      "transcripts": 3,
+      "native_probe_sets": 29494,
+      "candidate_records": 88482,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002726",
+      "gene_symbol": "AOC1",
+      "transcripts": 7,
+      "native_probe_sets": 15486,
+      "candidate_records": 46458,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002745",
+      "gene_symbol": "WNT16",
+      "transcripts": 2,
+      "native_probe_sets": 12818,
+      "candidate_records": 38454,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002746",
+      "gene_symbol": "HECW1",
+      "transcripts": 11,
+      "native_probe_sets": 56624,
+      "candidate_records": 169872,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002822",
+      "gene_symbol": "MAD1L1",
+      "transcripts": 23,
+      "native_probe_sets": 28862,
+      "candidate_records": 86586,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002834",
+      "gene_symbol": "LASP1",
+      "transcripts": 8,
+      "native_probe_sets": 28466,
+      "candidate_records": 85398,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002919",
+      "gene_symbol": "SNX11",
+      "transcripts": 13,
+      "native_probe_sets": 17564,
+      "candidate_records": 52692,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000002933",
+      "gene_symbol": "TMEM176A",
+      "transcripts": 11,
+      "native_probe_sets": 15380,
+      "candidate_records": 46140,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000003137",
+      "gene_symbol": "CYP26B1",
+      "transcripts": 5,
+      "native_probe_sets": 19316,
+      "candidate_records": 57948,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000003147",
+      "gene_symbol": "ICA1",
+      "transcripts": 19,
+      "native_probe_sets": 21940,
+      "candidate_records": 65820,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000003249",
+      "gene_symbol": "DBNDD1",
+      "transcripts": 7,
+      "native_probe_sets": 17960,
+      "candidate_records": 53880,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000003393",
+      "gene_symbol": "ALS2",
+      "transcripts": 75,
+      "native_probe_sets": 143568,
+      "candidate_records": 430704,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000003400",
+      "gene_symbol": "CASP10",
+      "transcripts": 15,
+      "native_probe_sets": 36588,
+      "candidate_records": 109764,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000099869",
+      "gene_symbol": "IGF2-AS",
+      "transcripts": 3,
+      "native_probe_sets": 11702,
+      "candidate_records": 35106,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000103472",
+      "gene_symbol": "RRN3P2",
+      "transcripts": 2,
+      "native_probe_sets": 9552,
+      "candidate_records": 28656,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000115934",
+      "gene_symbol": "LINC02566",
+      "transcripts": 1,
+      "native_probe_sets": 5078,
+      "candidate_records": 15234,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000117242",
+      "gene_symbol": "PINK1-AS",
+      "transcripts": 1,
+      "native_probe_sets": 17534,
+      "candidate_records": 52602,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000122043",
+      "gene_symbol": "LINC00544",
+      "transcripts": 6,
+      "native_probe_sets": 9742,
+      "candidate_records": 29226,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000122548",
+      "gene_symbol": "KIAA0087",
+      "transcripts": 1,
+      "native_probe_sets": 16894,
+      "candidate_records": 50682,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000124835",
+      "gene_symbol": "ENSG00000124835",
+      "transcripts": 1,
+      "native_probe_sets": 8686,
+      "candidate_records": 26058,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000124915",
+      "gene_symbol": "MYRF-AS1",
+      "transcripts": 3,
+      "native_probe_sets": 11540,
+      "candidate_records": 34620,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000125462",
+      "gene_symbol": "MIR9-1HG",
+      "transcripts": 95,
+      "native_probe_sets": 68214,
+      "candidate_records": 204642,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000125514",
+      "gene_symbol": "LINC00029",
+      "transcripts": 3,
+      "native_probe_sets": 7382,
+      "candidate_records": 22146,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000125804",
+      "gene_symbol": "FAM182A",
+      "transcripts": 19,
+      "native_probe_sets": 41956,
+      "candidate_records": 125868,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000128254",
+      "gene_symbol": "YWHAH-AS1",
+      "transcripts": 8,
+      "native_probe_sets": 29586,
+      "candidate_records": 88758,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000130600",
+      "gene_symbol": "H19",
+      "transcripts": 31,
+      "native_probe_sets": 18090,
+      "candidate_records": 54270,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000145063",
+      "gene_symbol": "ENSG00000145063",
+      "transcripts": 8,
+      "native_probe_sets": 19826,
+      "candidate_records": 59478,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000146049",
+      "gene_symbol": "KAAG1",
+      "transcripts": 1,
+      "native_probe_sets": 5294,
+      "candidate_records": 15882,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000146521",
+      "gene_symbol": "LINC01558",
+      "transcripts": 4,
+      "native_probe_sets": 12178,
+      "candidate_records": 36534,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000146666",
+      "gene_symbol": "LINC00525",
+      "transcripts": 1,
+      "native_probe_sets": 4514,
+      "candidate_records": 13542,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000152931",
+      "gene_symbol": "PART1",
+      "transcripts": 12,
+      "native_probe_sets": 51970,
+      "candidate_records": 155910,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000153363",
+      "gene_symbol": "LINC00467",
+      "transcripts": 29,
+      "native_probe_sets": 30948,
+      "candidate_records": 92844,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000157306",
+      "gene_symbol": "ZFHX2-AS1",
+      "transcripts": 5,
+      "native_probe_sets": 20350,
+      "candidate_records": 61050,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000162888",
+      "gene_symbol": "IKBKE-AS1",
+      "transcripts": 1,
+      "native_probe_sets": 8146,
+      "candidate_records": 24438,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000162913",
+      "gene_symbol": "OBSCN-AS1",
+      "transcripts": 7,
+      "native_probe_sets": 16106,
+      "candidate_records": 48318,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000163081",
+      "gene_symbol": "CCDC140",
+      "transcripts": 2,
+      "native_probe_sets": 7486,
+      "candidate_records": 22458,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000163364",
+      "gene_symbol": "LINC01116",
+      "transcripts": 6,
+      "native_probe_sets": 19206,
+      "candidate_records": 57618,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000163597",
+      "gene_symbol": "SNHG16",
+      "transcripts": 18,
+      "native_probe_sets": 25586,
+      "candidate_records": 76758,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000163915",
+      "gene_symbol": "IGF2BP2-AS1",
+      "transcripts": 5,
+      "native_probe_sets": 13866,
+      "candidate_records": 41598,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000164385",
+      "gene_symbol": "LINC01600",
+      "transcripts": 5,
+      "native_probe_sets": 12886,
+      "candidate_records": 38658,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000164621",
+      "gene_symbol": "SMAD5-AS1",
+      "transcripts": 1,
+      "native_probe_sets": 7026,
+      "candidate_records": 21078,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000165511",
+      "gene_symbol": "ZNF22-AS1",
+      "transcripts": 1,
+      "native_probe_sets": 12074,
+      "candidate_records": 36222,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000166917",
+      "gene_symbol": "MIR202HG",
+      "transcripts": 3,
+      "native_probe_sets": 5208,
+      "candidate_records": 15624,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000167046",
+      "gene_symbol": "ENSG00000167046",
+      "transcripts": 1,
+      "native_probe_sets": 7494,
+      "candidate_records": 22482,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    },
+    {
+      "target_id": "ENSG00000167459",
+      "gene_symbol": "LINC00905",
+      "transcripts": 38,
+      "native_probe_sets": 17282,
+      "candidate_records": 51846,
+      "non_acgt_windows": 0,
+      "missing_annotation": false,
+      "unavailable_contig_transcripts": []
+    }
+  ],
+  "final_selection": "not_evaluated",
+  "deduplication": "Complete target windows per gene; first sorted transcript origin retained",
+  "constraints": "ACGT windows only; all transcript windows; gaps 0 and 1; both RNA adjacency orientations",
+  "release_runner_sha256": "016d7f37b9f0b464a9f49f36d96b0ff812a530b3e4a683a33bf9ac98c1a4bd04",
+  "release_runner_change": "Only final-line CRLF normalized to LF after execution; runner_sha256 identifies the executed script."
+}
