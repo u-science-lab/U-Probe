@@ -1,0 +1,136 @@
+[
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000226574.9",
+    "workbook_rows": [
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000394820.8",
+    "workbook_rows": [
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000505458.5",
+    "workbook_rows": [
+      130,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000507079.6",
+    "workbook_rows": [
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000509165.2",
+    "workbook_rows": [
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000600343.5",
+    "workbook_rows": [
+      130,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000652569.1",
+    "workbook_rows": [
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000652619.1",
+    "workbook_rows": [
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000697794.1",
+    "workbook_rows": [
+      130,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000697799.1",
+    "workbook_rows": [
+      130,
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000697801.1",
+    "workbook_rows": [
+      132,
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "gene": "NFKB1",
+    "transcript": "ENST00000698233.1",
+    "workbook_rows": [
+      130,
+      132,
+      133,
+      134,
+      135
+    ]
+  }
+]

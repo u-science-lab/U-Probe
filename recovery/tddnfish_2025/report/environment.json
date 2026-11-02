@@ -1,0 +1,39 @@
+{
+  "uprobe_base_commit": "be519d7402587ffb611c684173462fbc9ad2cb67",
+  "python": "3.10.14",
+  "packages": {
+    "numpy": "1.26.0",
+    "pandas": "2.1.1",
+    "PyYAML": "6.0.1",
+    "biopython": "1.83",
+    "openpyxl": "3.1.5",
+    "pyfaidx": "0.5.9.5"
+  },
+  "references": [
+    {
+      "file": "gencode.v47.primary_assembly.annotation.gtf.gz",
+      "release": "GENCODE v47",
+      "url": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/gencode.v47.primary_assembly.annotation.gtf.gz",
+      "official_md5": "81cf2337bb31aeaddba7059a3b0f14f5",
+      "sha256": "f02ee3e1c8e7fd9be264be6d0b974feb225a1e9d6c81915ee271804b060bd8c0",
+      "uncompressed_file": "gencode.v47.primary_assembly.annotation.gtf",
+      "uncompressed_sha256": "7478f1c14e4915c32822e03cc7255a52cf0ae5ff4d08e926774dbb96b48b0c9b"
+    },
+    {
+      "file": "GRCh38.primary_assembly.genome.fa.gz",
+      "release": "GENCODE v47",
+      "url": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/GRCh38.primary_assembly.genome.fa.gz",
+      "official_md5": "0c33152bea6f09b89fb5e3f89558771e",
+      "sha256": "fca1b272425c11d5fa3ab11b2052e815d1b00de722b49617d7819cc998eb1fc1",
+      "uncompressed_file": "GRCh38.primary_assembly.genome.fa",
+      "uncompressed_sha256": "e49b92b3e4f321bf254c042f25b726d9931c4d74c7523e8b6bb530e63b0cfd4b"
+    }
+  ],
+  "reference_hash_provenance": "Existing shared reference download-validation manifest; GTF v47 header rechecked",
+  "common_evaluator_sha256": "979e1c45df686bff4ccf416a73e0cfbf90449f4df951ca85579dbca5e44b35af",
+  "stage_status": {
+    "Candidate Recovery": "Evaluated",
+    "Final Recovery": "Not evaluated",
+    "Structural Validation": "Sequence and modification checks evaluated; physical topology/folding Not evaluated"
+  }
+}

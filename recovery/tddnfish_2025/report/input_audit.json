@@ -1,0 +1,18 @@
+{
+  "source": "https://static-content.springer-cdn.com/esm/art%3A10.1038%2Fs41467-025-64294-1/MediaObjects/41467_2025_64294_MOESM3_ESM.xlsx",
+  "workbook_sha256": "513a441145496471228bd2f4e2a67f2b59807b1502196396b43007f775ce6855",
+  "scope": "Figure2 rows 82-135: complete two-round nine-gene HeLa panel",
+  "reference_records": 54,
+  "unique_reference_oligos": 54,
+  "targets": 9,
+  "excluded_records": 0,
+  "duplicate_records": 0,
+  "architecture_5prime_to_3prime": "readout(30)-binding(35)",
+  "normalizations": {
+    "TGFB 1": "TGFB1",
+    "NF-KB": "NFKB1"
+  },
+  "nfkb_evidence": "All six binding sequences match NFKB1 ENST00000226574.9; mapping is evaluation-only, never candidate window selection.",
+  "outside_scope": "Other Figure1/2 panels, influenza Figure3, mouse Figure4/5; no enlargement of the complete HeLa panel",
+  "candidate_inputs": "Only gene identities and fixed external readouts; no published binding DNA, full primary DNA or inferred coordinates"
+}

@@ -1,0 +1,60 @@
+{
+  "details": [
+    {
+      "target_id": "CCL2",
+      "transcripts": 3,
+      "unique_windows": 1965,
+      "candidates": 3930
+    },
+    {
+      "target_id": "CXCL10",
+      "transcripts": 1,
+      "unique_windows": 1141,
+      "candidates": 2282
+    },
+    {
+      "target_id": "CXCL8",
+      "transcripts": 5,
+      "unique_windows": 2647,
+      "candidates": 5294
+    },
+    {
+      "target_id": "IL6",
+      "transcripts": 9,
+      "unique_windows": 4417,
+      "candidates": 8834
+    },
+    {
+      "target_id": "NFKB1",
+      "transcripts": 25,
+      "unique_windows": 16075,
+      "candidates": 32150
+    },
+    {
+      "target_id": "PTGS2",
+      "transcripts": 6,
+      "unique_windows": 5544,
+      "candidates": 11088
+    },
+    {
+      "target_id": "TGFB1",
+      "transcripts": 5,
+      "unique_windows": 3334,
+      "candidates": 6668
+    },
+    {
+      "target_id": "TNF",
+      "transcripts": 2,
+      "unique_windows": 1678,
+      "candidates": 3356
+    },
+    {
+      "target_id": "TNFAIP3",
+      "transcripts": 9,
+      "unique_windows": 6590,
+      "candidates": 13180
+    }
+  ],
+  "basic_constraints": "ACGT only; deduplicate identical windows within each gene; step 1; all annotated transcripts",
+  "final_recovery": "Not evaluated"
+}

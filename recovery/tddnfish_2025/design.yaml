@@ -1,0 +1,185 @@
+name: TDDN_assembly
+genome: GRCh38
+targets:
+  synthetic_control: ACGTACGTTGCAAGTCGATCGTAGCTAGCATCGAT
+extracts:
+  target_region:
+    source: mRNA
+    length: 35
+    step: 1
+encoding: {}
+probes:
+  primary:
+    template: '{readout}{binding}'
+    parts:
+      readout:
+        template: GATCCGATTGGAACCGTCCCAAGCGTTGCG
+        parts: {}
+      binding:
+        expr: rc(target_region)
+  T0a:
+    template: '{sticky}{core}'
+    parts:
+      sticky:
+        expr: rc(primary.readout)
+      core:
+        template: ACATTCCTAAGTCTGAAACATTACAGCTTGCTACACGAGAAGAGCCGCCATAGTA
+        parts: {}
+    modifications:
+      internal:
+      - type: disulfide
+        after_base: 30
+  T0b:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        template: CTGTCATCGGTCAC
+        parts: {}
+      spacer:
+        template: T
+        parts: {}
+      core:
+        template: ATCACCAGGCAGTTGACAGTGTAGCAAGCTGTAATAGATGCGAGGGTCCAATAC
+        parts: {}
+  T0c:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T0b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        template: CAACTGCCTGGTGATAAAACGACACTACGTGGGAATCTACTATGGCGGCTCTTC
+        parts: {}
+  T0d:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T0b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        template: TCAGACTTAGGAATGTGCTTCCCACGTAGTGTCGTTTGTATTGGACCCTCGCAT
+        parts: {}
+  T1a:
+    template: '{sticky}{core}'
+    parts:
+      sticky:
+        expr: rc(T0b.sticky)
+      core:
+        expr: T0a.core
+  T1b:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        template: GAAGCCACTCTGAT
+        parts: {}
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0b.core
+  T1c:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T1b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0c.core
+  T1d:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T1b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0d.core
+  T2a:
+    template: '{sticky}{core}'
+    parts:
+      sticky:
+        expr: rc(T1b.sticky)
+      core:
+        expr: T0a.core
+  T2b:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        template: GACCGATGGATGAG
+        parts: {}
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0b.core
+  T2c:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T2b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0c.core
+  T2d:
+    template: '{sticky}{spacer}{core}'
+    parts:
+      sticky:
+        expr: T2b.sticky
+      spacer:
+        expr: T0b.spacer
+      core:
+        expr: T0d.core
+  Detection:
+    template: '{binding}'
+    parts:
+      binding:
+        expr: rc(T2b.sticky)
+    modifications:
+      5prime:
+        type: fluorophore
+        name: Cy5
+attributes: {}
+post_process: {}
+summary: {}
+meta:
+  roles:
+    primary: RNA recognition and T0 recruitment
+    T0: primary-connected core; three T1 recruitment sites
+    T1: T0-connected shell; three T2 recruitment sites
+    T2: T1-connected shell; three fluorescent-oligo recruitment sites
+    Detection: fluorescent readout
+  intended_copies_per_primary:
+    T0: 1
+    T1: 3
+    T2: 9
+    Detection: 27
+  groups:
+    T0:
+    - T0a
+    - T0b
+    - T0c
+    - T0d
+    T1:
+    - T1a
+    - T1b
+    - T1c
+    - T1d
+    T2:
+    - T2a
+    - T2b
+    - T2c
+    - T2d
+  fixed_inputs:
+  - primary.readout
+  - T0a.core
+  - T0b.sticky
+  - T0b.spacer
+  - T0b.core
+  - T0c.core
+  - T0d.core
+  - T1b.sticky
+  - T2b.sticky
+  scope: Assembly consistency only; synthetic target; fixed scaffold bodies are inputs,
+    not independent recovery.

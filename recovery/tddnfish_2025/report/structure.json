@@ -1,0 +1,527 @@
+{
+  "scope": "Assembly consistency; fixed bodies are declared inputs, not recovered sequences",
+  "source_sha256": "513a441145496471228bd2f4e2a67f2b59807b1502196396b43007f775ce6855",
+  "target": "synthetic 35-nt control; no published binding sequence supplied",
+  "scaffold_matches": {
+    "T0a": true,
+    "T0b": true,
+    "T0c": true,
+    "T0d": true,
+    "T1a": true,
+    "T1b": true,
+    "T1c": true,
+    "T1d": true,
+    "T2a": true,
+    "T2b": true,
+    "T2c": true,
+    "T2d": true,
+    "Detection": true
+  },
+  "scaffold_strands_exact": "12/12",
+  "groups": {
+    "T0": [
+      "T0a",
+      "T0b",
+      "T0c",
+      "T0d"
+    ],
+    "T1": [
+      "T1a",
+      "T1b",
+      "T1c",
+      "T1d"
+    ],
+    "T2": [
+      "T2a",
+      "T2b",
+      "T2c",
+      "T2d"
+    ]
+  },
+  "groups_semantics": "declarative metadata; dependencies enforced by native DAG",
+  "fixed_inputs": [
+    "primary.readout",
+    "T0a.core",
+    "T0b.sticky",
+    "T0b.spacer",
+    "T0b.core",
+    "T0c.core",
+    "T0d.core",
+    "T1b.sticky",
+    "T2b.sticky"
+  ],
+  "dag_edges": {
+    "primary.readout": [],
+    "primary.binding": [],
+    "primary": [
+      "primary.readout",
+      "primary.binding"
+    ],
+    "T0a.sticky": [
+      "primary.readout"
+    ],
+    "T0a.core": [],
+    "T0a": [
+      "T0a.sticky",
+      "T0a.core"
+    ],
+    "T0b.sticky": [],
+    "T0b.spacer": [],
+    "T0b.core": [],
+    "T0b": [
+      "T0b.sticky",
+      "T0b.spacer",
+      "T0b.core"
+    ],
+    "T0c.sticky": [
+      "T0b.sticky"
+    ],
+    "T0c.spacer": [
+      "T0b.spacer"
+    ],
+    "T0c.core": [],
+    "T0c": [
+      "T0c.sticky",
+      "T0c.spacer",
+      "T0c.core"
+    ],
+    "T0d.sticky": [
+      "T0b.sticky"
+    ],
+    "T0d.spacer": [
+      "T0b.spacer"
+    ],
+    "T0d.core": [],
+    "T0d": [
+      "T0d.sticky",
+      "T0d.spacer",
+      "T0d.core"
+    ],
+    "T1a.sticky": [
+      "T0b.sticky"
+    ],
+    "T1a.core": [
+      "T0a.core"
+    ],
+    "T1a": [
+      "T1a.sticky",
+      "T1a.core"
+    ],
+    "T1b.sticky": [],
+    "T1b.spacer": [
+      "T0b.spacer"
+    ],
+    "T1b.core": [
+      "T0b.core"
+    ],
+    "T1b": [
+      "T1b.sticky",
+      "T1b.spacer",
+      "T1b.core"
+    ],
+    "T1c.sticky": [
+      "T1b.sticky"
+    ],
+    "T1c.spacer": [
+      "T0b.spacer"
+    ],
+    "T1c.core": [
+      "T0c.core"
+    ],
+    "T1c": [
+      "T1c.sticky",
+      "T1c.spacer",
+      "T1c.core"
+    ],
+    "T1d.sticky": [
+      "T1b.sticky"
+    ],
+    "T1d.spacer": [
+      "T0b.spacer"
+    ],
+    "T1d.core": [
+      "T0d.core"
+    ],
+    "T1d": [
+      "T1d.sticky",
+      "T1d.spacer",
+      "T1d.core"
+    ],
+    "T2a.sticky": [
+      "T1b.sticky"
+    ],
+    "T2a.core": [
+      "T0a.core"
+    ],
+    "T2a": [
+      "T2a.sticky",
+      "T2a.core"
+    ],
+    "T2b.sticky": [],
+    "T2b.spacer": [
+      "T0b.spacer"
+    ],
+    "T2b.core": [
+      "T0b.core"
+    ],
+    "T2b": [
+      "T2b.sticky",
+      "T2b.spacer",
+      "T2b.core"
+    ],
+    "T2c.sticky": [
+      "T2b.sticky"
+    ],
+    "T2c.spacer": [
+      "T0b.spacer"
+    ],
+    "T2c.core": [
+      "T0c.core"
+    ],
+    "T2c": [
+      "T2c.sticky",
+      "T2c.spacer",
+      "T2c.core"
+    ],
+    "T2d.sticky": [
+      "T2b.sticky"
+    ],
+    "T2d.spacer": [
+      "T0b.spacer"
+    ],
+    "T2d.core": [
+      "T0d.core"
+    ],
+    "T2d": [
+      "T2d.sticky",
+      "T2d.spacer",
+      "T2d.core"
+    ],
+    "Detection.binding": [
+      "T2b.sticky"
+    ],
+    "Detection": [
+      "Detection.binding"
+    ]
+  },
+  "complementary_interfaces": 10,
+  "dependency_perturbations_passed": [
+    "primary.readout -> T0a.sticky",
+    "T0b.sticky -> T1a.sticky",
+    "T1b.sticky -> T2a.sticky",
+    "T2b.sticky -> Detection.binding"
+  ],
+  "tetrahedral_core_edges": [
+    {
+      "left": "T0a",
+      "right": "T0b",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          19,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T0a",
+      "right": "T0c",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          38,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T0a",
+      "right": "T0d",
+      "longest_exact_complement": 16,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T0b",
+      "right": "T0c",
+      "longest_exact_complement": 15,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T0b",
+      "right": "T0d",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          37,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T0c",
+      "right": "T0d",
+      "longest_exact_complement": 19,
+      "offsets": [
+        [
+          16,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T1a",
+      "right": "T1b",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          19,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T1a",
+      "right": "T1c",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          38,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T1a",
+      "right": "T1d",
+      "longest_exact_complement": 16,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T1b",
+      "right": "T1c",
+      "longest_exact_complement": 15,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T1b",
+      "right": "T1d",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          37,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T1c",
+      "right": "T1d",
+      "longest_exact_complement": 19,
+      "offsets": [
+        [
+          16,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T2a",
+      "right": "T2b",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          19,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T2a",
+      "right": "T2c",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          38,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T2a",
+      "right": "T2d",
+      "longest_exact_complement": 16,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T2b",
+      "right": "T2c",
+      "longest_exact_complement": 15,
+      "offsets": [
+        [
+          0,
+          0
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": false,
+      "best_17nt_mismatches": 7
+    },
+    {
+      "left": "T2b",
+      "right": "T2d",
+      "longest_exact_complement": 17,
+      "offsets": [
+        [
+          37,
+          37
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    },
+    {
+      "left": "T2c",
+      "right": "T2d",
+      "longest_exact_complement": 19,
+      "offsets": [
+        [
+          16,
+          18
+        ]
+      ],
+      "expected_edge_bases": 17,
+      "exact_17nt_edge": true,
+      "best_17nt_mismatches": 0
+    }
+  ],
+  "panel_variants": [
+    {
+      "variant": "hyb1-Cy5",
+      "exact": true,
+      "fluorophore": "Cy5",
+      "disulfide_explicit": true
+    },
+    {
+      "variant": "hyb1-Cy3",
+      "exact": true,
+      "fluorophore": "Cy3",
+      "disulfide_explicit": true
+    },
+    {
+      "variant": "hyb1-FAM",
+      "exact": true,
+      "fluorophore": "FAM",
+      "disulfide_explicit": true
+    },
+    {
+      "variant": "hyb2-Cy5",
+      "exact": true,
+      "fluorophore": "Cy5",
+      "disulfide_explicit": true
+    },
+    {
+      "variant": "hyb2-Cy3",
+      "exact": true,
+      "fluorophore": "Cy3",
+      "disulfide_explicit": false
+    },
+    {
+      "variant": "hyb2-FAM",
+      "exact": true,
+      "fluorophore": "FAM",
+      "disulfide_explicit": false
+    }
+  ],
+  "limitations": "Native DAG assembles strand sequences and modification annotations; tetrahedron membership and 1:3:9:27 copy topology are metadata, not enforced molecular complexes. Two hyb2 T0a entries lack an explicit SS marker; none is inferred.",
+  "chemical_modifications": {
+    "disulfide_after_base": 30,
+    "detection": [
+      {
+        "probe": "Detection",
+        "type": "fluorophore",
+        "position": "5prime",
+        "name": "Cy5"
+      }
+    ],
+    "passed": true
+  },
+  "native_exports_passed": [
+    "tsv",
+    "raw_tsv",
+    "raw_xlsx",
+    "xlsx"
+  ],
+  "CPSR": "N/A",
+  "folding_or_experimental_performance": "Not evaluated"
+}
