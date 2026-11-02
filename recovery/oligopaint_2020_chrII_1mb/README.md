@@ -79,9 +79,22 @@ python "$m/evaluate_stages.py" --diagnose --reference "$run/inputs/reference_oli
 
 ## Limitations
 
-The 96 unrecovered unique binding sequences have no exact site on ce11 chrII;
-the underlying assembly, sample or sequence differences are unresolved. No second
-assembly was tested. [Unrecovered records](report/unrecovered.json) preserve the evidence.
+The [targeted reference-version check](report/reference_version_check.csv) covers
+only the 96 unrecovered 40-nt bindings, extracted from the saved complete reference
+oligos. Previously established ce11 chrII exact-site counts are reused. All 96 also
+have zero exact sites on either strand of ce10/WS220 chrII: ce10 exact = 0,
+ce10-only exact = 0, neither version exact = 96. One batch Bowtie 1 search
+(`-v 2 -a`, both strands) finds minimum mismatches of 1 for 4 bindings and 2 for
+4 bindings, each at one ce10 site; 88 have no ungapped hit within two mismatches
+(`>2_or_no_ungapped_hit` in the CSV). Mismatch hits are diagnostic, not recovery.
+Positions are ce10-native, 1-based inclusive; strand indicates binding orientation
+relative to the reference. No cross-assembly coordinate identity is assumed.
+
+The [official ce10 chrII FASTA](https://hgdownload.soe.ucsc.edu/goldenPath/ce10/chromosomes/chrII.fa.gz)
+has compressed SHA-256 `644bdbd24c286a25b06fcc1f03580f86a63b7d6deae18ecc0ba0fa1922958b71`.
+The comparison provides no evidence that switching to ce10 resolves these losses;
+their cause remains **unresolved**. [Original diagnostics](report/unrecovered.json)
+and formal recovery/filtering metrics remain unchanged.
 Of the recovered unique references, quality filtering removes 185 for multiple
 genomic exact sites and 18 for GC. Genome exact-site uniqueness is not a complete
 hybridization specificity prediction. Paper-specific ranking, final-count selection,
