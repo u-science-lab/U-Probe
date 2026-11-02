@@ -34,6 +34,7 @@ from .hybridization import (FIELDS as HYBRIDIZATION_FIELDS, TM_METHODS, default_
                             validate_protocol_hybridization)
 from .composition import COMPOSITION_OPTIONS, COMPOSITION_TYPES, composition_settings
 from .layout import compile_layout, validate_layout_references
+from .modifications import ModificationError, has_chemical_notation, normalize_modifications
 from .offtarget import (BOWTIE2_INCOMPLETE_MAX_LENGTH, BOWTIE2_LOCAL_MIN_LENGTH, MAPPED_GENES_ALIGNERS,
                         MAX_MISMATCHES_LIMIT, STRANDS, check_oligo_parts, mapped_genes_settings)
 from .process import parse_condition
@@ -607,7 +608,19 @@ class _Validator:
             self.error(path, f'{kind} {full!r} must be a mapping',
                        'e.g.\n' + (SNIPPETS['probes'] if top else 'expr: "rc(target_region[0:20])"'))
             return
+        if 'modifications' in config:
+            if not top:
+                self.error(path + ('modifications',), 'modifications are allowed only on actual probes')
+            else:
+                try:
+                    normalize_modifications(config['modifications'], key)
+                except ModificationError as exc:
+                    self.error(exc.path, exc.reason)
+        if top and config.get('modifications') and isinstance(config.get('parts'), dict) and 'modifications' in config['parts']:
+            self.error(path + ('parts', 'modifications'), 'part name conflicts with the modification metadata column')
         for option in config:
+            if option == 'modifications':
+                continue
             if option not in PART_KEYS:
                 hint = ('for a fixed sequence write expr: "\'ACGT\'"' if option in ('sequence', 'seq')
                         else _did_you_mean(option, PART_KEYS, 'known keys'))
@@ -664,7 +677,8 @@ class _Validator:
         for literal, name, spec, conversion in fields:
             bad = ''.join(sorted(set(literal.upper()) - IUPAC))
             if bad:
-                self.warning(tpath, f'literal text {literal!r} contains non-nucleotide characters {bad!r}',
+                report = self.error if has_chemical_notation(literal) else self.warning
+                report(tpath, f'literal text {literal!r} contains non-nucleotide characters {bad!r}',
                              'templates hold {placeholders} and bases only (A, C, G, T, N ...)')
             if name is None:
                 continue
@@ -1711,6 +1725,13 @@ class _Validator:
                             continue
                         result = str(node.result)
                         self.built_lengths[node.name] = min(len(result), self.built_lengths.get(node.name, len(result)))
+                        if node.name in self.protocol['probes']:
+                            config = self.protocol['probes'][node.name]
+                            if 'modifications' in config:
+                                try:
+                                    normalize_modifications(config['modifications'], node.name, len(result))
+                                except ModificationError as exc:
+                                    self.error(exc.path, exc.reason)
                         is_expr = self.nodes[node.name][0][-1] == 'expr'
                         if is_expr and not result and all(dep.result for dep in node.deps):
                             empties.setdefault(node.name, (target, size))  # root causes only
@@ -1735,7 +1756,8 @@ class _Validator:
             self.warning(self.nodes[name][0], f'evaluates to an empty sequence (e.g. target {target!r} with a '
                          f'{size} nt target_region)', 'check the slice bounds against extracts.target_region.length')
         for name, result in odd.items():
-            self.warning(self.nodes[name][0], f'evaluates to {result[:40]!r}, which is not a nucleotide sequence',
+            report = self.error if has_chemical_notation(result) else self.warning
+            report(self.nodes[name][0], f'evaluates to {result[:40]!r}, which is not a nucleotide sequence',
                          "return a sequence, e.g. encoding[target]['BC1'] rather than encoding[target]")
         for name, (declared, actual, size) in lengths.items():
             self.warning(self.nodes[name][0][:-1] + ('length',), f'declared length {declared} but the part builds '
@@ -1839,7 +1861,7 @@ def _load_yaml(path: Path, doc: str):
         return None, {}, [Finding('error', '', 'the file is empty', 'see README.md for an example',
                                   label, None, (), doc)]
     index, duplicates = _line_index(text)
-    findings = [Finding('warning', format_path(key_path), f'duplicate key {key_path[-1]!r} (first on line {first}); '
+    findings = [Finding('error' if 'modifications' in key_path else 'warning', format_path(key_path), f'duplicate key {key_path[-1]!r} (first on line {first}); '
                         'YAML keeps only the last value', 'merge the two entries or rename one',
                         label, line, key_path, doc)
                 for key_path, line, first in duplicates]

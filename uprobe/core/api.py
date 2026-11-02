@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from .modifications import (ModificationError, check_modification_yaml_duplicates, normalize_modifications,
+                            validate_probe_modifications, validate_dna_sequence)
 from .sampling import normalize_sampling, iter_target_windows
 from .layout import compile_layout, expand_layout_candidates, validate_layout_references
 from .attributes import add_attributes
@@ -61,6 +63,7 @@ class UProbeAPI:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.protocol = self._load_config(protocol_config)
+        validate_probe_modifications(self.protocol.get('probes', {}))
         self.genomes = self._load_config(genomes_config)
         if require_genome:
             self.genome = self._validate_and_get_genome()
@@ -72,6 +75,25 @@ class UProbeAPI:
         self._csv_filename = None
         # The GTF parsed once for target validation and extraction (see _gtf_table).
         self._gtf = None
+
+    def _annotate_modifications(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Validate built DNA and attach chemistry without changing sequence columns."""
+        validate_probe_modifications(self.protocol.get('probes', {}))
+        for name, config in self.protocol.get('probes', {}).items():
+            declared = bool(config.get('modifications'))
+            if name not in df:
+                if declared and not df.empty:
+                    raise ModificationError(('probes', name, 'modifications'), 'generated probe sequence is missing')
+                continue
+            records = []
+            for sequence in df[name]:
+                if declared or isinstance(sequence, str):
+                    validate_dna_sequence(sequence, ('probes', name, 'template'))
+                if declared:
+                    records.append(normalize_modifications(config['modifications'], name, len(sequence)))
+            if 'modifications' in config and config['modifications']:
+                df[f'{name}.modifications'] = records
+        return df
 
     def _gtf_table(self) -> pd.DataFrame:
         """The genome's GTF, parsed once: target validation and extraction share it.
@@ -112,7 +134,9 @@ class UProbeAPI:
 
     def _load_config(self, config: T.Union[Path, dict]) -> dict:
         if isinstance(config, Path):
-            return yaml.safe_load(config.read_text(encoding="utf-8"))
+            text = config.read_text(encoding="utf-8")
+            check_modification_yaml_duplicates(text)
+            return yaml.safe_load(text)
         return config
 
     def _validate_and_get_genome(self) -> dict:
@@ -296,6 +320,7 @@ class UProbeAPI:
         target = df_targets['target'] if 'target' in df_targets.columns else pd.Series('', index=df_targets.index)
         candidate_index = target.astype(str).groupby(target.astype(str).to_numpy()).cumcount().to_numpy()
         probe_df = construct_probes(self.protocol, self._probe_contexts(df_targets, candidate_index))
+        probe_df = self._annotate_modifications(probe_df)
         if probe_df.empty:
             log.error("No probes were constructed. Check probe construction parameters.")
         else:
@@ -309,6 +334,7 @@ class UProbeAPI:
         ``threads`` is used by the aligner and Jellyfish steps of attributes that
         set no ``threads`` of their own.
         """
+        df_probes = self._annotate_modifications(df_probes)
         self.no_filtered_probes = False
         self.raw_file = None
         self.output_files = {'xlsx': None, 'raw_xlsx': None, 'tsv': None, 'raw_tsv': None}
@@ -405,6 +431,7 @@ class UProbeAPI:
                     if isinstance(attr, dict) and str(attr.get('target', '')).replace(':', '.') in nodes}
         log.info(f"Numbered the final probes of each target along the target ({PROBE_INDEX} 0, 1, ...) and rebuilt "
                  f"{', '.join(rebuilt)}" + (f"; recomputed {', '.join(affected)}" if affected else ""))
+        df = self._annotate_modifications(df)
         if affected:
             df = add_attributes(df, {**self.protocol, 'attributes': affected}, self.genome, {}, threads)
         return df

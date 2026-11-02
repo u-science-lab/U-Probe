@@ -412,6 +412,32 @@ summary:
   - **`expr`**: Apply Python-like expressions. You can use built-in functions like `rc()` (reverse complement), slice sequences (`[0:20]`), or fetch from the `encoding` map (`encoding[target]['BC1']`). Expressions are evaluated safely (never with Python `eval`): only string/integer literals, the names `target_region`, `target`, `encoding`, `target_parts`, `probe_index` and probe/part names (e.g. `probe_1.part1`), subscripts and slices, `+` concatenation, `%` (remainder of two integers) and `rc()` are allowed; anything else (other function calls, attribute or method access, comprehensions, lambdas, ...) is rejected with an error naming the probe part.
   - **`probe_index`**: the number of the probe within its target, 0, 1, 2, ... along the target (5' to 3' on an RNA, along the region on DNA), so a part can vary from probe to probe, e.g. rotate readouts with an encoding list: `rc(encoding[target]['readouts'][(probe_index + 1) % 4])` (an encoding value may be a list of sequences). The final probes are numbered after post-processing, the parts that read `probe_index` are then rebuilt and their attributes recomputed, and the final table gets a `probe_index` column; filters and sorts see each candidate numbered in extraction order (`uprobe validate` warns about attributes of such parts). The `merfish` template uses it to put 3 of each gene's 4 readouts on every probe.
   - **DAG References**: Because of the DAG structure, subsequent probes or parts can dynamically reference the sequences of previously defined probes/parts in their expressions.
+
+Chemical modifications belong to a complete `probes.<name>` entry, independently of its DNA sequence:
+
+```yaml
+probes:
+  padlock:
+    template: "{binding}"
+    parts:
+      binding:
+        expr: "rc(target_region)"
+    modifications:
+      5prime: phosphate
+  linker_probe:
+    template: "ACGTACGT"
+    parts: {}
+    modifications:
+      internal:
+        - type: disulfide
+          after_base: 4
+      3prime: {type: fluorophore, name: Cy5}
+```
+
+Terminal `5prime`/`3prime` entries support `phosphate`, `hydroxyl` and named `fluorophore`; `internal` lists support `disulfide` and `phosphorothioate`. `after_base: n` denotes the bond between bases n and n+1 (1-based; 1 ≤ n < generated sequence length). A bond accepts one modification. Validation rejects unknown types, invalid positions, conflicting declarations and chemical symbols in DNA. Modifications do not affect assembly, reverse complement, scoring or selection.
+
+The Python API adds `<probe>.modifications` only for probes with annotations, as a list of records such as `{"probe":"linker_probe","type":"disulfide","position":"internal","after_base":4}`. Raw and final TSV/XLSX tables encode this column as JSON. DNA columns remain plain sequences; unmodified protocols retain their existing columns.
+
 - **`attributes`**: Define the biochemical or physical properties you want to calculate for specific targets or probe parts. Available attribute types include:
   - `gc_content`: Calculates the GC ratio of the sequence.
   - `base_fraction`, `max_homopolymer`, `max_window_count`: base composition. `base_fraction` is the fraction of the sequence's bases that are one of `bases` (`A`, `C`, `GC`, ...; U counts as T); `max_homopolymer` the longest run of one base of `bases` (default: any base), so `<= 3` excludes AAAA; `max_window_count` the highest number of `bases` in any `window` consecutive bases. Each takes `positions: [start, end]`, 1-based and inclusive from the 5' end of the sequence as written (negative: from the 3' end, `-1` = the last base), to look at part of it only. Together they express sequence rules such as those of Xu et al. 2009 (PNAS 106:2289, [doi:10.1073/pnas.0812506106](https://doi.org/10.1073/pnas.0812506106)), which Oligostan applies to smiFISH probes: A < 28 % (`base_fraction`, `bases: A`, filter `< 0.28`), no AAAA, C 22-28 %, no CCCC, and no 4 C in any 6 consecutive bases within the first 12 (`max_window_count`, `bases: C`, `window: 6`, `positions: [1, 12]`, filter `<= 3`). Filters run before `remove_overlap`, so the overlap removal chooses among windows that pass them.
