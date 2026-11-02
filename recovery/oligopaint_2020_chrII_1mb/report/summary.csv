@@ -1,0 +1,7 @@
+stage,oligo_type,reference_sequences,matched_sequences,SRR_pct,reference_targets,recovered_targets,TRR_pct,MTR_pct,reference_pairs,matched_pairs,CPSR_pct,generated_records,generated_unique_reference_hits,excluded_reference_records,duplicate_reference_records
+candidate,all,9975,9879,99.0375939849624,100,100,100.0,99.0378932178932,,,N/A,1972876,9879,0,9
+candidate,primary,9975,9879,99.0375939849624,100,100,100.0,99.0378932178932,,,N/A,1972876,9879,0,9
+filtered,all,9975,9676,97.00250626566417,100,100,100.0,97.00207979224177,,,N/A,1303762,9676,0,9
+filtered,primary,9975,9676,97.00250626566417,100,100,100.0,97.00207979224177,,,N/A,1303762,9676,0,9
+non_overlap,all,9975,135,1.3533834586466165,100,31,31.0,1.3534511536573397,,,N/A,19344,135,0,9
+non_overlap,primary,9975,135,1.3533834586466165,100,31,31.0,1.3534511536573397,,,N/A,19344,135,0,9

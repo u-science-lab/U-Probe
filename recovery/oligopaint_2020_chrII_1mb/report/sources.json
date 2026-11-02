@@ -1,0 +1,11 @@
+{
+  "sha256": {
+    "s009.fa": "2cc4b2327b2794dc14856df1882883497d0cc1aad4235a64fd023a4304300651",
+    "s010.xlsx": "21f0df561c5ebff501712aaf10307e4e6829ce90c4257427a1b6497e0a85c04d",
+    "ce11.fa.gz": "b5f80e37d22eb8f1cce1efff09a7e2e2ac2b6c73650f674c41c0b2e281c97241"
+  },
+  "reference_count": 9984,
+  "bin_boundaries": "Published inclusive S2 header boundaries; 99 x 10001 bp + 9901 bp",
+  "barcode_exceptions": "S2 Read053B188 / Read054B189 replace S1 readout053 / readout054; fixed barcode DNA only",
+  "generator_inputs": "FASTA, fixed public bin boundaries, S1 readout-derived barcodes and fixed index/fiducial DNA only"
+}
