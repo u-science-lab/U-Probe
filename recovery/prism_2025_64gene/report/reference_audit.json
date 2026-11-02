@@ -1,0 +1,44 @@
+{
+  "valid_padlocks": 64,
+  "unique_genes": 64,
+  "padlock_length_nt": 120,
+  "backbone_exact_matches": 64,
+  "barcode_segment_lengths_nt": [
+    20,
+    20,
+    20,
+    20
+  ],
+  "imaging_sheet": "Imaging probe (64 panel)",
+  "rca_sheet": "RCA primer (64)",
+  "rca_primers": 12,
+  "gene_name_normalization": {
+    "Spp1 ": "Spp1",
+    "TBX5": "Tbx5",
+    "MEF2C": "Mef2c",
+    "Hba-X": "Hba-x"
+  },
+  "references": [
+    {
+      "assembly": "mm10",
+      "fasta": "mm10.fa",
+      "gtf": "mm10.gtf",
+      "annotation": "GENCODE M19 (Ensembl 94), GRCm38",
+      "covered_genes": 64,
+      "exact_40nt_antisense_matches": 64,
+      "matched_transcripts": 201,
+      "sense_matches": 0
+    },
+    {
+      "assembly": "GRCm39",
+      "fasta": "GRCm39.fa",
+      "gtf": "GRCm39.gtf",
+      "annotation": "NCBI RefSeq GCF_000001635.27-RS_2024_02",
+      "covered_genes": 64,
+      "exact_40nt_antisense_matches": 64,
+      "matched_transcripts": 276,
+      "sense_matches": 0
+    }
+  ],
+  "historical_reference_confirmed": false
+}

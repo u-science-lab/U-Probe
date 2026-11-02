@@ -1,0 +1,11 @@
+{
+  "candidate_records": 389656,
+  "config_sha256": "c7d5d7cb86362680c4e02c4a8b8f66dca05d5cd64e98465a593413eaec57c58c",
+  "fasta_sha256": "c7fe528da3fd081382ad65c1b1af3ea9c0b6251bc24f392b7b3ef4967eeed91c",
+  "gtf_sha256": "7ab6746c0417216e6fe299f91df8624e818ce419ae8f7d0f6118744e8cb36e6d",
+  "runner_sha256": "2ac6311360040c1d3e22f6ae308b2f32d6e62b24f10f46012900d34af9d494af",
+  "python": "3.10.14",
+  "pandas": "2.1.1",
+  "PyYAML": "6.0.1",
+  "annotated_transcripts": 341
+}
