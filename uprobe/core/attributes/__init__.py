@@ -284,4 +284,16 @@ def _add_attributes(
             raise NotImplementedError(
                 f"Attribute type {attr_type} is not implemented."
             )
+    from ..hybridization import comparable_tm_columns
+    if 'tm_diff' in attributes:
+        raise ValueError('attributes.tm_diff is reserved for the automatic Tm difference')
+    names = comparable_tm_columns(protocol)
+    if names:
+        values = df_probes.reindex(columns=names).apply(pd.to_numeric, errors='coerce')
+        values = values.replace([float('inf'), -float('inf')], float('nan'))
+        df_probes['tm_diff'] = values.max(axis=1, skipna=False) - values.min(axis=1, skipna=False)
+    else:
+        df_probes.drop(columns=['tm_diff'], errors='ignore', inplace=True)
+        if sum(str(a.get('type', '')).lower() == 'annealing_temperature' for a in attributes.values()) >= 2:
+            log.warning('tm_diff omitted: Tm methods or effective hybridization conditions differ')
     return df_probes

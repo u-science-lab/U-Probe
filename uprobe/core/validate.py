@@ -343,6 +343,12 @@ class _Validator:
     def known_columns(self, protocol) -> T.List[str]:
         """Columns available to filters, sorts and summary; attributes first."""
         columns = list(self.attributes)
+        from .hybridization import comparable_tm_columns
+        try:
+            if comparable_tm_columns(protocol):
+                columns.append('tm_diff')
+        except (ValueError, TypeError, AttributeError):
+            pass
         for name, attr in self.attributes.items():
             if isinstance(attr, dict) and str(attr.get('type', '')).lower() == 'mapped_sites':
                 columns.append(f'{name}_num')
@@ -942,6 +948,8 @@ class _Validator:
         from .attributes import target_sense
         for name, attr in self.attributes.items():
             path = ('attributes', name)
+            if name == 'tm_diff':
+                self.error(path, 'tm_diff is reserved for the automatic Tm difference', 'rename this attribute')
             if not isinstance(attr, dict):
                 self.error(path, f'attribute {name!r} must be a mapping with `target` and `type`',
                            f'e.g.\n{name}:\n  target: target_region\n  type: gc_content')

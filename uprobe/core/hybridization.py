@@ -245,3 +245,20 @@ def describe_conditions(protocol):
         text = ', '.join(units[key].format(value) for key, value in conditions.items())
         groups.setdefault((kind, text), []).append(name)
     return [f'{kind} ({", ".join(names)}): {text}' for (kind, text), names in groups.items()]
+
+
+def comparable_tm_columns(protocol):
+    """Tm attributes sharing a method and effective conditions, in protocol order."""
+    attrs = protocol.get('attributes') or {}
+    if not isinstance(attrs, dict):
+        return []
+    names = [name for name, attr in attrs.items() if isinstance(attr, dict)
+             and str(attr.get('type', '')).lower() == 'annealing_temperature']
+    if len(names) < 2:
+        return []
+    conditions = effective_conditions(protocol)
+    first = names[0]
+    if any(tm_method(attrs[name]) != tm_method(attrs[first])
+           or conditions[name] != conditions[first] for name in names[1:]):
+        return []
+    return names

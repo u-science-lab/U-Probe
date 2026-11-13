@@ -77,6 +77,8 @@ def workbook_bytes(df, protocol, full_table=None, truncated=None):
         style = styles.get(column, {})
         body = {"font_name": "Consolas" if style.get("sequence") else "Calibri",
                 "font_size": 11, "valign": "vcenter", "border": 1, "border_color": "#BBC7D2"}
+        if column == 'tm_diff':
+            body['num_format'] = '0.00'
         if style:
             body["bg_color"] = "#" + style["background"]
         formats[column] = book.add_format(body)
