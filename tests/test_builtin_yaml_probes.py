@@ -14,13 +14,13 @@ def library(tmp_path, monkeypatch):
     monkeypatch.setenv('UPROBE_SERVER_ROOT', str(tmp_path))
     (tmp_path / 'config.ini').write_text(f'[Paths]\ndata_dir = {tmp_path / "configured-data"}\n', encoding='utf8')
     root = get_probes_dir()
-    root.mkdir()
+    root.mkdir(parents=True)
     return root
 
 
 def write(root, name, value='ACGT'):
     config = {'probes': {'pad': {'template': '{arm}', 'parts': {'arm': {'expr': repr(value)}}}}}
-    (root / f'{name}.yaml').write_text(yaml.safe_dump(config), encoding='utf8')
+    (root / f'{name}_web.yaml').write_text(yaml.safe_dump(config), encoding='utf8')
     return config
 
 
@@ -32,9 +32,9 @@ def test_dynamic_add_edit_delete_and_single_bad_file(library):
     assert load_builtin_probe('MiP-seq') == changed
     write(library, 'ExSeq')
     assert set(load_builtin_probes()) == {'MiP-seq', 'ExSeq'}
-    (library / 'ExSeq.yaml').write_text('probes: [broken', encoding='utf8')
+    (library / 'ExSeq_web.yaml').write_text('probes: [broken', encoding='utf8')
     assert load_builtin_probes() == {'MiP-seq': changed}
-    (library / 'MiP-seq.yaml').unlink()
+    (library / 'MiP-seq_web.yaml').unlink()
     assert load_builtin_probes() == {}
 
 
@@ -51,12 +51,10 @@ def test_missing_directory_does_not_fall_back_to_json(library):
         load_builtin_probes()
 
 
-def test_config_directory_changes_are_dynamic(library, tmp_path):
-    other = tmp_path / 'other/probes'
-    other.mkdir(parents=True)
-    expected = write(other, 'New')
-    (tmp_path / 'config.ini').write_text(f'[Paths]\ndata_dir = {other.parent}\n', encoding='utf8')
-    assert get_probes_dir() == other
+def test_data_directory_does_not_change_repository_presets(library, tmp_path):
+    expected = write(library, 'New')
+    (tmp_path / 'config.ini').write_text(f'[Paths]\ndata_dir = {tmp_path / "other"}\n', encoding='utf8')
+    assert get_probes_dir() == library
     assert load_builtin_probes() == {'New': expected}
 
 
@@ -95,7 +93,7 @@ def test_ai_resolves_same_configured_directory(library, tmp_path, monkeypatch):
         monkeypatch.delenv(key, raising=False)
     paths = resolve_agent_paths(entrypoint='web', output_dir=tmp_path / 'out', memory_dir=tmp_path / 'memory')
     assert paths.probes_dir == library
-    assert paths.genomes_path == library.parent / 'genomes.yaml'
+    assert paths.genomes_path == tmp_path / 'configured-data' / 'genomes.yaml'
     apply_agent_runtime_env(paths)
     assert os.environ['UPROBE_PROBES_DIR'] == str(library)
     assert 'UPROBE_PROBE_JSON' not in os.environ

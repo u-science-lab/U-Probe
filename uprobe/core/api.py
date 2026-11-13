@@ -352,7 +352,7 @@ class UProbeAPI:
         time_str = time.strftime("%Y%m%d_%H%M%S")
         name = _file_stem(self.protocol.get("name", "probes"))
         self._csv_filename = f"{name}_{time_str}.xlsx"
-        # Plain-text copy of the final table for scripts and agents.
+        # TSV fallback when the final table exceeds Excel limits.
         tsv_path = self.output_dir / f"{name}_{time_str}_probes.tsv"
         raw_path = self.output_dir / f"{name}_{time_str}_raw.xlsx"
         raw_tsv_path = self.output_dir / f"{name}_{time_str}_raw.tsv"
@@ -439,12 +439,12 @@ class UProbeAPI:
     def _save_table(self, df: pd.DataFrame, xlsx_path: Path, tsv_path: Path, kind: str):
         """Write a result table as .xlsx and, when needed, .tsv; return the names written (or None).
 
-        ``kind`` is 'final' (its TSV is always written) or 'raw'. Excel never
+        ``kind`` is 'final' (TSV only for Excel limits) or 'raw'. Excel never
         fails the run or loses data: a table longer than a worksheet is written
         as TSV only, and a cell longer than Excel allows is cut in the .xlsx with
         a marker naming the TSV, which keeps the full value.
         """
-        with_tsv = kind == 'final'
+        with_tsv = False
         xlsx_name = None
         if exceeds_excel_rows(df):
             log.warning(f"The {kind} table has {len(df):,} rows, more than an Excel worksheet holds "
@@ -463,6 +463,8 @@ class UProbeAPI:
                 with_tsv = True
         if with_tsv:
             save_tsv(df, tsv_path)
+        else:
+            tsv_path.unlink(missing_ok=True)
         return xlsx_name, tsv_path.name if with_tsv else None
 
     def run_workflow(self, raw_csv: bool = False, continue_on_invalid_targets: bool = False,

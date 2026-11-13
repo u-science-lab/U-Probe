@@ -96,8 +96,8 @@ def get_barcodes_csv() -> Path:
     return (get_data_dir() / "barcodes" / "KYRCA 2-2-12.csv").resolve()
 
 def get_probes_dir() -> Path:
-    """Shared built-in YAML library; resolve the configured data directory anew."""
-    return (get_data_dir() / "probes").resolve()
+    """Built-in web presets shipped with the server repository."""
+    return (get_server_root() / "examples" / "web-presets").resolve()
 
 def get_tasks_dir() -> Path:
     """Return the directory for storing user tasks."""

@@ -1,4 +1,4 @@
-"""Built-in web/AI presets: <configured data_dir>/probes/<method>.yaml.
+"""Built-in web/AI presets: <server root>/examples/web-presets/<method>_web.yaml.
 
 No cache, JSON fallback, metadata wrapper, or CLI-template merge.
 """
@@ -44,7 +44,7 @@ def load_builtin_probes():
             config = yaml.load(file.read_text(encoding='utf-8'), Loader=PresetLoader)
             if not isinstance(config, dict) or not isinstance(config.get('probes'), dict):
                 raise ValueError('Expected a configuration with a probes mapping')
-            result[file.stem] = config
+            result[file.stem.removesuffix('_web')] = config
         except (OSError, ValueError, TypeError, yaml.YAMLError) as exc:
             log.error('Cannot load built-in probe %s: %s', file.name, exc)
     return result

@@ -94,10 +94,9 @@ def test_summary_matches_result_tables(tmp_path):
         assert stats['max'] == pytest.approx(result[name].max(), abs=1e-4)
 
     files = summary['output_files']
-    assert all(files[key] and (tmp_path / files[key]).is_file() for key in ('xlsx', 'raw_xlsx', 'tsv', 'html', 'summary'))
-    assert files['tsv'] == files['xlsx'].replace('.xlsx', '_probes.tsv')
-    table = pd.read_csv(tmp_path / files['tsv'], sep='\t')
-    assert list(table.columns) == list(result.columns)
+    assert all(files[key] and (tmp_path / files[key]).is_file() for key in ('xlsx', 'raw_xlsx', 'html', 'summary'))
+    assert files['tsv'] is None
+    table = pd.read_excel(tmp_path / files['xlsx'])
     assert table['probe_id'].tolist() == result['probe_id'].tolist()
     assert table['target_gc'].tolist() == pytest.approx(result['target_gc'].tolist())
     assert summary['flags'] == {'no_filtered_probes': False, 'raw_file': None}
@@ -110,7 +109,7 @@ def test_summary_lists_files_for_a_relative_output_dir(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     make_api(Path('out')).run_workflow()
     files = read_summary(tmp_path / 'out')['output_files']
-    assert all(files[key] and (tmp_path / 'out' / files[key]).is_file() for key in ('xlsx', 'tsv', 'html'))
+    assert all(files[key] and (tmp_path / 'out' / files[key]).is_file() for key in ('xlsx', 'html'))
 
 
 def test_summary_records_conditions_and_genome_source(tmp_path):
@@ -284,12 +283,12 @@ def check_toy_summary(summary, output):
     assert summary['inputs']['genome'] == 'toy' and summary['inputs']['extract_source'] == 'exon'
     assert summary['inputs']['valid_targets'] == ['ToyGeneA', 'ToyGeneB', 'ToyGeneC']
     assert summary['inputs']['invalid_targets'] == ['NotAGene']
-    table = pd.read_csv(output / summary['output_files']['tsv'], sep='\t')
+    table = pd.read_excel(output / summary['output_files']['xlsx'])
     assert summary['counts']['final_probes'] == len(table) > 0
     assert {name: t['final'] for name, t in summary['targets'].items()} == table.groupby('target').size().to_dict()
     assert sum(t['candidate_windows'] for t in summary['targets'].values()) == summary['counts']['candidate_windows']
-    # List cells are JSON, unquoted.
-    assert all(json.loads(cell) for cell in table['transcript_names'])
+    # Excel presents transcript names as readable text for this single-transcript fixture.
+    assert table['transcript_names'].tolist() == [f'{gene}.t1' for gene in table['target']]
 
 
 def test_cli_json_on_toy_genome_and_failure(tmp_path):
@@ -365,7 +364,7 @@ def test_cli_keeps_probes_per_target_spread_along_the_rna(tmp_path):
     assert {name: (t['final'], t['requested_probes']) for name, t in summary['targets'].items()} == {
         'ToyGeneA': (6, 6), 'ToyGeneB': (6, 6), 'ToyGeneC': (6, 6)}
     assert [s['stage'] for s in summary['stages']] == ['Remove overlap', 'Equal spacing']
-    table = pd.read_csv(output / summary['output_files']['tsv'], sep='\t')
+    table = pd.read_excel(output / summary['output_files']['xlsx'])
     for gene in ('ToyGeneA', 'ToyGeneB'):
         probes = table[table['target'] == gene]
         # Ranks 0, 8, 17, 26, 35, 44 along the target: two probes in each exon.
@@ -486,4 +485,6 @@ def test_web_tasks_skip_invalid_targets(tmp_path, monkeypatch):
         monkeypatch.setattr(task_router, 'get_process_pool', lambda: pool)
         asyncio.run(task_router._run_uprobe_task('tester', 't1'))
     assert [call['continue_invalid_targets'] for call in calls] == [True]
-    assert record.status == 'failed' and record.error_message == 'stub'
+    from uprobe.http.utils.task_errors import PUBLIC_ERRORS
+    assert record.status == 'failed'
+    assert record.error_message == PUBLIC_ERRORS['unknown']
